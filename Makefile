@@ -71,11 +71,11 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	podman build . -t ${IMG}
 
 # Push the docker image
 docker-push:
-	docker push ${IMG}
+	podman push ${IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary
@@ -120,4 +120,4 @@ bundle: manifests
 # Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	podman build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
