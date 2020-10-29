@@ -1,0 +1,6 @@
+# Version needed to share Travis build
+# configuration from external sources
+version: ~> 1.0
+
+import:
+  - openstack-k8s-operators/openstack-k8s-operators-ci:.travis/common_pipeline.yml
