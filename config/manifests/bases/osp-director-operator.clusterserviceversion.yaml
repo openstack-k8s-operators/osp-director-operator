@@ -1,0 +1,51 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.1.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: osp-director-operator.vX.Y.Z
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ControlPlane is the Schema for the controlplanes API
+      displayName: Control Plane
+      kind: ControlPlane
+      name: controlplanes.osp-director.openstack.org
+      version: v1beta1
+    required:
+    - kind: HyperConverged
+      name: hyperconvergeds.hco.kubevirt.io
+      version: v1alpha1
+  description: Install and manage an OpenStack cloud with OSP Director on OpenShift
+  displayName: OSP Director Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - OpenStack
+  - Director
+  links:
+  - name: Osp Director Operator
+    url: https://osp-director-operator.domain
+  maturity: alpha
+  provider:
+    name: Red Hat Inc.
+  version: 0.0.0

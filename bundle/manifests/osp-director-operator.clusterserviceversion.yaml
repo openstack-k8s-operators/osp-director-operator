@@ -24,15 +24,17 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: ControlPlane
+    - description: ControlPlane is the Schema for the controlplanes API
+      displayName: Control Plane
+      kind: ControlPlane
       name: controlplanes.osp-director.openstack.org
       version: v1beta1
     required:
     - kind: HyperConverged
       name: hyperconvergeds.hco.kubevirt.io
       version: v1alpha1
-  description: Osp Director Operator description. TODO.
-  displayName: Osp Director Operator
+  description: Install and manage an OpenStack cloud with OSP Director on OpenShift
+  displayName: OSP Director Operator
   icon:
   - base64data: ""
     mediatype: ""
@@ -40,18 +42,6 @@ spec:
     spec:
       clusterPermissions:
       - rules:
-        - apiGroups:
-          - authentication.k8s.io
-          resources:
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          verbs:
-          - create
         - apiGroups:
           - osp-director.openstack.org
           resources:
@@ -72,14 +62,31 @@ spec:
           - get
           - patch
           - update
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
         serviceAccountName: default
       deployments:
-      - name: controller-manager
+      - name: osp-director-operator-controller-manager
         spec:
-          selector: null
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
           strategy: {}
           template:
-            metadata: {}
+            metadata:
+              labels:
+                control-plane: controller-manager
             spec:
               containers:
               - args:
@@ -95,46 +102,6 @@ spec:
                 resources: {}
               - args:
                 - --metrics-addr=127.0.0.1:8080
-                - --enable-leader-election
-                name: manager
-                resources: {}
-      - name: controller-manager
-        spec:
-          selector: null
-          strategy: {}
-          template:
-            metadata: {}
-            spec:
-              containers:
-              - name: manager
-                ports:
-                - containerPort: 9443
-                  name: webhook-server
-                  protocol: TCP
-                resources: {}
-                volumeMounts:
-                - mountPath: /tmp/k8s-webhook-server/serving-certs
-                  name: cert
-                  readOnly: true
-              volumes:
-              - name: cert
-                secret:
-                  defaultMode: 420
-                  secretName: webhook-server-cert
-      - name: controller-manager
-        spec:
-          replicas: 1
-          selector:
-            matchLabels:
-              control-plane: controller-manager
-          strategy: {}
-          template:
-            metadata:
-              labels:
-                control-plane: controller-manager
-            spec:
-              containers:
-              - args:
                 - --enable-leader-election
                 command:
                 - /manager
@@ -180,24 +147,21 @@ spec:
         serviceAccountName: default
     strategy: deployment
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
-  - supported: false
+  - supported: true
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
   - supported: true
     type: AllNamespaces
   keywords:
-  - osp-director-operator
+  - OpenStack
+  - Director
   links:
   - name: Osp Director Operator
     url: https://osp-director-operator.domain
-  maintainers:
-  - email: your@email.com
-    name: Maintainer Name
   maturity: alpha
   provider:
-    name: Provider Name
-    url: https://your.domain
+    name: Red Hat Inc.
   version: 0.0.1
