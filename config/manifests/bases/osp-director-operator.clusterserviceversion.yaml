@@ -17,10 +17,6 @@ spec:
       kind: ControlPlane
       name: controlplanes.osp-director.openstack.org
       version: v1beta1
-    required:
-    - kind: HyperConverged
-      name: hyperconvergeds.hco.kubevirt.io
-      version: v1alpha1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator
   icon:

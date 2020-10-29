@@ -1,0 +1,5 @@
+dependencies:
+  - type: olm.package
+    value:
+      packageName: kubevirt-hyperconverged
+      version: ">2.4.2"
