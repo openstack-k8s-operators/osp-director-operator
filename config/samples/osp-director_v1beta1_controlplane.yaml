@@ -1,0 +1,7 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-sample
+spec:
+  # Add fields here
+  foo: bar

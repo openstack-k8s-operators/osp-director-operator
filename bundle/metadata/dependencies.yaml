@@ -1,0 +1,6 @@
+dependencies:
+  - type: olm.gvk
+    value:
+      group: hco.kubevirt.io
+      kind: HyperConverged
+      version: v1alpha1
