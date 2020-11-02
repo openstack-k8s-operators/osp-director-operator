@@ -7,7 +7,7 @@ set -ex
 # NOTE: Requires opm and operator-sdk to be installed!
 #
 
-VERSION=${1:-"latest"}
+VERSION=${1:-"0.0.1"}
 REPO=${2:-"quay.io/openstack-k8s-operators"}
 OP_NAME=${3:-"osp-director-operator"}
 IMG="$REPO/$OP_NAME":$VERSION
