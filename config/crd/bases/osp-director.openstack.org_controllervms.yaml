@@ -1,0 +1,121 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: controllervms.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: ControllerVM
+    listKind: ControllerVMList
+    plural: controllervms
+    singular: controllervm
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: ControllerVM is the Schema for the controllervms API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ControllerVMSpec defines the desired state of ControllerVM
+          properties:
+            baseImageURL:
+              description: Name of the VM base image used to setup the controller
+                VMs
+              type: string
+            controllerCount:
+              description: Number of controllers to configure, 1 or 3
+              type: integer
+            cores:
+              description: number of Cores assigned to the controller VMs
+              format: int32
+              type: integer
+            deploymentSSHSecret:
+              description: name of secret holding the stack-admin ssh keys
+              type: string
+            diskSize:
+              description: root Disc size in GB
+              format: int32
+              type: integer
+            memory:
+              description: amount of Memory in GB used by the controller VMs
+              format: int32
+              type: integer
+            networks:
+              description: Networks - e.g. ctlplane, tenant, internalAPI, storage,
+                storageMgmt, external
+              items:
+                description: 'Network - OSP networks used to create network-attachment-definitions
+                  for each of them TODO: that might change depending on our outcome
+                  of network config'
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+            storageClass:
+              description: StorageClass to be used for the controller disks
+              type: string
+          required:
+          - baseImageURL
+          - controllerCount
+          - cores
+          - deploymentSSHSecret
+          - diskSize
+          - memory
+          - networks
+          - storageClass
+          type: object
+        status:
+          description: ControllerVMStatus defines the observed state of ControllerVM
+          properties:
+            baseImageDVReady:
+              description: BaseImageDVReady is the status of the BaseImage DataVolume
+              type: boolean
+            controllers:
+              description: Controllers are the names of the kubevirt controller vm
+                pods
+              items:
+                type: string
+              type: array
+            controllersReady:
+              description: ControllersReady is the number of ready  kubevirt controller
+                vm instances
+              format: int32
+              type: integer
+          required:
+          - baseImageDVReady
+          - controllers
+          - controllersReady
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
