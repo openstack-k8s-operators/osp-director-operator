@@ -26,3 +26,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - provisionservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - provisionservers/status
+  verbs:
+  - get
+  - patch
+  - update
