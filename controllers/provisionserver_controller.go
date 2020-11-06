@@ -26,11 +26,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	ospdirectorv1beta1 "github.com/abays/osp-director-operator/api/v1beta1"
+	provisionserver "github.com/abays/osp-director-operator/pkg/provisionserver"
 	"github.com/openstack-k8s-operators/cinder-operator/pkg/cinderapi"
 	"github.com/openstack-k8s-operators/cinder-operator/pkg/common"
 	"github.com/openstack-k8s-operators/lib-common/pkg/util"
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
