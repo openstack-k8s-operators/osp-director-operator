@@ -149,8 +149,13 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 		}
 
 		replicas := int32(1)
+		falseVar := false
 
 		deployment.Spec.Replicas = &replicas
+		deployment.Spec.Template.Spec.HostNetwork = true
+		deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+			RunAsNonRoot: &falseVar,
+		}
 		deployment.Spec.Template.Spec = corev1.PodSpec{
 			Volumes: volumes,
 			Containers: []corev1.Container{

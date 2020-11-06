@@ -429,8 +429,6 @@ github.com/openstack-k8s-operators/keystone-operator v0.0.0-20201020115836-d8f73
 github.com/openstack-k8s-operators/lib-common v0.0.0-20200910130010-129482aabaf9/go.mod h1:3zJwwobj7g74V6TMv517PnzTObGDHXeXkPCzEsuewyY=
 github.com/openstack-k8s-operators/lib-common v0.0.0-20201012132655-247b83b2fafa h1:0VTOJp+Y6+qLt/WrE+K44lbFcyIADohMYHcrysKU9Is=
 github.com/openstack-k8s-operators/lib-common v0.0.0-20201012132655-247b83b2fafa/go.mod h1:3zJwwobj7g74V6TMv517PnzTObGDHXeXkPCzEsuewyY=
-github.com/openstack-k8s-operators/osp-director-operator v0.0.0-20201103130023-3fcc0835e23e h1:CvbxT+pk+KMRFlsFY1mNsya9/En7KaEshac+yWHJIl0=
-github.com/openstack-k8s-operators/osp-director-operator v0.0.0-20201103130023-3fcc0835e23e/go.mod h1:dT4nx03xkCvRE7r7RWON7ZNIMDRSwIL2m3eNAvj2lro=
 github.com/openzipkin/zipkin-go v0.1.6/go.mod h1:QgAqvLzwWbR/WpD4A3cGpPtJrZXNIiJc5AZX7/PBEpw=
 github.com/operator-framework/api v0.1.1/go.mod h1:yzNYR7qyJqRGOOp+bT6Z/iYSbSPNxeh3Si93Gx/3OBY=
 github.com/operator-framework/operator-lifecycle-manager v0.0.0-20200321030439-57b580e57e88/go.mod h1:7Ut8p9jJ8C6RZyyhZfZypmlibCIJwK5Wcc+WZDgLkOA=
