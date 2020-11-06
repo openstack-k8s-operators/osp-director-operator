@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta1 "github.com/abays/osp-director-operator/api/v1beta1"
 )
 
 // ControlPlaneReconciler reconciles a ControlPlane object
