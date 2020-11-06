@@ -1,8 +1,8 @@
 package provisionserver
 
 import (
+	ospdirectorv1 "github.com/abays/osp-director-operator/api/v1beta1"
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
-	ospdirectorv1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
