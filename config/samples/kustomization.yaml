@@ -2,4 +2,5 @@
 resources:
 - osp-director_v1beta1_controlplane.yaml
 - osp-director_v1beta1_controllervm.yaml
+- osp-director_v1beta1_provisionserver.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
