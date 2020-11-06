@@ -1,7 +1,7 @@
 domain: openstack.org
 layout: go.kubebuilder.io/v2
 projectName: osp-director-operator
-repo: github.com/openstack-k8s-operators/osp-director-operator
+repo: github.com/abays/osp-director-operator
 resources:
 - group: osp-director
   kind: ControlPlane

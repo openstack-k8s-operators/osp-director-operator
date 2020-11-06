@@ -28,8 +28,6 @@ import (
 
 	ospdirectorv1beta1 "github.com/abays/osp-director-operator/api/v1beta1"
 	provisionserver "github.com/abays/osp-director-operator/pkg/provisionserver"
-	"github.com/openstack-k8s-operators/cinder-operator/pkg/cinderapi"
-	"github.com/openstack-k8s-operators/cinder-operator/pkg/common"
 	"github.com/openstack-k8s-operators/lib-common/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -131,22 +129,22 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 
 		// Daemonset selector is immutable so we set this value only if
 		// a new object is going to be created
-		if deployment.ObjectMeta.CreationTimestamp.IsZero() {
-			deployment.Spec.Selector = &metav1.LabelSelector{
-				MatchLabels: common.GetLabels(instance.Name, cinderapi.AppLabel),
-			}
-		}
+		// if deployment.ObjectMeta.CreationTimestamp.IsZero() {
+		// 	deployment.Spec.Selector = &metav1.LabelSelector{
+		// 		MatchLabels: common.GetLabels(instance.Name, cinderapi.AppLabel),
+		// 	}
+		// }
 
-		if len(deployment.Spec.Template.Spec.Containers) != 1 {
-			deployment.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
-		}
-		envs := util.MergeEnvs(deployment.Spec.Template.Spec.Containers[0].Env, envVars)
+		// if len(deployment.Spec.Template.Spec.Containers) != 1 {
+		// 	deployment.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
+		// }
+		// envs := util.MergeEnvs(deployment.Spec.Template.Spec.Containers[0].Env, envVars)
 
-		// labels
-		common.InitLabelMap(&deployment.Spec.Template.Labels)
-		for k, v := range common.GetLabels(instance.Name, cinderapi.AppLabel) {
-			deployment.Spec.Template.Labels[k] = v
-		}
+		// // labels
+		// common.InitLabelMap(&deployment.Spec.Template.Labels)
+		// for k, v := range common.GetLabels(instance.Name, cinderapi.AppLabel) {
+		// 	deployment.Spec.Template.Labels[k] = v
+		// }
 
 		replicas := int32(1)
 		falseVar := false
@@ -162,7 +160,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 				{
 					Name:         "osp-httpd",
 					Image:        "quay.io/abays/httpd:2.4-alpine",
-					Env:          envs,
+					Env:          []corev1.EnvVar{},
 					VolumeMounts: volumeMounts,
 				},
 			},
