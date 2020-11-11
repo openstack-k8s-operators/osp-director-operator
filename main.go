@@ -34,6 +34,7 @@ import (
 
 	//virtv1 "kubevirt.io/client-go/api/v1"
 
+	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -48,11 +49,11 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(ospdirectorv1beta1.AddToScheme(scheme))
 	//utilruntime.Must(templatev1.AddToScheme(scheme))
 	//utilruntime.Must(virtv1.AddToScheme(scheme))
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
+	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

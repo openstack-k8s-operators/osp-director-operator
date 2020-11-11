@@ -26,11 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	ospdirectorv1beta1 "github.com/abays/osp-director-operator/api/v1beta1"
-	provisionserver "github.com/abays/osp-director-operator/pkg/provisionserver"
-	"github.com/openstack-k8s-operators/cinder-operator/pkg/cinderapi"
-	"github.com/openstack-k8s-operators/cinder-operator/pkg/common"
-	"github.com/openstack-k8s-operators/lib-common/pkg/util"
+	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
+	util "github.com/openstack-k8s-operators/osp-director-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -133,7 +132,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 		// a new object is going to be created
 		if deployment.ObjectMeta.CreationTimestamp.IsZero() {
 			deployment.Spec.Selector = &metav1.LabelSelector{
-				MatchLabels: common.GetLabels(instance.Name, cinderapi.AppLabel),
+				MatchLabels: common.GetLabels(instance.Name, "osp-director"),
 			}
 		}
 
@@ -144,7 +143,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 
 		// labels
 		common.InitLabelMap(&deployment.Spec.Template.Labels)
-		for k, v := range common.GetLabels(instance.Name, cinderapi.AppLabel) {
+		for k, v := range common.GetLabels(instance.Name, "osp-director") {
 			deployment.Spec.Template.Labels[k] = v
 		}
 
