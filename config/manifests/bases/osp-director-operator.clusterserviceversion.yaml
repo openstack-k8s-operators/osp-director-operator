@@ -12,35 +12,40 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-      - description: ControlPlane is the Schema for the controlplanes API
-        displayName: Control Plane
-        kind: ControlPlane
-        name: controlplanes.osp-director.openstack.org
-        version: v1beta1
+    - description: ControlPlane is the Schema for the controlplanes API
+      displayName: Control Plane
+      kind: ControlPlane
+      name: controlplanes.osp-director.openstack.org
+      version: v1beta1
+    - description: ProvisionServer is the Schema for the provisionservers API
+      displayName: Provision Server
+      kind: ProvisionServer
+      name: provisionservers.osp-director.openstack.org
+      version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator
   icon:
-    - base64data: ''
-      mediatype: ''
+  - base64data: ""
+    mediatype: ""
   install:
     spec:
       deployments: null
-    strategy: ''
+    strategy: ""
   installModes:
-    - type: OwnNamespace
-      supported: true
-    - type: SingleNamespace
-      supported: true
-    - type: MultiNamespace
-      supported: true
-    - type: AllNamespaces
-      supported: true
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: true
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
   keywords:
-    - OpenStack
-    - Director
+  - OpenStack
+  - Director
   links:
-    - name: Osp Director Operator
-      url: https://osp-director-operator.domain
+  - name: Osp Director Operator
+    url: https://osp-director-operator.domain
   maturity: alpha
   provider:
     name: Red Hat Inc.
