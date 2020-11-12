@@ -1,0 +1,39 @@
+pipeline {
+    agent none
+    stages {
+        stage('Pull request proposed jobs') {
+        when {
+            branch 'PR-*'
+        }
+            parallel {
+                stage('osp-director-operator-distgit-pr') {
+                    steps {
+                        build job: 'osp-director-operator-distgit-pr',
+                                  parameters: [
+                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID))
+                                  ]
+                    }
+                }
+                stage('osp-director-operator-buildah') {
+                    steps {
+                        build job: 'osp-director-operator-buildah',
+                                  parameters: [
+                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID))
+                                  ]
+                    }
+                }
+            }
+        }
+        stage('Pull request merged jobs') {
+        when {
+            allOf {
+                environment name: 'CHANGE_ID', value: ''
+                branch 'master'
+            }
+        }
+        steps {
+            build job: 'osp-director-operator-merge'
+        }
+        }
+    }
+}
