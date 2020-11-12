@@ -32,6 +32,9 @@ COPY pkg/ pkg/
 COPY bindata/ ${DEST_ROOT}/bindata/
 COPY templates/ ${DEST_ROOT}/templates/
 
+RUN mkdir -p /usr/share/osp-director-operator/templates/
+COPY templates/ /usr/share/osp-director-operator/
+
 # Build
 RUN CGO_ENABLED=0 GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -a -o ${DEST_ROOT}/manager main.go
 
@@ -63,5 +66,7 @@ COPY --from=builder ${DEST_ROOT}/templates ${OPERATOR_TEMPLATES}
 WORKDIR /
 COPY --from=builder ${DEST_ROOT}/manager .
 USER nonroot:nonroot
+
+ENV OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/
 
 ENTRYPOINT ["/manager"]
