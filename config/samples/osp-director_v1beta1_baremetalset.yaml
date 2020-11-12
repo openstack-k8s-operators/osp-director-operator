@@ -1,0 +1,6 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: BaremetalSet
+metadata:
+  name: baremetalset-sample
+spec:
+  replicas: 1

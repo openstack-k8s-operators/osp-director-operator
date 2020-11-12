@@ -27,6 +27,11 @@ spec:
         kind: ProvisionServer
         name: provisionservers.osp-director.openstack.org
       version: v1beta1
+    - description: BaremetalSet is the Schema for the baremetalsets API
+      displayName: Baremetal Set
+      kind: BaremetalSet
+      name: baremetalsets.osp-director.openstack.org
+      version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator
   icon:

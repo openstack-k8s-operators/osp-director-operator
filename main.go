@@ -35,6 +35,7 @@ import (
 	//virtv1 "kubevirt.io/client-go/api/v1"
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -123,6 +124,13 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProvisionServer")
+	}
+	if err = (&controllers.BaremetalSetReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("BaremetalSet"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BaremetalSet")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
