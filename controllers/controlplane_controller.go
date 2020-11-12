@@ -36,7 +36,6 @@ type ControlPlaneReconciler struct {
 
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hco.kubevirt.io,resources="*",verbs="*"
 
 // Reconcile - control plane
 func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {

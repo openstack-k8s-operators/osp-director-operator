@@ -42,11 +42,18 @@ spec:
               type: string
             port:
               type: integer
+            rhelImageUrl:
+              type: string
           required:
           - port
           type: object
         status:
           description: ProvisionServerStatus defines the observed state of ProvisionServer
+          properties:
+            provisioningServerIp:
+              description: Provisioning IP of underlying Apache web server hosting
+                images
+              type: string
           type: object
       type: object
   version: v1beta1

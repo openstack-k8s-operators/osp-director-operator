@@ -54,12 +54,12 @@ func GetInitVolumeMounts(name string) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
 			Name:      name + "-image-data",
-			MountPath: "/usr/local/apache/htdocs",
+			MountPath: "/usr/local/apache2/htdocs",
 		},
 		{
 			Name:      name + "-httpd-config",
-			MountPath: "/usr/local/apache/conf",
-			ReadOnly:  true,
+			MountPath: "/usr/local/apache2/conf",
+			ReadOnly:  false,
 		},
 	}
 }
@@ -69,11 +69,11 @@ func GetVolumeMounts(name string) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
 			Name:      name + "-image-data",
-			MountPath: "/usr/local/apache/htdocs",
+			MountPath: "/usr/local/apache2/htdocs",
 		},
 		{
 			Name:      name + "-httpd-config",
-			MountPath: "/usr/local/apache/conf",
+			MountPath: "/usr/local/apache2/conf",
 			ReadOnly:  true,
 		},
 	}

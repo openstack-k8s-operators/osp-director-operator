@@ -29,14 +29,15 @@ type ProvisionServerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of ProvisionServer. Edit ProvisionServer_types.go to remove/update
-	Foo  string `json:"foo,omitempty"`
-	Port int    `json:"port"`
+	Foo          string `json:"foo,omitempty"`
+	Port         int    `json:"port"`
+	RhelImageURL string `json:"rhelImageUrl,omitempty"`
 }
 
 // ProvisionServerStatus defines the observed state of ProvisionServer
 type ProvisionServerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Provisioning IP of underlying Apache web server hosting images
+	ProvisiongServerIP string `json:"provisioningServerIp,omitempty"`
 }
 
 // +kubebuilder:object:root=true
