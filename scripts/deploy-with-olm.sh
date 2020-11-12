@@ -1,9 +1,9 @@
 #!/bin/bash
 set -x
 
-TARGET_NAMESPACE=${TARGET_NAMESPACE:-"default"}
-INDEX_IMAGE=${INDEX_IMAGE:-"quay.io/openstack-k8s-operators/osp-director-operator-index:0.0.1"}
-CSV_VERSION=${CSV_VERSION:-"0.0.1"}
+TARGET_NAMESPACE=${TARGET_NAMESPACE:-"openstack"}
+INDEX_IMAGE=${INDEX_IMAGE:-"quay.io/dprince/osp-director-operator-index:0.0.3"}
+CSV_VERSION=${CSV_VERSION:-"0.0.3"}
 
 if [ `oc get catalogsource -n "${TARGET_NAMESPACE}" --no-headers 2> /dev/null | grep osp-director | wc -l` -eq 0 ]; then
 echo "Creating CatalogSource"
@@ -12,7 +12,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
   name: osp-director-operator-index
-  namespace: default
+  namespace: $TARGET_NAMESPACE
 spec:
   sourceType: grpc
   image: $INDEX_IMAGE
