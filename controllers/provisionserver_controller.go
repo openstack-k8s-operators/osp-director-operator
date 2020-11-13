@@ -117,7 +117,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	// Update Status
-	instance.Status.ProvisiongServerIP = podIP
+	instance.Status.LocalImageURL = r.getLocalImageUrl(podIP, instance)
 	err = r.Client.Status().Update(context.TODO(), instance)
 
 	if err != nil {
@@ -299,4 +299,15 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	}
 
 	return provIP, nil
+}
+
+func (r *ProvisionServerReconciler) getLocalImageUrl(podIP string, instance *ospdirectorv1beta1.ProvisionServer) string {
+	baseFilename := instance.Spec.RhelImageURL[strings.LastIndex(instance.Spec.RhelImageURL, "/")+1 : len(instance.Spec.RhelImageURL)]
+	baseFilenameEnd := baseFilename[len(baseFilename)-3 : len(baseFilename)]
+
+	if baseFilenameEnd == ".gz" || baseFilenameEnd == ".xz" {
+		baseFilename = baseFilename[0 : len(baseFilename)-3]
+	}
+
+	return fmt.Sprintf("http://%s:%d/images/%s/compressed-%s", podIP, instance.Spec.Port, baseFilename, baseFilename)
 }
