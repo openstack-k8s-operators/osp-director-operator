@@ -15,6 +15,7 @@ COPY api/ api/
 COPY pkg/ pkg/
 COPY controllers/ controllers/
 COPY templates/ templates/
+RUN mkdir -p /usr/share/osp-director-operator/templates
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
@@ -24,9 +25,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
-COPY --from=builder /workspace/templates .
+COPY --from=builder /workspace/templates /usr/share/osp-director-operator/templates/.
 USER nonroot:nonroot
 
-ENV OPERATOR_TEMPLATES=/
+ENV OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/
 
 ENTRYPOINT ["/manager"]
