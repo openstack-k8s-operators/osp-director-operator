@@ -27,6 +27,8 @@ type BaremetalSetSpec struct {
 
 	// Replicas The number of baremetalhosts to attempt to aquire
 	Replicas int `json:"replicas,omitempty"`
+	// Remote URL pointing to desired image (in GZ format!) for the set
+	RhelImageURL string `json:"rhelImageUrl,omitempty"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet

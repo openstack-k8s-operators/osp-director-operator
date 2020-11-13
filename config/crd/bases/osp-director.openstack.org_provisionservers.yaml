@@ -36,10 +36,6 @@ spec:
         spec:
           description: ProvisionServerSpec defines the desired state of ProvisionServer
           properties:
-            foo:
-              description: Foo is an example field of ProvisionServer. Edit ProvisionServer_types.go
-                to remove/update
-              type: string
             port:
               type: integer
             rhelImageUrl:
@@ -50,7 +46,7 @@ spec:
         status:
           description: ProvisionServerStatus defines the observed state of ProvisionServer
           properties:
-            provisioningServerIp:
+            localImageUrl:
               description: Provisioning IP of underlying Apache web server hosting
                 images
               type: string

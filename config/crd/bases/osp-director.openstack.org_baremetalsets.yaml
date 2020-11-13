@@ -39,6 +39,10 @@ spec:
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               type: integer
+            rhelImageUrl:
+              description: Remote URL pointing to desired image (in GZ format!) for
+                the set
+              type: string
           type: object
         status:
           description: BaremetalSetStatus defines the observed state of BaremetalSet

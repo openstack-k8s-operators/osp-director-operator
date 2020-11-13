@@ -28,8 +28,6 @@ type ProvisionServerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ProvisionServer. Edit ProvisionServer_types.go to remove/update
-	Foo          string `json:"foo,omitempty"`
 	Port         int    `json:"port"`
 	RhelImageURL string `json:"rhelImageUrl,omitempty"`
 }
@@ -37,7 +35,7 @@ type ProvisionServerSpec struct {
 // ProvisionServerStatus defines the observed state of ProvisionServer
 type ProvisionServerStatus struct {
 	// Provisioning IP of underlying Apache web server hosting images
-	ProvisiongServerIP string `json:"provisioningServerIp,omitempty"`
+	LocalImageURL string `json:"localImageUrl,omitempty"`
 }
 
 // +kubebuilder:object:root=true
