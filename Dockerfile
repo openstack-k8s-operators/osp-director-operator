@@ -67,6 +67,6 @@ WORKDIR /
 COPY --from=builder ${DEST_ROOT}/manager .
 USER nonroot:nonroot
 
-ENV OPERATOR_TEMPLATES=/
+ENV OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/
 
 ENTRYPOINT ["/manager"]
