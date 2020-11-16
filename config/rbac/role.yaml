@@ -69,12 +69,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - hco.kubevirt.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
   - machine.openshift.io
   resources:
   - '*'
@@ -170,6 +164,22 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - anyuid
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - privileged
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

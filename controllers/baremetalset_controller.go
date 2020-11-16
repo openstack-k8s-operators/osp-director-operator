@@ -82,7 +82,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	if provisionServer.Status.LocalImageURL == "" {
 		r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer local image URL not yet available, requeuing and waiting", baremetalset.Name))
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Second * 30}, err
 	}
 
 	// Search for baremetalhosts that don't have consumerRef or Online set

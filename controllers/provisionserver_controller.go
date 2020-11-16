@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,6 +61,8 @@ type ProvisionServerReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=machine.openshift.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=metal3.io,resources="*",verbs="*"
+// +kubebuilder:rbac:groups=security.openshift.io,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
+// +kubebuilder:rbac:groups=security.openshift.io,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
 func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -113,7 +116,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	if podIP == "" {
 		r.Log.Info(fmt.Sprintf("Deployment %s pod provisioning IP not yet available, requeuing and waiting", instance.Name))
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Second * 30}, err
 	}
 
 	// Update Status
@@ -180,24 +183,16 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
 
 		replicas := int32(1)
-		falseVar := false
-		trueVar := true
 
 		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Template.Spec = corev1.PodSpec{
-			HostNetwork: true,
-			SecurityContext: &corev1.PodSecurityContext{
-				RunAsNonRoot: &falseVar,
-			},
+			HostNetwork:     true,
 			Volumes: volumes,
 			Containers: []corev1.Container{
 				{
-					Name:  "osp-httpd",
-					Image: "quay.io/abays/httpd:2.4-alpine",
-					Env:   []corev1.EnvVar{},
-					SecurityContext: &corev1.SecurityContext{
-						Privileged: &trueVar,
-					},
+					Name:            "osp-httpd",
+					Image:           "quay.io/abays/httpd:2.4-alpine",
+					Env:             []corev1.EnvVar{},
 					VolumeMounts: volumeMounts,
 				},
 			},
@@ -206,7 +201,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 		initContainerDetails := provisionserver.InitContainer{
 			ContainerImage: "quay.io/abays/downloader:latest",
 			RhelImageURL:   instance.Spec.RhelImageURL,
-			Privileged:     true,
+			Privileged:     false,
 			VolumeMounts:   initVolumeMounts,
 		}
 
