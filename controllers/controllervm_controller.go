@@ -387,7 +387,6 @@ func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.C
 
 		//Todo: mschuppert log vm definition when debug?
 		r.Log.Info(fmt.Sprintf("/n%s/n", obj))
-		//os.Exit(1)
 		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
 			r.Log.Error(err, "Failed to apply objects")
 			return err

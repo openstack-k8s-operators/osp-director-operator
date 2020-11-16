@@ -85,8 +85,12 @@ spec:
               - networks
               - storageClass
               type: object
+            openStackClientImageURL:
+              description: OpenstackClient image
+              type: string
           required:
           - controller
+          - openStackClientImageURL
           type: object
         status:
           description: ControlPlaneStatus defines the observed state of ControlPlane
