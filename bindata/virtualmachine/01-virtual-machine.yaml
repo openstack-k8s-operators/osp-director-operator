@@ -1,0 +1,77 @@
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: {{ .DomainName }}
+  name: {{ .DomainName }}
+  namespace: {{ .Namespace }}
+  annotations:
+    k8s.v1.cni.cncf.io/networks: {{ .Namespace }}/ctlplane
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      creationTimestamp: null
+      name: {{ .DomainNameUniq }}
+      namespace: {{ .Namespace }}
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .DiskSize }}Gi
+        volumeMode: Filesystem
+        storageClassName: {{ .StorageClass }}
+      source:
+        pvc:
+          name: {{ .BaseImageName }}
+          namespace: {{ .Namespace }}
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: {{ .DomainName }}
+    spec:
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+          #- bridge: {}
+          #  name: ctlplane
+          networkInterfaceMultiqueue: true
+          rng: {}
+        machine:
+          type: ""
+        resources:
+          requests:
+            memory: {{ .Memory }}Gi
+      evictionStrategy: LiveMigrate
+      hostname: {{ .DomainName }}
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - dataVolume:
+          name:  {{ .DomainNameUniq }}
+        name: rootdisk
+      - cloudInitNoCloud:
+          secretRef:
+            name: {{ .UserDataSecret }}
+        name: cloudinitdisk
+      networks:
+      - name: default
+        pod: {}
+      #- multus:
+      #    networkName: ctlplane
+      #  name: ctlplane
+
+
+

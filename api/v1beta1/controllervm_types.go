@@ -20,13 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ControlPlaneSpec defines the desired state of ControlPlane
-type ControlPlaneSpec struct {
-	Controller ControllerSpec `json:"controller"`
-}
-
-// ControllerSpec - defines the desired state of Controllers VMs
-type ControllerSpec struct {
+// ControllerVMSpec defines the desired state of ControllerVM
+type ControllerVMSpec struct {
 	// Number of controllers to configure, 1 or 3
 	ControllerCount int `json:"controllerCount"`
 	// number of Cores assigned to the controller VMs
@@ -39,37 +34,43 @@ type ControllerSpec struct {
 	BaseImageURL string `json:"baseImageURL"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass"`
+	// name of secret holding the stack-admin ssh keys
+	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// Networks - e.g. ctlplane, tenant, internalAPI, storage, storageMgmt, external
 	Networks []Network `json:"networks"`
 }
 
-// ControlPlaneStatus defines the observed state of ControlPlane
-type ControlPlaneStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+// ControllerVMStatus defines the observed state of ControllerVM
+type ControllerVMStatus struct {
+	// BaseImageDVReady is the status of the BaseImage DataVolume
+	BaseImageDVReady bool `json:"baseImageDVReady"`
+	// ControllersReady is the number of ready  kubevirt controller vm instances
+	ControllersReady int32 `json:"controllersReady"`
+	// Controllers are the names of the kubevirt controller vm pods
+	Controllers []string `json:"controllers"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// ControlPlane is the Schema for the controlplanes API
-type ControlPlane struct {
+// ControllerVM is the Schema for the controllervms API
+type ControllerVM struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ControlPlaneSpec   `json:"spec,omitempty"`
-	Status ControlPlaneStatus `json:"status,omitempty"`
+	Spec   ControllerVMSpec   `json:"spec,omitempty"`
+	Status ControllerVMStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// ControlPlaneList contains a list of ControlPlane
-type ControlPlaneList struct {
+// ControllerVMList contains a list of ControllerVM
+type ControllerVMList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ControlPlane `json:"items"`
+	Items           []ControllerVM `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ControlPlane{}, &ControlPlaneList{})
+	SchemeBuilder.Register(&ControllerVM{}, &ControllerVMList{})
 }

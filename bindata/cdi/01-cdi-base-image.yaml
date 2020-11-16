@@ -1,0 +1,16 @@
+apiVersion: cdi.kubevirt.io/v1alpha1
+kind: DataVolume
+metadata:
+  name: {{ .BaseImageName }}
+  namespace: {{ .Namespace }}
+spec:
+  pvc:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: {{ .DiskSize }}Gi
+    volumeMode: Filesystem
+  source:
+    http:
+      url: {{ .BaseImageURL }}
