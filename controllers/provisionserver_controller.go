@@ -63,6 +63,7 @@ type ProvisionServerReconciler struct {
 // +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
 // +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
+// Reconcile - provision image servers
 func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("provisionserver", req.NamespacedName)
@@ -117,7 +118,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	// Update Status
-	instance.Status.LocalImageURL = r.getLocalImageUrl(podIP, instance)
+	instance.Status.LocalImageURL = r.getLocalImageURL(podIP, instance)
 	err = r.Client.Status().Update(context.TODO(), instance)
 
 	if err != nil {
@@ -128,6 +129,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager - prepare controller for use with operator manager
 func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
@@ -296,7 +298,7 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	return provIP, nil
 }
 
-func (r *ProvisionServerReconciler) getLocalImageUrl(podIP string, instance *ospdirectorv1beta1.ProvisionServer) string {
+func (r *ProvisionServerReconciler) getLocalImageURL(podIP string, instance *ospdirectorv1beta1.ProvisionServer) string {
 	baseFilename := instance.Spec.RhelImageURL[strings.LastIndex(instance.Spec.RhelImageURL, "/")+1 : len(instance.Spec.RhelImageURL)]
 	baseFilenameEnd := baseFilename[len(baseFilename)-3 : len(baseFilename)]
 
