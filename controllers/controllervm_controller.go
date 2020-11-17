@@ -199,6 +199,8 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager -
 func (r *ControllerVMReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO: Myabe use filtering functions here since some resource permissions
+	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ControllerVM{}).
 		Owns(&corev1.ConfigMap{}).

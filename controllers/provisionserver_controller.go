@@ -34,7 +34,6 @@ import (
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
-	"github.com/openstack-k8s-operators/osp-director-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -82,8 +81,6 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, err
 	}
 
-	envVars := make(map[string]util.EnvSetter)
-
 	// config maps
 	op, err := r.httpdConfigMapCreateOrUpdate(instance)
 
@@ -97,7 +94,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	// provisionserver
 	// Create or update the Deployment object
-	op, err = r.deploymentCreateOrUpdate(instance, envVars)
+	op, err = r.deploymentCreateOrUpdate(instance)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -107,7 +104,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
-	// Get the
+	// Get the provisioning IP of node hosting the pod belonging to the CR
 	podIP, err := r.getProvisionServerProvisioningIP(instance)
 
 	if err != nil {
@@ -132,6 +129,8 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 }
 
 func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO: Myabe use filtering functions here since some resource permissions
+	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ProvisionServer{}).
 		Owns(&appsv1.Deployment{}).
@@ -156,7 +155,7 @@ func (r *ProvisionServerReconciler) httpdConfigMapCreateOrUpdate(instance *ospdi
 
 }
 
-func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer, envVars map[string]util.EnvSetter) (controllerutil.OperationResult, error) {
+func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer) (controllerutil.OperationResult, error) {
 
 	// Get volumes
 	initVolumeMounts := provisionserver.GetInitVolumeMounts(instance.Name)
@@ -257,6 +256,7 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	machineName := strings.Split(node.ObjectMeta.Annotations["machine.openshift.io/machine"], "/")[1]
 	r.Log.Info(fmt.Sprintf("Found node %s on machine %s", node.Name, machineName))
 
+	// Get machine associated with node
 	machine := &machinev1beta1.Machine{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: machineName, Namespace: "openshift-machine-api"}, machine)
 
@@ -275,18 +275,21 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 		return "", err
 	}
 
-	r.Log.Info(fmt.Sprintf("Found bare metal host %s", bmh.Name))
+	r.Log.Info(fmt.Sprintf("Found baremetalhost %s", bmh.Name))
 
+	// TODO: There is likely a better way we should be doing this.
 	// Get baremetalhost's provisioning IP by using its spec's "bootMACAddress" and finding
 	// the nic in its status with that MAC address
 	provMAC := bmh.Spec.BootMACAddress
 	provIP := ""
 
-	for _, nic := range bmh.Status.HardwareDetails.NIC {
-		if nic.MAC == provMAC {
-			provIP = nic.IP
-			r.Log.Info(fmt.Sprintf("Found provisioning IP %s on bare metal host %s", provIP, bmh.Name))
-			break
+	if bmh.Status.HardwareDetails != nil {
+		for _, nic := range bmh.Status.HardwareDetails.NIC {
+			if nic.MAC == provMAC {
+				provIP = nic.IP
+				r.Log.Info(fmt.Sprintf("Found provisioning IP %s on baremetalhost %s", provIP, bmh.Name))
+				break
+			}
 		}
 	}
 

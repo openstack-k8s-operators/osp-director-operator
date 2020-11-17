@@ -27,7 +27,7 @@ type BaremetalSetSpec struct {
 
 	// Replicas The number of baremetalhosts to attempt to aquire
 	Replicas int `json:"replicas,omitempty"`
-	// Remote URL pointing to desired image (in GZ format!) for the set
+	// Remote URL pointing to desired RHEL qcow2 image (TODO: currently gzipped only) for the set
 	RhelImageURL string `json:"rhelImageUrl,omitempty"`
 }
 

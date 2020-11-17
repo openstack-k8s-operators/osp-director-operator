@@ -28,13 +28,15 @@ type ProvisionServerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Port         int    `json:"port"`
+	// The port on which the Apache server should listen
+	Port int `json:"port"`
+	// URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed -- current implementation is Metal3 pattern)
 	RhelImageURL string `json:"rhelImageUrl,omitempty"`
 }
 
 // ProvisionServerStatus defines the observed state of ProvisionServer
 type ProvisionServerStatus struct {
-	// Provisioning IP of underlying Apache web server hosting images
+	// URL of provisioning image on underlying Apache web server
 	LocalImageURL string `json:"localImageUrl,omitempty"`
 }
 

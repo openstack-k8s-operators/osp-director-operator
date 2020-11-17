@@ -37,8 +37,11 @@ spec:
           description: ProvisionServerSpec defines the desired state of ProvisionServer
           properties:
             port:
+              description: The port on which the Apache server should listen
               type: integer
             rhelImageUrl:
+              description: 'URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed
+                -- current implementation is Metal3 pattern)'
               type: string
           required:
           - port
@@ -47,8 +50,7 @@ spec:
           description: ProvisionServerStatus defines the observed state of ProvisionServer
           properties:
             localImageUrl:
-              description: Provisioning IP of underlying Apache web server hosting
-                images
+              description: URL of provisioning image on underlying Apache web server
               type: string
           type: object
       type: object

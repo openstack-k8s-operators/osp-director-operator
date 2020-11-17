@@ -159,6 +159,8 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager -
 func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO: Myabe use filtering functions here since some resource permissions
+	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ControlPlane{}).
 		Owns(&corev1.Secret{}).

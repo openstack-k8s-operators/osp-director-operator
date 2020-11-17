@@ -40,8 +40,8 @@ spec:
               description: Replicas The number of baremetalhosts to attempt to aquire
               type: integer
             rhelImageUrl:
-              description: Remote URL pointing to desired image (in GZ format!) for
-                the set
+              description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:
+                currently gzipped only) for the set'
               type: string
           type: object
         status:
