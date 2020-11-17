@@ -11,7 +11,6 @@ require (
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
-	github.com/openshift/api v3.9.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.7.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
