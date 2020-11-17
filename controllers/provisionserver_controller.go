@@ -50,19 +50,19 @@ type ProvisionServerReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=core,resources=volumes,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,namespace=openstack,resources=configmaps,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=core,namespace=openstack,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=apps,namespace=openstack,resources=deployments,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=core,namespace=openstack,resources=volumes,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;update;watch;
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
+// +kubebuilder:rbac:groups=core,namespace=openstack,resources=pods,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=machine.openshift.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=metal3.io,resources="*",verbs="*"
-// +kubebuilder:rbac:groups=security.openshift.io,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
-// +kubebuilder:rbac:groups=security.openshift.io,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
+// +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
+// +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
 func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -186,13 +186,13 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 
 		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Template.Spec = corev1.PodSpec{
-			HostNetwork:     true,
-			Volumes: volumes,
+			HostNetwork: true,
+			Volumes:     volumes,
 			Containers: []corev1.Container{
 				{
-					Name:            "osp-httpd",
-					Image:           "quay.io/abays/httpd:2.4-alpine",
-					Env:             []corev1.EnvVar{},
+					Name:         "osp-httpd",
+					Image:        "quay.io/abays/httpd:2.4-alpine",
+					Env:          []corev1.EnvVar{},
 					VolumeMounts: volumeMounts,
 				},
 			},

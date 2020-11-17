@@ -12,20 +12,20 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-      - description: ControlPlane is the Schema for the controlplanes API
-        displayName: Control Plane
-        kind: ControlPlane
-        name: controlplanes.osp-director.openstack.org
-        version: v1beta1
-      - description: ControllerVM is the Schema for the controllervms API
-        displayName: Controller VM
-        kind: ControllerVM
-        name: controllervms.osp-director.openstack.org
-        version: v1beta1
-      - description: ProvisionServer is the Schema for the provisionservers API
-        displayName: Provision Server
-        kind: ProvisionServer
-        name: provisionservers.osp-director.openstack.org
+    - description: ControlPlane is the Schema for the controlplanes API
+      displayName: Control Plane
+      kind: ControlPlane
+      name: controlplanes.osp-director.openstack.org
+      version: v1beta1
+    - description: ControllerVM is the Schema for the controllervms API
+      displayName: Controller VM
+      kind: ControllerVM
+      name: controllervms.osp-director.openstack.org
+      version: v1beta1
+    - description: ProvisionServer is the Schema for the provisionservers API
+      displayName: Provision Server
+      kind: ProvisionServer
+      name: provisionservers.osp-director.openstack.org
       version: v1beta1
     - description: BaremetalSet is the Schema for the baremetalsets API
       displayName: Baremetal Set
