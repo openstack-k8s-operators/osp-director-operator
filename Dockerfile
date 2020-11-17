@@ -29,7 +29,7 @@ FROM gcr.io/distroless/static:nonroot
 ENV USER_UID=1001 \
     OPERATOR_BINDATA_DIR=/bindata/ \
     OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/ \
-    WATCH_NAMESPACE=openstack
+    WATCH_NAMESPACE=openstack,openshift-machine-api
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

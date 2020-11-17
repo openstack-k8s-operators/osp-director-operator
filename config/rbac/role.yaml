@@ -7,56 +7,6 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - machine.openshift.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
-  - metal3.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
-  - metal3.io
-  resources:
-  - baremetalhosts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - metal3.io
-  resources:
-  - baremetalhosts/status
-  verbs:
-  - get
-  - patch
-  - update
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  creationTimestamp: null
-  name: manager-role
-  namespace: openstack
-rules:
-- apiGroups:
   - apps
   resources:
   - daemonsets
@@ -77,18 +27,6 @@ rules:
   - delete
   - get
   - list
-  - update
-  - watch
-- apiGroups:
-  - cdi.kubevirt.io
-  resources:
-  - datavolumes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -132,6 +70,15 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - get
@@ -162,15 +109,21 @@ rules:
   - update
   - watch
 - apiGroups:
-  - hco.kubevirt.io
+  - machine.openshift.io
   resources:
   - '*'
   verbs:
   - '*'
 - apiGroups:
-  - k8s.cni.cncf.io
+  - metal3.io
   resources:
-  - network-attachment-definitions
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
   verbs:
   - create
   - delete
@@ -180,17 +133,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - kubevirt.io
+  - metal3.io
   resources:
-  - virtualmachines
+  - baremetalhosts/status
   verbs:
-  - create
-  - delete
   - get
-  - list
   - patch
   - update
-  - watch
 - apiGroups:
   - osp-director.openstack.org
   resources:
@@ -278,12 +227,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - deployments/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - provisionservers
   verbs:
   - create
@@ -312,6 +255,63 @@ rules:
   verbs:
   - get
   - patch
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: manager-role
+  namespace: openstack
+rules:
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datavolumes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hco.kubevirt.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kubevirt.io
+  resources:
+  - virtualmachines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - deployments/finalizers
+  verbs:
   - update
 - apiGroups:
   - security.openshift.io

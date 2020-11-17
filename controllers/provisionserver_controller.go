@@ -50,15 +50,15 @@ type ProvisionServerReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=provisionservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,namespace=openstack,resources=configmaps,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=core,namespace=openstack,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=apps,namespace=openstack,resources=deployments,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=core,namespace=openstack,resources=volumes,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=core,resources=volumes,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;update;watch;
-// +kubebuilder:rbac:groups=core,namespace=openstack,resources=pods,verbs=get;list;update;watch;
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=machine.openshift.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=metal3.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
@@ -255,10 +255,8 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	}
 
 	machineName := strings.Split(node.ObjectMeta.Annotations["machine.openshift.io/machine"], "/")[1]
-
 	r.Log.Info(fmt.Sprintf("Found node %s on machine %s", node.Name, machineName))
 
-	// Get machine associated with node
 	machine := &machinev1beta1.Machine{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: machineName, Namespace: "openshift-machine-api"}, machine)
 
@@ -267,7 +265,6 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	}
 
 	bmhName := strings.Split(machine.ObjectMeta.Annotations["metal3.io/BareMetalHost"], "/")[1]
-
 	r.Log.Info(fmt.Sprintf("Found machine %s on bare metal host %s", machine.Name, bmhName))
 
 	// Get baremetalhost associated with machine
