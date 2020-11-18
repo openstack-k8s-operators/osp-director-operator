@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,8 +39,29 @@ import (
 // BaremetalSetReconciler reconciles a BaremetalSet object
 type BaremetalSetReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
+}
+
+// GetClient -
+func (r *BaremetalSetReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *BaremetalSetReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetLogger -
+func (r *BaremetalSetReconciler) GetLogger() logr.Logger {
+	return r.Log
+}
+
+// GetScheme -
+func (r *BaremetalSetReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
 }
 
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=baremetalsets,verbs=get;list;watch;create;update;patch;delete

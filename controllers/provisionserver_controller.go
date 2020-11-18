@@ -49,6 +49,26 @@ type ProvisionServerReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
+// GetClient -
+func (r *ProvisionServerReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *ProvisionServerReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetLogger -
+func (r *ProvisionServerReconciler) GetLogger() logr.Logger {
+	return r.Log
+}
+
+// GetScheme -
+func (r *ProvisionServerReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
+}
+
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
