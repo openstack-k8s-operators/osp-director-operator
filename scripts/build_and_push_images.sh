@@ -20,18 +20,16 @@ make manifests
 make generate
 IMG=${IMG} make docker-build docker-push
 
+rm -Rf bundle
+rm -Rf bundle.Dockerfile
+
 # Bundle image
 VERSION=${VERSION} IMG=${IMG} make bundle
-#yq '. | .spec.installModes=[{"type":"OwnNamespace","supported":true},{"type":"SingleNamespace","supported":true},{"type":"MultiNamespace","supported":true},{"type":"AllNamespaces","supported":true}]' \
-#config/manifests/bases/${OP_NAME}.clusterserviceversion.yaml -yri
-#yq '. | .spec.replaces=""'  bundle/manifests/${OP_NAME}.clusterserviceversion.yaml -yri
-VERSION=${IMG} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
+VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
+
 podman push ${BUNDLE_IMG}
+#opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
 # Index image
 opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman
 podman push ${INDEX_IMG}
-
-# This falsely claims there is a problem finding manifests and metadata, yet everything
-# deploys fine in the cluster if one tries it out
-#opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
