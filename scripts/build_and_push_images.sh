@@ -27,7 +27,7 @@ rm -Rf bundle.Dockerfile
 VERSION=${VERSION} IMG=${IMG} make bundle
 VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
 podman push ${BUNDLE_IMG}
-opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
+#opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
 # Index image
 opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman
