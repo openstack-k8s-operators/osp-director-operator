@@ -1,0 +1,8 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: BaremetalSet
+metadata:
+  name: baremetalset-sample
+  namespace: openstack
+spec:
+  replicas: 1
+  rhelImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz

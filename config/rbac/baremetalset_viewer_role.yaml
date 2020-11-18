@@ -1,0 +1,20 @@
+# permissions for end users to view baremetalsets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baremetalset-viewer-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - baremetalsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - baremetalsets/status
+  verbs:
+  - get

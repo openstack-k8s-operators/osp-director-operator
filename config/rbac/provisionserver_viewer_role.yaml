@@ -1,0 +1,20 @@
+# permissions for end users to view provisionservers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: provisionserver-viewer-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - provisionservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - provisionservers/status
+  verbs:
+  - get

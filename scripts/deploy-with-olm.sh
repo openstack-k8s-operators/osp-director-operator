@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 
-TARGET_NAMESPACE=${TARGET_NAMESPACE:-"default"}
+TARGET_NAMESPACE=${TARGET_NAMESPACE:-"openstack"}
 INDEX_IMAGE=${INDEX_IMAGE:-"quay.io/openstack-k8s-operators/osp-director-operator-index:0.0.1"}
 CSV_VERSION=${CSV_VERSION:-"0.0.1"}
 

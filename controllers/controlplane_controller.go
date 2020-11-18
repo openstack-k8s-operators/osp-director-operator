@@ -65,13 +65,13 @@ func (r *ControlPlaneReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=controlplanes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=controlplanes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=controlplanes/finalizers,verbs=update
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=controllervms,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=controllervms/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms/finalizers,verbs=update
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
-// +kubebuilder:rbac:groups=core,namespace=openstack,resources=secrets,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - control plane
 func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -159,6 +159,8 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager -
 func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// TODO: Myabe use filtering functions here since some resource permissions
+	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ControlPlane{}).
 		Owns(&corev1.Secret{}).

@@ -1,0 +1,8 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: ProvisionServer
+metadata:
+  name: provisionserver-sample
+  namespace: openstack
+spec:
+  port: 8080
+  rhelImageUrl: http://172.22.0.1:8080/rhel-guest-image-8.3-417.x86_64.qcow2.gz
