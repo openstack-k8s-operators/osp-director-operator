@@ -20,18 +20,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ProvisionServerSpec defines the desired state of ProvisionServer
 type ProvisionServerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// The port on which the Apache server should listen
 	Port int `json:"port"`
 	// URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed -- current implementation is Metal3 pattern)
-	RhelImageURL string `json:"rhelImageUrl,omitempty"`
+	RhelImageURL string `json:"rhelImageUrl"`
 }
 
 // ProvisionServerStatus defines the observed state of ProvisionServer

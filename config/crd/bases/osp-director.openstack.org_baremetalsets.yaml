@@ -43,6 +43,8 @@ spec:
               description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:
                 currently gzipped only) for the set'
               type: string
+          required:
+          - rhelImageUrl
           type: object
         status:
           description: BaremetalSetStatus defines the observed state of BaremetalSet

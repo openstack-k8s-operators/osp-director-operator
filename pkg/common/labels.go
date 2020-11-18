@@ -24,10 +24,3 @@ func GetLabels(name string, appLabel string) map[string]string {
 		"app":   appLabel,
 	}
 }
-
-// InitLabelMap - Inititialise a label map to an empty map if it is nil.
-func InitLabelMap(m *map[string]string) {
-	if *m == nil {
-		*m = make(map[string]string)
-	}
-}

@@ -45,6 +45,7 @@ spec:
               type: string
           required:
           - port
+          - rhelImageUrl
           type: object
         status:
           description: ProvisionServerStatus defines the observed state of ProvisionServer

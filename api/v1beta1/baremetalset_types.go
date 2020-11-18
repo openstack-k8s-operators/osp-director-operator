@@ -22,19 +22,14 @@ import (
 
 // BaremetalSetSpec defines the desired state of BaremetalSet
 type BaremetalSetSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Replicas The number of baremetalhosts to attempt to aquire
 	Replicas int `json:"replicas,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image (TODO: currently gzipped only) for the set
-	RhelImageURL string `json:"rhelImageUrl,omitempty"`
+	RhelImageURL string `json:"rhelImageUrl"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet
 type BaremetalSetStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
