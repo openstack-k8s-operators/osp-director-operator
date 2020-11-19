@@ -36,10 +36,57 @@ spec:
         spec:
           description: ControlPlaneSpec defines the desired state of ControlPlane
           properties:
-            foo:
-              description: Foo is an example field of ControlPlane. Edit ControlPlane_types.go
-                to remove/update
-              type: string
+            controller:
+              description: ControllerSpec - defines the desired state of Controllers
+                VMs
+              properties:
+                baseImageURL:
+                  description: Name of the VM base image used to setup the controller
+                    VMs
+                  type: string
+                controllerCount:
+                  description: Number of controllers to configure, 1 or 3
+                  type: integer
+                cores:
+                  description: number of Cores assigned to the controller VMs
+                  format: int32
+                  type: integer
+                diskSize:
+                  description: root Disc size in GB
+                  format: int32
+                  type: integer
+                memory:
+                  description: amount of Memory in GB used by the controller VMs
+                  format: int32
+                  type: integer
+                networks:
+                  description: Networks - e.g. ctlplane, tenant, internalAPI, storage,
+                    storageMgmt, external
+                  items:
+                    description: 'Network - OSP networks used to create network-attachment-definitions
+                      for each of them TODO: that might change depending on our outcome
+                      of network config'
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type: array
+                storageClass:
+                  description: StorageClass to be used for the controller disks
+                  type: string
+              required:
+              - baseImageURL
+              - controllerCount
+              - cores
+              - diskSize
+              - memory
+              - networks
+              - storageClass
+              type: object
+          required:
+          - controller
           type: object
         status:
           description: ControlPlaneStatus defines the observed state of ControlPlane

@@ -12,7 +12,12 @@ RUN go mod download
 # Copy the go source
 COPY main.go main.go
 COPY api/ api/
+COPY pkg/ pkg/
 COPY controllers/ controllers/
+COPY templates/ templates/
+COPY bindata/ bindata/
+RUN mkdir -p /usr/share/osp-director-operator/templates
+RUN mkdir -p /bindata/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
@@ -20,8 +25,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
+
+ENV USER_UID=1001 \
+    OPERATOR_BINDATA_DIR=/bindata/ \
+    OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/ \
+    WATCH_NAMESPACE=openstack,openshift-machine-api
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/templates /usr/share/osp-director-operator/templates/.
+COPY --from=builder /workspace/bindata /bindata/.
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

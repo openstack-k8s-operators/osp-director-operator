@@ -20,16 +20,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ControlPlaneSpec defines the desired state of ControlPlane
 type ControlPlaneSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Controller ControllerSpec `json:"controller"`
+}
 
-	// Foo is an example field of ControlPlane. Edit ControlPlane_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// ControllerSpec - defines the desired state of Controllers VMs
+type ControllerSpec struct {
+	// Number of controllers to configure, 1 or 3
+	ControllerCount int `json:"controllerCount"`
+	// number of Cores assigned to the controller VMs
+	Cores uint32 `json:"cores"`
+	// amount of Memory in GB used by the controller VMs
+	Memory uint32 `json:"memory"`
+	// root Disc size in GB
+	DiskSize uint32 `json:"diskSize"`
+	// Name of the VM base image used to setup the controller VMs
+	BaseImageURL string `json:"baseImageURL"`
+	// StorageClass to be used for the controller disks
+	StorageClass string `json:"storageClass"`
+	// Networks - e.g. ctlplane, tenant, internalAPI, storage, storageMgmt, external
+	Networks []Network `json:"networks"`
 }
 
 // ControlPlaneStatus defines the observed state of ControlPlane

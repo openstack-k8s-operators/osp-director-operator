@@ -1,0 +1,16 @@
+#cloud-config
+users:
+  - name: cloud-admin
+    # for now set a password '12345678'
+    passwd: $6$s2t53Brmt2f0Ws5G$mdOCrvOrlKSrjpzLjxtgC5cb6.d5eHMLwmshbVYhs9.u0xdmy5m/Z8SJgc52wZ4V2N8gGS1bnjJ8hBF1w4tW/1
+    lock_passwd: false
+    ssh-authorized-keys: {{ .AuthorizedKeys }}
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+write_files:
+  - path: /tmp/write_file
+    content: |
+      BLAA
+      BOOOO
+runcmd:
+  - echo "GNAHHH" > /tmp/runcmd

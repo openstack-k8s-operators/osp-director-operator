@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 
-TARGET_NAMESPACE=${TARGET_NAMESPACE:-"default"}
+TARGET_NAMESPACE=${TARGET_NAMESPACE:-"openstack"}
 INDEX_IMAGE=${INDEX_IMAGE:-"quay.io/openstack-k8s-operators/osp-director-operator-index:0.0.1"}
 CSV_VERSION=${CSV_VERSION:-"0.0.1"}
 
@@ -12,7 +12,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
   name: osp-director-operator-index
-  namespace: default
+  namespace: "$TARGET_NAMESPACE"
 spec:
   sourceType: grpc
   image: $INDEX_IMAGE
@@ -56,6 +56,10 @@ metadata:
   name: osp-director-operator-subscription
   namespace: $TARGET_NAMESPACE
 spec:
+  config:
+    env:
+    - name: WATCH_NAMESPACE
+      value: $TARGET_NAMESPACE
   source: osp-director-operator-index
   sourceNamespace: $TARGET_NAMESPACE
   name: osp-director-operator
