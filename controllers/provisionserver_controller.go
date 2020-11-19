@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	metal3valpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -103,19 +105,34 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	// config maps
-	op, err := r.httpdConfigMapCreateOrUpdate(instance)
+	envVars := make(map[string]common.EnvSetter)
+	cmLabels := common.GetLabels(instance.Name, provisionserver.AppLabel)
 
-	if err != nil {
-		return ctrl.Result{}, err
+	templateParameters := make(map[string]string)
+	templateParameters["Port"] = strconv.Itoa(instance.Spec.Port)
+
+	cm := []common.Template{
+		// Apache server config
+		{
+			Name:           fmt.Sprintf("%s-httpd-config", instance.Name),
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			Labels:         cmLabels,
+			ConfigOptions:  templateParameters,
+		},
 	}
 
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Httpd ConfigMap %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+
+	if err != nil {
+		return ctrl.Result{}, nil
 	}
 
 	// provisionserver
 	// Create or update the Deployment object
-	op, err = r.deploymentCreateOrUpdate(instance)
+	op, err := r.deploymentCreateOrUpdate(instance)
 
 	if err != nil {
 		return ctrl.Result{}, err
