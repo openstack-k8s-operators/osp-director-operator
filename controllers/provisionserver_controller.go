@@ -285,6 +285,12 @@ func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *o
 	pod := podList.Items[0]
 	r.Log.Info(fmt.Sprintf("Found pod %s on node %s", pod.Name, pod.Spec.NodeName))
 
+	// If the pod is not running yet, we don't actually have the server available
+	// on the provisioning IP, so just stop here for now
+	if pod.Status.Phase != corev1.PodRunning {
+		return "", nil
+	}
+
 	// Get node on which pod is scheduled
 	node, err := r.Kclient.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
 
