@@ -29,6 +29,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -70,6 +73,8 @@ func (r *ControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
@@ -154,16 +159,92 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 
+	// get PodIP's from the OSP controller VMs and update openstackclient
+	controllerPodList, err := common.GetAllPodsWithLabel(r, map[string]string{
+		"controllervms.osp-director.openstack.org/ospcontroller": "True",
+	}, instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// TODO:
+	// - check vm container status and update CR.Status.ControllersReady
+	// - change CR.Status.Controllers to be struct with name + Pod IP of the controllers
+
+	// Create openstack client pod
+	openstackclient := &ospdirectorv1beta1.OpenStackClient{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "openstackclient",
+			Namespace: instance.Namespace,
+		},
+	}
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
+		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
+		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
+		openstackclient.Spec.CloudName = instance.Name
+		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)
+
+		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("OpenStackClient CR successfully reconciled - operation: %s", string(op)))
+		return ctrl.Result{}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager -
 func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// TODO: Myabe use filtering functions here since some resource permissions
-	// are now cluster-scoped?
+
+	// watch for objects in the same namespace as the controller CR
+	namespacedFn := handler.ToRequestsFunc(func(obj handler.MapObject) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all CRs from the same namespace
+		crs := &ospdirectorv1beta1.ControlPlaneList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(obj.Meta.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve CRs %v")
+			return nil
+		}
+
+		for _, cr := range crs.Items {
+			if obj.Meta.GetNamespace() == cr.Namespace {
+				// return namespace and Name of CR
+				name := client.ObjectKey{
+					Namespace: cr.Namespace,
+					Name:      cr.Name,
+				}
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ControlPlane{}).
 		Owns(&corev1.Secret{}).
 		Owns(&ospdirectorv1beta1.ControllerVM{}).
+		Owns(&ospdirectorv1beta1.OpenStackClient{}).
+		// watch pods in the same namespace as we want to reconcile if
+		// e.g. a controller vm gets destroyed
+		Watches(&source.Kind{Type: &corev1.Pod{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: namespacedFn,
+			}).
 		Complete(r)
 }

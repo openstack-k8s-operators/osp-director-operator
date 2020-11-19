@@ -1,0 +1,8 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackClient
+metadata:
+  name: openstackclient
+  namespace: openstack
+spec:
+  imageURL: quay.io/openstack-k8s-operators/tripleo-deploy
+  deploymentSSHSecret: osp-controlplane-ssh-keys

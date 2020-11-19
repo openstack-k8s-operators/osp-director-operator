@@ -2,8 +2,6 @@
 apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
 metadata:
-  labels:
-    kubevirt.io/vm: {{ .DomainName }}
   name: {{ .DomainName }}
   namespace: {{ .Namespace }}
   annotations:
@@ -32,6 +30,7 @@ spec:
     metadata:
       labels:
         kubevirt.io/vm: {{ .DomainName }}
+        controllervms.osp-director.openstack.org/ospcontroller: "True"
     spec:
       domain:
         devices:

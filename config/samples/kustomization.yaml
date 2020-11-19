@@ -4,4 +4,5 @@ resources:
 - osp-director_v1beta1_controllervm.yaml
 - osp-director_v1beta1_provisionserver.yaml
 - osp-director_v1beta1_baremetalset.yaml
+- osp-director_v1beta1_openstackclient.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

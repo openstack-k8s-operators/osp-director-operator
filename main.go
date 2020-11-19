@@ -139,6 +139,7 @@ func main() {
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProvisionServer")
+		os.Exit(1)
 	}
 	if err = (&controllers.BaremetalSetReconciler{
 		Client:  mgr.GetClient(),
@@ -147,6 +148,15 @@ func main() {
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BaremetalSet")
+		os.Exit(1)
+	}
+	if err = (&controllers.OpenStackClientReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackClient"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackClient")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

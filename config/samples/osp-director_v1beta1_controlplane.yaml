@@ -4,6 +4,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
+  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy
   controller:
     controllerCount: 1
     cores: 2

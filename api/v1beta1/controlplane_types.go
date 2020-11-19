@@ -23,6 +23,8 @@ import (
 // ControlPlaneSpec defines the desired state of ControlPlane
 type ControlPlaneSpec struct {
 	Controller ControllerSpec `json:"controller"`
+	// OpenstackClient image
+	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 }
 
 // ControllerSpec - defines the desired state of Controllers VMs
