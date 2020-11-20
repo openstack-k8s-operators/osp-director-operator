@@ -177,23 +177,6 @@ func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ProvisionServerReconciler) httpdConfigMapCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer) (controllerutil.OperationResult, error) {
-	cm := provisionserver.HttpdConfigMap(instance)
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, cm, func() error {
-		err := controllerutil.SetControllerReference(instance, cm, r.Scheme)
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return op, err
-
-}
-
 func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer) (controllerutil.OperationResult, error) {
 
 	// Get volumes
