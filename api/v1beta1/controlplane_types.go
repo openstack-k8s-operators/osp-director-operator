@@ -41,8 +41,8 @@ type ControllerSpec struct {
 	BaseImageURL string `json:"baseImageURL"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass"`
-	// Networks - e.g. ctlplane, tenant, internalAPI, storage, storageMgmt, external
-	Networks []Network `json:"networks"`
+	// OSPNetwork
+	OSPNetwork Network `json:"ospNetwork"`
 }
 
 // ControlPlaneStatus defines the observed state of ControlPlane

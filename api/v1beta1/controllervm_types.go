@@ -36,8 +36,8 @@ type ControllerVMSpec struct {
 	StorageClass string `json:"storageClass"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
-	// Networks - e.g. ctlplane, tenant, internalAPI, storage, storageMgmt, external
-	Networks []Network `json:"networks"`
+	// OSPNetwork
+	OSPNetwork Network `json:"ospNetwork"`
 }
 
 // ControllerVMStatus defines the observed state of ControllerVM

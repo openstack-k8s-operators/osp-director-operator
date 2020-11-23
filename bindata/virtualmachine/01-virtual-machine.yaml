@@ -5,7 +5,7 @@ metadata:
   name: {{ .DomainName }}
   namespace: {{ .Namespace }}
   annotations:
-    k8s.v1.cni.cncf.io/networks: {{ .Namespace }}/ctlplane
+    k8s.v1.cni.cncf.io/networks: {{ .Namespace }}/{{ .Network }}
 spec:
   dataVolumeTemplates:
   - metadata:
@@ -45,8 +45,8 @@ spec:
           - masquerade: {}
             model: virtio
             name: default
-          #- bridge: {}
-          #  name: ctlplane
+          - bridge: {}
+            name: osp
           networkInterfaceMultiqueue: true
           rng: {}
         machine:
@@ -68,9 +68,9 @@ spec:
       networks:
       - name: default
         pod: {}
-      #- multus:
-      #    networkName: ctlplane
-      #  name: ctlplane
+      - multus:
+          networkName: {{ .Network }}
+        name: osp
 
 
 
