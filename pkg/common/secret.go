@@ -19,10 +19,12 @@ package common
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -46,6 +48,21 @@ func GetSecret(r ReconcilerCommon, secretName string, secretNamespace string) (*
 		return nil, "", fmt.Errorf("error calculating configuration hash: %v", err)
 	}
 	return secret, secretHash, nil
+}
+
+// GetSecrets -
+func GetSecrets(r ReconcilerCommon, secretNamespace string, labelSelectorMap map[string]string) (*corev1.SecretList, error) {
+	var secrets *corev1.SecretList
+
+	secrets, err := r.GetKClient().CoreV1().Secrets(secretNamespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labels.FormatLabels(labelSelectorMap),
+	})
+
+	if err != nil {
+		return secrets, err
+	}
+
+	return secrets, nil
 }
 
 // CreateOrUpdateSecret -
@@ -113,7 +130,6 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 
 	// create or update the CM
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), secret, func() error {
-
 		secret.Labels = st.Labels
 		// add data from templates
 		dataString := make(map[string]string)
@@ -123,13 +139,30 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 		}
 		secret.Data = data
 
-		err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
-		if err != nil {
-			return err
+		// Only set controller ref if namespaces are equal, else we hit an error
+		if obj.GetNamespace() == secret.Namespace {
+			err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
+			if err != nil {
+				return err
+			}
+		} else {
+			// Set ownership labels that can be found by the respective controller kind
+			ownerLabel := fmt.Sprintf("%s.%s", strings.ToLower(st.InstanceType), GroupLabel)
+			labelSelector := map[string]string{
+				ownerLabel + "/uid":       string(obj.GetUID()),
+				ownerLabel + "/namespace": obj.GetNamespace(),
+				ownerLabel + "/name":      obj.GetName(),
+			}
+
+			secret.GetObjectMeta().SetLabels(labels.Merge(secret.GetObjectMeta().GetLabels(), labelSelector))
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return "", op, err
+	}
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {

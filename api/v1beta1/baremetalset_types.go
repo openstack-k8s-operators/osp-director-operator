@@ -26,10 +26,23 @@ type BaremetalSetSpec struct {
 	Replicas int `json:"replicas,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image (TODO: currently gzipped only) for the set
 	RhelImageURL string `json:"rhelImageUrl"`
+	// Name of secret holding the stack-admin ssh keys
+	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
+	// CIDR for management network
+	MgmtCIDR string `json:"mgmtCidr"`
+	// Interface to use for management network
+	MgmtInterface string `json:"mgmtInterface"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet
 type BaremetalSetStatus struct {
+	BaremetalHosts map[string]BaremetalHostStatus `json:"baremetalHosts"`
+}
+
+// BaremetalHost represents a BMH resource allocated by the BaremetalSet
+type BaremetalHostStatus struct {
+	SecretName string `json:"secretName"`
+	MgmtIP     string `json:"mgmtIP"`
 }
 
 // +kubebuilder:object:root=true

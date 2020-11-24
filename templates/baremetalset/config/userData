@@ -1,0 +1,26 @@
+#cloud-config
+users:
+  - name: cloud-admin
+    # for now set a password '12345678'
+    passwd: $6$s2t53Brmt2f0Ws5G$mdOCrvOrlKSrjpzLjxtgC5cb6.d5eHMLwmshbVYhs9.u0xdmy5m/Z8SJgc52wZ4V2N8gGS1bnjJ8hBF1w4tW/1
+    lock_passwd: false
+    ssh-authorized-keys: {{ .AuthorizedKeys }}
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+bootcmd:
+  - nmcli con load /etc/sysconfig/network-scripts/ifcfg-{{ .MgmtInterface }}
+  - nmcli dev disconnect {{ .MgmtInterface }}
+runcmd:
+  - nmcli con load /etc/sysconfig/network-scripts/ifcfg-{{ .MgmtInterface }}
+  - nmcli con up "System {{ .MgmtInterface }}"
+write_files:
+  - path: /etc/sysconfig/network-scripts/ifcfg-{{ .MgmtInterface }}
+    content: |
+      BOOTPROTO=none
+      DEVICE={{ .MgmtInterface }}
+      IPADDR={{ .MgmtIp }}
+      PREFIX={{ .MgmtNetmask }}
+      ONBOOT=yes
+      STARTMODE=auto
+      TYPE=Ethernet
+      USERCTL=no

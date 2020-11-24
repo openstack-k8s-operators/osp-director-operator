@@ -22,4 +22,8 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "provisionservers.osp-director.openstack.org"
+
+	OwnerUIDLabelSelector       = "provisionservers.osp-director.openstack.org/uid"
+	OwnerNameSpaceLabelSelector = "provisionservers.osp-director.openstack.org/namespace"
+	OwnerNameLabelSelector      = "provisionservers.osp-director.openstack.org/name"
 )

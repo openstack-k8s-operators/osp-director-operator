@@ -14,10 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package baremetalset
 
 const (
-	// OwnerLabel -
-	OwnerLabel = "osp-director"
-	GroupLabel = OwnerLabel + ".openstack.org"
+	// AppLabel -
+	AppLabel = "osp-baremetalset"
+
+	// FinalizerName -
+	FinalizerName = "baremetalsets.osp-director.openstack.org"
+
+	// OwnerUIDLabelSelector - Ownership label for UID
+	OwnerUIDLabelSelector = "baremetalset.osp-director.openstack.org/uid"
+	// OwnerNameSpaceLabelSelector - Ownership label for Namespace
+	OwnerNameSpaceLabelSelector = "baremetalset.osp-director.openstack.org/namespace"
+	// OwnerNameLabelSelector - Ownership label for Name
+	OwnerNameLabelSelector = "baremetalset.osp-director.openstack.org/name"
 )

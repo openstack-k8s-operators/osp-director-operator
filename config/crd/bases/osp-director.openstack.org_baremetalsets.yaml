@@ -36,6 +36,15 @@ spec:
         spec:
           description: BaremetalSetSpec defines the desired state of BaremetalSet
           properties:
+            deploymentSSHSecret:
+              description: Name of secret holding the stack-admin ssh keys
+              type: string
+            mgmtCidr:
+              description: CIDR for management network
+              type: string
+            mgmtInterface:
+              description: Interface to use for management network
+              type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               type: integer
@@ -44,10 +53,30 @@ spec:
                 currently gzipped only) for the set'
               type: string
           required:
+          - deploymentSSHSecret
+          - mgmtCidr
+          - mgmtInterface
           - rhelImageUrl
           type: object
         status:
           description: BaremetalSetStatus defines the observed state of BaremetalSet
+          properties:
+            baremetalHosts:
+              additionalProperties:
+                description: BaremetalHost represents a BMH resource allocated by
+                  the BaremetalSet
+                properties:
+                  mgmtIP:
+                    type: string
+                  secretName:
+                    type: string
+                required:
+                - mgmtIP
+                - secretName
+                type: object
+              type: object
+          required:
+          - baremetalHosts
           type: object
       type: object
   version: v1beta1

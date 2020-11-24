@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/go-logr/logr v0.2.1
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/metal3-io/baremetal-operator v0.0.0-20201116105209-c72e2e0d8803
