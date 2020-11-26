@@ -142,8 +142,9 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		Volumes:                       openstackclient.GetVolumes(instance),
 		Containers: []corev1.Container{
 			{
-				Name:  "openstackclient",
-				Image: instance.Spec.ImageURL,
+				Name:            "openstackclient",
+				Image:           instance.Spec.ImageURL,
+				ImagePullPolicy: corev1.PullAlways,
 				Command: []string{
 					"/bin/bash",
 					"-c",
