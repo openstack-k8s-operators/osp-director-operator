@@ -141,7 +141,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		ospControllerVM.Spec.DiskSize = instance.Spec.Controller.DiskSize
 		ospControllerVM.Spec.StorageClass = instance.Spec.Controller.StorageClass
 		ospControllerVM.Spec.DeploymentSSHSecret = deploymentSecretName
-		ospControllerVM.Spec.Networks = instance.Spec.Controller.Networks
+		ospControllerVM.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
 
 		err := controllerutil.SetControllerReference(instance, ospControllerVM, r.Scheme)
 		if err != nil {

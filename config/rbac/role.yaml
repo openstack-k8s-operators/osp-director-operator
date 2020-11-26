@@ -144,6 +144,18 @@ rules:
   - patch
   - update
 - apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkconfigurationpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - osp-director.openstack.org
   resources:
   - baremetalsets
