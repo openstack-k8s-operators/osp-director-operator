@@ -127,9 +127,9 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		{
 			Name:           fmt.Sprintf("%s-cloudinit", instance.Name),
 			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeConfig,
+			Type:           common.TemplateTypeNone,
 			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
+			AdditionalData: map[string]string{"userdata": "/controllervm/cloudinit/userdata"},
 			Labels:         secretLabels,
 			ConfigOptions:  templateParameters,
 		},
@@ -142,6 +142,41 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//	Labels:    secretLabels,
 		//},
 	}
+
+	controllerDetails := []ospdirectorv1beta1.Host{}
+
+	// Generate the Contoller networkdata secrets
+	for i := 0; i < instance.Spec.ControllerCount; i++ {
+		// TODO: do we need custom hostname format?
+		// TODO: multi nic support with bindata template
+		// TODO: for now single network and hardcode controller ips to 192.168.25.1X
+
+		hostname := fmt.Sprintf("controller-%d", i)
+		ip := fmt.Sprintf("192.168.25.1%d", i)
+		networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname)
+		templateParameters["ControllerIP"] = ip
+
+		controllerDetails = append(controllerDetails,
+			ospdirectorv1beta1.Host{
+				Hostname:          hostname,
+				DomainName:        hostname,
+				DomainNameUniq:    fmt.Sprintf("%s-%s", hostname, instance.UID[0:4]),
+				IPAdress:          ip,
+				NetworkDataSecret: networkDataSecretName,
+			},
+		)
+
+		sts = append(sts, common.Template{
+			Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeNone,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{"networkdata": "/controllervm/cloudinit/networkdata"},
+			Labels:         secretLabels,
+			ConfigOptions:  templateParameters,
+		})
+	}
+
 	err = common.EnsureSecrets(r, instance, sts, &envVars)
 	if err != nil {
 		return ctrl.Result{}, nil
@@ -186,9 +221,12 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	// Create controller VM objects
 	if instance.Status.BaseImageDVReady {
-		err = r.vmCreateInstance(instance, envVars)
-		if err != nil {
-			return ctrl.Result{}, err
+		// Generate the Contoller networkdata secrets
+		for _, ctl := range controllerDetails {
+			err = r.vmCreateInstance(instance, envVars, &ctl)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
 		r.Log.Info("BaseImageDV is not Ready!")
@@ -340,8 +378,7 @@ func (r *ControllerVMReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.
 	return nil
 }
 
-//func (r *ControllerVMReconciler) vmTemplateCreateOrUpdate(instance *ospdirectorv1beta1.ControllerVM, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
-func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.ControllerVM, envVars map[string]common.EnvSetter) error {
+func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.ControllerVM, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -360,19 +397,17 @@ func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.C
 		labelSelector[k] = v
 	}
 
-	// Generate the Contoller VM objects
-	for i := 0; i < instance.Spec.ControllerCount; i++ {
-		// TODO: do we need custom hostname format?
-		// TODO: multi nic support with bindata template
-		data.Data["DomainName"] = fmt.Sprintf("controller-%d", i)
-		data.Data["DomainNameUniq"] = fmt.Sprintf("controller-%d-%s", i, instance.UID[0:4])
-		manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "virtualmachine"), data)
-		if err != nil {
-			r.Log.Error(err, "Failed to render virtualmachine manifests : %v")
-			return err
-		}
-		objs = append(objs, manifests...)
+	// Generate the Contoller VM object
+	data.Data["DomainName"] = ctl.DomainName
+	data.Data["DomainNameUniq"] = ctl.DomainNameUniq
+	data.Data["NetworkDataSecret"] = ctl.NetworkDataSecret
+
+	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "virtualmachine"), data)
+	if err != nil {
+		r.Log.Error(err, "Failed to render virtualmachine manifests : %v")
+		return err
 	}
+	objs = append(objs, manifests...)
 
 	// Apply the objects to the cluster
 	for _, obj := range objs {

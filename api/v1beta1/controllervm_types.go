@@ -50,6 +50,15 @@ type ControllerVMStatus struct {
 	Controllers []string `json:"controllers"`
 }
 
+// Host -
+type Host struct {
+	Hostname          string `json:"hostname"`
+	DomainName        string `json:"domainName"`
+	DomainNameUniq    string `json:"domainNameUniq"`
+	IPAdress          string `json:"ipAdress"`
+	NetworkDataSecret string `json:"networkDataSecret"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
