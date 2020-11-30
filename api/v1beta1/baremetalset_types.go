@@ -43,6 +43,7 @@ type BaremetalSetStatus struct {
 type BaremetalHostStatus struct {
 	SecretName string `json:"secretName"`
 	MgmtIP     string `json:"mgmtIP"`
+	Online     bool   `json:"online"`
 }
 
 // +kubebuilder:object:root=true

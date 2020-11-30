@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -200,21 +201,12 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager - prepare controller for use with operator manager
 func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	openshiftMachineApiSecretsFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
-		cc := mgr.GetClient()
+	openshiftMachineAPIBareMetalHostsFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
 		result := []reconcile.Request{}
-		secret := &corev1.Secret{}
-		key := client.ObjectKey{Namespace: o.Meta.GetNamespace(), Name: o.Meta.GetName()}
-		err := cc.Get(context.Background(), key, secret)
-		if err != nil && !errors.IsNotFound(err) {
-			r.Log.Error(err, "Unable to retrieve Secret %v")
-			return nil
-		}
-
-		label := secret.ObjectMeta.GetLabels()
+		label := o.Meta.GetLabels()
 		// verify object has ownerUIDLabelSelector
 		if uid, ok := label[baremetalset.OwnerUIDLabelSelector]; ok {
-			r.Log.Info(fmt.Sprintf("Secret object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			r.Log.Info(fmt.Sprintf("BareMetalHost object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
 				Namespace: label[baremetalset.OwnerNameSpaceLabelSelector],
@@ -231,9 +223,9 @@ func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.BaremetalSet{}).
 		Owns(&ospdirectorv1beta1.ProvisionServer{}).
-		Watches(&source.Kind{Type: &corev1.Secret{}},
+		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}},
 			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: openshiftMachineApiSecretsFn,
+				ToRequests: openshiftMachineAPIBareMetalHostsFn,
 			}).
 		Complete(r)
 }
@@ -265,36 +257,9 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 
 // Provision or deprovision BaremetalHost resources based on replica count
 func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret) error {
-	// Get old BaremetalHosts status map
-	oldBaremetalHostsStatusMap := instance.Status.BaremetalHosts
-
-	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.
-	// TODO: Add something to CR to allow user to specify which BaremetalHosts are removed
-	for i := len(oldBaremetalHostsStatusMap); i > instance.Spec.Replicas; i-- {
-		for oldBmhName, oldBmhStatus := range oldBaremetalHostsStatusMap {
-			// Just delete the first one we find until the TODO from above is implemented
-			err := r.baremetalHostDeprovision(instance, oldBmhName, oldBmhStatus.SecretName)
-
-			if err != nil {
-				return err
-			}
-
-			delete(oldBaremetalHostsStatusMap, oldBmhName)
-			break
-		}
-	}
-
-	// How many new BaremetalHost allocations do we need (if any)?
-	newBmhsNeededCount := instance.Spec.Replicas - len(oldBaremetalHostsStatusMap)
-
-	if newBmhsNeededCount <= 0 {
-		// We're done
-		r.Log.Info("All requested BaremetalHost replicas have been provisioned")
-		return nil
-	}
-
-	// We have new replicas requested, so search for baremetalhosts that don't have consumerRef or Online set
-	availableBaremetalHosts := []string{}
+	// Get all openshift-machine-api BaremetalHosts
+	// TODO: Might need to filter this API call to only retrieve a subset, given
+	//       what we might expose in our BaremetalSet CR for hardware options, etc
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
 		client.InNamespace("openshift-machine-api"),
@@ -304,25 +269,72 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		return err
 	}
 
+	existingBaremetalHosts := []string{}
+
+	// Find the current BaremetalHosts belonging to this BaremetalSet
 	for _, baremetalHost := range baremetalHostsList.Items {
-		if baremetalHost.Spec.Online == true || baremetalHost.Spec.ConsumerRef != nil {
-			continue
+		if baremetalHost.Spec.ConsumerRef != nil && (baremetalHost.Spec.ConsumerRef.Kind == instance.Kind && baremetalHost.Spec.ConsumerRef.Name == instance.Name && baremetalHost.Spec.ConsumerRef.Namespace == instance.Namespace) {
+			r.Log.Info(fmt.Sprintf("Existing BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
+			existingBaremetalHosts = append(existingBaremetalHosts, baremetalHost.ObjectMeta.Name)
 		}
-		r.Log.Info(fmt.Sprintf("Available BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
-		availableBaremetalHosts = append(availableBaremetalHosts, baremetalHost.ObjectMeta.Name)
 	}
 
-	// If we can't satisfy the new requested replica count, explicitly state so
-	if newBmhsNeededCount > len(availableBaremetalHosts) {
-		r.Log.Info(fmt.Sprintf("WARNING: Unable to find %d requested BaremetalHost replicas (%d in use, %d available)", instance.Spec.Replicas, len(oldBaremetalHostsStatusMap), len(availableBaremetalHosts)))
+	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.
+	// TODO: Add something to CR to allow user to specify which BaremetalHosts are removed
+	for i := len(existingBaremetalHosts); i > instance.Spec.Replicas; i-- {
+		for _, oldBmhName := range existingBaremetalHosts {
+			// Just delete the first one we find until the TODO from above is implemented
+			err := r.baremetalHostDeprovision(instance, oldBmhName)
+
+			if err != nil {
+				return err
+			}
+
+			if len(existingBaremetalHosts) > 1 {
+				existingBaremetalHosts = existingBaremetalHosts[1:]
+			} else {
+				existingBaremetalHosts = []string{}
+			}
+			break
+		}
 	}
 
-	// For each available BaremetalHost we update the reference to use our image
-	// and set the user data to use our cloud-init secret.  Then we add the status
-	// to store the BMH name, cloud-init secret name and management IP for the
-	// particular worker
-	for i := 0; i < len(availableBaremetalHosts); i++ {
-		err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret)
+	// How many new BaremetalHost allocations do we need (if any)?
+	newBmhsNeededCount := instance.Spec.Replicas - len(existingBaremetalHosts)
+
+	if newBmhsNeededCount > 0 {
+		// We have new replicas requested, so search for baremetalhosts that don't have consumerRef or Online set
+		availableBaremetalHosts := []string{}
+
+		for _, baremetalHost := range baremetalHostsList.Items {
+			if baremetalHost.Spec.Online == true || baremetalHost.Spec.ConsumerRef != nil {
+				continue
+			}
+			r.Log.Info(fmt.Sprintf("Available BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
+			availableBaremetalHosts = append(availableBaremetalHosts, baremetalHost.ObjectMeta.Name)
+		}
+
+		// If we can't satisfy the new requested replica count, explicitly state so
+		if newBmhsNeededCount > len(availableBaremetalHosts) {
+			r.Log.Info(fmt.Sprintf("WARNING: Unable to find %d requested BaremetalHost replicas (%d in use, %d available)", instance.Spec.Replicas, len(existingBaremetalHosts), len(availableBaremetalHosts)))
+		}
+
+		// For each available BaremetalHost that we need to allocate, we update the
+		// reference to use our image and set the user data to use our cloud-init secret.
+		// Then we add the status to store the BMH name, cloud-init secret name, management
+		// IP and BMH power status for the particular worker
+		for i := 0; i < len(availableBaremetalHosts) && i < newBmhsNeededCount; i++ {
+			err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Now reconcile existing BaremetalHosts for this BaremetalSet
+	for i := 0; i < len(existingBaremetalHosts); i++ {
+		err := r.baremetalHostProvision(instance, existingBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret)
 
 		if err != nil {
 			return err
@@ -344,7 +356,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	mgmtIP, err := findNewMgmtIP(instance)
+	mgmtIP, err := findNewMgmtIP(instance, bmh)
 
 	if err != nil {
 		return err
@@ -362,7 +374,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	templateParameters["MgmtNetmask"] = strings.Split(instance.Spec.MgmtCIDR, "/")[1]
 	// TODO: Either generate the gateway from the network object or allow user specification via CR?
 
-	secretName := fmt.Sprintf("%s-cloudinit-%s", instance.Name, bmh)
+	secretName := fmt.Sprintf(baremetalset.CloudInitSecretName, instance.Name, bmh)
 
 	st := common.Template{
 		Name:           secretName,
@@ -390,9 +402,20 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 		return err
 	}
 
-	r.Log.Info(fmt.Sprintf("Allocating BaremetalHost: %s", bmh))
+	r.Log.Info(fmt.Sprintf("Allocating/Updating BaremetalHost: %s", bmh))
+
+	// Set our ownership labels so we can watch this resource
+	// Set ownership labels that can be found by the respective controller kind
+	labelSelector := map[string]string{
+		baremetalset.OwnerUIDLabelSelector:       string(instance.UID),
+		baremetalset.OwnerNameSpaceLabelSelector: instance.Namespace,
+		baremetalset.OwnerNameLabelSelector:      instance.Name,
+	}
+
+	foundBaremetalHost.GetObjectMeta().SetLabels(labels.Merge(foundBaremetalHost.GetObjectMeta().GetLabels(), labelSelector))
+
 	foundBaremetalHost.Spec.Online = true
-	foundBaremetalHost.Spec.ConsumerRef = &corev1.ObjectReference{Name: instance.Name, Kind: "BaremetalSet"}
+	foundBaremetalHost.Spec.ConsumerRef = &corev1.ObjectReference{Name: instance.Name, Kind: instance.Kind, Namespace: instance.Namespace}
 	foundBaremetalHost.Spec.Image = &metal3v1alpha1.Image{
 		URL:      localImageURL,
 		Checksum: fmt.Sprintf("%s.md5sum", localImageURL),
@@ -407,16 +430,13 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	instance.Status.BaremetalHosts[bmh] = ospdirectorv1beta1.BaremetalHostStatus{
-		SecretName: secretName,
-		MgmtIP:     mgmtIP,
-	}
+	r.setBaremetalHostStatus(instance, foundBaremetalHost, secretName, mgmtIP)
 
 	return nil
 }
 
 // Deprovision a BaremetalHost via Metal3 (and delete its bootstrapping secret)
-func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.BaremetalSet, bmh string, userDataSecret string) error {
+func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.BaremetalSet, bmh string) error {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, baremetalHost)
 
@@ -425,6 +445,14 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	}
 
 	r.Log.Info(fmt.Sprintf("Deallocating BaremetalHost: %s", bmh))
+
+	// Remove our ownership labels
+	labels := baremetalHost.GetObjectMeta().GetLabels()
+	delete(labels, baremetalset.OwnerUIDLabelSelector)
+	delete(labels, baremetalset.OwnerNameSpaceLabelSelector)
+	delete(labels, baremetalset.OwnerNameLabelSelector)
+	baremetalHost.GetObjectMeta().SetLabels(labels)
+
 	baremetalHost.Spec.Online = false
 	baremetalHost.Spec.ConsumerRef = nil
 	baremetalHost.Spec.Image = nil
@@ -437,7 +465,7 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	// Also remove userdata secret
 	secret := &corev1.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      userDataSecret,
+			Name:      fmt.Sprintf(baremetalset.CloudInitSecretName, instance.Name, bmh),
 			Namespace: "openshift-machine-api",
 		},
 	}
@@ -453,11 +481,20 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	return nil
 }
 
+func (r *BaremetalSetReconciler) setBaremetalHostStatus(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost, secretName string, mgmtIP string) {
+	// Set status (add this BaremetalHost entry)
+	instance.Status.BaremetalHosts[bmh.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
+		SecretName: secretName,
+		MgmtIP:     mgmtIP,
+		Online:     bmh.Status.PoweredOn,
+	}
+}
+
 // Deprovision all associated BaremetalHosts for this BaremetalSet via Metal3
 func (r *BaremetalSetReconciler) baremetalHostCleanup(instance *ospdirectorv1beta1.BaremetalSet) error {
 	if instance.Status.BaremetalHosts != nil {
-		for bmhName, bmhStatus := range instance.Status.BaremetalHosts {
-			err := r.baremetalHostDeprovision(instance, bmhName, bmhStatus.SecretName)
+		for bmhName := range instance.Status.BaremetalHosts {
+			err := r.baremetalHostDeprovision(instance, bmhName)
 
 			if err != nil {
 				return err
@@ -498,8 +535,15 @@ func (r *BaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirec
 	return nil
 }
 
-// Get an unused IP from the management network for the BaremetalSet
-func findNewMgmtIP(instance *ospdirectorv1beta1.BaremetalSet) (string, error) {
+// Get the IP from the management network for a particular BaremetalHost in the BaremetalSet
+func findNewMgmtIP(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) (string, error) {
+	// First check if we already have an IP for this host
+	if bmhStatus, ok := instance.Status.BaremetalHosts[bmhName]; ok {
+		if bmhStatus.MgmtIP != "" {
+			return bmhStatus.MgmtIP, nil
+		}
+	}
+
 	_, network, err := net.ParseCIDR(instance.Spec.MgmtCIDR)
 
 	if err != nil {

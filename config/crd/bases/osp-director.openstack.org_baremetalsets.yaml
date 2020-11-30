@@ -68,10 +68,13 @@ spec:
                 properties:
                   mgmtIP:
                     type: string
+                  online:
+                    type: boolean
                   secretName:
                     type: string
                 required:
                 - mgmtIP
+                - online
                 - secretName
                 type: object
               type: object
