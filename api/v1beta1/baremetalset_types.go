@@ -39,7 +39,7 @@ type BaremetalSetStatus struct {
 	BaremetalHosts map[string]BaremetalHostStatus `json:"baremetalHosts"`
 }
 
-// BaremetalHost represents a BMH resource allocated by the BaremetalSet
+// BaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
 type BaremetalHostStatus struct {
 	SecretName string `json:"secretName"`
 	MgmtIP     string `json:"mgmtIP"`
