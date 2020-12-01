@@ -550,7 +550,8 @@ func findNewMgmtIP(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) (s
 		return "", err
 	}
 
-	for i := uint64(2); i <= cidr.AddressCount(network); i++ {
+	// Exclude the first address (gateway) and the last address (broadcast)
+	for i := uint64(2); i < cidr.AddressCount(network); i++ {
 		mgmtIP, err := cidr.Host(network, int(i))
 
 		if err != nil {
