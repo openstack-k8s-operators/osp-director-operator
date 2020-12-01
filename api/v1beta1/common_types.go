@@ -16,6 +16,10 @@ limitations under the License.
 
 package v1beta1
 
+import (
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+)
+
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter
@@ -24,8 +28,10 @@ type Hash struct {
 	Hash string `json:"hash,omitempty"`
 }
 
-// Network - OSP networks used to create network-attachment-definitions for each of them
+// Network - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 // TODO: that might change depending on our outcome of network config
 type Network struct {
-	Name string `json:"name"`
+	Name         string           `json:"name"`
+	BridgeName   string           `json:"bridgeName"`
+	DesiredState nmstateapi.State `json:"desiredState,omitempty"`
 }

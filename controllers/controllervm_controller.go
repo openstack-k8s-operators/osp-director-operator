@@ -82,6 +82,7 @@ func (r *ControllerVMReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=cdi.kubevirt.io,namespace=openstack,resources=datavolumes,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - controller VMs
 func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -226,6 +227,9 @@ func (r *ControllerVMReconciler) getRenderData(instance *ospdirectorv1beta1.Cont
 	data.Data["Cores"] = instance.Spec.Cores
 	data.Data["Memory"] = instance.Spec.Memory
 	data.Data["StorageClass"] = instance.Spec.StorageClass
+	data.Data["Network"] = instance.Spec.OSPNetwork.Name
+	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
+	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
@@ -267,15 +271,12 @@ func (r *ControllerVMReconciler) networkCreateAttachmentDefinition(instance *osp
 	}
 
 	// Generate the Network Definition objects
-	for _, v := range instance.Spec.Networks {
-		data.Data["Network"] = v.Name
-		manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "network"), data)
-		if err != nil {
-			r.Log.Error(err, "Failed to render network manifests : %v")
-			return err
-		}
-		objs = append(objs, manifests...)
+	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "network"), data)
+	if err != nil {
+		r.Log.Error(err, "Failed to render network manifests : %v")
+		return err
 	}
+	objs = append(objs, manifests...)
 
 	// Apply the objects to the cluster
 	for _, obj := range objs {
@@ -285,7 +286,6 @@ func (r *ControllerVMReconciler) networkCreateAttachmentDefinition(instance *osp
 		}
 		// merge owner ref label into labels on the objects
 		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
-		objs = append(objs, obj)
 
 		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
 			r.Log.Error(err, "Failed to apply objects")
@@ -330,7 +330,6 @@ func (r *ControllerVMReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.
 		}
 		// merge owner ref label into labels on the objects
 		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
-		objs = append(objs, obj)
 
 		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
 			r.Log.Error(err, "Failed to apply objects")
@@ -383,11 +382,9 @@ func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.C
 		}
 		// merge owner ref label into labels on the objects
 		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
-		objs = append(objs, obj)
 
 		//Todo: mschuppert log vm definition when debug?
 		r.Log.Info(fmt.Sprintf("/n%s/n", obj))
-		//os.Exit(1)
 		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
 			r.Log.Error(err, "Failed to apply objects")
 			return err
