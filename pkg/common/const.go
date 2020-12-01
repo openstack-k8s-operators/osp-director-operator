@@ -19,4 +19,6 @@ package common
 const (
 	// OwnerLabel -
 	OwnerLabel = "osp-director"
+	// GroupLabel -
+	GroupLabel = OwnerLabel + ".openstack.org"
 )

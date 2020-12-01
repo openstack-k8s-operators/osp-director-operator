@@ -103,6 +103,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - secrets/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - volumes
   verbs:
   - create
