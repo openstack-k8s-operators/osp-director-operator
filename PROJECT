@@ -15,6 +15,9 @@ resources:
 - group: osp-director
   kind: BaremetalSet
   version: v1beta1
+- group: osp-director
+  kind: OpenStackClient
+  version: v1beta1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

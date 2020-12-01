@@ -1,0 +1,91 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: openstackclients.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackClient
+    listKind: OpenStackClientList
+    plural: openstackclients
+    singular: openstackclient
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: OpenStackClient is the Schema for the openstackclients API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: OpenStackClientSpec defines the desired state of OpenStackClient
+          properties:
+            cloudName:
+              description: cloudname passed in via OS_CLOUDNAME
+              type: string
+            deploymentSSHSecret:
+              description: name of secret holding the stack-admin ssh keys
+              type: string
+            hostAliases:
+              description: additional Hostaliases added to the openstackclient hosts
+                file
+              items:
+                description: HostAlias holds the mapping between IP and hostnames
+                  that will be injected as an entry in the pod's hosts file.
+                properties:
+                  hostnames:
+                    description: Hostnames for the above IP address.
+                    items:
+                      type: string
+                    type: array
+                  ip:
+                    description: IP address of the host file entry.
+                    type: string
+                type: object
+              type: array
+            imageURL:
+              description: Name of the image
+              type: string
+          required:
+          - cloudName
+          - deploymentSSHSecret
+          - hostAliases
+          - imageURL
+          type: object
+        status:
+          description: OpenStackClientStatus defines the observed state of OpenStackClient
+          properties:
+            authURL:
+              description: OS_AUTH_URL
+              type: string
+          required:
+          - authURL
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

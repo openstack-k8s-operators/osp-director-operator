@@ -58,20 +58,22 @@ spec:
               description: amount of Memory in GB used by the controller VMs
               format: int32
               type: integer
-            networks:
-              description: Networks - e.g. ctlplane, tenant, internalAPI, storage,
-                storageMgmt, external
-              items:
-                description: 'Network - OSP networks used to create network-attachment-definitions
-                  for each of them TODO: that might change depending on our outcome
-                  of network config'
-                properties:
-                  name:
-                    type: string
-                required:
-                - name
-                type: object
-              type: array
+            ospNetwork:
+              description: OSPNetwork
+              properties:
+                bridgeName:
+                  type: string
+                desiredState:
+                  description: "State contains the namestatectl yaml [1] as string
+                    instead of golang struct so we don't need to be in sync with the
+                    schema. \n [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
+                  type: object
+                name:
+                  type: string
+              required:
+              - bridgeName
+              - name
+              type: object
             storageClass:
               description: StorageClass to be used for the controller disks
               type: string
@@ -82,7 +84,7 @@ spec:
           - deploymentSSHSecret
           - diskSize
           - memory
-          - networks
+          - ospNetwork
           - storageClass
           type: object
         status:
