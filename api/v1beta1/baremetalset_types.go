@@ -41,9 +41,10 @@ type BaremetalSetStatus struct {
 
 // BaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
 type BaremetalHostStatus struct {
-	SecretName string `json:"secretName"`
-	MgmtIP     string `json:"mgmtIP"`
-	Online     bool   `json:"online"`
+	UserDataSecretName    string `json:"userDataSecretName"`
+	NetworkDataSecretName string `json:"networkDataSecretName"`
+	MgmtIP                string `json:"mgmtIP"`
+	Online                bool   `json:"online"`
 }
 
 // +kubebuilder:object:root=true

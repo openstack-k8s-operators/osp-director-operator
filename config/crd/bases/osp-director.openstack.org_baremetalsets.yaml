@@ -63,19 +63,22 @@ spec:
           properties:
             baremetalHosts:
               additionalProperties:
-                description: BaremetalHost represents a BMH resource allocated by
-                  the BaremetalSet
+                description: BaremetalHostStatus represents the observed state of
+                  a particular allocated BaremetalHost resource
                 properties:
                   mgmtIP:
                     type: string
+                  networkDataSecretName:
+                    type: string
                   online:
                     type: boolean
-                  secretName:
+                  userDataSecretName:
                     type: string
                 required:
                 - mgmtIP
+                - networkDataSecretName
                 - online
-                - secretName
+                - userDataSecretName
                 type: object
               type: object
           required:

@@ -20,8 +20,10 @@ const (
 	// AppLabel -
 	AppLabel = "osp-baremetalset"
 
-	// CloudInitSecretName - Naming template used for generating BaremetalHost userdata secrets
-	CloudInitSecretName = "%s-cloudinit-%s"
+	// CloudInitUserDataSecretName - Naming template used for generating BaremetalHost cloudinit userdata secrets
+	CloudInitUserDataSecretName = "%s-cloudinit-userdata-%s"
+	// CloudInitNetworkDataSecretName - Naming template used for generating BaremetalHost cloudinit networkdata secrets
+	CloudInitNetworkDataSecretName = "%s-cloudinit-networkdata-%s"
 
 	// FinalizerName -
 	FinalizerName = "baremetalsets.osp-director.openstack.org"
