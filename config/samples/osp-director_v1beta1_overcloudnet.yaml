@@ -1,0 +1,15 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OvercloudNet
+metadata:
+  name: overcloudnet-sample
+spec:
+  networks:
+  - name: ctlplane
+    CIDR: 192.168.0.1/24
+    reservedIPs:
+    - 192.168.0.1
+    - 192.168.0.2
+    - 192.168.0.3
+    - 192.168.0.4
+  - name: mgmt
+    CIDR: 192.168.1.1/24
