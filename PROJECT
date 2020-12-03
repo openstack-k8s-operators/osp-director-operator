@@ -21,6 +21,9 @@ resources:
 - group: osp-director
   kind: OvercloudNet
   version: v1beta1
+- group: osp-director
+  kind: OvercloudIPSet
+  version: v1beta1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

@@ -6,4 +6,5 @@ resources:
 - osp-director_v1beta1_baremetalset.yaml
 - osp-director_v1beta1_openstackclient.yaml
 - osp-director_v1beta1_overcloudnet.yaml
+- osp-director_v1beta1_overcloudipset.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
