@@ -22,6 +22,8 @@ const (
 	TemplateTypeConfig TType = "config"
 	// TemplateTypeCustom - custom config type
 	TemplateTypeCustom TType = "custom"
+	// TemplateTypeNone - none type, don't add configs from a directory, only files from AdditionalData
+	TemplateTypeNone TType = "none"
 )
 
 // Template - config map details
@@ -134,13 +136,16 @@ func getTemplateData(t Template) map[string]string {
 	// get templates base path, either running local or deployed as container
 	templatesPath := GetTemplatesPath()
 
-	// get all scripts templates which are in ../templesPath/cr.Kind/CMType
-	templatesFiles := GetAllTemplates(templatesPath, t.InstanceType, string(t.Type))
-
 	data := make(map[string]string)
-	// render all template files
-	for _, file := range templatesFiles {
-		data[filepath.Base(file)] = ExecuteTemplate(file, opts)
+
+	if t.Type != TemplateTypeNone {
+		// get all scripts templates which are in ../templesPath/cr.Kind/CMType
+		templatesFiles := GetAllTemplates(templatesPath, t.InstanceType, string(t.Type))
+
+		// render all template files
+		for _, file := range templatesFiles {
+			data[filepath.Base(file)] = ExecuteTemplate(file, opts)
+		}
 	}
 	// add additional files e.g. from different directory, which
 	// can be common to multiple controllers

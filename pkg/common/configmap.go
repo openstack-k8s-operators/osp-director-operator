@@ -132,7 +132,7 @@ func EnsureConfigMaps(r ReconcilerCommon, obj metav1.Object, cms []Template, env
 }
 
 // GetConfigMaps - get all configmaps required, verify they exist and add the hash to env and status
-func GetConfigMaps(r ReconcilerCommon, obj runtime.Object, configMaps []string, namespace string, envVars *map[string]EnvSetter, configPrefix string) ([]ospdirectorv1beta1.Hash, error) {
+func GetConfigMaps(r ReconcilerCommon, obj runtime.Object, configMaps []string, namespace string, envVars *map[string]EnvSetter) ([]ospdirectorv1beta1.Hash, error) {
 	hashes := []ospdirectorv1beta1.Hash{}
 
 	for _, cm := range configMaps {
