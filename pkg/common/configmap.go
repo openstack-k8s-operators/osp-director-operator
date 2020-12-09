@@ -121,7 +121,6 @@ func EnsureConfigMaps(r ReconcilerCommon, obj metav1.Object, cms []Template, env
 		}
 		if op != controllerutil.OperationResultNone {
 			r.GetLogger().Info(fmt.Sprintf("ConfigMap %s successfully reconciled - operation: %s", cm.Name, string(op)))
-			return nil
 		}
 		if envVars != nil {
 			(*envVars)[cm.Name] = EnvValue(hash)

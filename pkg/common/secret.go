@@ -231,7 +231,6 @@ func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVar
 		}
 		if op != controllerutil.OperationResultNone {
 			r.GetLogger().Info(fmt.Sprintf("Secret %s successfully reconciled - operation: %s", s.Name, string(op)))
-			return nil
 		}
 		if envVars != nil {
 			(*envVars)[s.Name] = EnvValue(hash)
