@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: overcloudnets.osp-director.openstack.org
+  name: overcloudipsets.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: OvercloudNet
-    listKind: OvercloudNetList
-    plural: overcloudnets
-    singular: overcloudnet
+    kind: OvercloudIPSet
+    listKind: OvercloudIPSetList
+    plural: overcloudipsets
+    singular: overcloudipset
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OvercloudNet is the Schema for the overcloudnets API
+      description: OvercloudIPSet is the Schema for the overcloudipsets API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,39 +34,22 @@ spec:
         metadata:
           type: object
         spec:
-          description: OvercloudNetSpec defines the desired state of OvercloudNet
+          description: OvercloudIPSetSpec defines the desired state of OvercloudIPSet
           properties:
-            allocationEnd:
-              description: AllocationEnd a set of IPs that are reserved and will not
-                be assigned
-              type: string
-            allocationStart:
-              description: AllocationStart a set of IPs that are reserved and will
-                not be assigned
-              type: string
-            cidr:
-              description: Cidr the cidr to use for this network
-              type: string
-          required:
-          - cidr
+            networks:
+              description: Networks the name(s) of the OvercloudNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
           type: object
         status:
-          description: OvercloudNetStatus defines the observed state of OvercloudNet
+          description: OvercloudIPSetStatus defines the observed state of OvercloudIPSet
           properties:
-            reservations:
-              description: Reservations IP address reservations
-              items:
-                description: IPReservation contains an IP, and Hostname
-                properties:
-                  hostname:
-                    type: string
-                  ip:
-                    description: IP       net.IP `json:"ip"`
-                    type: string
-                required:
-                - ip
-                type: object
-              type: array
+            ipaddresses:
+              additionalProperties:
+                type: string
+              type: object
           type: object
       type: object
   version: v1beta1

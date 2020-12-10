@@ -20,23 +20,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPAddress
-type IPAddress struct {
-	Address string `json:"address"`
-
-	NetName string `json:"name"`
-}
-
 // OvercloudIPSetSpec defines the desired state of OvercloudIPSet
 type OvercloudIPSetSpec struct {
 
-	// NetworkName the name of the OvercloudNetwork to pull IPs from
-	NetworkNames []string `json:"networkNames,omitempty"`
+	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	Networks []string `json:"networks,omitempty"`
 }
 
 // OvercloudIPSetStatus defines the observed state of OvercloudIPSet
 type OvercloudIPSetStatus struct {
-	IPAddresses []IPAddress `json:"ipaddresses,omitempty"`
+	IPAddresses map[string]string `json:"ipaddresses,omitempty"`
 }
 
 // +kubebuilder:object:root=true
