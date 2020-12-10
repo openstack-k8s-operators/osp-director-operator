@@ -39,6 +39,94 @@ spec:
             deploymentSSHSecret:
               description: Name of secret holding the stack-admin ssh keys
               type: string
+            hardwareReqs:
+              description: Hardware requests for selecting BaremetalHosts with certain
+                specs
+              properties:
+                cpuReqs:
+                  description: CPUReqs defines specific CPU hardware requests
+                  properties:
+                    arch:
+                      description: Arch is a scalar (string) because it wouldn't make
+                        sense to give it an "exact-match" option
+                      type: string
+                    countReq:
+                      description: CPUCountReq defines a specific hardware request
+                        for CPU core count
+                      properties:
+                        count:
+                          type: integer
+                        exactMatch:
+                          description: If ExactMatch == false, actual count > Count
+                            will match
+                          type: boolean
+                      required:
+                      - count
+                      type: object
+                    mhzReq:
+                      description: CPUMhzReq defines a specific hardware request for
+                        CPU clock speed
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual mhz > Mhz will
+                            match
+                          type: boolean
+                        mhz:
+                          type: integer
+                      required:
+                      - mhz
+                      type: object
+                  type: object
+                diskReqs:
+                  description: DiskReqs defines specific disk hardware requests
+                  properties:
+                    gbReq:
+                      description: DiskGbReq defines a specific hardware request for
+                        disk size
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual GB > Gb will
+                            match
+                          type: boolean
+                        gb:
+                          type: integer
+                      required:
+                      - gb
+                      type: object
+                    ssdReq:
+                      description: SSD is scalar (bool) because it wouldn't make sense
+                        to give it an "exact-match" option
+                      properties:
+                        exactMatch:
+                          description: We only actually care about SSD flag if it
+                            is true or ExactMatch is set to true. This second flag
+                            is necessary as SSD's bool zero-value (false) is indistinguishable
+                            from it being explicitly set to false
+                          type: boolean
+                        ssd:
+                          type: boolean
+                      required:
+                      - ssd
+                      type: object
+                  type: object
+                memReqs:
+                  description: MemReqs defines specific memory hardware requests
+                  properties:
+                    gbReq:
+                      description: MemGbReq defines a specific hardware request for
+                        memory size
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual GB > Gb will
+                            match
+                          type: boolean
+                        gb:
+                          type: integer
+                      required:
+                      - gb
+                      type: object
+                  type: object
+              type: object
             mgmtCidr:
               description: CIDR for management network
               type: string

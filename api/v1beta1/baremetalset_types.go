@@ -20,6 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// HardwareReqType is used to enumerate the various hardware requests that can be made for the set
+type HardwareReqType string
+
 // BaremetalSetSpec defines the desired state of BaremetalSet
 type BaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
@@ -32,6 +35,8 @@ type BaremetalSetSpec struct {
 	MgmtCIDR string `json:"mgmtCidr"`
 	// Interface to use for management network
 	MgmtInterface string `json:"mgmtInterface"`
+	// Hardware requests for selecting BaremetalHosts with certain specs
+	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet
@@ -45,6 +50,70 @@ type BaremetalHostStatus struct {
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 	MgmtIP                string `json:"mgmtIP"`
 	Online                bool   `json:"online"`
+}
+
+// HardwareReqs defines request hardware attributes for the BaremetalHost replicas
+type HardwareReqs struct {
+	CPUReqs  CPUReqs  `json:"cpuReqs,omitempty"`
+	MemReqs  MemReqs  `json:"memReqs,omitempty"`
+	DiskReqs DiskReqs `json:"diskReqs,omitempty"`
+}
+
+// CPUReqs defines specific CPU hardware requests
+type CPUReqs struct {
+	// Arch is a scalar (string) because it wouldn't make sense to give it an "exact-match" option
+	Arch     string      `json:"arch,omitempty"`
+	CountReq CPUCountReq `json:"countReq,omitempty"`
+	MhzReq   CPUMhzReq   `json:"mhzReq,omitempty"`
+}
+
+// CPUCountReq defines a specific hardware request for CPU core count
+type CPUCountReq struct {
+	Count int `json:"count"`
+	// If ExactMatch == false, actual count > Count will match
+	ExactMatch bool `json:"exactMatch,omitempty"`
+}
+
+// CPUMhzReq defines a specific hardware request for CPU clock speed
+type CPUMhzReq struct {
+	Mhz int `json:"mhz"`
+	// If ExactMatch == false, actual mhz > Mhz will match
+	ExactMatch bool `json:"exactMatch,omitempty"`
+}
+
+// MemReqs defines specific memory hardware requests
+type MemReqs struct {
+	GbReq MemGbReq `json:"gbReq,omitempty"`
+}
+
+// MemGbReq defines a specific hardware request for memory size
+type MemGbReq struct {
+	Gb int `json:"gb"`
+	// If ExactMatch == false, actual GB > Gb will match
+	ExactMatch bool `json:"exactMatch,omitempty"`
+}
+
+// DiskReqs defines specific disk hardware requests
+type DiskReqs struct {
+	GbReq DiskGbReq `json:"gbReq,omitempty"`
+	// SSD is scalar (bool) because it wouldn't make sense to give it an "exact-match" option
+	SSDReq DiskSSDReq `json:"ssdReq,omitempty"`
+}
+
+// DiskGbReq defines a specific hardware request for disk size
+type DiskGbReq struct {
+	Gb int `json:"gb"`
+	// If ExactMatch == false, actual GB > Gb will match
+	ExactMatch bool `json:"exactMatch,omitempty"`
+}
+
+// DiskSSDReq defines a specific hardware request for disk of type SSD (true) or rotational (false)
+type DiskSSDReq struct {
+	SSD bool `json:"ssd"`
+	// We only actually care about SSD flag if it is true or ExactMatch is set to true.
+	// This second flag is necessary as SSD's bool zero-value (false) is indistinguishable
+	// from it being explicitly set to false
+	ExactMatch bool `json:"exactMatch,omitempty"`
 }
 
 // +kubebuilder:object:root=true
