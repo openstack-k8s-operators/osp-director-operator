@@ -3,5 +3,6 @@ kind: OvercloudIPSet
 metadata:
   name: worker1
 spec:
+  role: Controller
   networks:
     - ctlplane

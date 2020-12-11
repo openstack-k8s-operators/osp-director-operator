@@ -37,6 +37,16 @@ spec:
       kind: OpenStackClient
       name: openstackclients.osp-director.openstack.org
       version: v1beta1
+    - description: OvercloudIPSet is the Schema for the overcloudipsets API
+      displayName: Overcloud IPSet
+      kind: OvercloudIPSet
+      name: overcloudipsets.osp-director.openstack.org
+      version: v1beta1
+    - description: OvercloudNet is the Schema for the overcloudnets API
+      displayName: Overcloud Net
+      kind: OvercloudNet
+      name: overcloudnets.osp-director.openstack.org
+      version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator
   icon:

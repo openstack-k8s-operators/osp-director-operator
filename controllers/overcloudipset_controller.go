@@ -17,13 +17,16 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/go-logr/logr"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,8 +37,29 @@ import (
 // OvercloudIPSetReconciler reconciles a OvercloudIPSet object
 type OvercloudIPSetReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
+}
+
+// GetClient -
+func (r *OvercloudIPSetReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *OvercloudIPSetReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetLogger -
+func (r *OvercloudIPSetReconciler) GetLogger() logr.Logger {
+	return r.Log
+}
+
+// GetScheme -
+func (r *OvercloudIPSetReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
 }
 
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudnets,verbs=get;list;watch;create;update;patch;delete
@@ -108,6 +132,62 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
+	// generate pre assigned IPs environment file for Heat
+	overcloudIPList := &ospdirectorv1beta1.OvercloudIPSetList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.Client.List(context.TODO(), overcloudIPList, listOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	roleIPSets := map[string]map[string][]string{}
+
+	for _, ipset := range overcloudIPList.Items {
+		if roleIPSet, exists := roleIPSets[ipset.Spec.Role]; exists {
+			for netName, addr := range ipset.Status.IPAddresses {
+				//roleIPSet.IPList = append(roleIPSet.IPList, ipset.Status.IPAddresses[netName])
+				roleIPSet[netName] = append(roleIPSet[netName], addr)
+			}
+		} else {
+			// initialize the roleIPSet with new netIPLists
+			for name, addr := range ipset.Status.IPAddresses {
+				roleIPSets[instance.Spec.Role] = map[string][]string{name: {addr}}
+			}
+
+		}
+	}
+
+	r.Log.Info("RoleIPList:")
+	r.Log.Info(fmt.Sprintf("%v", roleIPSets))
+
+	// write it all to a configmap
+	envVars := make(map[string]common.EnvSetter)
+	cmLabels := common.GetLabels(instance.Name, "osp-overcloudipset")
+
+	templateParameters := make(map[string]string)
+	templateParameters["PredictableIps"] = roleIPSetToString(roleIPSets)
+
+	cm := []common.Template{
+		{
+			Name:           "predictable-ips-heat-env",
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			Labels:         cmLabels,
+			ConfigOptions:  templateParameters,
+			SkipSetOwner:   true,
+		},
+	}
+
+	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -116,4 +196,19 @@ func (r *OvercloudIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OvercloudIPSet{}).
 		Complete(r)
+}
+
+// roleIPSetToString -
+func roleIPSetToString(r map[string]map[string][]string) string {
+	var b bytes.Buffer
+	for role, roleIps := range r {
+		b.WriteString(fmt.Sprintf("  %sIPs:\n", role))
+		for netname, ips := range roleIps {
+			b.WriteString(fmt.Sprintf("    %s:\n", netname))
+			for _, ip := range ips {
+				b.WriteString(fmt.Sprintf("    - %s\n", ip))
+			}
+		}
+	}
+	return b.String()
 }

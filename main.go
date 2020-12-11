@@ -160,17 +160,19 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.OvercloudNetReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("OvercloudNet"),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OvercloudNet"),
+		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OvercloudNet")
 		os.Exit(1)
 	}
 	if err = (&controllers.OvercloudIPSetReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("OvercloudIPSet"),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OvercloudIPSet"),
+		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OvercloudIPSet")
 		os.Exit(1)

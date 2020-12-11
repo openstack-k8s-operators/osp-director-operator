@@ -25,6 +25,9 @@ type OvercloudIPSetSpec struct {
 
 	// Networks the name(s) of the OvercloudNetworks used to generate IPs
 	Networks []string `json:"networks,omitempty"`
+
+	// Role the name of the Overcloud role this IPset is associated with. Used to generate the required predictable IPs files.
+	Role string `json:"role,omitempty"`
 }
 
 // OvercloudIPSetStatus defines the observed state of OvercloudIPSet

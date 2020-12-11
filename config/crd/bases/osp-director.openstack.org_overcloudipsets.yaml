@@ -42,6 +42,10 @@ spec:
               items:
                 type: string
               type: array
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate the required predictable IPs files.
+              type: string
           type: object
         status:
           description: OvercloudIPSetStatus defines the observed state of OvercloudIPSet
