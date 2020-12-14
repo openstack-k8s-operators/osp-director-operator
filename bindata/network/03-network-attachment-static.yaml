@@ -1,0 +1,23 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: {{ .Network }}-static
+  namespace: {{ .Namespace }}
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: bridge.network.kubevirt.io/{{ .BridgeName }}
+spec:
+  config: >
+    {
+        "cniVersion": "0.3.1",
+        "name": "{{ .BridgeName }}-config",
+        "plugins": [
+            {
+                "type": "bridge",
+                "bridge": "{{ .BridgeName }}",
+                "ipam": {"type": "static"}
+            },
+            {
+                "type": "tuning"
+            }
+        ]
+    }

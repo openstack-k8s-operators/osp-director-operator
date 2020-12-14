@@ -29,9 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// BITSIZE
 const (
-	BITSIZE int = 4096
+	// BITSIZE -
+	BITSIZE   int = 4096
+	sshConfig     = `Host *
+    User cloud-admin
+    StrictHostKeyChecking no`
 )
 
 // GetSecret -
@@ -111,6 +114,7 @@ func SSHKeySecret(name string, namespace string, labels map[string]string) (*cor
 		StringData: map[string]string{
 			"identity":        privateKeyPem,
 			"authorized_keys": publicKey,
+			"config":          sshConfig,
 		},
 	}
 	return secret, nil

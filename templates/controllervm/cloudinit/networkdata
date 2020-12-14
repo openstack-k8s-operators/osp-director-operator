@@ -1,0 +1,4 @@
+version: 2
+ethernets:
+  eth1:
+    addresses: [ {{ .ControllerIP }} ]

@@ -13,4 +13,5 @@ write_files:
       BLAA
       BOOOO
 runcmd:
-  - echo "GNAHHH" > /tmp/runcmd
+  - dnf install -y http://download.devel.redhat.com/rcm-guest/puddles/OpenStack/rhos-release/rhos-release-latest.noarch.rpm
+  - rhos-release 16.2

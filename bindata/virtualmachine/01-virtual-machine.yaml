@@ -33,6 +33,8 @@ spec:
         controllervms.osp-director.openstack.org/ospcontroller: "True"
     spec:
       domain:
+        cpu:
+          cores: {{ .Cores }}
         devices:
           disks:
           - disk:
@@ -64,6 +66,8 @@ spec:
       - cloudInitNoCloud:
           secretRef:
             name: {{ .UserDataSecret }}
+          networkDataSecretRef:
+            name: {{ .NetworkDataSecret }}
         name: cloudinitdisk
       networks:
       - name: default

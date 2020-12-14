@@ -103,6 +103,17 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	hashes = append(hashes, ospdirectorv1beta1.Hash{Name: sshSecret.Name, Hash: secretHash})
 
+	// check for required configMaps
+	configMaps := []string{
+		"tripleo-deploy-config",
+		"tripleo-deploy-sh",
+	}
+	configHashes, err := common.GetConfigMaps(r, instance, configMaps, instance.Namespace, &envVars)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+	}
+	hashes = append(hashes, configHashes...)
+
 	// Create or update the pod object
 	op, err := r.podCreateOrUpdate(instance, envVars)
 	if err != nil {
@@ -129,12 +140,13 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 
 	// TODO: the overcloud deploy end with create of clouds.yaml
 	//       add clouds.yaml into a secret and mount to this pod
-	envVars["OS_CLOUDNAME"] = common.EnvValue(instance.Spec.CloudName)
-
+	envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
+			// TODO: remove hard coded IP
+			Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": `[{"name": "osp-static", "namespace": "openstack", "ips": ["192.168.25.6/24"]}]`},
 		},
 	}
 	pod.Spec = corev1.PodSpec{
@@ -178,6 +190,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		// Delete pod when an unsupported change was requested, like
 		// e.g. additional controller VM got up. We just re-create the
 		// openstackclient pod
+		r.Log.Info(fmt.Sprintf("openstackclient pod deleted due to spec change %v", err))
 		if err := r.Client.Delete(context.TODO(), pod); err != nil {
 			return op, err
 		}
