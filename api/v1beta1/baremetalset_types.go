@@ -26,6 +26,7 @@ type HardwareReqType string
 // BaremetalSetSpec defines the desired state of BaremetalSet
 type BaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
+	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image (TODO: currently gzipped only) for the set
 	RhelImageURL string `json:"rhelImageUrl"`
@@ -35,7 +36,9 @@ type BaremetalSetSpec struct {
 	MgmtCIDR string `json:"mgmtCidr"`
 	// Interface to use for management network
 	MgmtInterface string `json:"mgmtInterface"`
-	// Hardware requests for selecting BaremetalHosts with certain specs
+	// BmhLabelSelector allows for a sub-selection of BaremetalHosts based on arbitrary labels
+	BmhLabelSelector map[string]string `json:"bmhLabelSelector,omitempty"`
+	// Hardware requests for sub-selection of BaremetalHosts with certain hardware specs
 	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
 }
 
@@ -62,6 +65,8 @@ type HardwareReqs struct {
 // CPUReqs defines specific CPU hardware requests
 type CPUReqs struct {
 	// Arch is a scalar (string) because it wouldn't make sense to give it an "exact-match" option
+	// Can be either "x86_64" or "ppc64le" if included
+	// +kubebuilder:validation:Enum=x86_64;ppc64le
 	Arch     string      `json:"arch,omitempty"`
 	CountReq CPUCountReq `json:"countReq,omitempty"`
 	MhzReq   CPUMhzReq   `json:"mhzReq,omitempty"`
@@ -69,6 +74,7 @@ type CPUReqs struct {
 
 // CPUCountReq defines a specific hardware request for CPU core count
 type CPUCountReq struct {
+	// +kubebuilder:validation:Minimum=1
 	Count int `json:"count"`
 	// If ExactMatch == false, actual count > Count will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
@@ -76,6 +82,7 @@ type CPUCountReq struct {
 
 // CPUMhzReq defines a specific hardware request for CPU clock speed
 type CPUMhzReq struct {
+	// +kubebuilder:validation:Minimum=1
 	Mhz int `json:"mhz"`
 	// If ExactMatch == false, actual mhz > Mhz will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
@@ -88,6 +95,7 @@ type MemReqs struct {
 
 // MemGbReq defines a specific hardware request for memory size
 type MemGbReq struct {
+	// +kubebuilder:validation:Minimum=1
 	Gb int `json:"gb"`
 	// If ExactMatch == false, actual GB > Gb will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
@@ -102,6 +110,7 @@ type DiskReqs struct {
 
 // DiskGbReq defines a specific hardware request for disk size
 type DiskGbReq struct {
+	// +kubebuilder:validation:Minimum=1
 	Gb int `json:"gb"`
 	// If ExactMatch == false, actual GB > Gb will match
 	ExactMatch bool `json:"exactMatch,omitempty"`

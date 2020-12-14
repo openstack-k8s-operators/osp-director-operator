@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -262,6 +263,12 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 	listOpts := []client.ListOption{
 		client.InNamespace("openshift-machine-api"),
 	}
+
+	if len(instance.Spec.BmhLabelSelector) > 0 {
+		labels := client.MatchingLabels(instance.Spec.BmhLabelSelector)
+		listOpts = append(listOpts, labels)
+	}
+
 	err := r.Client.List(context.TODO(), baremetalHostsList, listOpts...)
 	if err != nil {
 		return err
@@ -328,6 +335,9 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
 			r.Log.Info(fmt.Sprintf("WARNING: Unable to find %d requested BaremetalHost replicas (%d in use, %d available)", instance.Spec.Replicas, len(existingBaremetalHosts), len(availableBaremetalHosts)))
 		}
+
+		// Sort the list of available BaremetalHosts
+		sort.Strings(availableBaremetalHosts)
 
 		// For each available BaremetalHost that we need to allocate, we update the
 		// reference to use our image and set the user data to use our cloud-init secret.

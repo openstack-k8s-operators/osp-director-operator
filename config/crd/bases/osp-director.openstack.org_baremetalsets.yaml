@@ -36,25 +36,36 @@ spec:
         spec:
           description: BaremetalSetSpec defines the desired state of BaremetalSet
           properties:
+            bmhLabelSelector:
+              additionalProperties:
+                type: string
+              description: BmhLabelSelector allows for a sub-selection of BaremetalHosts
+                based on arbitrary labels
+              type: object
             deploymentSSHSecret:
               description: Name of secret holding the stack-admin ssh keys
               type: string
             hardwareReqs:
-              description: Hardware requests for selecting BaremetalHosts with certain
-                specs
+              description: Hardware requests for sub-selection of BaremetalHosts with
+                certain hardware specs
               properties:
                 cpuReqs:
                   description: CPUReqs defines specific CPU hardware requests
                   properties:
                     arch:
                       description: Arch is a scalar (string) because it wouldn't make
-                        sense to give it an "exact-match" option
+                        sense to give it an "exact-match" option Can be either "x86_64"
+                        or "ppc64le" if included
+                      enum:
+                      - x86_64
+                      - ppc64le
                       type: string
                     countReq:
                       description: CPUCountReq defines a specific hardware request
                         for CPU core count
                       properties:
                         count:
+                          minimum: 1
                           type: integer
                         exactMatch:
                           description: If ExactMatch == false, actual count > Count
@@ -72,6 +83,7 @@ spec:
                             match
                           type: boolean
                         mhz:
+                          minimum: 1
                           type: integer
                       required:
                       - mhz
@@ -89,6 +101,7 @@ spec:
                             match
                           type: boolean
                         gb:
+                          minimum: 1
                           type: integer
                       required:
                       - gb
@@ -121,6 +134,7 @@ spec:
                             match
                           type: boolean
                         gb:
+                          minimum: 1
                           type: integer
                       required:
                       - gb
@@ -135,6 +149,7 @@ spec:
               type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
+              minimum: 0
               type: integer
             rhelImageUrl:
               description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:
