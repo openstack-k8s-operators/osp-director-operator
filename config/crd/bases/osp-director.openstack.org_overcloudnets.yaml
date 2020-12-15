@@ -48,6 +48,8 @@ spec:
               description: Cidr the cidr to use for this network
               type: string
           required:
+          - allocationEnd
+          - allocationStart
           - cidr
           type: object
         status:
@@ -64,9 +66,12 @@ spec:
                     description: IP       net.IP `json:"ip"`
                     type: string
                 required:
+                - hostname
                 - ip
                 type: object
               type: array
+          required:
+          - reservations
           type: object
       type: object
   version: v1beta1

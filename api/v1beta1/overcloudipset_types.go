@@ -24,15 +24,15 @@ import (
 type OvercloudIPSetSpec struct {
 
 	// Networks the name(s) of the OvercloudNetworks used to generate IPs
-	Networks []string `json:"networks,omitempty"`
+	Networks []string `json:"networks"`
 
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate the required predictable IPs files.
-	Role string `json:"role,omitempty"`
+	Role string `json:"role"`
 }
 
 // OvercloudIPSetStatus defines the observed state of OvercloudIPSet
 type OvercloudIPSetStatus struct {
-	IPAddresses map[string]string `json:"ipaddresses,omitempty"`
+	IPAddresses map[string]string `json:"ipaddresses"`
 }
 
 // +kubebuilder:object:root=true

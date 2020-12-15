@@ -24,7 +24,7 @@ import (
 type IPReservation struct {
 	//IP       net.IP `json:"ip"`
 	IP       string `json:"ip"`
-	Hostname string `json:"hostname,omitempty"`
+	Hostname string `json:"hostname"`
 }
 
 // OvercloudNetSpec defines the desired state of OvercloudNet
@@ -36,17 +36,17 @@ type OvercloudNetSpec struct {
 
 	// +kubebuilder:validation:Required
 	// AllocationStart a set of IPs that are reserved and will not be assigned
-	AllocationStart string `json:"allocationStart,omitempty"`
+	AllocationStart string `json:"allocationStart"`
 
 	// +kubebuilder:validation:Required
 	// AllocationEnd a set of IPs that are reserved and will not be assigned
-	AllocationEnd string `json:"allocationEnd,omitempty"`
+	AllocationEnd string `json:"allocationEnd"`
 }
 
 // OvercloudNetStatus defines the observed state of OvercloudNet
 type OvercloudNetStatus struct {
 	// Reservations IP address reservations
-	Reservations []IPReservation `json:"reservations,omitempty"`
+	Reservations []IPReservation `json:"reservations"`
 }
 
 // +kubebuilder:object:root=true
