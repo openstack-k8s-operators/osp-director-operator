@@ -98,7 +98,6 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 	ospdirectorv1beta1.AddToScheme(scheme.Scheme)
 
 	dClient := dynamic.NewForConfigOrDie(config)
-	// kubeClient := kubernetes.NewForConfigOrDie(config)
 
 	provServerClient := dClient.Resource(provisionServerGVR)
 	unstructured, err := provServerClient.Namespace(startOpts.provServerNamespace).Get(context.Background(), startOpts.provServerName, metav1.GetOptions{})
@@ -138,9 +137,6 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 	}
 
 	_, err = provServerClient.Namespace(startOpts.provServerNamespace).UpdateStatus(context.Background(), unstructured, metav1.UpdateOptions{})
-
-	// _, err = provServerClient.Namespace(startOpts.provServerNamespace).Patch(context.Background(), startOpts.provServerName, types.MergePatchType,
-	// 	[]byte(fmt.Sprintf(`{"status":{"localImageUrl":"%s"}}`, "nonsense")), metav1.PatchOptions{})
 
 	for err != nil {
 		time.Sleep(time.Second * 5)
