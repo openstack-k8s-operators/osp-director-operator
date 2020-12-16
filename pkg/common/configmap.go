@@ -50,9 +50,11 @@ func createOrUpdateConfigMap(r ReconcilerCommon, obj metav1.Object, cm Template)
 		// add data from templates
 		configMap.Data = getTemplateData(cm)
 
-		err := controllerutil.SetControllerReference(obj, configMap, r.GetScheme())
-		if err != nil {
-			return err
+		if !cm.SkipSetOwner {
+			err := controllerutil.SetControllerReference(obj, configMap, r.GetScheme())
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil

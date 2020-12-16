@@ -1,0 +1,74 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: overcloudipsets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OvercloudIPSet
+    listKind: OvercloudIPSetList
+    plural: overcloudipsets
+    singular: overcloudipset
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: OvercloudIPSet is the Schema for the overcloudipsets API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: OvercloudIPSetSpec defines the desired state of OvercloudIPSet
+          properties:
+            networks:
+              description: Networks the name(s) of the OvercloudNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate the required predictable IPs files.
+              type: string
+          required:
+          - networks
+          - role
+          type: object
+        status:
+          description: OvercloudIPSetStatus defines the observed state of OvercloudIPSet
+          properties:
+            ipaddresses:
+              additionalProperties:
+                type: string
+              type: object
+          required:
+          - ipaddresses
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
