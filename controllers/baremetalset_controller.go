@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -82,6 +81,9 @@ func (r *BaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=metal3.io,resources=baremetalhosts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=metal3.io,resources=baremetalhosts/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
@@ -256,6 +258,37 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 	return provisionServer, op, err
 }
 
+func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet, hostname string) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
+	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      hostname,
+			Namespace: instance.ObjectMeta.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
+		overcloudIPSet.Spec.Networks = instance.Spec.Networks
+		overcloudIPSet.Spec.Role = instance.Spec.Role
+
+		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return overcloudIPSet, op, err
+}
+
+func createOrGetHostname(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) string {
+	if found, ok := instance.Status.BaremetalHosts[bmhName]; ok {
+		return found.Hostname
+	}
+	return fmt.Sprintf("%s%s", instance.Spec.Role, string(len(instance.Status.BaremetalHosts)))
+}
+
 // Provision or deprovision BaremetalHost resources based on replica count
 func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret) error {
 	// Get all openshift-machine-api BaremetalHosts
@@ -405,22 +438,14 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	mgmtIP, gwIP, netmask, err := findIPs(instance, bmh)
+	hostname := createOrGetHostname(instance, bmh)
 
+	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance, hostname)
 	if err != nil {
 		return err
 	}
-
-	if mgmtIP == "" {
-		return fmt.Errorf("Unable to find free IP for CIDR %s", instance.Spec.MgmtCIDR)
-	}
-
-	if gwIP == "" {
-		return fmt.Errorf("Unable to find gateway IP for CIDR %s", instance.Spec.MgmtCIDR)
-	}
-
-	if netmask == "" {
-		return fmt.Errorf("Unable to find netmask for CIDR %s", instance.Spec.MgmtCIDR)
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// User data cloud-init secret
@@ -441,12 +466,14 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	sts = append(sts, userDataSt)
 
+	ip, network, _ := net.ParseCIDR(ipset.Status.IPAddresses["ctlplane"]) // We use ctlplane as the MgmtNetwork too for now
+
 	// Network data cloud-init secret
 	templateParameters = make(map[string]string)
-	templateParameters["MgmtIp"] = mgmtIP
+	templateParameters["MgmtIp"] = ip.String()
 	templateParameters["MgmtInterface"] = instance.Spec.MgmtInterface
-	templateParameters["MgmtGateway"] = gwIP
-	templateParameters["MgmtNetmask"] = netmask
+	templateParameters["MgmtGateway"] = "192.168.1.1" //FIXME
+	templateParameters["MgmtNetmask"] = fmt.Sprintf("/%s", strings.Split(network.String(), "/")[1])
 	// TODO: Either generate the gateway from the network object or allow user specification via CR?
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
@@ -509,7 +536,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, mgmtIP)
+	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ip.String(), hostname)
 
 	return nil
 }
@@ -578,9 +605,10 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	return nil
 }
 
-func (r *BaremetalSetReconciler) setBaremetalHostStatus(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost, userDataSecretName string, networkDataSecretName string, mgmtIP string) {
+func (r *BaremetalSetReconciler) setBaremetalHostStatus(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost, userDataSecretName string, networkDataSecretName string, mgmtIP string, hostname string) {
 	// Set status (add this BaremetalHost entry)
 	instance.Status.BaremetalHosts[bmh.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
+		Hostname:              hostname,
 		UserDataSecretName:    userDataSecretName,
 		NetworkDataSecretName: networkDataSecretName,
 		MgmtIP:                mgmtIP,
@@ -733,57 +761,4 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 	r.Log.Info(fmt.Sprintf("BaremetalHost %s satisfies BaremetalSet %s hardware requirements", bmh.Name, instance.Name))
 
 	return true, nil
-}
-
-// Get the IP, gateway and netmask from the management network for a particular BaremetalHost in the BaremetalSet
-func findIPs(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) (ip string, gateway string, netmask string, err error) {
-	_, network, err := net.ParseCIDR(instance.Spec.MgmtCIDR)
-
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// Gateway will just be first address in the network for now
-	gw, err := cidr.Host(network, 1)
-
-	if err != nil {
-		return "", "", "", err
-	}
-
-	gateway = gw.String()
-
-	// Calculate "X.X.X.X" netmask
-	// IPv4 only for now, but this whole function is going away eventually anyhow
-	netmask = fmt.Sprintf("%d.%d.%d.%d", network.Mask[0], network.Mask[1], network.Mask[2], network.Mask[3])
-
-	// First check if we already have an IP for this host
-	if bmhStatus, ok := instance.Status.BaremetalHosts[bmhName]; ok {
-		if bmhStatus.MgmtIP != "" {
-			return bmhStatus.MgmtIP, gateway, netmask, nil
-		}
-	}
-
-	// Exclude the first address (gateway) and the last address (broadcast)
-	for i := uint64(2); i < cidr.AddressCount(network); i++ {
-		mgmtIP, err := cidr.Host(network, int(i))
-
-		if err != nil {
-			return "", "", "", err
-		}
-
-		found := false
-
-		for _, bmhStatus := range instance.Status.BaremetalHosts {
-			if bmhStatus.MgmtIP == mgmtIP.String() {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			return mgmtIP.String(), gateway, netmask, nil
-		}
-	}
-
-	return "", "", "", nil
 }

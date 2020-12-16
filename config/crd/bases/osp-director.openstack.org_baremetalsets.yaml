@@ -131,12 +131,15 @@ spec:
                       type: object
                   type: object
               type: object
-            mgmtCidr:
-              description: CIDR for management network
-              type: string
             mgmtInterface:
               description: Interface to use for management network
               type: string
+            networks:
+              description: Networks the name(s) of the OvercloudNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               minimum: 0
@@ -145,11 +148,16 @@ spec:
               description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:
                 currently gzipped only) for the set'
               type: string
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate the required predictable IPs files.
+              type: string
           required:
           - deploymentSSHSecret
-          - mgmtCidr
           - mgmtInterface
+          - networks
           - rhelImageUrl
+          - role
           type: object
         status:
           description: BaremetalSetStatus defines the observed state of BaremetalSet
@@ -159,6 +167,8 @@ spec:
                 description: BaremetalHostStatus represents the observed state of
                   a particular allocated BaremetalHost resource
                 properties:
+                  hostname:
+                    type: string
                   mgmtIP:
                     type: string
                   networkDataSecretName:
@@ -168,6 +178,7 @@ spec:
                   userDataSecretName:
                     type: string
                 required:
+                - hostname
                 - mgmtIP
                 - networkDataSecretName
                 - online

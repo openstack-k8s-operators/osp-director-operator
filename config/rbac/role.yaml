@@ -292,6 +292,18 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - overcloudipsets/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - overcloudipsets/status
   verbs:
   - get
