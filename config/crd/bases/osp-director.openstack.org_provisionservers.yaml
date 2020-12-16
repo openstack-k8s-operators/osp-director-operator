@@ -53,6 +53,10 @@ spec:
             localImageUrl:
               description: URL of provisioning image on underlying Apache web server
               type: string
+            provisionIp:
+              description: IP of the provisioning interface on the node running the
+                ProvisionServer pod
+              type: string
           type: object
       type: object
   version: v1beta1
