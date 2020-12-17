@@ -1,0 +1,4 @@
+# Environment file for pre-assigned IPs
+
+parameter_defaults:
+{{.PredictableIps}}

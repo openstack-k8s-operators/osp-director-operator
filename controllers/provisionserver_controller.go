@@ -134,7 +134,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
 
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	// Get the provisioning interface of the cluster worker nodes
