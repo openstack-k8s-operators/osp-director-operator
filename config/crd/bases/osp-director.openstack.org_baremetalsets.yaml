@@ -36,9 +36,111 @@ spec:
         spec:
           description: BaremetalSetSpec defines the desired state of BaremetalSet
           properties:
+            bmhLabelSelector:
+              additionalProperties:
+                type: string
+              description: BmhLabelSelector allows for a sub-selection of BaremetalHosts
+                based on arbitrary labels
+              type: object
             deploymentSSHSecret:
               description: Name of secret holding the stack-admin ssh keys
               type: string
+            hardwareReqs:
+              description: Hardware requests for sub-selection of BaremetalHosts with
+                certain hardware specs
+              properties:
+                cpuReqs:
+                  description: CPUReqs defines specific CPU hardware requests
+                  properties:
+                    arch:
+                      description: Arch is a scalar (string) because it wouldn't make
+                        sense to give it an "exact-match" option Can be either "x86_64"
+                        or "ppc64le" if included
+                      enum:
+                      - x86_64
+                      - ppc64le
+                      type: string
+                    countReq:
+                      description: CPUCountReq defines a specific hardware request
+                        for CPU core count
+                      properties:
+                        count:
+                          minimum: 1
+                          type: integer
+                        exactMatch:
+                          description: If ExactMatch == false, actual count > Count
+                            will match
+                          type: boolean
+                      required:
+                      - count
+                      type: object
+                    mhzReq:
+                      description: CPUMhzReq defines a specific hardware request for
+                        CPU clock speed
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual mhz > Mhz will
+                            match
+                          type: boolean
+                        mhz:
+                          minimum: 1
+                          type: integer
+                      required:
+                      - mhz
+                      type: object
+                  type: object
+                diskReqs:
+                  description: DiskReqs defines specific disk hardware requests
+                  properties:
+                    gbReq:
+                      description: DiskGbReq defines a specific hardware request for
+                        disk size
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual GB > Gb will
+                            match
+                          type: boolean
+                        gb:
+                          minimum: 1
+                          type: integer
+                      required:
+                      - gb
+                      type: object
+                    ssdReq:
+                      description: SSD is scalar (bool) because it wouldn't make sense
+                        to give it an "exact-match" option
+                      properties:
+                        exactMatch:
+                          description: We only actually care about SSD flag if it
+                            is true or ExactMatch is set to true. This second flag
+                            is necessary as SSD's bool zero-value (false) is indistinguishable
+                            from it being explicitly set to false
+                          type: boolean
+                        ssd:
+                          type: boolean
+                      required:
+                      - ssd
+                      type: object
+                  type: object
+                memReqs:
+                  description: MemReqs defines specific memory hardware requests
+                  properties:
+                    gbReq:
+                      description: MemGbReq defines a specific hardware request for
+                        memory size
+                      properties:
+                        exactMatch:
+                          description: If ExactMatch == false, actual GB > Gb will
+                            match
+                          type: boolean
+                        gb:
+                          minimum: 1
+                          type: integer
+                      required:
+                      - gb
+                      type: object
+                  type: object
+              type: object
             mgmtCidr:
               description: CIDR for management network
               type: string
@@ -47,6 +149,7 @@ spec:
               type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
+              minimum: 0
               type: integer
             rhelImageUrl:
               description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:

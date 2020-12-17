@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -258,12 +259,16 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 // Provision or deprovision BaremetalHost resources based on replica count
 func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret) error {
 	// Get all openshift-machine-api BaremetalHosts
-	// TODO: Might need to filter this API call to only retrieve a subset, given
-	//       what we might expose in our BaremetalSet CR for hardware options, etc
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
 		client.InNamespace("openshift-machine-api"),
 	}
+
+	if len(instance.Spec.BmhLabelSelector) > 0 {
+		labels := client.MatchingLabels(instance.Spec.BmhLabelSelector)
+		listOpts = append(listOpts, labels)
+	}
+
 	err := r.Client.List(context.TODO(), baremetalHostsList, listOpts...)
 	if err != nil {
 		return err
@@ -310,6 +315,18 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 			if baremetalHost.Spec.Online == true || baremetalHost.Spec.ConsumerRef != nil {
 				continue
 			}
+
+			hardwareMatch, err := r.verifyHardwareMatch(instance, &baremetalHost)
+
+			if err != nil {
+				return err
+			}
+
+			if !hardwareMatch {
+				r.Log.Info(fmt.Sprintf("BaremetalHost %s does not match hardware requirements for BaremetalSet %s", baremetalHost.ObjectMeta.Name, instance.Name))
+				continue
+			}
+
 			r.Log.Info(fmt.Sprintf("Available BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
 			availableBaremetalHosts = append(availableBaremetalHosts, baremetalHost.ObjectMeta.Name)
 		}
@@ -318,6 +335,9 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
 			r.Log.Info(fmt.Sprintf("WARNING: Unable to find %d requested BaremetalHost replicas (%d in use, %d available)", instance.Spec.Replicas, len(existingBaremetalHosts), len(availableBaremetalHosts)))
 		}
+
+		// Sort the list of available BaremetalHosts
+		sort.Strings(availableBaremetalHosts)
 
 		// For each available BaremetalHost that we need to allocate, we update the
 		// reference to use our image and set the user data to use our cloud-init secret.
@@ -374,7 +394,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	userDataSecretName := fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh)
 
-	st := common.Template{
+	userDataSt := common.Template{
 		Name:           userDataSecretName,
 		Namespace:      "openshift-machine-api",
 		Type:           common.TemplateTypeConfig,
@@ -384,7 +404,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 		ConfigOptions:  templateParameters,
 	}
 
-	sts = append(sts, st)
+	sts = append(sts, userDataSt)
 
 	// Network data cloud-init secret
 	templateParameters = make(map[string]string)
@@ -396,7 +416,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 
-	st = common.Template{
+	networkDataSt := common.Template{
 		Name:           networkDataSecretName,
 		Namespace:      "openshift-machine-api",
 		Type:           common.TemplateTypeConfig,
@@ -406,7 +426,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 		ConfigOptions:  templateParameters,
 	}
 
-	sts = append(sts, st)
+	sts = append(sts, networkDataSt)
 
 	err = common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
 
@@ -422,7 +442,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 		return err
 	}
 
-	r.Log.Info(fmt.Sprintf("Allocating/Updating BaremetalHost: %s", bmh))
+	r.Log.Info(fmt.Sprintf("Allocating/Updating BaremetalHost: %s", foundBaremetalHost.Name))
 
 	// Set our ownership labels so we can watch this resource
 	// Set ownership labels that can be found by the respective controller kind
@@ -571,6 +591,108 @@ func (r *BaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirec
 	}
 
 	return nil
+}
+
+func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost) (bool, error) {
+	// If no requested hardware requirements, we're all set
+	if instance.Spec.HardwareReqs == (ospdirectorv1beta1.HardwareReqs{}) {
+		return true, nil
+	}
+
+	// Can't make comparisons if the BMH lacks hardware details
+	if bmh.Status.HardwareDetails == nil {
+		r.Log.Info(fmt.Sprintf("WARNING: BaremetalHost %s lacks hardware details in status; cannot verify against BaremetalSet %s hardware requests!", bmh.Name, instance.Name))
+		return false, nil
+	}
+
+	cpuReqs := instance.Spec.HardwareReqs.CPUReqs
+
+	// CPU architecture is always exact-match only
+	if cpuReqs.Arch != "" && bmh.Status.HardwareDetails.CPU.Arch != cpuReqs.Arch {
+		r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU arch %s does not match BaremetalSet %s request for '%s'", bmh.Name, bmh.Status.HardwareDetails.CPU.Arch, instance.Name, cpuReqs.Arch))
+		return false, nil
+	}
+
+	// CPU count can be exact-match or (default) greater
+	if cpuReqs.CountReq.Count != 0 && bmh.Status.HardwareDetails.CPU.Count != cpuReqs.CountReq.Count {
+		if cpuReqs.CountReq.ExactMatch || cpuReqs.CountReq.Count > bmh.Status.HardwareDetails.CPU.Count {
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU count %d does not match BaremetalSet %s request for '%d'", bmh.Name, bmh.Status.HardwareDetails.CPU.Count, instance.Name, cpuReqs.CountReq.Count))
+			return false, nil
+		}
+	}
+
+	// CPU clock speed can be exact-match or (default) greater
+	if cpuReqs.MhzReq.Mhz != 0 {
+		clockSpeed := int(bmh.Status.HardwareDetails.CPU.ClockMegahertz)
+		if cpuReqs.MhzReq.Mhz != clockSpeed && (cpuReqs.MhzReq.ExactMatch || cpuReqs.MhzReq.Mhz > clockSpeed) {
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU mhz %d does not match BaremetalSet %s request for '%d'", bmh.Name, clockSpeed, instance.Name, cpuReqs.MhzReq.Mhz))
+			return false, nil
+		}
+	}
+
+	memReqs := instance.Spec.HardwareReqs.MemReqs
+
+	// Memory GBs can be exact-match or (default) greater
+	if memReqs.GbReq.Gb != 0 {
+
+		memGbBms := float64(memReqs.GbReq.Gb)
+		memGbBmh := float64(bmh.Status.HardwareDetails.RAMMebibytes) / float64(1024)
+
+		if memGbBmh != memGbBms && (memReqs.GbReq.ExactMatch || memGbBms > memGbBmh) {
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s memory size %v does not match BaremetalSet %s request for '%v'", bmh.Name, memGbBmh, instance.Name, memGbBms))
+			return false, nil
+		}
+	}
+
+	diskReqs := instance.Spec.HardwareReqs.DiskReqs
+
+	var foundDisk *metal3v1alpha1.Storage
+
+	if diskReqs.GbReq.Gb != 0 {
+		diskGbBms := float64(diskReqs.GbReq.Gb)
+		// TODO: Make sure there's at least one disk of this size?
+		for _, disk := range bmh.Status.HardwareDetails.Storage {
+			diskGbBmh := float64(disk.SizeBytes) / float64(1073741824)
+
+			if diskGbBmh == diskGbBms || (!diskReqs.GbReq.ExactMatch && diskGbBmh > diskGbBms) {
+				foundDisk = &disk
+				break
+			}
+		}
+
+		if foundDisk == nil {
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk of size %v that matches BaremetalSet %s request", bmh.Name, diskGbBms, instance.Name))
+			return false, nil
+		}
+	}
+
+	// We only care about the SSD flag if the user requested an exact match for it or if SSD is true
+	if diskReqs.SSDReq.ExactMatch || diskReqs.SSDReq.SSD {
+		found := false
+
+		// If we matched on a disk for a GbReqs above, we need to match on the same disk
+		if foundDisk != nil {
+			if foundDisk.Rotational != diskReqs.SSDReq.SSD {
+				found = true
+			}
+		} else {
+			// TODO: Just need to match on any disk?
+			for _, disk := range bmh.Status.HardwareDetails.Storage {
+				if disk.Rotational != diskReqs.SSDReq.SSD {
+					found = true
+				}
+			}
+		}
+
+		if !found {
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk with 'rotational' equal to %v that matches BaremetalSet %s request", bmh.Name, diskReqs.SSDReq.SSD, instance.Name))
+			return false, nil
+		}
+	}
+
+	r.Log.Info(fmt.Sprintf("BaremetalHost %s satisfies BaremetalSet %s hardware requirements", bmh.Name, instance.Name))
+
+	return true, nil
 }
 
 // Get the IP, gateway and netmask from the management network for a particular BaremetalHost in the BaremetalSet

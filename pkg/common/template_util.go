@@ -35,6 +35,7 @@ type Template struct {
 	AdditionalData map[string]string
 	Labels         map[string]string
 	ConfigOptions  map[string]string
+	SkipSetOwner   bool // skip setting ownership on the associated configmap
 }
 
 // GetTemplatesPath get path to templates, either running local or deployed as container
