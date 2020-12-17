@@ -1,0 +1,15 @@
+FROM registry.svc.ci.openshift.org/ocp/builder:rhel-8-golang-1.15-openshift-4.7 AS builder
+WORKDIR /go/src/github.com/openstack-k8s-operators/osp-director-operator
+COPY . .
+RUN go mod vendor
+RUN BIN_PATH=build/_output/cmd ./containers/provision_ip_discovery_agent/build-provision-ip-discovery-agent.sh
+
+FROM registry.svc.ci.openshift.org/ocp/4.7:base
+RUN yum -y update && yum clean all
+LABEL io.k8s.display-name="OSP-Director-Operator provision-ip-discovery-agent" \
+      io.k8s.description="This is an agent that discovers the IP of a designated provisioning interface on a given host" \
+      io.openshift.tags="openstack,director" \
+      maintainer="Andrew Bays <abays@redhat.com>"
+COPY --from=builder /go/src/github.com/openstack-k8s-operators/osp-director-operator/build/_output/cmd/provision-ip-discovery-agent /usr/bin/
+
+CMD ["/usr/bin/provision-ip-discovery-agent"]
