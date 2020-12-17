@@ -10,12 +10,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/openshift/sriov-network-operator/pkg/version"
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -44,7 +42,6 @@ var (
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.PersistentFlags().StringVar(&startOpts.kubeconfig, "kubeconfig", "", "Kubeconfig file to access a remote cluster (testing only)")
 	startCmd.PersistentFlags().StringVar(&startOpts.provIntf, "prov-intf", "", "Provisioning interface name on the associated host")
 	startCmd.PersistentFlags().StringVar(&startOpts.provServerName, "prov-server-name", "", "Provisioning server resource name")
 	startCmd.PersistentFlags().StringVar(&startOpts.provServerNamespace, "prov-server-namespace", "", "Provisioning server resource namespace")
@@ -53,6 +50,8 @@ func init() {
 func runStartCmd(cmd *cobra.Command, args []string) {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
+
+	glog.V(0).Info("Starting ProvisionIpDiscoveryAgent")
 
 	// To help debugging, immediately log version
 	glog.V(2).Infof("Version: %+v", version.Version)
@@ -95,8 +94,6 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 		panic(err.Error())
 	}
 
-	ospdirectorv1beta1.AddToScheme(scheme.Scheme)
-
 	dClient := dynamic.NewForConfigOrDie(config)
 
 	provServerClient := dClient.Resource(provisionServerGVR)
@@ -122,8 +119,10 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 				panic(err.Error())
 			}
 
-			ip = addrs[0].String()
-			ip = strings.Split(ip, "/")[0]
+			if len(addrs) > 0 {
+				ip = addrs[0].String()
+				ip = strings.Split(ip, "/")[0]
+			}
 			break
 		}
 	}
