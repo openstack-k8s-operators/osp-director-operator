@@ -16,7 +16,7 @@ type InitContainer struct {
 	VolumeMounts   []corev1.VolumeMount
 }
 
-// GetInitContainer - init container for cinder services
+// GetInitContainers - init containers for ProvisionServers
 func GetInitContainers(inits []InitContainer) []corev1.Container {
 	trueVar := true
 
