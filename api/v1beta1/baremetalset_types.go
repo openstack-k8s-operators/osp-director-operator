@@ -75,7 +75,7 @@ type CPUReqs struct {
 // CPUCountReq defines a specific hardware request for CPU core count
 type CPUCountReq struct {
 	// +kubebuilder:validation:Minimum=1
-	Count int `json:"count"`
+	Count int `json:"count,omitempty"`
 	// If ExactMatch == false, actual count > Count will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
 }
@@ -83,7 +83,7 @@ type CPUCountReq struct {
 // CPUMhzReq defines a specific hardware request for CPU clock speed
 type CPUMhzReq struct {
 	// +kubebuilder:validation:Minimum=1
-	Mhz int `json:"mhz"`
+	Mhz int `json:"mhz,omitempty"`
 	// If ExactMatch == false, actual mhz > Mhz will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
 }
@@ -96,7 +96,7 @@ type MemReqs struct {
 // MemGbReq defines a specific hardware request for memory size
 type MemGbReq struct {
 	// +kubebuilder:validation:Minimum=1
-	Gb int `json:"gb"`
+	Gb int `json:"gb,omitempty"`
 	// If ExactMatch == false, actual GB > Gb will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
 }
@@ -111,14 +111,14 @@ type DiskReqs struct {
 // DiskGbReq defines a specific hardware request for disk size
 type DiskGbReq struct {
 	// +kubebuilder:validation:Minimum=1
-	Gb int `json:"gb"`
+	Gb int `json:"gb,omitempty"`
 	// If ExactMatch == false, actual GB > Gb will match
 	ExactMatch bool `json:"exactMatch,omitempty"`
 }
 
 // DiskSSDReq defines a specific hardware request for disk of type SSD (true) or rotational (false)
 type DiskSSDReq struct {
-	SSD bool `json:"ssd"`
+	SSD bool `json:"ssd,omitempty"`
 	// We only actually care about SSD flag if it is true or ExactMatch is set to true.
 	// This second flag is necessary as SSD's bool zero-value (false) is indistinguishable
 	// from it being explicitly set to false
