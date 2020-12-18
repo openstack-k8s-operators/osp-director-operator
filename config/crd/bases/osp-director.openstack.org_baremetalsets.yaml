@@ -71,8 +71,6 @@ spec:
                           description: If ExactMatch == false, actual count > Count
                             will match
                           type: boolean
-                      required:
-                      - count
                       type: object
                     mhzReq:
                       description: CPUMhzReq defines a specific hardware request for
@@ -85,8 +83,6 @@ spec:
                         mhz:
                           minimum: 1
                           type: integer
-                      required:
-                      - mhz
                       type: object
                   type: object
                 diskReqs:
@@ -103,8 +99,6 @@ spec:
                         gb:
                           minimum: 1
                           type: integer
-                      required:
-                      - gb
                       type: object
                     ssdReq:
                       description: SSD is scalar (bool) because it wouldn't make sense
@@ -118,8 +112,6 @@ spec:
                           type: boolean
                         ssd:
                           type: boolean
-                      required:
-                      - ssd
                       type: object
                   type: object
                 memReqs:
@@ -136,8 +128,6 @@ spec:
                         gb:
                           minimum: 1
                           type: integer
-                      required:
-                      - gb
                       type: object
                   type: object
               type: object
