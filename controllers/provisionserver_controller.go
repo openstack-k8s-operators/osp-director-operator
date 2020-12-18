@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -166,8 +167,17 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	// Provision IP Discovery Agent sets status' ProvisionIP
 	if instance.Status.ProvisionIP != "" {
-		urlPieces := strings.Split(instance.Status.LocalImageURL, "/")
-		if instance.Status.LocalImageURL == "" || len(urlPieces) <= 1 || (len(urlPieces) >= 3 && urlPieces[2] != instance.Status.LocalImageURL) {
+
+		// Get the current LocalImageURL IP (if any)
+		curURL, err := url.Parse(instance.Status.LocalImageURL)
+
+		if err != nil {
+			r.Log.Error(err, "Failed to parse existing LocalImageURL for ProvisionServer %s: %s", instance.Name, instance.Status.LocalImageURL)
+			return ctrl.Result{}, err
+		}
+
+		// If the current LocalImageURL is empty, or its embedded IP does not equal the ProvisionIP, the update the LocalImageURL
+		if instance.Status.LocalImageURL == "" || curURL.Hostname() != instance.Status.ProvisionIP {
 			// Update status with LocalImageURL, given ProvisionIP status value
 			instance.Status.LocalImageURL = r.getLocalImageURL(instance)
 			err = r.Client.Status().Update(context.TODO(), instance)
@@ -176,6 +186,8 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 				r.Log.Error(err, "Failed to update CR status %v")
 				return ctrl.Result{}, err
 			}
+
+			r.Log.Info(fmt.Sprintf("ProvisionServer %s status' LocalImageURL updated: %s", instance.Name, instance.Status.LocalImageURL))
 		}
 	}
 
