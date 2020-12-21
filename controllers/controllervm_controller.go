@@ -122,7 +122,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	templateParameters := make(map[string]string)
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 
-	sts := []common.Template{
+	cloudinit := []common.Template{
 		// CloudInitSecret
 		{
 			Name:           fmt.Sprintf("%s-cloudinit", instance.Name),
@@ -143,7 +143,12 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//},
 	}
 
-	controllerDetails := []ospdirectorv1beta1.Host{}
+	err = common.EnsureSecrets(r, instance, cloudinit, &envVars)
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
+
+	controllerDetails := map[string]ospdirectorv1beta1.Host{}
 
 	// Generate the Contoller networkdata secrets
 	for i := 0; i < instance.Spec.ControllerCount; i++ {
@@ -152,34 +157,33 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		// TODO: for now single network and hardcode controller ips to 192.168.25.1X
 
 		hostname := fmt.Sprintf("controller-%d", i)
-		ip := fmt.Sprintf("192.168.25.1%d", i)
 		networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname)
-		templateParameters["ControllerIP"] = ip
 
-		controllerDetails = append(controllerDetails,
-			ospdirectorv1beta1.Host{
-				Hostname:          hostname,
-				DomainName:        hostname,
-				DomainNameUniq:    fmt.Sprintf("%s-%s", hostname, instance.UID[0:4]),
-				IPAdress:          ip,
-				NetworkDataSecret: networkDataSecretName,
+		controllerDetails[hostname] = ospdirectorv1beta1.Host{
+			Hostname:          hostname,
+			DomainName:        hostname,
+			DomainNameUniq:    fmt.Sprintf("%s-%s", hostname, instance.UID[0:4]),
+			IPAdress:          fmt.Sprintf("192.168.25.1%d", i),
+			NetworkDataSecret: networkDataSecretName,
+		}
+
+		templateParameters["ControllerIP"] = controllerDetails[hostname].IPAdress
+		networkdata := []common.Template{
+			{
+				Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),
+				Namespace:      instance.Namespace,
+				Type:           common.TemplateTypeNone,
+				InstanceType:   instance.Kind,
+				AdditionalData: map[string]string{"networkdata": "/controllervm/cloudinit/networkdata"},
+				Labels:         secretLabels,
+				ConfigOptions:  templateParameters,
 			},
-		)
+		}
 
-		sts = append(sts, common.Template{
-			Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeNone,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{"networkdata": "/controllervm/cloudinit/networkdata"},
-			Labels:         secretLabels,
-			ConfigOptions:  templateParameters,
-		})
-	}
-
-	err = common.EnsureSecrets(r, instance, sts, &envVars)
-	if err != nil {
-		return ctrl.Result{}, nil
+		err = common.EnsureSecrets(r, instance, networkdata, &envVars)
+		if err != nil {
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// Create base image, controller disks get cloned from this
