@@ -19,20 +19,18 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	metal3valpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
@@ -40,7 +38,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+)
+
+var (
+	provInterfaceName = ""
+	provisioningsGVR  = schema.GroupVersionResource{
+		Group:    "metal3.io",
+		Version:  "v1alpha1",
+		Resource: "provisionings",
+	}
 )
 
 // ProvisionServerReconciler reconciles a ProvisionServer object
@@ -130,9 +138,24 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, err
 	}
 
+	// Get the provisioning interface of the cluster worker nodes
+	if provInterfaceName == "" {
+		r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
+
+		provInterfaceName, err = r.getProvisioningInterface(instance)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if provInterfaceName == "" {
+			return ctrl.Result{}, fmt.Errorf("metal3 provisioning interface configuration not found")
+		}
+	}
+
 	// provisionserver
 	// Create or update the Deployment object
-	op, err := r.deploymentCreateOrUpdate(instance)
+	op, err := r.deploymentCreateOrUpdate(instance, provInterfaceName)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -142,25 +165,30 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
-	// Get the provisioning IP of node hosting the pod belonging to the CR
-	podIP, err := r.getProvisionServerProvisioningIP(instance)
+	// Provision IP Discovery Agent sets status' ProvisionIP
+	if instance.Status.ProvisionIP != "" {
 
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		// Get the current LocalImageURL IP (if any)
+		curURL, err := url.Parse(instance.Status.LocalImageURL)
 
-	if podIP == "" {
-		r.Log.Info(fmt.Sprintf("Deployment %s pod provisioning IP not yet available, requeuing and waiting", instance.Name))
-		return ctrl.Result{RequeueAfter: time.Second * 30}, err
-	}
+		if err != nil {
+			r.Log.Error(err, "Failed to parse existing LocalImageURL for ProvisionServer %s: %s", instance.Name, instance.Status.LocalImageURL)
+			return ctrl.Result{}, err
+		}
 
-	// Update Status
-	instance.Status.LocalImageURL = r.getLocalImageURL(podIP, instance)
-	err = r.Client.Status().Update(context.TODO(), instance)
+		// If the current LocalImageURL is empty, or its embedded IP does not equal the ProvisionIP, the update the LocalImageURL
+		if instance.Status.LocalImageURL == "" || curURL.Hostname() != instance.Status.ProvisionIP {
+			// Update status with LocalImageURL, given ProvisionIP status value
+			instance.Status.LocalImageURL = r.getLocalImageURL(instance)
+			err = r.Client.Status().Update(context.TODO(), instance)
 
-	if err != nil {
-		r.Log.Error(err, "Failed to update CR status %v")
-		return ctrl.Result{}, err
+			if err != nil {
+				r.Log.Error(err, "Failed to update CR status %v")
+				return ctrl.Result{}, err
+			}
+
+			r.Log.Info(fmt.Sprintf("ProvisionServer %s status' LocalImageURL updated: %s", instance.Name, instance.Status.LocalImageURL))
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -177,7 +205,7 @@ func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer) (controllerutil.OperationResult, error) {
+func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer, provInterfaceName string) (controllerutil.OperationResult, error) {
 
 	// Get volumes
 	initVolumeMounts := provisionserver.GetInitVolumeMounts(instance.Name)
@@ -216,17 +244,44 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 					Env:          []corev1.EnvVar{},
 					VolumeMounts: volumeMounts,
 				},
+				{
+					Name:    "osp-provision-ip-discovery-agent",
+					Args:    []string{"start"},
+					Command: []string{"provision-ip-discovery-agent"},
+					Image:   "quay.io/abays/provision-ip-discovery-agent:0.0.11",
+					Env: []corev1.EnvVar{
+						{
+							Name:  "PROV_INTF",
+							Value: provInterfaceName,
+						},
+						{
+							Name:  "PROV_SERVER_NAME",
+							Value: instance.GetName(),
+						},
+						{
+							Name:  "PROV_SERVER_NAMESPACE",
+							Value: instance.GetNamespace(),
+						},
+					},
+				},
 			},
 		}
 
-		initContainerDetails := provisionserver.InitContainer{
-			ContainerImage: "quay.io/abays/downloader:latest",
-			RhelImageURL:   instance.Spec.RhelImageURL,
-			Privileged:     false,
-			VolumeMounts:   initVolumeMounts,
+		initContainerDetails := []provisionserver.InitContainer{
+			{
+				ContainerImage: "quay.io/abays/downloader:latest",
+				Env: []corev1.EnvVar{
+					{
+						Name:  "RHEL_IMAGE_URL",
+						Value: instance.Spec.RhelImageURL,
+					},
+				},
+				Privileged:   false,
+				VolumeMounts: initVolumeMounts,
+			},
 		}
 
-		deployment.Spec.Template.Spec.InitContainers = provisionserver.GetInitContainer(initContainerDetails)
+		deployment.Spec.Template.Spec.InitContainers = provisionserver.GetInitContainers(initContainerDetails)
 
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 
@@ -240,97 +295,48 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 	return op, err
 }
 
-func (r *ProvisionServerReconciler) getProvisionServerProvisioningIP(instance *ospdirectorv1beta1.ProvisionServer) (string, error) {
-	// Get the pod associated with the deployment
-	labelSelectorString := labels.Set(map[string]string{
-		"deployment": instance.Name + "-provisionserver-deployment",
-	}).String()
-
-	podList, err := r.Kclient.CoreV1().Pods(instance.Namespace).List(
-		context.TODO(),
-		metav1.ListOptions{
-			LabelSelector: labelSelectorString,
-		},
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	if len(podList.Items) < 1 {
-		return "", nil
-	} else if len(podList.Items) > 1 {
-		err := fmt.Errorf("Expected 1 pod for %s deployment, got %d", instance.Name, len(podList.Items))
-		r.Log.Error(err, "Invalid pod count")
-		return "", err
-	}
-
-	pod := podList.Items[0]
-	r.Log.Info(fmt.Sprintf("Found pod %s on node %s", pod.Name, pod.Spec.NodeName))
-
-	// If the pod is not running yet, we don't actually have the server available
-	// on the provisioning IP, so just stop here for now
-	if pod.Status.Phase != corev1.PodRunning {
-		return "", nil
-	}
-
-	// Get node on which pod is scheduled
-	node, err := r.Kclient.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
-
-	if err != nil {
-		return "", err
-	}
-
-	machineName := strings.Split(node.ObjectMeta.Annotations["machine.openshift.io/machine"], "/")[1]
-	r.Log.Info(fmt.Sprintf("Found node %s on machine %s", node.Name, machineName))
-
-	// Get machine associated with node
-	machine := &machinev1beta1.Machine{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: machineName, Namespace: "openshift-machine-api"}, machine)
-
-	if err != nil {
-		return "", err
-	}
-
-	bmhName := strings.Split(machine.ObjectMeta.Annotations["metal3.io/BareMetalHost"], "/")[1]
-	r.Log.Info(fmt.Sprintf("Found machine %s on bare metal host %s", machine.Name, bmhName))
-
-	// Get baremetalhost associated with machine
-	bmh := &metal3valpha1.BareMetalHost{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: bmhName, Namespace: "openshift-machine-api"}, bmh)
-
-	if err != nil {
-		return "", err
-	}
-
-	r.Log.Info(fmt.Sprintf("Found baremetalhost %s", bmh.Name))
-
-	// TODO: There is likely a better way we should be doing this.
-	// Get baremetalhost's provisioning IP by using its spec's "bootMACAddress" and finding
-	// the nic in its status with that MAC address
-	provMAC := bmh.Spec.BootMACAddress
-	provIP := ""
-
-	if bmh.Status.HardwareDetails != nil {
-		for _, nic := range bmh.Status.HardwareDetails.NIC {
-			if nic.MAC == provMAC {
-				provIP = nic.IP
-				r.Log.Info(fmt.Sprintf("Found provisioning IP %s on baremetalhost %s", provIP, bmh.Name))
-				break
-			}
-		}
-	}
-
-	return provIP, nil
-}
-
-func (r *ProvisionServerReconciler) getLocalImageURL(podIP string, instance *ospdirectorv1beta1.ProvisionServer) string {
+func (r *ProvisionServerReconciler) getLocalImageURL(instance *ospdirectorv1beta1.ProvisionServer) string {
 	baseFilename := instance.Spec.RhelImageURL[strings.LastIndex(instance.Spec.RhelImageURL, "/")+1 : len(instance.Spec.RhelImageURL)]
-	baseFilenameEnd := baseFilename[len(baseFilename)-3 : len(baseFilename)]
+	baseFilenameEnd := baseFilename[len(baseFilename)-3:]
 
 	if baseFilenameEnd == ".gz" || baseFilenameEnd == ".xz" {
 		baseFilename = baseFilename[0 : len(baseFilename)-3]
 	}
 
-	return fmt.Sprintf("http://%s:%d/images/%s/compressed-%s", podIP, instance.Spec.Port, baseFilename, baseFilename)
+	return fmt.Sprintf("http://%s:%d/images/%s/compressed-%s", instance.Status.ProvisionIP, instance.Spec.Port, baseFilename, baseFilename)
+}
+
+func (r *ProvisionServerReconciler) getProvisioningInterface(instance *ospdirectorv1beta1.ProvisionServer) (string, error) {
+	cfg, err := config.GetConfig()
+
+	if err != nil {
+		return "", err
+	}
+
+	dynClient, err := dynamic.NewForConfig(cfg)
+
+	if err != nil {
+		return "", err
+	}
+
+	provisioningsClient := dynClient.Resource(provisioningsGVR)
+
+	provisioning, err := provisioningsClient.Get(context.TODO(), "provisioning-configuration", metav1.GetOptions{})
+
+	if err != nil {
+		return "", err
+	}
+
+	provisioningSpecIntf := provisioning.Object["spec"]
+
+	if provisioningSpec, ok := provisioningSpecIntf.(map[string]interface{}); ok {
+		interfaceIntf := provisioningSpec["provisioningInterface"]
+
+		if provInterfaceName, ok := interfaceIntf.(string); ok {
+			r.Log.Info(fmt.Sprintf("Found provisioning interface %s in Metal3 config", provInterfaceName))
+			return provInterfaceName, nil
+		}
+	}
+
+	return "", nil
 }

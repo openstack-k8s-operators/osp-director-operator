@@ -30,6 +30,8 @@ type ProvisionServerSpec struct {
 
 // ProvisionServerStatus defines the observed state of ProvisionServer
 type ProvisionServerStatus struct {
+	// IP of the provisioning interface on the node running the ProvisionServer pod
+	ProvisionIP string `json:"provisionIp,omitempty"`
 	// URL of provisioning image on underlying Apache web server
 	LocalImageURL string `json:"localImageUrl,omitempty"`
 }

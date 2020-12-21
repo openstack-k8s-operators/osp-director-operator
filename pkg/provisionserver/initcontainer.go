@@ -1,39 +1,51 @@
 package provisionserver
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
 // InitContainer information
 type InitContainer struct {
-	Privileged     bool
+	Args           []string
+	Commands       []string
 	ContainerImage string
-	RhelImageURL   string
+	Env            []corev1.EnvVar
+	Privileged     bool
 	VolumeMounts   []corev1.VolumeMount
 }
 
-// GetInitContainer - init container for cinder services
-func GetInitContainer(init InitContainer) []corev1.Container {
+// GetInitContainers - init containers for ProvisionServers
+func GetInitContainers(inits []InitContainer) []corev1.Container {
 	trueVar := true
 
 	securityContext := &corev1.SecurityContext{}
+	initContainers := []corev1.Container{}
 
-	if init.Privileged {
-		securityContext.Privileged = &trueVar
-	}
+	for index, init := range inits {
+		if init.Privileged {
+			securityContext.Privileged = &trueVar
+		}
 
-	return []corev1.Container{
-		{
-			Name:            "init",
+		container := corev1.Container{
+			Name:            fmt.Sprintf("init-%d", index),
 			Image:           init.ContainerImage,
 			SecurityContext: securityContext,
 			VolumeMounts:    init.VolumeMounts,
-			Env: []corev1.EnvVar{
-				{
-					Name:  "RHEL_IMAGE_URL",
-					Value: init.RhelImageURL,
-				},
-			},
-		},
+			Env:             init.Env,
+		}
+
+		if len(init.Args) != 0 {
+			container.Args = init.Args
+		}
+
+		if len(init.Commands) != 0 {
+			container.Command = init.Commands
+		}
+
+		initContainers = append(initContainers, container)
 	}
+
+	return initContainers
 }
