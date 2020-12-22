@@ -274,32 +274,67 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		return err
 	}
 
-	existingBaremetalHosts := []string{}
+	existingBaremetalHosts := map[string]string{}
+	removalAnnotatedBaremetalHosts := []string{}
 
 	// Find the current BaremetalHosts belonging to this BaremetalSet
 	for _, baremetalHost := range baremetalHostsList.Items {
 		if baremetalHost.Spec.ConsumerRef != nil && (baremetalHost.Spec.ConsumerRef.Kind == instance.Kind && baremetalHost.Spec.ConsumerRef.Name == instance.Name && baremetalHost.Spec.ConsumerRef.Namespace == instance.Namespace) {
 			r.Log.Info(fmt.Sprintf("Existing BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
-			existingBaremetalHosts = append(existingBaremetalHosts, baremetalHost.ObjectMeta.Name)
+			// Storing the existing BaremetalHosts in a map like this just makes selected replica scale-down easier below
+			existingBaremetalHosts[baremetalHost.ObjectMeta.Name] = baremetalHost.ObjectMeta.Name
+
+			// Prep for possible replica scale-down below
+			if val, ok := baremetalHost.Annotations[baremetalset.BaremetalHostRemovalAnnotation]; ok && (val == "yes" || val == "true") {
+				removalAnnotatedBaremetalHosts = append(removalAnnotatedBaremetalHosts, baremetalHost.ObjectMeta.Name)
+			}
 		}
 	}
 
-	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.
-	// TODO: Add something to CR to allow user to specify which BaremetalHosts are removed
-	for i := len(existingBaremetalHosts); i > instance.Spec.Replicas; i-- {
-		for _, oldBmhName := range existingBaremetalHosts {
-			// Just delete the first one we find until the TODO from above is implemented
+	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.  First we
+	// choose BaremetalHosts with the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes"
+	// annotation, then, if there are still BaremetalHosts left to deprovision, we choose randomly from the
+	// existingBaremetalHosts map (as maps are unordered in Golang, we don't know which one will be chosen)
+
+	// How many new BaremetalHost de-allocations do we need (if any)?
+	oldBmhsToRemoveCount := len(existingBaremetalHosts) - instance.Spec.Replicas
+
+	for i := 0; i < oldBmhsToRemoveCount; i++ {
+		// First choose BaremetalHosts to remove from the prepared list of BaremetalHosts
+		// that have the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes" annotation
+
+		if len(removalAnnotatedBaremetalHosts) > 0 {
+			err := r.baremetalHostDeprovision(instance, removalAnnotatedBaremetalHosts[0])
+
+			if err != nil {
+				return err
+			}
+
+			// Remove the removal-annotated BaremetalHost from the existingBaremetalHosts map
+			delete(existingBaremetalHosts, removalAnnotatedBaremetalHosts[0])
+
+			// Remove the removal-annotated BaremetalHost from the removalAnnotatedBaremetalHosts list
+			if len(removalAnnotatedBaremetalHosts) > 1 {
+				removalAnnotatedBaremetalHosts = removalAnnotatedBaremetalHosts[1:]
+			} else {
+				removalAnnotatedBaremetalHosts = []string{}
+			}
+
+			// We removed a removal-annotated BaremetalHost, so continue
+			continue
+		}
+
+		// We did NOT find a removal-annotated BaremetalHost to remove above, so we pick the first one
+		// in the existingBaremetalHosts list
+
+		for oldBmhName := range existingBaremetalHosts {
 			err := r.baremetalHostDeprovision(instance, oldBmhName)
 
 			if err != nil {
 				return err
 			}
 
-			if len(existingBaremetalHosts) > 1 {
-				existingBaremetalHosts = existingBaremetalHosts[1:]
-			} else {
-				existingBaremetalHosts = []string{}
-			}
+			delete(existingBaremetalHosts, oldBmhName)
 			break
 		}
 	}
@@ -353,8 +388,8 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 	}
 
 	// Now reconcile existing BaremetalHosts for this BaremetalSet
-	for i := 0; i < len(existingBaremetalHosts); i++ {
-		err := r.baremetalHostProvision(instance, existingBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret)
+	for bmhName := range existingBaremetalHosts {
+		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret)
 
 		if err != nil {
 			return err
@@ -496,6 +531,11 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	delete(labels, baremetalset.OwnerNameSpaceLabelSelector)
 	delete(labels, baremetalset.OwnerNameLabelSelector)
 	baremetalHost.GetObjectMeta().SetLabels(labels)
+
+	// Remove deletion annotation (if any)
+	annotations := baremetalHost.GetObjectMeta().GetAnnotations()
+	delete(annotations, baremetalset.BaremetalHostRemovalAnnotation)
+	baremetalHost.GetObjectMeta().SetAnnotations(annotations)
 
 	baremetalHost.Spec.Online = false
 	baremetalHost.Spec.ConsumerRef = nil
