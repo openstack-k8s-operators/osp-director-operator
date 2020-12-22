@@ -34,15 +34,20 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OvercloudIPSetList
 	ctlPlaneIps := map[string]string{}
 
 	for _, ipset := range overcloudIPList.Items {
-		for netName, addr := range ipset.Status.IPAddresses {
-			if netName == "ctlplane" {
-				ctlPlaneIps[ipset.Name] = addr
-			} else {
-				if roleIPSet, exists := roleIPSets[ipset.Spec.Role]; exists {
-					//roleIPSets[ipset.Spec.Role] = map[string][]string{netName: append(roleIPSet[netName], addr)}
-					roleIPSet[netName] = append(roleIPSet[netName], addr)
+		for count := 1; count <= ipset.Spec.HostCount; count++ {
+			hostname := fmt.Sprintf("%s%d", ipset.Name, count)
+
+			for netName, addr := range ipset.Status.HostIPs[hostname].IPAddresses {
+				if netName == "ctlplane" {
+					//ctlPlaneIps[ipset.Name] = addr
+					ctlPlaneIps[hostname] = addr
 				} else {
-					roleIPSets[ipset.Spec.Role] = map[string][]string{netName: {addr}}
+					if roleIPSet, exists := roleIPSets[ipset.Spec.Role]; exists {
+						//roleIPSets[ipset.Spec.Role] = map[string][]string{netName: append(roleIPSet[netName], addr)}
+						roleIPSet[netName] = append(roleIPSet[netName], addr)
+					} else {
+						roleIPSets[ipset.Spec.Role] = map[string][]string{netName: {addr}}
+					}
 				}
 			}
 		}

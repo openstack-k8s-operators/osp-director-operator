@@ -1,8 +1,11 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OvercloudIPSet
 metadata:
-  name: worker1
+  name: controllers
 spec:
+  hostCount: 1
   role: Controller
   networks:
     - ctlplane
+    - storage
+    - tenant

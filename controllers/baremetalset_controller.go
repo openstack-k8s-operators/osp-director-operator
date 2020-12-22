@@ -187,8 +187,23 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.BaremetalHostStatus{}
 	}
 
+	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{}, nil
+	}
+
+	if len(ipset.Status.HostIPs) != instance.Spec.Replicas {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.Replicas))
+		return ctrl.Result{}, nil
+	}
+
 	// Provision / deprovision requested replicas
-	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret); err != nil {
+	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, ipset); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -258,10 +273,10 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 	return provisionServer, op, err
 }
 
-func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet, hostname string) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
+func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
 	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      hostname,
+			Name:      instance.Name, // used as the base name of server instances
 			Namespace: instance.ObjectMeta.Namespace,
 		},
 	}
@@ -269,6 +284,7 @@ func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirec
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
 		overcloudIPSet.Spec.Networks = instance.Spec.Networks
 		overcloudIPSet.Spec.Role = instance.Spec.Role
+		overcloudIPSet.Spec.HostCount = instance.Spec.Replicas
 
 		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
 
@@ -286,11 +302,11 @@ func createOrGetHostname(instance *ospdirectorv1beta1.BaremetalSet, bmhName stri
 	if found, ok := instance.Status.BaremetalHosts[bmhName]; ok {
 		return found.Hostname
 	}
-	return fmt.Sprintf("%s%s", instance.Spec.Role, string(len(instance.Status.BaremetalHosts)))
+	return fmt.Sprintf("%s%d", instance.Name, len(instance.Status.BaremetalHosts)+1)
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
-func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret) error {
+func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
@@ -412,7 +428,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		// Then we add the status to store the BMH name, cloud-init secret name, management
 		// IP and BMH power status for the particular worker
 		for i := 0; i < len(availableBaremetalHosts) && i < newBmhsNeededCount; i++ {
-			err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret)
+			err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret, ipset)
 
 			if err != nil {
 				return err
@@ -422,7 +438,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 
 	// Now reconcile existing BaremetalHosts for this BaremetalSet
 	for bmhName := range existingBaremetalHosts {
-		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret)
+		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret, ipset)
 
 		if err != nil {
 			return err
@@ -433,20 +449,12 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 }
 
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
-func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.BaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret) error {
+func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.BaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
 	// Prepare cloudinit (create secret)
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	hostname := createOrGetHostname(instance, bmh)
-
-	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance, hostname)
-	if err != nil {
-		return err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
+	bmhName := createOrGetHostname(instance, bmh)
 
 	// User data cloud-init secret
 	templateParameters := make(map[string]string)
@@ -465,8 +473,9 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	sts = append(sts, userDataSt)
+	ip, network, _ := net.ParseCIDR(ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"]) // We use ctlplane as the MgmtNetwork too for now
 
-	ip, network, _ := net.ParseCIDR(ipset.Status.IPAddresses["ctlplane"]) // We use ctlplane as the MgmtNetwork too for now
+	r.Log.Info(fmt.Sprintf("Network: %s", network.String()))
 
 	// Network data cloud-init secret
 	templateParameters = make(map[string]string)
@@ -490,7 +499,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	sts = append(sts, networkDataSt)
 
-	err = common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
+	err := common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
 
 	if err != nil {
 		return err
@@ -536,7 +545,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ip.String(), hostname)
+	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ip.String(), bmhName)
 
 	return nil
 }

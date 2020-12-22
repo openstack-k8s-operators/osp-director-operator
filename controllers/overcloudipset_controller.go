@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/go-logr/logr"
@@ -85,48 +86,58 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.IPAddresses == nil {
-		instance.Status.IPAddresses = make(map[string]string)
+	if instance.Status.HostIPs == nil {
+		//instance.Status.IPAddresses = make(map[string]string)
+		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPSetStatus)
 	}
 
 	ctlplaneCidr := ""
 
-	// iterate over the requested Networks
-	for _, netName := range instance.Spec.Networks {
+	// iterate over the requested hostCount
+	for count := 1; count <= instance.Spec.HostCount; count++ {
+		hostname := fmt.Sprintf("%s%d", instance.Name, count)
 
-		if instance.Status.IPAddresses[netName] != "" {
-			continue
-		}
+		// iterate over the requested Networks
+		for _, netName := range instance.Spec.Networks {
 
-		network := &ospdirectorv1beta1.OvercloudNet{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, nil
+			if instance.Status.HostIPs[hostname].IPAddresses[netName] != "" {
+				continue
 			}
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
+
+			network := &ospdirectorv1beta1.OvercloudNet{}
+			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
+			if err != nil {
+				if k8s_errors.IsNotFound(err) {
+					return ctrl.Result{}, nil
+				}
+				// Error reading the object - requeue the request.
+				return ctrl.Result{}, err
+			}
+
+			_, cidr, _ := net.ParseCIDR(network.Spec.Cidr)
+			if network.Name == "ctlplane" {
+				ctlplaneCidr = network.Spec.Cidr
+			}
+			start := net.ParseIP(network.Spec.AllocationStart)
+			end := net.ParseIP(network.Spec.AllocationEnd)
+
+			ip, reservation, err := common.AssignIP(*cidr, start, end, network.Status.Reservations, instance.Name)
+
+			// record the reservation on the OvercloudNet
+			network.Status.Reservations = reservation
+			err = r.Client.Status().Update(context.TODO(), network)
+			if err != nil {
+				r.Log.Error(err, "Failed to update OvercloudNet status %v")
+				return ctrl.Result{}, err
+			}
+
+			if instance.Status.HostIPs[hostname].IPAddresses == nil {
+				instance.Status.HostIPs[hostname] = ospdirectorv1beta1.OvercloudIPSetStatus{IPAddresses: map[string]string{netName: ip.String()}}
+			} else {
+				instance.Status.HostIPs[hostname].IPAddresses[netName] = ip.String()
+			}
+
 		}
-
-		_, cidr, _ := net.ParseCIDR(network.Spec.Cidr)
-		if network.Name == "ctlplane" {
-			ctlplaneCidr = network.Spec.Cidr
-		}
-		start := net.ParseIP(network.Spec.AllocationStart)
-		end := net.ParseIP(network.Spec.AllocationEnd)
-
-		ip, reservation, err := common.AssignIP(*cidr, start, end, network.Status.Reservations, instance.Name)
-
-		// record the reservation on the OvercloudNet
-		network.Status.Reservations = reservation
-		err = r.Client.Status().Update(context.TODO(), network)
-		if err != nil {
-			r.Log.Error(err, "Failed to update OvercloudNet status %v")
-			return ctrl.Result{}, err
-		}
-
-		instance.Status.IPAddresses[netName] = ip.String()
-
 	}
 
 	// update the IPs for each IPSet
