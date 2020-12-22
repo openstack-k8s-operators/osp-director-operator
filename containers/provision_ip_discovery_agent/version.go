@@ -22,7 +22,10 @@ func init() {
 }
 
 func runVersionCmd(cmd *cobra.Command, args []string) {
-	flag.Set("logtostderr", "true")
+	err := flag.Set("logtostderr", "true")
+	if err != nil {
+		panic(err.Error())
+	}
 	flag.Parse()
 
 	program := "ProvisionServerIpDiscoveryAgent"

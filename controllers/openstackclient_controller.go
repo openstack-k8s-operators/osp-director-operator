@@ -93,26 +93,76 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets
-	hashes := []ospdirectorv1beta1.Hash{}
-	sshSecret, secretHash, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
+	_, _, err = common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
 	if err != nil && errors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	hashes = append(hashes, ospdirectorv1beta1.Hash{Name: sshSecret.Name, Hash: secretHash})
-
-	// check for required configMaps
-	configMaps := []string{
-		"tripleo-deploy-config",
-		"tripleo-deploy-sh",
+	templateParameters := make(map[string]interface{})
+	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
+	cms := []common.Template{
+		// Custom CM holding Tripleo deployment environment parameter files
+		{
+			Name:      "tripleo-deploy-config-custom",
+			Namespace: instance.Namespace,
+			Type:      common.TemplateTypeCustom,
+			Labels:    cmLabels,
+		},
+		// Custom CM holding Tripleo net-config files then used in parameter files
+		{
+			Name:      "tripleo-net-config",
+			Namespace: instance.Namespace,
+			Type:      common.TemplateTypeCustom,
+			Labels:    cmLabels,
+		},
 	}
-	configHashes, err := common.GetConfigMaps(r, instance, configMaps, instance.Namespace, &envVars)
+	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		return ctrl.Result{}, nil
 	}
-	hashes = append(hashes, configHashes...)
+
+	// get tripleo-deploy-config-custom, created/rendered by overcloudipset controller
+	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-custom", instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
+	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
+
+	// get tripleo-deploy-config, created/rendered by overcloudipset controller
+	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+		return ctrl.Result{}, err
+	}
+
+	tripleoDeployFiles := tripleoDeployCM.Data
+	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
+
+	// create cm holding deployment script and render deployment script.
+	// All yaml files from tripleo-deploy-config-custom and tripleo-deploy-config
+	// are added as environment files.
+	cms = []common.Template{
+		// ScriptsConfigMap
+		{
+			Name:           "tripleo-deploy-sh",
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeScripts,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			ConfigOptions:  templateParameters,
+			Labels:         cmLabels,
+		},
+	}
+	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
 
 	// Create or update the pod object
 	op, err := r.podCreateOrUpdate(instance, envVars)
@@ -132,6 +182,7 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackClient{}).
 		Owns(&corev1.Pod{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 

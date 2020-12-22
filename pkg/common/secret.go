@@ -31,8 +31,8 @@ import (
 
 const (
 	// BITSIZE -
-	BITSIZE   int = 4096
-	sshConfig     = `Host *
+	BITSIZE   int    = 4096
+	sshConfig string = `Host *
     User cloud-admin
     StrictHostKeyChecking no`
 )
@@ -80,6 +80,9 @@ func CreateOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, secret *corev1.
 
 		return nil
 	})
+	if err != nil {
+		return "", op, fmt.Errorf("error create/updating secret: %v", err)
+	}
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {
@@ -136,8 +139,7 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), secret, func() error {
 		secret.Labels = st.Labels
 		// add data from templates
-		dataString := make(map[string]string)
-		dataString = getTemplateData(st)
+		dataString := getTemplateData(st)
 		for k, d := range dataString {
 			data[k] = []byte(d)
 		}

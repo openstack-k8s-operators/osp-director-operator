@@ -96,7 +96,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// iterate over the requested hostCount
 	for count := 0; count < instance.Spec.HostCount; count++ {
-		hostname := fmt.Sprintf("%s-%d", instance.Spec.Role, count)
+		hostname := fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), count)
 
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {
@@ -116,6 +116,12 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			if network.Name == "ctlplane" {
 				ctlplaneCidr = network.Spec.Cidr
 			}
+
+			// TODO: should we really skip here, or modify AssignIP to just return the ip of an already existing entry?
+			if instance.Status.HostIPs[hostname].IPAddresses[netName] != "" {
+				continue
+			}
+
 			start := net.ParseIP(network.Spec.AllocationStart)
 			end := net.ParseIP(network.Spec.AllocationEnd)
 
@@ -135,6 +141,10 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			if reservationIP == "" {
 				// No reservation found, so create a new one
 				ip, reservation, err := common.AssignIP(*cidr, start, end, network.Status.Reservations, hostname)
+				if err != nil {
+					r.Log.Error(err, "Failed to do ip reservation %v")
+					return ctrl.Result{}, err
+				}
 
 				reservationIP = ip.String()
 
@@ -182,7 +192,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	cm := []common.Template{
 		{
-			Name:           "predictable-ips-heat-env",
+			Name:           "tripleo-deploy-config",
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeConfig,
 			InstanceType:   instance.Kind,

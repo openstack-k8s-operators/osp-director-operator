@@ -79,5 +79,5 @@ func CreateOrGetHostname(hostStore HostnameStore, idkey string, basename string)
 		chosenNumber = len(foundNumbers)
 	}
 
-	return fmt.Sprintf("%s-%d", basename, chosenNumber), nil
+	return fmt.Sprintf("%s-%d", strings.ToLower(basename), chosenNumber), nil
 }

@@ -49,7 +49,12 @@ func init() {
 }
 
 func runStartCmd(cmd *cobra.Command, args []string) {
-	flag.Set("logtostderr", "true")
+	var err error
+	err = flag.Set("logtostderr", "true")
+	if err != nil {
+		panic(err.Error())
+	}
+
 	flag.Parse()
 
 	glog.V(0).Info("Starting ProvisionIpDiscoveryAgent")
@@ -82,7 +87,6 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 	}
 
 	var config *rest.Config
-	var err error
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)

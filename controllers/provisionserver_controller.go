@@ -116,7 +116,7 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance.Name, provisionserver.AppLabel)
 
-	templateParameters := make(map[string]string)
+	templateParameters := make(map[string]interface{})
 	templateParameters["Port"] = strconv.Itoa(instance.Spec.Port)
 
 	cm := []common.Template{
