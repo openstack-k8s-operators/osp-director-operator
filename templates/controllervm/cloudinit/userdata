@@ -15,3 +15,4 @@ write_files:
 runcmd:
   - dnf install -y http://download.devel.redhat.com/rcm-guest/puddles/OpenStack/rhos-release/rhos-release-latest.noarch.rpm
   - rhos-release 16.2
+  - dnf install -y qemu-guest-agent && systemctl enable --now qemu-guest-agent
