@@ -299,43 +299,42 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 	// How many new BaremetalHost de-allocations do we need (if any)?
 	oldBmhsToRemoveCount := len(existingBaremetalHosts) - instance.Spec.Replicas
 
-	for i := 0; i < oldBmhsToRemoveCount; i++ {
-		// First choose BaremetalHosts to remove from the prepared list of BaremetalHosts
-		// that have the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes" annotation
+	if oldBmhsToRemoveCount > 0 {
+		oldBmhsRemovedCount := 0
 
-		if len(removalAnnotatedBaremetalHosts) > 0 {
-			err := r.baremetalHostDeprovision(instance, removalAnnotatedBaremetalHosts[0])
+		for i := 0; i < oldBmhsToRemoveCount; i++ {
+			// First choose BaremetalHosts to remove from the prepared list of BaremetalHosts
+			// that have the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes" annotation
 
-			if err != nil {
-				return err
-			}
+			if len(removalAnnotatedBaremetalHosts) > 0 {
+				err := r.baremetalHostDeprovision(instance, removalAnnotatedBaremetalHosts[0])
 
-			// Remove the removal-annotated BaremetalHost from the existingBaremetalHosts map
-			delete(existingBaremetalHosts, removalAnnotatedBaremetalHosts[0])
+				if err != nil {
+					return err
+				}
 
-			// Remove the removal-annotated BaremetalHost from the removalAnnotatedBaremetalHosts list
-			if len(removalAnnotatedBaremetalHosts) > 1 {
-				removalAnnotatedBaremetalHosts = removalAnnotatedBaremetalHosts[1:]
+				// Remove the removal-annotated BaremetalHost from the existingBaremetalHosts map
+				delete(existingBaremetalHosts, removalAnnotatedBaremetalHosts[0])
+
+				// Remove the removal-annotated BaremetalHost from the removalAnnotatedBaremetalHosts list
+				if len(removalAnnotatedBaremetalHosts) > 1 {
+					removalAnnotatedBaremetalHosts = removalAnnotatedBaremetalHosts[1:]
+				} else {
+					removalAnnotatedBaremetalHosts = []string{}
+				}
+
+				// We removed a removal-annotated BaremetalHost, so increment the removed count
+				oldBmhsRemovedCount++
 			} else {
-				removalAnnotatedBaremetalHosts = []string{}
+				// Just break, as any further iterations of the loop have nothing upon
+				// which to operate (we'll report this as a warning just below)
+				break
 			}
-
-			// We removed a removal-annotated BaremetalHost, so continue
-			continue
 		}
 
-		// We did NOT find a removal-annotated BaremetalHost to remove above, so we pick the first one
-		// in the existingBaremetalHosts list
-
-		for oldBmhName := range existingBaremetalHosts {
-			err := r.baremetalHostDeprovision(instance, oldBmhName)
-
-			if err != nil {
-				return err
-			}
-
-			delete(existingBaremetalHosts, oldBmhName)
-			break
+		// If we can't satisfy the requested scale-down, explicitly state so
+		if oldBmhsRemovedCount < oldBmhsToRemoveCount {
+			r.Log.Info(fmt.Sprintf("WARNING: Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found and removed, %d requested)", oldBmhsRemovedCount, oldBmhsToRemoveCount))
 		}
 	}
 
