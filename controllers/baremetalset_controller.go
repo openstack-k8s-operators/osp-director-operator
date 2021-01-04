@@ -285,7 +285,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 			existingBaremetalHosts[baremetalHost.ObjectMeta.Name] = baremetalHost.ObjectMeta.Name
 
 			// Prep for possible replica scale-down below
-			if val, ok := baremetalHost.Annotations[baremetalset.BaremetalHostRemovalAnnotation]; ok && (val == "yes" || val == "true") {
+			if val, ok := baremetalHost.Annotations[baremetalset.BaremetalHostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 				removalAnnotatedBaremetalHosts = append(removalAnnotatedBaremetalHosts, baremetalHost.ObjectMeta.Name)
 			}
 		}
