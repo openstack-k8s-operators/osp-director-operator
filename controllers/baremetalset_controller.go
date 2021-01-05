@@ -293,8 +293,9 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 
 	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.  First we
 	// choose BaremetalHosts with the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes"
-	// annotation, then, if there are still BaremetalHosts left to deprovision, we choose randomly from the
-	// existingBaremetalHosts map (as maps are unordered in Golang, we don't know which one will be chosen)
+	// annotation.  Then, if there are still BaremetalHosts left to deprovision based on the requested
+	// replica count, we will log a warning indicating that we cannot (fully or partially) honor the
+	// scale-down.
 
 	// How many new BaremetalHost de-allocations do we need (if any)?
 	oldBmhsToRemoveCount := len(existingBaremetalHosts) - instance.Spec.Replicas
