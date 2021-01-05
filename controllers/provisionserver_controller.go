@@ -248,7 +248,8 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 					Name:    "osp-provision-ip-discovery-agent",
 					Args:    []string{"start"},
 					Command: []string{"provision-ip-discovery-agent"},
-					Image:   "quay.io/abays/provision-ip-discovery-agent:0.0.11",
+					// TODO: Create an openstack-k8s-operators quay image/tag for this
+					Image: "quay.io/abays/provision-ip-discovery-agent:0.0.11",
 					Env: []corev1.EnvVar{
 						{
 							Name:  "PROV_INTF",
@@ -269,7 +270,8 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 
 		initContainerDetails := []provisionserver.InitContainer{
 			{
-				ContainerImage: "quay.io/abays/downloader:latest",
+				// TODO: Create an openstack-k8s-operators quay image/tag for this
+				ContainerImage: "quay.io/abays/downloader:0.0.3",
 				Env: []corev1.EnvVar{
 					{
 						Name:  "RHEL_IMAGE_URL",
