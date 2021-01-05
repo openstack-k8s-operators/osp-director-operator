@@ -271,7 +271,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 		initContainerDetails := []provisionserver.InitContainer{
 			{
 				// TODO: Create an openstack-k8s-operators quay image/tag for this
-				ContainerImage: "quay.io/abays/downloader:0.0.2",
+				ContainerImage: "quay.io/abays/downloader:0.0.3",
 				Env: []corev1.EnvVar{
 					{
 						Name:  "RHEL_IMAGE_URL",
