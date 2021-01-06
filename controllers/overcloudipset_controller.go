@@ -108,6 +108,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
+					r.Log.Info(fmt.Sprintf("OvercloudNet named %s not found!", netName))
 					return ctrl.Result{}, nil
 				}
 				// Error reading the object - requeue the request.
