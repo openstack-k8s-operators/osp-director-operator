@@ -480,7 +480,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	templateParameters = make(map[string]string)
 	templateParameters["MgmtIp"] = ip.String()
 	templateParameters["MgmtInterface"] = instance.Spec.MgmtInterface
-	templateParameters["MgmtGateway"] = "192.168.1.1" //FIXME
+	templateParameters["MgmtGateway"] = "192.168.25.1" //FIXME
 	templateParameters["MgmtNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
 	// TODO: Either generate the gateway from the network object or allow user specification via CR?
 
