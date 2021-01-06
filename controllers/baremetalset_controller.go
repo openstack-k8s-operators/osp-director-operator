@@ -474,15 +474,14 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	sts = append(sts, userDataSt)
 	ip, network, _ := net.ParseCIDR(ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"]) // We use ctlplane as the MgmtNetwork too for now
-
-	r.Log.Info(fmt.Sprintf("Network: %s", network.String()))
+	netMask := network.Mask
 
 	// Network data cloud-init secret
 	templateParameters = make(map[string]string)
 	templateParameters["MgmtIp"] = ip.String()
 	templateParameters["MgmtInterface"] = instance.Spec.MgmtInterface
 	templateParameters["MgmtGateway"] = "192.168.1.1" //FIXME
-	templateParameters["MgmtNetmask"] = fmt.Sprintf("/%s", strings.Split(network.String(), "/")[1])
+	templateParameters["MgmtNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
 	// TODO: Either generate the gateway from the network object or allow user specification via CR?
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
