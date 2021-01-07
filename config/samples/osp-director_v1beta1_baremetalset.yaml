@@ -10,8 +10,11 @@ spec:
   rhelImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-baremetalset-ssh-keys
-  # A CIDR for a management network on which to access the nodes
-  mgmtCidr: 172.23.0.0/24
+  # Networks to associate with this host
+  networks:
+    - ctlplane
+    - tenant
+  role: worker
   # The interface on the nodes that will be assigned an IP from the mgmtCidr
   mgmtInterface: eth2
   # Arbitrary label selector for BaremetalHosts (optional)

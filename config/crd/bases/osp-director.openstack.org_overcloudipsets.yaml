@@ -36,6 +36,9 @@ spec:
         spec:
           description: OvercloudIPSetSpec defines the desired state of OvercloudIPSet
           properties:
+            hostCount:
+              description: HostCount Host count
+              type: integer
             networks:
               description: Networks the name(s) of the OvercloudNetworks used to generate
                 IPs
@@ -47,18 +50,27 @@ spec:
                 with. Used to generate the required predictable IPs files.
               type: string
           required:
+          - hostCount
           - networks
           - role
           type: object
         status:
-          description: OvercloudIPSetStatus defines the observed state of OvercloudIPSet
+          description: OvercloudHostIPStatus set of hosts with IP information
           properties:
-            ipaddresses:
+            hosts:
               additionalProperties:
-                type: string
+                description: OvercloudIPSetStatus per host IP set
+                properties:
+                  ipaddresses:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - ipaddresses
+                type: object
               type: object
           required:
-          - ipaddresses
+          - hosts
           type: object
       type: object
   version: v1beta1

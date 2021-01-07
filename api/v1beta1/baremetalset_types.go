@@ -32,14 +32,16 @@ type BaremetalSetSpec struct {
 	RhelImageURL string `json:"rhelImageUrl"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
-	// CIDR for management network
-	MgmtCIDR string `json:"mgmtCidr"`
 	// Interface to use for management network
 	MgmtInterface string `json:"mgmtInterface"`
 	// BmhLabelSelector allows for a sub-selection of BaremetalHosts based on arbitrary labels
 	BmhLabelSelector map[string]string `json:"bmhLabelSelector,omitempty"`
 	// Hardware requests for sub-selection of BaremetalHosts with certain hardware specs
 	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
+	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	Networks []string `json:"networks"`
+	// Role the name of the Overcloud role this IPset is associated with. Used to generate the required predictable IPs files.
+	Role string `json:"role"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet
@@ -49,6 +51,7 @@ type BaremetalSetStatus struct {
 
 // BaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
 type BaremetalHostStatus struct {
+	Hostname              string `json:"hostname"`
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 	MgmtIP                string `json:"mgmtIP"`

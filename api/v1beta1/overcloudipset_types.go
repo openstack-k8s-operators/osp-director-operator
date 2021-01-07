@@ -28,9 +28,17 @@ type OvercloudIPSetSpec struct {
 
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate the required predictable IPs files.
 	Role string `json:"role"`
+
+	// HostCount Host count
+	HostCount int `json:"hostCount"`
 }
 
-// OvercloudIPSetStatus defines the observed state of OvercloudIPSet
+// OvercloudHostIPStatus set of hosts with IP information
+type OvercloudHostIPStatus struct {
+	HostIPs map[string]OvercloudIPSetStatus `json:"hosts"`
+}
+
+// OvercloudIPSetStatus per host IP set
 type OvercloudIPSetStatus struct {
 	IPAddresses map[string]string `json:"ipaddresses"`
 }
@@ -43,8 +51,8 @@ type OvercloudIPSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OvercloudIPSetSpec   `json:"spec,omitempty"`
-	Status OvercloudIPSetStatus `json:"status,omitempty"`
+	Spec   OvercloudIPSetSpec    `json:"spec,omitempty"`
+	Status OvercloudHostIPStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
