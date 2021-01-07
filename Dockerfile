@@ -1,5 +1,10 @@
+ARG GOLANG_BUILDER=golang:1.13
+ARG OPERATOR_BASE_IMAGE=gcr.io/distroless/static:nonroot
+
 # Build the manager binary
-FROM golang:1.13 as builder
+FROM ${GOLANG_BUILDER} AS builder
+
+ARG GO_BUILD_EXTRA_ARGS
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -20,11 +25,11 @@ RUN mkdir -p /usr/share/osp-director-operator/templates
 RUN mkdir -p /bindata/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM ${OPERATOR_BASE_IMAGE}
 
 ENV USER_UID=1001 \
     OPERATOR_BINDATA_DIR=/bindata/ \
