@@ -145,7 +145,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	err = common.EnsureSecrets(r, instance, cloudinit, &envVars)
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	controllerDetails := map[string]ospdirectorv1beta1.Host{}
