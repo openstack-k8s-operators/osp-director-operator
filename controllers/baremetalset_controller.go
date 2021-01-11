@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -194,10 +195,9 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{}, nil
 	}
 
-	if len(ipset.Status.HostIPs) != instance.Spec.Replicas {
+	if len(ipset.Status.HostIPs) < instance.Spec.Replicas {
 		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.Replicas))
 		return ctrl.Result{}, nil
 	}
@@ -298,11 +298,57 @@ func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirec
 	return overcloudIPSet, op, err
 }
 
-func createOrGetHostname(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) string {
+func createOrGetHostname(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) (string, error) {
 	if found, ok := instance.Status.BaremetalHosts[bmhName]; ok {
-		return found.Hostname
+		return found.Hostname, nil
 	}
-	return fmt.Sprintf("%s%d", instance.Name, len(instance.Status.BaremetalHosts)+1)
+
+	// Get all numbers currently in use
+	foundNumbers := []int{}
+
+	for _, bmh := range instance.Status.BaremetalHosts {
+		pieces := strings.Split(bmh.Hostname, "-")
+		num, err := strconv.Atoi(pieces[len(pieces)-1])
+
+		if err != nil {
+			// This should never happen, as we control the generated hostnames
+			// and always use the "<instance.Name>-<number>" format
+			return "", err
+		}
+
+		foundNumbers = append(foundNumbers, num)
+	}
+
+	// Sort the existing numbers in ascending order
+	sort.Ints(foundNumbers)
+
+	//
+	// Approach: choose the lowest unused number in the sequence
+	//
+
+	chosenNumber := -1
+
+	if len(foundNumbers) > 0 && foundNumbers[0] != 0 {
+		// Unique case where first number is not 0, so we choose 0
+		chosenNumber = 0
+	} else {
+		for i := 1; i < len(foundNumbers); i++ {
+			// If there is a gap of at least 1 number between this foundNumber and the last,
+			// we use the number equal to foundNumbers[i-1]+1
+			if foundNumbers[i-1] < foundNumbers[i]-1 {
+				chosenNumber = foundNumbers[i-1] + 1
+				break
+			}
+		}
+	}
+
+	if chosenNumber == -1 {
+		// No gaps were found that we could reuse, so just chose the next number
+		// in the sequence
+		chosenNumber = len(foundNumbers)
+	}
+
+	return fmt.Sprintf("%s-%d", instance.Name, chosenNumber), nil
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
@@ -454,7 +500,11 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	bmhName := createOrGetHostname(instance, bmh)
+	bmhName, err := createOrGetHostname(instance, bmh)
+
+	if err != nil {
+		return err
+	}
 
 	// User data cloud-init secret
 	templateParameters := make(map[string]string)
@@ -498,7 +548,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	sts = append(sts, networkDataSt)
 
-	err := common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
+	err = common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
 
 	if err != nil {
 		return err
