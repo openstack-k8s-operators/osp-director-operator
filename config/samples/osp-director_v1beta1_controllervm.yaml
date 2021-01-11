@@ -26,3 +26,6 @@ spec:
               enabled: false
           port:
           - name: enp6s0
+  networks:
+    - ctlplane
+  role: controller

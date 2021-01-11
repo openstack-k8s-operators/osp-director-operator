@@ -96,7 +96,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// iterate over the requested hostCount
 	for count := 0; count < instance.Spec.HostCount; count++ {
-		hostname := fmt.Sprintf("%s-%d", instance.Name, count)
+		hostname := fmt.Sprintf("%s-%d", instance.Spec.Role, count)
 
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {

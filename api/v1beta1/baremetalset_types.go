@@ -40,7 +40,7 @@ type BaremetalSetSpec struct {
 	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
 	// Networks the name(s) of the OvercloudNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this IPset is associated with. Used to generate the required predictable IPs files.
+	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
 	Role string `json:"role"`
 }
 
@@ -56,6 +56,15 @@ type BaremetalHostStatus struct {
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 	MgmtIP                string `json:"mgmtIP"`
 	Online                bool   `json:"online"`
+}
+
+// GetHostnames -
+func (bmSet BaremetalSet) GetHostnames() map[string]string {
+	ret := make(map[string]string)
+	for key, val := range bmSet.Status.BaremetalHosts {
+		ret[key] = val.Hostname
+	}
+	return ret
 }
 
 // HardwareReqs defines request hardware attributes for the BaremetalHost replicas

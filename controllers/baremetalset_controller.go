@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -195,11 +194,12 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.Replicas {
 		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.Replicas))
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	// Provision / deprovision requested replicas
@@ -276,7 +276,7 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
 	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.Name, // used as the base name of server instances
+			Name:      instance.Name,
 			Namespace: instance.ObjectMeta.Namespace,
 		},
 	}
@@ -296,59 +296,6 @@ func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirec
 	})
 
 	return overcloudIPSet, op, err
-}
-
-func createOrGetHostname(instance *ospdirectorv1beta1.BaremetalSet, bmhName string) (string, error) {
-	if found, ok := instance.Status.BaremetalHosts[bmhName]; ok {
-		return found.Hostname, nil
-	}
-
-	// Get all numbers currently in use
-	foundNumbers := []int{}
-
-	for _, bmh := range instance.Status.BaremetalHosts {
-		pieces := strings.Split(bmh.Hostname, "-")
-		num, err := strconv.Atoi(pieces[len(pieces)-1])
-
-		if err != nil {
-			// This should never happen, as we control the generated hostnames
-			// and always use the "<instance.Name>-<number>" format
-			return "", err
-		}
-
-		foundNumbers = append(foundNumbers, num)
-	}
-
-	// Sort the existing numbers in ascending order
-	sort.Ints(foundNumbers)
-
-	//
-	// Approach: choose the lowest unused number in the sequence
-	//
-
-	chosenNumber := -1
-
-	if len(foundNumbers) > 0 && foundNumbers[0] != 0 {
-		// Unique case where first number is not 0, so we choose 0
-		chosenNumber = 0
-	} else {
-		for i := 1; i < len(foundNumbers); i++ {
-			// If there is a gap of at least 1 number between this foundNumber and the last,
-			// we use the number equal to foundNumbers[i-1]+1
-			if foundNumbers[i-1] < foundNumbers[i]-1 {
-				chosenNumber = foundNumbers[i-1] + 1
-				break
-			}
-		}
-	}
-
-	if chosenNumber == -1 {
-		// No gaps were found that we could reuse, so just chose the next number
-		// in the sequence
-		chosenNumber = len(foundNumbers)
-	}
-
-	return fmt.Sprintf("%s-%d", instance.Name, chosenNumber), nil
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
@@ -500,7 +447,8 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	bmhName, err := createOrGetHostname(instance, bmh)
+	bmhName, err := common.CreateOrGetHostname(instance, bmh, instance.Spec.Role)
+	r.Log.Info(fmt.Sprintf("CreateOrgGetHostname: bmhName: %s", bmhName))
 
 	if err != nil {
 		return err
@@ -523,7 +471,8 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	sts = append(sts, userDataSt)
-	ip, network, _ := net.ParseCIDR(ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"]) // We use ctlplane as the MgmtNetwork too for now
+	ipCidr := ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"] // We use ctlplane as the MgmtNetwork too for now
+	ip, network, _ := net.ParseCIDR(ipCidr)
 	netMask := network.Mask
 
 	// Network data cloud-init secret
@@ -594,7 +543,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ip.String(), bmhName)
+	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ipCidr, bmhName)
 
 	return nil
 }
