@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/go-logr/logr"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -100,10 +101,6 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {
 
-			if instance.Status.HostIPs[hostname].IPAddresses[netName] != "" {
-				continue
-			}
-
 			network := &ospdirectorv1beta1.OvercloudNet{}
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
 			if err != nil {
@@ -127,7 +124,10 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			// Do we already have a reservation for this hostname on the network?
 			for _, reservation := range network.Status.Reservations {
 				if reservation.Hostname == hostname {
-					reservationIP = reservation.IP
+					// We also need the netmask (which is not stored in the OvercloudNet status),
+					// so we acquire it from the OvercloudIpSet spec
+					cidrPieces := strings.Split(network.Spec.Cidr, "/")
+					reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
 					break
 				}
 			}
