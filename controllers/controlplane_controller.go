@@ -128,7 +128,9 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	// Create or update the controllerVM CR object
 	ospControllerVM := &ospdirectorv1beta1.ControllerVM{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-controllervm", instance.Name),
+			// FIXME: currently we use the name of the resource as the basename
+			Name: "controller",
+			//Name:      fmt.Sprintf("%s-controllervm", instance.Name),
 			Namespace: instance.Namespace,
 		},
 	}
@@ -142,6 +144,8 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		ospControllerVM.Spec.StorageClass = instance.Spec.Controller.StorageClass
 		ospControllerVM.Spec.DeploymentSSHSecret = deploymentSecretName
 		ospControllerVM.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
+		ospControllerVM.Spec.Networks = instance.Spec.Controller.Networks
+		ospControllerVM.Spec.Role = instance.Spec.Controller.Role
 
 		err := controllerutil.SetControllerReference(instance, ospControllerVM, r.Scheme)
 		if err != nil {

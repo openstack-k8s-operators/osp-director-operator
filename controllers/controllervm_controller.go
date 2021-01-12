@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
@@ -39,6 +40,7 @@ import (
 	controllervm "github.com/openstack-k8s-operators/osp-director-operator/pkg/controllervm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	//virtv1 "kubevirt.io/client-go/api/v1"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -83,6 +85,9 @@ func (r *ControllerVMReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
 
 // Reconcile - controller VMs
 func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -148,26 +153,51 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, err
 	}
 
+	// If ControllerHosts status map is nil, create it
+	if instance.Status.ControllerHosts == nil {
+		instance.Status.ControllerHosts = map[string]ospdirectorv1beta1.ControllerHostStatus{}
+	}
+
+	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	if len(ipset.Status.HostIPs) != instance.Spec.ControllerCount {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.ControllerCount))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
 	controllerDetails := map[string]ospdirectorv1beta1.Host{}
 
 	// Generate the Contoller networkdata secrets
 	for i := 0; i < instance.Spec.ControllerCount; i++ {
 		// TODO: do we need custom hostname format?
 		// TODO: multi nic support with bindata template
-		// TODO: for now single network and hardcode controller ips to 192.168.25.1X
 
-		hostname := fmt.Sprintf("controller-%d", i)
+		hostKey := fmt.Sprintf("%s-%d", instance.Name, i)
+		hostname, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
+		r.Log.Info(fmt.Sprintf("Controlplane VM hostname set to %s", hostname))
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname)
 
 		controllerDetails[hostname] = ospdirectorv1beta1.Host{
 			Hostname:          hostname,
 			DomainName:        hostname,
 			DomainNameUniq:    fmt.Sprintf("%s-%s", hostname, instance.UID[0:4]),
-			IPAdress:          fmt.Sprintf("192.168.25.1%d", i),
+			IPAddress:         ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"],
 			NetworkDataSecret: networkDataSecretName,
 		}
 
-		templateParameters["ControllerIP"] = controllerDetails[hostname].IPAdress
+		templateParameters["ControllerIP"] = controllerDetails[hostname].IPAddress
 		networkdata := []common.Template{
 			{
 				Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),
@@ -184,6 +214,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		if err != nil {
 			return ctrl.Result{}, nil
 		}
+		r.setControllerHostStatus(instance, hostname, ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"])
 	}
 
 	// Create base image, controller disks get cloned from this
@@ -238,6 +269,39 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ControllerVMReconciler) setControllerHostStatus(instance *ospdirectorv1beta1.ControllerVM, hostname string, ipaddress string) {
+	// Set status for controllerHosts
+	instance.Status.ControllerHosts[hostname] = ospdirectorv1beta1.ControllerHostStatus{
+		Hostname:  hostname,
+		IPAddress: ipaddress,
+	}
+}
+
+func (r *ControllerVMReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.ControllerVM) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
+	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      instance.Name,
+			Namespace: instance.ObjectMeta.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
+		overcloudIPSet.Spec.Networks = instance.Spec.Networks
+		overcloudIPSet.Spec.Role = instance.Spec.Role
+		overcloudIPSet.Spec.HostCount = instance.Spec.ControllerCount
+
+		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return overcloudIPSet, op, err
 }
 
 // SetupWithManager -

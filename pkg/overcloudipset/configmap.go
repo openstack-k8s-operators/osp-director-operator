@@ -35,7 +35,7 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OvercloudIPSetList
 
 	for _, ipset := range overcloudIPList.Items {
 		for count := 1; count <= ipset.Spec.HostCount; count++ {
-			hostname := fmt.Sprintf("%s%d", ipset.Name, count)
+			hostname := fmt.Sprintf("%s-%d", ipset.Spec.Role, count)
 
 			for netName, addr := range ipset.Status.HostIPs[hostname].IPAddresses {
 				if netName == "ctlplane" {

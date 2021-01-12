@@ -58,6 +58,12 @@ spec:
               description: amount of Memory in GB used by the controller VMs
               format: int32
               type: integer
+            networks:
+              description: Networks the name(s) of the OvercloudNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
             ospNetwork:
               description: OSPNetwork
               properties:
@@ -74,6 +80,10 @@ spec:
               - bridgeName
               - name
               type: object
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate hostnames.
+              type: string
             storageClass:
               description: StorageClass to be used for the controller disks
               type: string
@@ -84,7 +94,9 @@ spec:
           - deploymentSSHSecret
           - diskSize
           - memory
+          - networks
           - ospNetwork
+          - role
           - storageClass
           type: object
         status:
@@ -93,6 +105,20 @@ spec:
             baseImageDVReady:
               description: BaseImageDVReady is the status of the BaseImage DataVolume
               type: boolean
+            controllerHosts:
+              additionalProperties:
+                description: ControllerHostStatus represents the hostname and IP info
+                  for a specific controller
+                properties:
+                  hostname:
+                    type: string
+                  ipaddress:
+                    type: string
+                required:
+                - hostname
+                - ipaddress
+                type: object
+              type: object
             controllers:
               description: Controllers are the names of the kubevirt controller vm
                 pods
@@ -106,6 +132,7 @@ spec:
               type: integer
           required:
           - baseImageDVReady
+          - controllerHosts
           - controllers
           - controllersReady
           type: object

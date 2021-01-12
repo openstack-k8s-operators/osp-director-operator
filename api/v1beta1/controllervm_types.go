@@ -38,6 +38,16 @@ type ControllerVMSpec struct {
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// OSPNetwork
 	OSPNetwork Network `json:"ospNetwork"`
+	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	Networks []string `json:"networks"`
+	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
+	Role string `json:"role"`
+}
+
+// ControllerHostStatus represents the hostname and IP info for a specific controller
+type ControllerHostStatus struct {
+	Hostname  string `json:"hostname"`
+	IPAddress string `json:"ipaddress"`
 }
 
 // ControllerVMStatus defines the observed state of ControllerVM
@@ -47,7 +57,8 @@ type ControllerVMStatus struct {
 	// ControllersReady is the number of ready  kubevirt controller vm instances
 	ControllersReady int32 `json:"controllersReady"`
 	// Controllers are the names of the kubevirt controller vm pods
-	Controllers []string `json:"controllers"`
+	Controllers     []string                        `json:"controllers"`
+	ControllerHosts map[string]ControllerHostStatus `json:"controllerHosts"`
 }
 
 // Host -
@@ -55,7 +66,7 @@ type Host struct {
 	Hostname          string `json:"hostname"`
 	DomainName        string `json:"domainName"`
 	DomainNameUniq    string `json:"domainNameUniq"`
-	IPAdress          string `json:"ipAdress"`
+	IPAddress         string `json:"ipAddress"`
 	NetworkDataSecret string `json:"networkDataSecret"`
 }
 
@@ -69,6 +80,15 @@ type ControllerVM struct {
 
 	Spec   ControllerVMSpec   `json:"spec,omitempty"`
 	Status ControllerVMStatus `json:"status,omitempty"`
+}
+
+// GetHostnames -
+func (cvm ControllerVM) GetHostnames() map[string]string {
+	ret := make(map[string]string)
+	for key, val := range cvm.Status.ControllerHosts {
+		ret[key] = val.Hostname
+	}
+	return ret
 }
 
 // +kubebuilder:object:root=true
