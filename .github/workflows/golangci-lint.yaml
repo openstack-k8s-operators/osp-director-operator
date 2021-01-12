@@ -1,0 +1,32 @@
+name: Golang lint, vet and unit test pipeline
+
+on: [push, pull_request]
+
+jobs:
+  golangci:
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        os: [ubuntu-latest]
+
+    name: lint
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout project code
+        uses: actions/checkout@v2
+      - name: Checkout openstack-k8s-operators-ci project
+        uses: actions/checkout@v2
+        with:
+          repository: openstack-k8s-operators/openstack-k8s-operators-ci
+          path: ./openstack-k8s-operators-ci
+      - name: Run govet.sh
+        run: ./openstack-k8s-operators-ci/test-runner/govet.sh
+      - name: Run golint.sh
+        run: ./openstack-k8s-operators-ci/test-runner/golint.sh
+      - name: Run gotest.sh
+        run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
