@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: osp-director-operator-admission-controller
+  labels:
+    app: osp-director-operator-admission-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: osp-director-operator-admission-controller
+  template:
+    metadata:
+      labels:
+        app: osp-director-operator-admission-controller
+    spec:
+      containers:
+        - name: osp-director-operator-admission-controller
+          image: quay.io/abays/osp-director-operator-admission-controller:0.0.7
+          command: ["/usr/bin/admission-controller"]
+          env:
+            - name: HOSTNAME
+              value: "osp-webhook.openstack.svc"
+          args:
+            [
+              "-host",
+              "$(HOSTNAME)",
+              "-cert-path",
+              "/certs/tls.crt",
+              "-key-path",
+              "/certs/tls.key",
+            ]
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8443
+              name: server-tls-port
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128M"
+            limits:
+              cpu: "250m"
+              memory: "256M"
+          volumeMounts:
+            - name: certs
+              mountPath: "/certs"
+              readOnly: true
+      volumes:
+        - name: certs
+          secret:
+            secretName: osp-director-operator-admission-controller-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: osp-webhook
+    labels:
+      service: osp-director-operator-admission-controller-service
+spec:
+  selector:
+    app: osp-director-operator-admission-controller
+  ports:
+    - port: 443 # Service's port
+      protocol: TCP
+      targetPort: server-tls-port
