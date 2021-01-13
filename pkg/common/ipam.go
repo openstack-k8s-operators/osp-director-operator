@@ -197,8 +197,7 @@ func isIntIPv4(checkipint *big.Int) bool {
 
 // BigIntToIP converts a big.Int to a net.IP
 func BigIntToIP(inipint big.Int) net.IP {
-	var outip net.IP
-	outip = net.IP(make([]byte, net.IPv6len))
+	outip := net.IP(make([]byte, net.IPv6len))
 	intbytes := inipint.Bytes()
 	if len(intbytes) == net.IPv6len {
 		// This is an IPv6 address.

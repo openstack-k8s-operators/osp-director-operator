@@ -3,13 +3,13 @@ name: Golang lint, vet and unit test pipeline
 on: [push, pull_request]
 
 jobs:
-  golangci:
+  test:
     strategy:
       matrix:
         go-version: [1.14.x]
         os: [ubuntu-latest]
 
-    name: lint
+    name: govet, golint and gotest
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -30,3 +30,22 @@ jobs:
         run: ./openstack-k8s-operators-ci/test-runner/golint.sh
       - name: Run gotest.sh
         run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
+
+  golangci:
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        os: [ubuntu-latest]
+
+    name: golangci
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout project code
+        uses: actions/checkout@v2
+      - name: Run golangci lint
+        uses: golangci/golangci-lint-action@v2

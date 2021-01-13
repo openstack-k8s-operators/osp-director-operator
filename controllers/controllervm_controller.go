@@ -111,20 +111,17 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets
-	hashes := []ospdirectorv1beta1.Hash{}
-	sshSecret, secretHash, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
+	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
 	if err != nil && errors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	hashes = append(hashes, ospdirectorv1beta1.Hash{Name: sshSecret.Name, Hash: secretHash})
-
 	// Create/update secrets from templates
 	secretLabels := common.GetLabels(instance.Name, controllervm.AppLabel)
 
-	templateParameters := make(map[string]string)
+	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 
 	cloudinit := []common.Template{
@@ -177,7 +174,6 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	// Generate the Contoller networkdata secrets
 	for i := 0; i < instance.Spec.ControllerCount; i++ {
-		// TODO: do we need custom hostname format?
 		// TODO: multi nic support with bindata template
 
 		hostKey := fmt.Sprintf("%s-%d", instance.Name, i)
@@ -316,11 +312,13 @@ func (r *ControllerVMReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+/* mpryc: golangci - comment out unused function
 func setDefaults(instance *ospdirectorv1beta1.ControllerVM) {
 	if instance.Spec.ControllerCount < 1 {
 		instance.Spec.ControllerCount = 1
 	}
 }
+*/
 
 func (r *ControllerVMReconciler) getRenderData(instance *ospdirectorv1beta1.ControllerVM) (*bindatautil.RenderData, error) {
 	data := bindatautil.MakeRenderData()

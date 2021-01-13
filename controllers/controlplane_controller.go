@@ -186,6 +186,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
+		// TODO: change with ctrlplan IPs from IPAM when integrated
 		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)
 
 		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)

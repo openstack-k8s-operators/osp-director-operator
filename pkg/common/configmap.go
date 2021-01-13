@@ -59,6 +59,9 @@ func createOrUpdateConfigMap(r ReconcilerCommon, obj metav1.Object, cm Template)
 
 		return nil
 	})
+	if err != nil {
+		return "", op, fmt.Errorf("error create/updating configmap: %v", err)
+	}
 
 	configMapHash, err := ObjectHash(configMap)
 	if err != nil {

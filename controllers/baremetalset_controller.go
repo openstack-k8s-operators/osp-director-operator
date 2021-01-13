@@ -171,16 +171,12 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// First we need the public SSH key, which should be stored in a secret
-	hashes := []ospdirectorv1beta1.Hash{}
-	sshSecret, secretHash, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
+	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
 	if err != nil && errors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// TODO: Put hashes in BaremetalSet status?
-	hashes = append(hashes, ospdirectorv1beta1.Hash{Name: sshSecret.Name, Hash: secretHash})
 
 	// If BaremetalHosts status map is nil, create it
 	if instance.Status.BaremetalHosts == nil {
@@ -389,7 +385,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		availableBaremetalHosts := []string{}
 
 		for _, baremetalHost := range baremetalHostsList.Items {
-			if baremetalHost.Spec.Online == true || baremetalHost.Spec.ConsumerRef != nil {
+			if baremetalHost.Spec.Online || baremetalHost.Spec.ConsumerRef != nil {
 				continue
 			}
 
@@ -455,8 +451,9 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// User data cloud-init secret
-	templateParameters := make(map[string]string)
+	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
+	templateParameters["Hostname"] = bmhName
 
 	userDataSecretName := fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh)
 
@@ -476,7 +473,8 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	netMask := network.Mask
 
 	// Network data cloud-init secret
-	templateParameters = make(map[string]string)
+
+	templateParameters = make(map[string]interface{})
 	templateParameters["MgmtIp"] = ip.String()
 	templateParameters["MgmtInterface"] = instance.Spec.MgmtInterface
 	templateParameters["MgmtGateway"] = "192.168.25.1" //FIXME

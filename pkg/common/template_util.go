@@ -34,7 +34,7 @@ type Template struct {
 	InstanceType   string
 	AdditionalData map[string]string
 	Labels         map[string]string
-	ConfigOptions  map[string]string
+	ConfigOptions  map[string]interface{}
 	SkipSetOwner   bool // skip setting ownership on the associated configmap
 }
 
@@ -46,7 +46,7 @@ func GetTemplatesPath() string {
 	if templates == "" {
 		// support local testing with 'up local'
 		_, basefile, _, _ := runtime.Caller(1)
-		templatesPath = path.Join(path.Dir(basefile), fmt.Sprintf("../../templates"))
+		templatesPath = path.Join(path.Dir(basefile), "../../templates")
 	} else {
 		// deployed as a container
 		templatesPath = templates
@@ -131,7 +131,6 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 
 // getTemplateData -
 func getTemplateData(t Template) map[string]string {
-	//opts := ConfigOptions{}
 	opts := t.ConfigOptions
 
 	// get templates base path, either running local or deployed as container
