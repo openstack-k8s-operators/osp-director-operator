@@ -41,6 +41,10 @@ type OvercloudNetSpec struct {
 	// +kubebuilder:validation:Required
 	// AllocationEnd a set of IPs that are reserved and will not be assigned
 	AllocationEnd string `json:"allocationEnd"`
+
+	// +kubebuilder:validation:Optional
+	// Gateway optional gateway for the network
+	Gateway string `json:"gateway"`
 }
 
 // OvercloudNetStatus defines the observed state of OvercloudNet

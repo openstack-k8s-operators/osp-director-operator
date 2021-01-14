@@ -6,31 +6,26 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: osp-director-operator.vX.Y.Z
+  name: osp-director-operator.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: ControlPlane is the Schema for the controlplanes API
-      displayName: Control Plane
-      kind: ControlPlane
-      name: controlplanes.osp-director.openstack.org
+    - description: BaremetalSet is the Schema for the baremetalsets API
+      displayName: Baremetal Set
+      kind: BaremetalSet
+      name: baremetalsets.osp-director.openstack.org
       version: v1beta1
     - description: ControllerVM is the Schema for the controllervms API
       displayName: Controller VM
       kind: ControllerVM
       name: controllervms.osp-director.openstack.org
       version: v1beta1
-    - description: ProvisionServer is the Schema for the provisionservers API
-      displayName: Provision Server
-      kind: ProvisionServer
-      name: provisionservers.osp-director.openstack.org
-      version: v1beta1
-    - description: BaremetalSet is the Schema for the baremetalsets API
-      displayName: Baremetal Set
-      kind: BaremetalSet
-      name: baremetalsets.osp-director.openstack.org
+    - description: ControlPlane is the Schema for the controlplanes API
+      displayName: Control Plane
+      kind: ControlPlane
+      name: controlplanes.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackClient is the Schema for the openstackclients API
       displayName: Open Stack Client
@@ -46,6 +41,11 @@ spec:
       displayName: Overcloud Net
       kind: OvercloudNet
       name: overcloudnets.osp-director.openstack.org
+      version: v1beta1
+    - description: ProvisionServer is the Schema for the provisionservers API
+      displayName: Provision Server
+      kind: ProvisionServer
+      name: provisionservers.osp-director.openstack.org
       version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator

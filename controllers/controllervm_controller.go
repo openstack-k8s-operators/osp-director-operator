@@ -194,6 +194,14 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		}
 
 		templateParameters["ControllerIP"] = controllerDetails[hostname].IPAddress
+		gateway := ipset.Status.Networks["ctlplane"].Gateway
+		if gateway != "" {
+			if strings.Contains(gateway, ":") {
+				templateParameters["Gateway"] = fmt.Sprintf("gateway6: %s", gateway)
+			} else {
+				templateParameters["Gateway"] = fmt.Sprintf("gateway4: %s", gateway)
+			}
+		}
 		networkdata := []common.Template{
 			{
 				Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),

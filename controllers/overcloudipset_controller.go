@@ -89,10 +89,11 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if instance.Status.HostIPs == nil {
 		//instance.Status.IPAddresses = make(map[string]string)
-		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPSetStatus)
+		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPHostsStatus)
 	}
 
 	ctlplaneCidr := ""
+	instance.Status.Networks = make(map[string]ospdirectorv1beta1.OvercloudNetSpec)
 
 	// iterate over the requested hostCount
 	for count := 0; count < instance.Spec.HostCount; count++ {
@@ -106,11 +107,12 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
 					r.Log.Info(fmt.Sprintf("OvercloudNet named %s not found!", netName))
-					return ctrl.Result{}, nil
 				}
 				// Error reading the object - requeue the request.
 				return ctrl.Result{}, err
 			}
+
+			instance.Status.Networks[network.Name] = network.Spec
 
 			_, cidr, _ := net.ParseCIDR(network.Spec.Cidr)
 			if network.Name == "ctlplane" {
@@ -158,7 +160,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 
 			if instance.Status.HostIPs[hostname].IPAddresses == nil {
-				instance.Status.HostIPs[hostname] = ospdirectorv1beta1.OvercloudIPSetStatus{IPAddresses: map[string]string{netName: reservationIP}}
+				instance.Status.HostIPs[hostname] = ospdirectorv1beta1.OvercloudIPHostsStatus{IPAddresses: map[string]string{netName: reservationIP}}
 			} else {
 				instance.Status.HostIPs[hostname].IPAddresses[netName] = reservationIP
 			}

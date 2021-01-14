@@ -33,13 +33,14 @@ type OvercloudIPSetSpec struct {
 	HostCount int `json:"hostCount"`
 }
 
-// OvercloudHostIPStatus set of hosts with IP information
-type OvercloudHostIPStatus struct {
-	HostIPs map[string]OvercloudIPSetStatus `json:"hosts"`
+// OvercloudIPSetStatus set of hosts with IP information
+type OvercloudIPSetStatus struct {
+	HostIPs  map[string]OvercloudIPHostsStatus `json:"hosts"`
+	Networks map[string]OvercloudNetSpec       `json:"networks"`
 }
 
-// OvercloudIPSetStatus per host IP set
-type OvercloudIPSetStatus struct {
+// OvercloudIPHostsStatus per host IP set
+type OvercloudIPHostsStatus struct {
 	IPAddresses map[string]string `json:"ipaddresses"`
 }
 
@@ -51,8 +52,8 @@ type OvercloudIPSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OvercloudIPSetSpec    `json:"spec,omitempty"`
-	Status OvercloudHostIPStatus `json:"status,omitempty"`
+	Spec   OvercloudIPSetSpec   `json:"spec,omitempty"`
+	Status OvercloudIPSetStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
