@@ -14,6 +14,7 @@ import (
 
 	admissioncontrol "github.com/elithrar/admission-control"
 	log "github.com/go-kit/kit/log"
+	client "github.com/openstack-k8s-operators/osp-director-operator/pkg/client"
 )
 
 type conf struct {
@@ -41,6 +42,12 @@ func main() {
 	stdlog.SetOutput(log.NewStdlibAdapter(logger))
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "loc", log.DefaultCaller)
 
+	// Get a dynamic k8s client
+	dClient, err := client.GetInClusterClient()
+	if err != nil {
+		fatal(logger, err)
+	}
+
 	// TLS configuration
 	var tlsConf *tls.Config
 	keyPair, err := tls.LoadX509KeyPair(conf.TLSCertPath, conf.TLSKeyPath)
@@ -63,11 +70,16 @@ func main() {
 	// Base path
 	admissions := r.PathPrefix("/osp-director-operator").Subrouter()
 
-	// Individual endpoints:
-	// - BaremetalSet validation
+	//
+	// Individual CRD webhook endpoints...
+	//
 
+	// Acquire resource-specific dynamic clients that are needed below for the actual webhooks
+	baremetalSetClient := dClient.Resource(client.BaremetalSetGVR)
+
+	// - BaremetalSet validation
 	admissions.Handle("/validate-baremetalset", &admissioncontrol.AdmissionHandler{
-		AdmitFunc: ValidateBaremetalSet(logger),
+		AdmitFunc: ValidateBaremetalSet(baremetalSetClient, logger),
 		Logger:    logger,
 	}).Methods(http.MethodPost)
 
