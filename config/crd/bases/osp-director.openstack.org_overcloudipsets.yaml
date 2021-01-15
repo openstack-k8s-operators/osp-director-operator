@@ -55,11 +55,11 @@ spec:
           - role
           type: object
         status:
-          description: OvercloudHostIPStatus set of hosts with IP information
+          description: OvercloudIPSetStatus set of hosts with IP information
           properties:
             hosts:
               additionalProperties:
-                description: OvercloudIPSetStatus per host IP set
+                description: OvercloudIPHostsStatus per host IP set
                 properties:
                   ipaddresses:
                     additionalProperties:
@@ -69,8 +69,33 @@ spec:
                 - ipaddresses
                 type: object
               type: object
+            networks:
+              additionalProperties:
+                description: OvercloudNetSpec defines the desired state of OvercloudNet
+                properties:
+                  allocationEnd:
+                    description: AllocationEnd a set of IPs that are reserved and
+                      will not be assigned
+                    type: string
+                  allocationStart:
+                    description: AllocationStart a set of IPs that are reserved and
+                      will not be assigned
+                    type: string
+                  cidr:
+                    description: Cidr the cidr to use for this network
+                    type: string
+                  gateway:
+                    description: Gateway optional gateway for the network
+                    type: string
+                required:
+                - allocationEnd
+                - allocationStart
+                - cidr
+                type: object
+              type: object
           required:
           - hosts
+          - networks
           type: object
       type: object
   version: v1beta1

@@ -47,6 +47,9 @@ spec:
             cidr:
               description: Cidr the cidr to use for this network
               type: string
+            gateway:
+              description: Gateway optional gateway for the network
+              type: string
           required:
           - allocationEnd
           - allocationStart
