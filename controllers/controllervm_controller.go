@@ -124,6 +124,30 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 
+	if instance.Spec.PasswordSecret != "" {
+		// check if specified password secret exists before creating the controlplane
+		passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, fmt.Errorf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
+			}
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+		// use same NodeRootPassword paremater as tripleo have
+		if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
+			/*
+				passwordHash, err := common.HashAndSalt(passwordSecret.Data["NodeRootPassword"])
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+
+				templateParameters["NodeRootPassword"] = passwordHash
+			*/
+			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
+		}
+	}
+
 	cloudinit := []common.Template{
 		// CloudInitSecret
 		{

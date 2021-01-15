@@ -27,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -151,6 +152,19 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		}
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
 		return ctrl.Result{}, nil
+	}
+
+	if instance.Spec.PasswordSecret != "" {
+		// check if specified password secret exists before creating the controlplane
+		_, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, fmt.Errorf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
+			}
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
 	// First deploy the provisioning image (Apache) server
@@ -454,6 +468,29 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 	templateParameters["Hostname"] = bmhName
+
+	if instance.Spec.PasswordSecret != "" {
+		// check if specified password secret exists before creating the controlplane
+		passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				return fmt.Errorf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
+			}
+			// Error reading the object - requeue the request.
+			return err
+		}
+
+		// use same NodeRootPassword paremater as tripleo have
+		if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
+			/*
+				passwordHash, err := common.HashAndSalt(passwordSecret.Data["NodeRootPassword"])
+				if err != nil {
+					return err
+				}
+			*/
+			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
+		}
+	}
 
 	userDataSecretName := fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh)
 

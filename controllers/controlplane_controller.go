@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -125,6 +126,19 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 	envVars[deploymentSecret.Name] = common.EnvValue(secretHash)
 
+	if instance.Spec.PasswordSecret != "" {
+		// check if specified password secret exists before creating the controlplane
+		_, _, err = common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, fmt.Errorf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
+			}
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
+	}
+
 	// Create or update the controllerVM CR object
 	ospControllerVM := &ospdirectorv1beta1.ControllerVM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,6 +159,9 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		ospControllerVM.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
 		ospControllerVM.Spec.Networks = instance.Spec.Controller.Networks
 		ospControllerVM.Spec.Role = instance.Spec.Controller.Role
+		if instance.Spec.PasswordSecret != "" {
+			ospControllerVM.Spec.PasswordSecret = instance.Spec.PasswordSecret
+		}
 
 		err := controllerutil.SetControllerReference(instance, ospControllerVM, r.Scheme)
 		if err != nil {

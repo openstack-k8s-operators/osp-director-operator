@@ -25,6 +25,8 @@ type ControlPlaneSpec struct {
 	Controller ControllerSpec `json:"controller"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
+	// PasswordSecret used to e.g specify root pwd
+	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
 // ControllerSpec - defines the desired state of Controllers VMs

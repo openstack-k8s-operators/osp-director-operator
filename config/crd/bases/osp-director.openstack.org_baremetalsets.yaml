@@ -140,6 +140,11 @@ spec:
               items:
                 type: string
               type: array
+            passwordSecret:
+              description: 'PasswordSecret the name of the secret used to optionally
+                set the root pwd by adding NodeRootPassword: <base64 enc pwd> to the
+                secret data'
+              type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               minimum: 0
