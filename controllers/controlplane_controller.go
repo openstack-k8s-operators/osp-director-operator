@@ -128,9 +128,8 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	// Create or update the controllerVM CR object
 	ospControllerVM := &ospdirectorv1beta1.ControllerVM{
 		ObjectMeta: metav1.ObjectMeta{
-			// FIXME: currently we use the name of the resource as the basename
-			Name: "controller",
-			//Name:      fmt.Sprintf("%s-controllervm", instance.Name),
+			// use the role name as the VM CR name
+			Name:      strings.ToLower(instance.Spec.Controller.Role),
 			Namespace: instance.Namespace,
 		},
 	}
