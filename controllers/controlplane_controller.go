@@ -141,6 +141,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		ospControllerVM.Spec.Memory = instance.Spec.Controller.Memory
 		ospControllerVM.Spec.DiskSize = instance.Spec.Controller.DiskSize
 		ospControllerVM.Spec.StorageClass = instance.Spec.Controller.StorageClass
+		ospControllerVM.Spec.ImageImportStorageClass = instance.Spec.Controller.DeepCopy().ImageImportStorageClass
 		ospControllerVM.Spec.DeploymentSSHSecret = deploymentSecretName
 		ospControllerVM.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
 		ospControllerVM.Spec.Networks = instance.Spec.Controller.Networks

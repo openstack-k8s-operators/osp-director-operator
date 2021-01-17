@@ -34,6 +34,8 @@ type ControllerVMSpec struct {
 	BaseImageURL string `json:"baseImageURL"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass"`
+	// ImageImportStorageClass used to import base image into the cluster
+	ImageImportStorageClass string `json:"imageImportStorageClass"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// OSPNetwork

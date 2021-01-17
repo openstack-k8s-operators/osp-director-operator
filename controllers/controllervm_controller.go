@@ -339,6 +339,7 @@ func (r *ControllerVMReconciler) getRenderData(instance *ospdirectorv1beta1.Cont
 	data.Data["Cores"] = instance.Spec.Cores
 	data.Data["Memory"] = instance.Spec.Memory
 	data.Data["StorageClass"] = instance.Spec.StorageClass
+	data.Data["ImageImportStorageClass"] = instance.Spec.ImageImportStorageClass
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
 	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()

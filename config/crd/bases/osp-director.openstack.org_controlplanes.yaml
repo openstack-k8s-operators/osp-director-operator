@@ -55,6 +55,10 @@ spec:
                   description: root Disc size in GB
                   format: int32
                   type: integer
+                imageImportStorageClass:
+                  description: ImageImportStorageClass used to import base image into
+                    the cluster
+                  type: string
                 memory:
                   description: amount of Memory in GB used by the controller VMs
                   format: int32
@@ -93,6 +97,7 @@ spec:
               - controllerCount
               - cores
               - diskSize
+              - imageImportStorageClass
               - memory
               - networks
               - ospNetwork
