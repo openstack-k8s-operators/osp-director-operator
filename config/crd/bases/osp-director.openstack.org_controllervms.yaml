@@ -80,6 +80,11 @@ spec:
               - bridgeName
               - name
               type: object
+            passwordSecret:
+              description: 'PasswordSecret the name of the secret used to optionally
+                set the root pwd by adding NodeRootPassword: <base64 enc pwd> to the
+                secret data'
+              type: string
             role:
               description: Role the name of the Overcloud role this IPset is associated
                 with. Used to generate hostnames.

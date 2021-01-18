@@ -102,6 +102,9 @@ spec:
             openStackClientImageURL:
               description: OpenstackClient image
               type: string
+            passwordSecret:
+              description: PasswordSecret used to e.g specify root pwd
+              type: string
           required:
           - controller
           - openStackClientImageURL

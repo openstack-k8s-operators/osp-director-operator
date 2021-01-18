@@ -42,6 +42,10 @@ type BaremetalSetSpec struct {
 	Networks []string `json:"networks"`
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
 	Role string `json:"role"`
+	// PasswordSecret the name of the secret used to optionally set the root pwd by adding
+	// NodeRootPassword: <base64 enc pwd>
+	// to the secret data
+	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
 // BaremetalSetStatus defines the observed state of BaremetalSet
