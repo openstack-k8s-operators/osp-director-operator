@@ -11,6 +11,9 @@ spec:
       requests:
         storage: {{ .DiskSize }}Gi
     volumeMode: Filesystem
+{{if .ImageImportStorageClass }}
+    storageClassName: {{ .ImageImportStorageClass }}
+{{end}}
   source:
     http:
       url: {{ .BaseImageURL }}

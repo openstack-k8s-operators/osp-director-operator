@@ -10,6 +10,7 @@ spec:
   memory: 5
   diskSize: 10
   storageClass: host-nfs-storageclass
+  #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys
   ospNetwork:
     bridgeName: br-osp
