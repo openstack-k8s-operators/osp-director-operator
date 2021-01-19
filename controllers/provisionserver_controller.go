@@ -206,6 +206,7 @@ func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer, provInterfaceName string) (controllerutil.OperationResult, error) {
+	trueValue := true
 
 	// Get volumes
 	initVolumeMounts := provisionserver.GetInitVolumeMounts(instance.Name)
@@ -235,12 +236,16 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 
 		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Template.Spec = corev1.PodSpec{
-			HostNetwork: true,
-			Volumes:     volumes,
+			ServiceAccountName: provisionserver.ServiceAccount,
+			HostNetwork:        true,
+			Volumes:            volumes,
 			Containers: []corev1.Container{
 				{
-					Name:         "osp-httpd",
-					Image:        "quay.io/abays/httpd:2.4-alpine",
+					Name:  "osp-httpd",
+					Image: "quay.io/abays/httpd:2.4-alpine",
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: &trueValue,
+					},
 					Env:          []corev1.EnvVar{},
 					VolumeMounts: volumeMounts,
 				},

@@ -29,4 +29,7 @@ const (
 	OwnerNameSpaceLabelSelector = "provisionservers.osp-director.openstack.org/namespace"
 	// OwnerNameLabelSelector -
 	OwnerNameLabelSelector = "provisionservers.osp-director.openstack.org/name"
+
+	// ServiceAccount -
+	ServiceAccount = "osp-director-operator-provisionserver"
 )
