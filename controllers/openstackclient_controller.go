@@ -201,6 +201,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		},
 	}
 	pod.Spec = corev1.PodSpec{
+		ServiceAccountName:            openstackclient.ServiceAccount,
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Volumes:                       openstackclient.GetVolumes(instance),
 		Containers: []corev1.Container{

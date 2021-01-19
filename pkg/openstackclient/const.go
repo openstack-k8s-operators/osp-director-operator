@@ -22,4 +22,7 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstackclient.osp-director.openstack.org"
+
+	// ServiceAccount -
+	ServiceAccount = "osp-director-operator-openstackclient"
 )
