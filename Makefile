@@ -11,6 +11,9 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+# CI tools repo for running tests
+CI_TOOLS_REPO := https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci
+
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -25,19 +28,32 @@ endif
 
 all: manager
 
+# Get scripts to run tests
+CI_TOOLS_REPO_DIR = $(shell pwd)/CI_TOOLS_REPO
+.PHONY: get-ci-tools
+get-ci-tools:
+	if [ -d  "$(CI_TOOLS_REPO_DIR)" ]; then \
+		echo "Ci tools exists"; \
+		pushd "$(CI_TOOLS_REPO_DIR)"; \
+		git pull --rebase; \
+		popd; \
+	else \
+	  git clone $(CI_TOOLS_REPO) "$(CI_TOOLS_REPO_DIR)"; \
+	fi
+
 # Run tests
 ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
-test: generate fmt vet manifests
+test: get-ci-tools generate gofmt govet manifests gotest golangci golint
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR)
 
 # Build manager binary
-manager: generate fmt vet
+manager: generate gofmt govet
 	go build -o bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate gofmt govet manifests
 	go run ./main.go
 
 # Install CRDs into a cluster
@@ -58,12 +74,24 @@ manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
-fmt:
-	go fmt ./...
+gofmt: get-ci-tools
+	$(CI_TOOLS_REPO_DIR)/test-runner/gofmt.sh
 
 # Run go vet against code
-vet:
-	go vet ./...
+govet: get-ci-tools
+	$(CI_TOOLS_REPO_DIR)/test-runner/govet.sh
+
+# Run go test against code
+gotest: get-ci-tools
+	$(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
+
+# Run golangci-lint test against code
+golangci: get-ci-tools
+	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
+
+# Run go lint against code
+golint: get-ci-tools
+	PATH=$(GOBIN):$(PATH); $(CI_TOOLS_REPO_DIR)/test-runner/golint.sh
 
 # Generate code
 generate: controller-gen

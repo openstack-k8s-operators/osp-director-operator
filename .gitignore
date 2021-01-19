@@ -12,6 +12,9 @@ manager
 *.test
 testbin
 
+# Common CI tools repository
+CI_TOOLS_REPO
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
