@@ -202,32 +202,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controllervms
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - controllervms/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - controllervms/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - controlplanes
   verbs:
   - create
@@ -357,6 +331,32 @@ rules:
   - osp-director.openstack.org
   resources:
   - provisionservers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - vmsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - vmsets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - vmsets/status
   verbs:
   - get
   - patch

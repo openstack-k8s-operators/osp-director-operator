@@ -1,11 +1,11 @@
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ControllerVM
+kind: VMSet
 metadata:
   name: osp-controller
   namespace: openstack
 spec:
   baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
-  controllerCount: 1
+  vmCount: 1
   cores: 2
   memory: 5
   diskSize: 10

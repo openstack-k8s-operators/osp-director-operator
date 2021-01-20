@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllervm
+package vmset
 
 const (
 	// AppLabel -
-	AppLabel = "osp-controllervm"
+	AppLabel = "osp-vmset"
 
 	// FinalizerName -
-	FinalizerName = "controllervms.osp-director.openstack.org"
+	FinalizerName = "vmsets.osp-director.openstack.org"
 )

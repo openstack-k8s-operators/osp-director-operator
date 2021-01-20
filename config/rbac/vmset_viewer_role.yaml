@@ -1,13 +1,13 @@
-# permissions for end users to view controllervms.
+# permissions for end users to view vmsets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: controllervm-viewer-role
+  name: vmset-viewer-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controllervms
+  - vmsets
   verbs:
   - get
   - list
@@ -15,6 +15,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controllervms/status
+  - vmsets/status
   verbs:
   - get

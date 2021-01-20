@@ -29,7 +29,7 @@ type ControlPlaneSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// ControllerSpec - defines the desired state of Controllers VMs
+// ControllerSpec - defines the desired state of VMs VMs
 type ControllerSpec struct {
 	// Number of controllers to configure, 1 or 3
 	ControllerCount int `json:"controllerCount"`

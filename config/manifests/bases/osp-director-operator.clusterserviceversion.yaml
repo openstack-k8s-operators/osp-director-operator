@@ -17,10 +17,10 @@ spec:
       kind: BaremetalSet
       name: baremetalsets.osp-director.openstack.org
       version: v1beta1
-    - description: ControllerVM is the Schema for the controllervms API
+    - description: VMSet is the Schema for the vmsets API
       displayName: Controller VM
-      kind: ControllerVM
-      name: controllervms.osp-director.openstack.org
+      kind: VMSet
+      name: vmsets.osp-director.openstack.org
       version: v1beta1
     - description: ControlPlane is the Schema for the controlplanes API
       displayName: Control Plane

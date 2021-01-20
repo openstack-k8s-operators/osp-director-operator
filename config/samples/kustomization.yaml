@@ -1,7 +1,7 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - osp-director_v1beta1_controlplane.yaml
-- osp-director_v1beta1_controllervm.yaml
+- osp-director_v1beta1_vmset.yaml
 - osp-director_v1beta1_provisionserver.yaml
 - osp-director_v1beta1_baremetalset.yaml
 - osp-director_v1beta1_openstackclient.yaml

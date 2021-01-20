@@ -123,13 +123,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ControlPlane")
 		os.Exit(1)
 	}
-	if err = (&controllers.ControllerVMReconciler{
+	if err = (&controllers.VMSetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("ControllerVM"),
+		Log:     ctrl.Log.WithName("controllers").WithName("VMSet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ControllerVM")
+		setupLog.Error(err, "unable to create controller", "controller", "VMSet")
 		os.Exit(1)
 	}
 	if err = (&controllers.ProvisionServerReconciler{

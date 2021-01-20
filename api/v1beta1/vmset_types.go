@@ -20,19 +20,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ControllerVMSpec defines the desired state of ControllerVM
-type ControllerVMSpec struct {
-	// Number of controllers to configure, 1 or 3
-	ControllerCount int `json:"controllerCount"`
-	// number of Cores assigned to the controller VMs
+// VMSetSpec defines the desired state of VMSet
+type VMSetSpec struct {
+	// Number of VMs to configure, 1 or 3
+	VMCount int `json:"vmCount"`
+	// number of Cores assigned to the VMs
 	Cores uint32 `json:"cores"`
-	// amount of Memory in GB used by the controller VMs
+	// amount of Memory in GB used by the VMs
 	Memory uint32 `json:"memory"`
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
-	// Name of the VM base image used to setup the controller VMs
+	// Name of the VM base image used to setup the VMs
 	BaseImageURL string `json:"baseImageURL"`
-	// StorageClass to be used for the controller disks
+	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass"`
 	// ImageImportStorageClass used to import base image into the cluster
 	ImageImportStorageClass string `json:"imageImportStorageClass,omitempty"`
@@ -50,21 +50,21 @@ type ControllerVMSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// ControllerHostStatus represents the hostname and IP info for a specific controller
-type ControllerHostStatus struct {
+// VMHostStatus represents the hostname and IP info for a specific VM
+type VMHostStatus struct {
 	Hostname  string `json:"hostname"`
 	IPAddress string `json:"ipaddress"`
 }
 
-// ControllerVMStatus defines the observed state of ControllerVM
-type ControllerVMStatus struct {
+// VMSetStatus defines the observed state of VMSet
+type VMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
 	BaseImageDVReady bool `json:"baseImageDVReady"`
-	// ControllersReady is the number of ready  kubevirt controller vm instances
-	ControllersReady int32 `json:"controllersReady"`
-	// Controllers are the names of the kubevirt controller vm pods
-	Controllers     []string                        `json:"controllers"`
-	ControllerHosts map[string]ControllerHostStatus `json:"controllerHosts"`
+	// VMsReady is the number of ready  kubevirt controller vm instances
+	VMsReady int32 `json:"vmsReady"`
+	// VMs are the names of the kubevirt controller vm pods
+	VMs     []string                `json:"vms"`
+	VMHosts map[string]VMHostStatus `json:"vmHosts"`
 }
 
 // Host -
@@ -79,19 +79,19 @@ type Host struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// ControllerVM is the Schema for the controllervms API
-type ControllerVM struct {
+// VMSet is the Schema for the vmsets API
+type VMSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ControllerVMSpec   `json:"spec,omitempty"`
-	Status ControllerVMStatus `json:"status,omitempty"`
+	Spec   VMSetSpec   `json:"spec,omitempty"`
+	Status VMSetStatus `json:"status,omitempty"`
 }
 
 // GetHostnames -
-func (cvm ControllerVM) GetHostnames() map[string]string {
+func (vms VMSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for key, val := range cvm.Status.ControllerHosts {
+	for key, val := range vms.Status.VMHosts {
 		ret[key] = val.Hostname
 	}
 	return ret
@@ -99,13 +99,13 @@ func (cvm ControllerVM) GetHostnames() map[string]string {
 
 // +kubebuilder:object:root=true
 
-// ControllerVMList contains a list of ControllerVM
-type ControllerVMList struct {
+// VMSetList contains a list of VMSet
+type VMSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ControllerVM `json:"items"`
+	Items           []VMSet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ControllerVM{}, &ControllerVMList{})
+	SchemeBuilder.Register(&VMSet{}, &VMSetList{})
 }

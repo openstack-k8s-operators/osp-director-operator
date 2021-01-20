@@ -37,8 +37,7 @@ spec:
           description: ControlPlaneSpec defines the desired state of ControlPlane
           properties:
             controller:
-              description: ControllerSpec - defines the desired state of Controllers
-                VMs
+              description: ControllerSpec - defines the desired state of VMs VMs
               properties:
                 baseImageURL:
                   description: Name of the VM base image used to setup the controller

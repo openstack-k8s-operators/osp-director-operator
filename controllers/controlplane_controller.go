@@ -72,8 +72,8 @@ func (r *ControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/finalizers,verbs=update
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
@@ -140,7 +140,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// Create or update the controllerVM CR object
-	ospControllerVM := &ospdirectorv1beta1.ControllerVM{
+	ospVMSet := &ospdirectorv1beta1.VMSet{
 		ObjectMeta: metav1.ObjectMeta{
 			// use the role name as the VM CR name
 			Name:      strings.ToLower(instance.Spec.Controller.Role),
@@ -148,23 +148,23 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, ospControllerVM, func() error {
-		ospControllerVM.Spec.BaseImageURL = instance.Spec.Controller.BaseImageURL
-		ospControllerVM.Spec.ControllerCount = instance.Spec.Controller.ControllerCount
-		ospControllerVM.Spec.Cores = instance.Spec.Controller.Cores
-		ospControllerVM.Spec.Memory = instance.Spec.Controller.Memory
-		ospControllerVM.Spec.DiskSize = instance.Spec.Controller.DiskSize
-		ospControllerVM.Spec.StorageClass = instance.Spec.Controller.StorageClass
-		ospControllerVM.Spec.ImageImportStorageClass = instance.Spec.Controller.DeepCopy().ImageImportStorageClass
-		ospControllerVM.Spec.DeploymentSSHSecret = deploymentSecretName
-		ospControllerVM.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
-		ospControllerVM.Spec.Networks = instance.Spec.Controller.Networks
-		ospControllerVM.Spec.Role = instance.Spec.Controller.Role
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, ospVMSet, func() error {
+		ospVMSet.Spec.BaseImageURL = instance.Spec.Controller.BaseImageURL
+		ospVMSet.Spec.VMCount = instance.Spec.Controller.ControllerCount
+		ospVMSet.Spec.Cores = instance.Spec.Controller.Cores
+		ospVMSet.Spec.Memory = instance.Spec.Controller.Memory
+		ospVMSet.Spec.DiskSize = instance.Spec.Controller.DiskSize
+		ospVMSet.Spec.StorageClass = instance.Spec.Controller.StorageClass
+		ospVMSet.Spec.ImageImportStorageClass = instance.Spec.Controller.DeepCopy().ImageImportStorageClass
+		ospVMSet.Spec.DeploymentSSHSecret = deploymentSecretName
+		ospVMSet.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
+		ospVMSet.Spec.Networks = instance.Spec.Controller.Networks
+		ospVMSet.Spec.Role = instance.Spec.Controller.Role
 		if instance.Spec.PasswordSecret != "" {
-			ospControllerVM.Spec.PasswordSecret = instance.Spec.PasswordSecret
+			ospVMSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
 		}
 
-		err := controllerutil.SetControllerReference(instance, ospControllerVM, r.Scheme)
+		err := controllerutil.SetControllerReference(instance, ospVMSet, r.Scheme)
 		if err != nil {
 			return err
 		}
@@ -176,21 +176,21 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("ControllerVM CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
 		return ctrl.Result{}, nil
 	}
 
 	// get PodIP's from the OSP controller VMs and update openstackclient
 	controllerPodList, err := common.GetAllPodsWithLabel(r, map[string]string{
-		"controllervms.osp-director.openstack.org/ospcontroller": "True",
+		"vmsets.osp-director.openstack.org/ospcontroller": "True",
 	}, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// TODO:
-	// - check vm container status and update CR.Status.ControllersReady
-	// - change CR.Status.Controllers to be struct with name + Pod IP of the controllers
+	// - check vm container status and update CR.Status.VMsReady
+	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
 
 	// Create openstack client pod
 	openstackclient := &ospdirectorv1beta1.OpenStackClient{
@@ -260,7 +260,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.ControlPlane{}).
 		Owns(&corev1.Secret{}).
-		Owns(&ospdirectorv1beta1.ControllerVM{}).
+		Owns(&ospdirectorv1beta1.VMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		// watch pods in the same namespace as we want to reconcile if
 		// e.g. a controller vm gets destroyed
