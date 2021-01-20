@@ -97,7 +97,6 @@ spec:
               - controllerCount
               - cores
               - diskSize
-              - imageImportStorageClass
               - memory
               - networks
               - ospNetwork
