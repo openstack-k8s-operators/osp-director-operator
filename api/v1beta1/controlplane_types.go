@@ -44,7 +44,7 @@ type ControllerSpec struct {
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass"`
 	// ImageImportStorageClass used to import base image into the cluster
-	ImageImportStorageClass string `json:"imageImportStorageClass"`
+	ImageImportStorageClass string `json:"imageImportStorageClass,omitempty"`
 	// OSPNetwork
 	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OvercloudNetworks used to generate IPs
