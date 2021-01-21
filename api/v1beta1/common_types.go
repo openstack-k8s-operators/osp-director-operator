@@ -20,6 +20,20 @@ import (
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
+// GVRs
+// var (
+// 	BaremetalSetGVR = schema.GroupVersionResource{
+// 		Group:    "osp-director.openstack.org",
+// 		Version:  "v1beta1",
+// 		Resource: "baremetalsets",
+// 	}
+// 	ControllerVMGVR = schema.GroupVersionResource{
+// 		Group:    "osp-director.openstack.org",
+// 		Version:  "v1beta1",
+// 		Resource: "controllervms",
+// 	}
+// )
+
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter
