@@ -11,10 +11,14 @@ import (
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CheckRoleNameExists - This function is needed by webhooks for both BaremetalSets and VMSets
+// Client needed for API calls (manager's client, set by first SetupWebhookWithManager() call
+// to any particular webhook)
+var webhookClient goClient.Client
+
+// checkRoleNameExists - This function is needed by webhooks for both BaremetalSets and VMSets
 // to help ensure that role names are unique across a given namespace
-func CheckRoleNameExists(client goClient.Client, typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta, role string) error {
-	existing, err := getRoleNames(client, objectMeta.Namespace)
+func checkRoleNameExists(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta, role string) error {
+	existing, err := getRoleNames(objectMeta.Namespace)
 
 	if err != nil {
 		return err
@@ -30,7 +34,7 @@ func CheckRoleNameExists(client goClient.Client, typeMeta metav1.TypeMeta, objec
 	return nil
 }
 
-func getRoleNames(client goClient.Client, namespace string) (map[string]string, error) {
+func getRoleNames(namespace string) (map[string]string, error) {
 	found := map[string]string{}
 
 	// Get BaremetalSet role names
@@ -39,7 +43,7 @@ func getRoleNames(client goClient.Client, namespace string) (map[string]string, 
 		goClient.InNamespace(namespace),
 	}
 
-	err := client.List(context.TODO(), baremetalSetsList, listOpts...)
+	err := webhookClient.List(context.TODO(), baremetalSetsList, listOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +53,9 @@ func getRoleNames(client goClient.Client, namespace string) (map[string]string, 
 	}
 
 	// Get VMSet role names
-	vmSetsList := &ControllerVMList{}
+	vmSetsList := &VMSetList{}
 
-	err = client.List(context.TODO(), vmSetsList, listOpts...)
+	err = webhookClient.List(context.TODO(), vmSetsList, listOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,34 +63,6 @@ func getRoleNames(client goClient.Client, namespace string) (map[string]string, 
 	for _, vmSet := range vmSetsList.Items {
 		found[fmt.Sprintf("%s/%s", vmSet.Kind, vmSet.Name)] = vmSet.Spec.Role
 	}
-
-	// baremetalSetClient := client.Resource(BaremetalSetGVR)
-	// controllerVMClient := client.Resource(ControllerVMGVR)
-
-	// // Get roles from BaremetalSets
-	// list, err := baremetalSetClient.Namespace(namespace).List(context.Background(), metav1.ListOptions{})
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// foundBaremetalSetRoles := getRoleNames(list.Items)
-
-	// // Get roles from ControllerVMs
-	// list, err = controllerVMClient.Namespace(namespace).List(context.Background(), metav1.ListOptions{})
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// foundControllerVMRoles := getRoleNames(list.Items)
-
-	// // Now just merge them together in the first map
-	// for key, value := range foundControllerVMRoles {
-	// 	foundBaremetalSetRoles[key] = value
-	// }
-
-	// return foundBaremetalSetRoles, nil
 
 	return found, nil
 }

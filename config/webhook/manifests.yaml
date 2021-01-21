@@ -24,3 +24,21 @@ webhooks:
     - UPDATE
     resources:
     - baremetalsets
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-vmset
+  failurePolicy: Fail
+  name: vvmset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vmsets

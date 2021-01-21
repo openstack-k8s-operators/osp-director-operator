@@ -186,6 +186,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BaremetalSet")
 			os.Exit(1)
 		}
+		if err = (&ospdirectorv1beta1.VMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
+			os.Exit(1)
+		}
 		// +kubebuilder:scaffold:builder
 	}
 
