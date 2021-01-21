@@ -5,11 +5,9 @@ go 1.13
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/elithrar/admission-control v0.6.6 // indirect
-	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-logr/logr v0.2.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/metal3-io/baremetal-operator v0.0.0-20201116105209-c72e2e0d8803
 	github.com/nmstate/kubernetes-nmstate v0.33.0
 	github.com/onsi/ginkgo v1.14.1
