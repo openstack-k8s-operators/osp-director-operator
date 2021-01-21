@@ -37,7 +37,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	controllervm "github.com/openstack-k8s-operators/osp-director-operator/pkg/controllervm"
+	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,8 +46,8 @@ import (
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
-// ControllerVMReconciler reconciles a ControllerVM object
-type ControllerVMReconciler struct {
+// VMSetReconciler reconciles a VMSet object
+type VMSetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -55,28 +55,28 @@ type ControllerVMReconciler struct {
 }
 
 // GetClient -
-func (r *ControllerVMReconciler) GetClient() client.Client {
+func (r *VMSetReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *ControllerVMReconciler) GetKClient() kubernetes.Interface {
+func (r *VMSetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *ControllerVMReconciler) GetLogger() logr.Logger {
+func (r *VMSetReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *ControllerVMReconciler) GetScheme() *runtime.Scheme {
+func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controllervms/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=deployments/finalizers,verbs=update
 // +kubebuilder:rbac:groups=template.openshift.io,namespace=openstack,resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 // +kubebuilder:rbac:groups=core,resources=pods;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
@@ -90,12 +90,12 @@ func (r *ControllerVMReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
 
 // Reconcile - controller VMs
-func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("controllervm", req.NamespacedName)
+	_ = r.Log.WithValues("vmset", req.NamespacedName)
 
 	// Fetch the controller VM instance
-	instance := &ospdirectorv1beta1.ControllerVM{}
+	instance := &ospdirectorv1beta1.VMSet{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -119,7 +119,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// Create/update secrets from templates
-	secretLabels := common.GetLabels(instance.Name, controllervm.AppLabel)
+	secretLabels := common.GetLabels(instance.Name, vmset.AppLabel)
 
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
@@ -155,7 +155,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeNone,
 			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{"userdata": "/controllervm/cloudinit/userdata"},
+			AdditionalData: map[string]string{"userdata": "/vmset/cloudinit/userdata"},
 			Labels:         secretLabels,
 			ConfigOptions:  templateParameters,
 		},
@@ -174,9 +174,9 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, err
 	}
 
-	// If ControllerHosts status map is nil, create it
-	if instance.Status.ControllerHosts == nil {
-		instance.Status.ControllerHosts = map[string]ospdirectorv1beta1.ControllerHostStatus{}
+	// If VMHosts status map is nil, create it
+	if instance.Status.VMHosts == nil {
+		instance.Status.VMHosts = map[string]ospdirectorv1beta1.VMHostStatus{}
 	}
 
 	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
@@ -189,20 +189,20 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
-	if len(ipset.Status.HostIPs) != instance.Spec.ControllerCount {
-		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.ControllerCount))
+	if len(ipset.Status.HostIPs) != instance.Spec.VMCount {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.VMCount))
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	controllerDetails := map[string]ospdirectorv1beta1.Host{}
 
 	// Generate the Contoller networkdata secrets
-	for i := 0; i < instance.Spec.ControllerCount; i++ {
+	for i := 0; i < instance.Spec.VMCount; i++ {
 		// TODO: multi nic support with bindata template
 
 		hostKey := fmt.Sprintf("%s-%d", instance.Name, i)
 		hostname, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
-		r.Log.Info(fmt.Sprintf("Controlplane VM hostname set to %s", hostname))
+		r.Log.Info(fmt.Sprintf("VMSet VM hostname set to %s", hostname))
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -232,7 +232,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				Namespace:      instance.Namespace,
 				Type:           common.TemplateTypeNone,
 				InstanceType:   instance.Kind,
-				AdditionalData: map[string]string{"networkdata": "/controllervm/cloudinit/networkdata"},
+				AdditionalData: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
 				Labels:         secretLabels,
 				ConfigOptions:  templateParameters,
 			},
@@ -242,7 +242,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		if err != nil {
 			return ctrl.Result{}, nil
 		}
-		r.setControllerHostStatus(instance, hostname, ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"])
+		r.setVMHostStatus(instance, hostname, ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"])
 	}
 
 	// Create base image, controller disks get cloned from this
@@ -264,7 +264,7 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	// - when import done
 	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
 	pvc := &corev1.PersistentVolumeClaim{}
-	baseImageName := fmt.Sprintf("osp-controller-baseimage-%s", instance.UID[0:4])
+	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && errors.IsNotFound(err) {
 		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcil in 10s", baseImageName))
@@ -299,15 +299,15 @@ func (r *ControllerVMReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	return ctrl.Result{}, nil
 }
 
-func (r *ControllerVMReconciler) setControllerHostStatus(instance *ospdirectorv1beta1.ControllerVM, hostname string, ipaddress string) {
-	// Set status for controllerHosts
-	instance.Status.ControllerHosts[hostname] = ospdirectorv1beta1.ControllerHostStatus{
+func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, hostname string, ipaddress string) {
+	// Set status for vmHosts
+	instance.Status.VMHosts[hostname] = ospdirectorv1beta1.VMHostStatus{
 		Hostname:  hostname,
 		IPAddress: ipaddress,
 	}
 }
 
-func (r *ControllerVMReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.ControllerVM) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
+func (r *VMSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.VMSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
 	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      instance.Name,
@@ -318,7 +318,7 @@ func (r *ControllerVMReconciler) overcloudipsetCreateOrUpdate(instance *ospdirec
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
 		overcloudIPSet.Spec.Networks = instance.Spec.Networks
 		overcloudIPSet.Spec.Role = instance.Spec.Role
-		overcloudIPSet.Spec.HostCount = instance.Spec.ControllerCount
+		overcloudIPSet.Spec.HostCount = instance.Spec.VMCount
 
 		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
 
@@ -333,11 +333,11 @@ func (r *ControllerVMReconciler) overcloudipsetCreateOrUpdate(instance *ospdirec
 }
 
 // SetupWithManager -
-func (r *ControllerVMReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.ControllerVM{}).
+		For(&ospdirectorv1beta1.VMSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
@@ -345,18 +345,18 @@ func (r *ControllerVMReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 /* mpryc: golangci - comment out unused function
-func setDefaults(instance *ospdirectorv1beta1.ControllerVM) {
-	if instance.Spec.ControllerCount < 1 {
-		instance.Spec.ControllerCount = 1
+func setDefaults(instance *ospdirectorv1beta1.VMSet) {
+	if instance.Spec.VMCount < 1 {
+		instance.Spec.VMCount = 1
 	}
 }
 */
 
-func (r *ControllerVMReconciler) getRenderData(instance *ospdirectorv1beta1.ControllerVM) (*bindatautil.RenderData, error) {
+func (r *VMSetReconciler) getRenderData(instance *ospdirectorv1beta1.VMSet) (*bindatautil.RenderData, error) {
 	data := bindatautil.MakeRenderData()
 	// Base image used to clone the controller VM images from
 	// adding first 5 char from instance.UID as identifier
-	data.Data["BaseImageName"] = fmt.Sprintf("osp-controller-baseimage-%s", instance.UID[0:4])
+	data.Data["BaseImageName"] = fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
 	data.Data["BaseImageURL"] = instance.Spec.BaseImageURL
 	data.Data["DiskSize"] = instance.Spec.DiskSize
 	data.Data["Namespace"] = instance.Namespace
@@ -388,7 +388,7 @@ func (r *ControllerVMReconciler) getRenderData(instance *ospdirectorv1beta1.Cont
 	return &data, nil
 }
 
-func (r *ControllerVMReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.ControllerVM) error {
+func (r *VMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.VMSet) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -403,7 +403,7 @@ func (r *ControllerVMReconciler) networkCreateAttachmentDefinition(instance *osp
 		OwnerNameSpaceLabelSelector: instance.Namespace,
 		OwnerNameLabelSelector:      instance.Name,
 	}
-	for k, v := range common.GetLabels(instance.Name, controllervm.AppLabel) {
+	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
 		labelSelector[k] = v
 	}
 
@@ -433,7 +433,7 @@ func (r *ControllerVMReconciler) networkCreateAttachmentDefinition(instance *osp
 	return nil
 }
 
-func (r *ControllerVMReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.ControllerVM) error {
+func (r *VMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.VMSet) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -448,7 +448,7 @@ func (r *ControllerVMReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.
 		OwnerNameSpaceLabelSelector: instance.Namespace,
 		OwnerNameLabelSelector:      instance.Name,
 	}
-	for k, v := range common.GetLabels(instance.Name, controllervm.AppLabel) {
+	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
 		labelSelector[k] = v
 	}
 
@@ -477,7 +477,7 @@ func (r *ControllerVMReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.
 	return nil
 }
 
-func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.ControllerVM, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
+func (r *VMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.VMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -492,7 +492,7 @@ func (r *ControllerVMReconciler) vmCreateInstance(instance *ospdirectorv1beta1.C
 		OwnerNameSpaceLabelSelector: instance.Namespace,
 		OwnerNameLabelSelector:      instance.Name,
 	}
-	for k, v := range common.GetLabels(instance.Name, controllervm.AppLabel) {
+	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
 		labelSelector[k] = v
 	}
 

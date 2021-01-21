@@ -1,13 +1,13 @@
-# permissions for end users to edit controllervms.
+# permissions for end users to edit vmsets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: controllervm-editor-role
+  name: vmset-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controllervms
+  - vmsets
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controllervms/status
+  - vmsets/status
   verbs:
   - get
