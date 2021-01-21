@@ -23,10 +23,13 @@ IMG=${IMG} make docker-build docker-push
 rm -Rf bundle
 rm -Rf bundle.Dockerfile
 
-# Bundle image
+# Generate bundle manifests
 VERSION=${VERSION} IMG=${IMG} make bundle
+
+# Build bundle image
 VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
 
+# Push bundle image
 podman push ${BUNDLE_IMG}
 #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
