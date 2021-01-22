@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 package controllers
-
+// DNM - testing 3
 const (
 	// ManifestPath - bindata path
 	ManifestPath = "./bindata"
