@@ -1,11 +1,11 @@
 links:
-- name: {{ .MgmtInterface }}
-  id: {{ .MgmtInterface }}
+- name: {{ .CtlplaneInterface }}
+  id: {{ .CtlplaneInterface }}
   type: vif
 networks:
-- netmask: {{ .MgmtNetmask }}
-  link: {{ .MgmtInterface }}
-  id: {{ .MgmtInterface }}
-  ip_address: {{ .MgmtIp }}
+- netmask: {{ .CtlplaneNetmask }}
+  link: {{ .CtlplaneInterface }}
+  id: {{ .CtlplaneInterface }}
+  ip_address: {{ .CtlplaneIp }}
   type: ipv4
-  gateway: {{ .MgmtGateway }}
+  gateway: {{ .CtlplaneGateway }}

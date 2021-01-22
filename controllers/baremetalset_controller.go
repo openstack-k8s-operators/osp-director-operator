@@ -505,17 +505,17 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	sts = append(sts, userDataSt)
-	ipCidr := ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"] // We use ctlplane as the MgmtNetwork too for now
+	ipCidr := ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"]
 	ip, network, _ := net.ParseCIDR(ipCidr)
 	netMask := network.Mask
 
 	// Network data cloud-init secret
 
 	templateParameters = make(map[string]interface{})
-	templateParameters["MgmtIp"] = ip.String()
-	templateParameters["MgmtInterface"] = instance.Spec.MgmtInterface
-	templateParameters["MgmtGateway"] = ipset.Status.Networks["ctlplane"].Gateway
-	templateParameters["MgmtNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
+	templateParameters["CtlplaneIp"] = ip.String()
+	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
+	templateParameters["CtlplaneGateway"] = ipset.Status.Networks["ctlplane"].Gateway
+	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 
@@ -577,7 +577,13 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	r.setBaremetalHostStatus(instance, foundBaremetalHost, userDataSecretName, networkDataSecretName, ipCidr, bmhName)
+	instance.Status.BaremetalHosts[foundBaremetalHost.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
+		Hostname:              bmhName,
+		UserDataSecretName:    userDataSecretName,
+		NetworkDataSecretName: networkDataSecretName,
+		CtlplaneIP:            ipCidr,
+		Online:                foundBaremetalHost.Status.PoweredOn,
+	}
 
 	return nil
 }
@@ -644,17 +650,6 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	delete(instance.Status.BaremetalHosts, bmh)
 
 	return nil
-}
-
-func (r *BaremetalSetReconciler) setBaremetalHostStatus(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost, userDataSecretName string, networkDataSecretName string, mgmtIP string, hostname string) {
-	// Set status (add this BaremetalHost entry)
-	instance.Status.BaremetalHosts[bmh.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
-		Hostname:              hostname,
-		UserDataSecretName:    userDataSecretName,
-		NetworkDataSecretName: networkDataSecretName,
-		MgmtIP:                mgmtIP,
-		Online:                bmh.Status.PoweredOn,
-	}
 }
 
 // Deprovision all associated BaremetalHosts for this BaremetalSet via Metal3

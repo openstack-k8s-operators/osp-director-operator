@@ -32,8 +32,8 @@ type BaremetalSetSpec struct {
 	RhelImageURL string `json:"rhelImageUrl"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
-	// Interface to use for management network
-	MgmtInterface string `json:"mgmtInterface"`
+	// Interface to use for ctlplane network
+	CtlplaneInterface string `json:"ctlplaneInterface"`
 	// BmhLabelSelector allows for a sub-selection of BaremetalHosts based on arbitrary labels
 	BmhLabelSelector map[string]string `json:"bmhLabelSelector,omitempty"`
 	// Hardware requests for sub-selection of BaremetalHosts with certain hardware specs
@@ -58,7 +58,7 @@ type BaremetalHostStatus struct {
 	Hostname              string `json:"hostname"`
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
-	MgmtIP                string `json:"mgmtIP"`
+	CtlplaneIP            string `json:"ctlplaneIP"`
 	Online                bool   `json:"online"`
 }
 
