@@ -25,4 +25,16 @@ const (
 
 	// ServiceAccount -
 	ServiceAccount = "osp-director-operator-openstackclient"
+
+	// CloudAdminUID -
+	CloudAdminUID = 1001
+	// CloudAdminGID -
+	CloudAdminGID = 1001
+	// HostsPersistentStorageSize - size in GB
+	HostsPersistentStorageSize = "1G"
+	// CloudAdminPersistentStorageSize - size in GB
+	CloudAdminPersistentStorageSize = "4G"
+	// PersistentStorageClass -
+	// TODO: move to be CRD parameter PersistentStorageClass
+	PersistentStorageClass = "host-nfs-storageclass"
 )

@@ -150,7 +150,7 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	cms = []common.Template{
 		// ScriptsConfigMap
 		{
-			Name:           "tripleo-deploy-sh",
+			Name:           "openstackclient-sh",
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeScripts,
 			InstanceType:   instance.Kind,
@@ -164,8 +164,48 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, nil
 	}
 
+	// PVCs
+	// volume to presistent store /etc/hosts where entries get added by tripleo deploy
+	pvcDetails := common.Pvc{
+		Name:         fmt.Sprintf("%s-hosts", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.HostsPersistentStorageSize,
+		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
+		StorageClass: openstackclient.PersistentStorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err := common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Openstackclient /etc/hosts PVC %s Updated", pvc.Name))
+	}
+
+	pvcDetails = common.Pvc{
+		Name:         fmt.Sprintf("%s-cloud-admin", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.CloudAdminPersistentStorageSize,
+		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
+		StorageClass: openstackclient.PersistentStorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Openstackclient PVC /home/cloud-admin %s Updated", pvc.Name))
+	}
+
 	// Create or update the pod object
-	op, err := r.podCreateOrUpdate(instance, envVars)
+	op, err = r.podCreateOrUpdate(instance, envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -188,9 +228,14 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
 	var terminationGracePeriodSeconds int64 = 0
+	runAsUser := int64(openstackclient.CloudAdminUID)
+	runAsGroup := int64(openstackclient.CloudAdminGID)
 
-	// TODO: the overcloud deploy end with create of clouds.yaml
-	//       add clouds.yaml into a secret and mount to this pod
+	// Get volumes
+	initVolumeMounts := openstackclient.GetInitVolumeMounts(instance)
+	volumeMounts := openstackclient.GetVolumeMounts(instance)
+	volumes := openstackclient.GetVolumes(instance)
+
 	envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -201,9 +246,14 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		},
 	}
 	pod.Spec = corev1.PodSpec{
-		ServiceAccountName:            openstackclient.ServiceAccount,
+		ServiceAccountName: openstackclient.ServiceAccount,
+		SecurityContext: &corev1.PodSecurityContext{
+			RunAsUser:  &runAsUser,
+			RunAsGroup: &runAsGroup,
+			FSGroup:    &runAsGroup,
+		},
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-		Volumes:                       openstackclient.GetVolumes(instance),
+		Volumes:                       volumes,
 		Containers: []corev1.Container{
 			{
 				Name:            "openstackclient",
@@ -215,10 +265,24 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 					"/bin/sleep infinity",
 				},
 				Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
-				VolumeMounts: openstackclient.GetVolumeMounts(),
+				VolumeMounts: volumeMounts,
 			},
 		},
 	}
+
+	initContainerDetails := []openstackclient.InitContainer{
+		{
+			ContainerImage: instance.Spec.ImageURL,
+			Commands: []string{
+				"/bin/bash", "-c", "/usr/local/bin/init.sh",
+			},
+			Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
+			Privileged:   false,
+			VolumeMounts: initVolumeMounts,
+		},
+	}
+
+	pod.Spec.InitContainers = openstackclient.GetInitContainers(initContainerDetails)
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
 		// HostAliases

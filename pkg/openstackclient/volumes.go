@@ -17,54 +17,85 @@ limitations under the License.
 package openstackclient
 
 import (
+	"fmt"
+
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // GetVolumeMounts -
-func GetVolumeMounts() []corev1.VolumeMount {
+func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
+			Name: fmt.Sprintf("%s-hosts", instance.Name),
+			//MountPath: "/mnt",
+			MountPath: "/etc/hosts",
+			SubPath:   "hosts",
+			ReadOnly:  false,
+		},
+		{
+			Name:      fmt.Sprintf("%s-cloud-admin", instance.Name),
+			MountPath: "/home/cloud-admin",
+			ReadOnly:  false,
+		},
+		{
 			Name:      "id-rsa",
-			MountPath: "/root/.ssh/id_rsa",
+			MountPath: "/home/cloud-admin/.ssh/id_rsa",
 			SubPath:   "id_rsa",
-			ReadOnly:  false,
+			ReadOnly:  true,
 		},
 		{
 			Name:      "ssh-config",
-			MountPath: "/root/.ssh/id_rsa.pub",
+			MountPath: "/home/cloud-admin/.ssh/id_rsa.pub",
 			SubPath:   "id_rsa.pub",
-			ReadOnly:  false,
+			ReadOnly:  true,
 		},
 		{
 			Name:      "ssh-config",
-			MountPath: "/root/.ssh/config",
+			MountPath: "/home/cloud-admin/.ssh/config",
 			SubPath:   "config",
-			ReadOnly:  false,
+			ReadOnly:  true,
 		},
 		{
 			Name:      "tripleo-deploy-config",
-			MountPath: "/root/config",
-			ReadOnly:  false,
+			MountPath: "/home/cloud-admin/config",
+			ReadOnly:  true,
 		},
 		{
 			Name:      "tripleo-deploy-config-custom",
-			MountPath: "/root/config-custom",
-			ReadOnly:  false,
+			MountPath: "/home/cloud-admin/config-custom",
+			ReadOnly:  true,
 		},
 		{
 			Name:      "tripleo-net-config",
-			MountPath: "/root/net-config",
-			ReadOnly:  false,
+			MountPath: "/home/cloud-admin/net-config",
+			ReadOnly:  true,
 		},
 		{
-			Name:      "tripleo-deploy-sh",
-			MountPath: "/root/tripleo-deploy.sh",
+			Name:      "openstackclient-scripts",
+			MountPath: "/home/cloud-admin/tripleo-deploy.sh",
 			SubPath:   "tripleo-deploy.sh",
-			ReadOnly:  false,
+			ReadOnly:  true,
 		},
 	}
 
+}
+
+// GetInitVolumeMounts -
+func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      "openstackclient-scripts",
+			MountPath: "/usr/local/bin/init.sh",
+			SubPath:   "init.sh",
+			ReadOnly:  true,
+		},
+		{
+			Name:      fmt.Sprintf("%s-hosts", instance.Name),
+			MountPath: "/mnt",
+			ReadOnly:  false,
+		},
+	}
 }
 
 // GetVolumes -
@@ -142,19 +173,39 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 			},
 		},
 		{
-			Name: "tripleo-deploy-sh",
+			Name: "openstackclient-scripts",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0755AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-deploy-sh",
+						Name: "openstackclient-sh",
 					},
 					Items: []corev1.KeyToPath{
 						{
 							Key:  "tripleo-deploy.sh",
 							Path: "tripleo-deploy.sh",
 						},
+						{
+							Key:  "init.sh",
+							Path: "init.sh",
+						},
 					},
+				},
+			},
+		},
+		{
+			Name: fmt.Sprintf("%s-hosts", instance.Name),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: fmt.Sprintf("%s-hosts", instance.Name),
+				},
+			},
+		},
+		{
+			Name: fmt.Sprintf("%s-cloud-admin", instance.Name),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: fmt.Sprintf("%s-cloud-admin", instance.Name),
 				},
 			},
 		},
