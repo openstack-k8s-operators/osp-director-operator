@@ -213,6 +213,9 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 	volumeMounts := provisionserver.GetVolumeMounts(instance.Name)
 	volumes := provisionserver.GetVolumes(instance.Name)
 
+	labels := common.GetLabels(instance.Name, provisionserver.AppLabel)
+	labels["deployment"] = instance.Name + "-provisionserver-deployment"
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
@@ -224,7 +227,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"deployment": instance.Name + "-provisionserver-deployment"},
+					Labels: labels,
 				},
 			},
 		},
@@ -239,6 +242,25 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 			ServiceAccountName: provisionserver.ServiceAccount,
 			HostNetwork:        true,
 			Volumes:            volumes,
+			Affinity: &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+						{
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "app",
+										Operator: metav1.LabelSelectorOperator(corev1.NodeSelectorOpIn),
+										Values:   []string{provisionserver.AppLabel},
+									},
+								},
+							},
+							Namespaces:  []string{instance.Namespace},
+							TopologyKey: "kubernetes.io/hostname",
+						},
+					},
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "osp-httpd",
