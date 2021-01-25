@@ -15,8 +15,8 @@ spec:
     - ctlplane
     - tenant
   role: worker
-  # The interface on the nodes that will be assigned an IP from the mgmtCidr
-  mgmtInterface: eth2
+  # The interface on the nodes that will be assigned an IP from the ctlCidr
+  ctlplaneInterface: eth2
   # Arbitrary label selector for BaremetalHosts (optional)
   bmhLabelSelector:
     arbitraryKey: arbitraryValue
