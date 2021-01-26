@@ -136,14 +136,6 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		// use same NodeRootPassword paremater as tripleo have
 		if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
-			/*
-				passwordHash, err := common.HashAndSalt(passwordSecret.Data["NodeRootPassword"])
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-
-				templateParameters["NodeRootPassword"] = passwordHash
-			*/
 			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
 		}
 	}
