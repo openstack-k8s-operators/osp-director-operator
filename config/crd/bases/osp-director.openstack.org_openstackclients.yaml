@@ -62,11 +62,18 @@ spec:
             imageURL:
               description: Name of the image
               type: string
+            networks:
+              description: Networks the name(s) of the OvercloudNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
           required:
           - cloudName
           - deploymentSSHSecret
           - hostAliases
           - imageURL
+          - networks
           type: object
         status:
           description: OpenStackClientStatus defines the observed state of OpenStackClient
