@@ -482,12 +482,6 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 		// use same NodeRootPassword paremater as tripleo have
 		if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
-			/*
-				passwordHash, err := common.HashAndSalt(passwordSecret.Data["NodeRootPassword"])
-				if err != nil {
-					return err
-				}
-			*/
 			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
 		}
 	}
