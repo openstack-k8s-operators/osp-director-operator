@@ -29,4 +29,4 @@ spec:
           - name: enp6s0
   networks:
     - ctlplane
-  role: controller
+  role: Controller

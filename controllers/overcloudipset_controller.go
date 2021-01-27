@@ -180,6 +180,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
+		client.MatchingLabels{overcloudipset.AddToPredictableIPsLabel: "true"},
 	}
 	err = r.Client.List(context.TODO(), overcloudIPList, listOpts...)
 	if err != nil {
@@ -188,7 +189,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// write it all to a configmap
 	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance.Name, "osp-overcloudipset")
+	cmLabels := common.GetLabels(instance.Name, overcloudipset.AppLabel)
 
 	templateParameters := overcloudipset.CreateConfigMapParams(*overcloudIPList, ctlplaneCidr)
 

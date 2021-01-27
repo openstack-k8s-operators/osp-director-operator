@@ -78,11 +78,13 @@ spec:
         status:
           description: OpenStackClientStatus defines the observed state of OpenStackClient
           properties:
-            authURL:
-              description: OS_AUTH_URL
+            hostname:
+              type: string
+            ipaddress:
               type: string
           required:
-          - authURL
+          - hostname
+          - ipaddress
           type: object
       type: object
   version: v1beta1

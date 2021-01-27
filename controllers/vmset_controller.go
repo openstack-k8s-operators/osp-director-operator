@@ -40,7 +40,6 @@ import (
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	//virtv1 "kubevirt.io/client-go/api/v1"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -171,7 +170,13 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		instance.Status.VMHosts = map[string]ospdirectorv1beta1.VMHostStatus{}
 	}
 
-	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Networks,
+		Role:                instance.Spec.Role,
+		HostCount:           instance.Spec.VMCount,
+		AddToPredictableIPs: true,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -234,7 +239,12 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return ctrl.Result{}, nil
 		}
+
 		r.setVMHostStatus(instance, hostname, ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"])
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Create base image, controller disks get cloned from this
@@ -302,31 +312,6 @@ func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, ho
 		Hostname:  hostname,
 		IPAddress: ipaddress,
 	}
-}
-
-func (r *VMSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.VMSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.ObjectMeta.Namespace,
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
-		overcloudIPSet.Spec.Networks = instance.Spec.Networks
-		overcloudIPSet.Spec.Role = instance.Spec.Role
-		overcloudIPSet.Spec.HostCount = instance.Spec.VMCount
-
-		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return overcloudIPSet, op, err
 }
 
 // SetupWithManager -

@@ -4,12 +4,17 @@ package common
 // There is potential to refactor into a library perhaps useful to both projects?
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"net"
+	"strconv"
 
-	//"github.com/dougbtv/whereabouts/pkg/logging"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // AssignmentError defines an IP assignment error.
@@ -218,4 +223,41 @@ func IPToBigInt(IPv6Addr net.IP) *big.Int {
 	IPv6Int := big.NewInt(0)
 	IPv6Int.SetBytes(IPv6Addr)
 	return IPv6Int
+}
+
+// IPSet - ipset details
+type IPSet struct {
+	Networks            []string
+	Role                string
+	HostCount           int
+	AddToPredictableIPs bool
+}
+
+// OvercloudipsetCreateOrUpdate -
+func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset IPSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
+	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+			Labels: map[string]string{
+				overcloudipset.AddToPredictableIPsLabel: strconv.FormatBool(ipset.AddToPredictableIPs),
+			},
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), overcloudIPSet, func() error {
+		overcloudIPSet.Spec.Networks = ipset.Networks
+		overcloudIPSet.Spec.Role = ipset.Role
+		overcloudIPSet.Spec.HostCount = ipset.HostCount
+
+		err := controllerutil.SetControllerReference(obj, overcloudIPSet, r.GetScheme())
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return overcloudIPSet, op, err
 }

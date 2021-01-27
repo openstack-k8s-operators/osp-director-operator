@@ -35,7 +35,6 @@ import (
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // OpenStackClientReconciler reconciles a OpenStackClient object
@@ -101,7 +100,13 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, err
 	}
 
-	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Networks,
+		Role:                openstackclient.Role,
+		HostCount:           openstackclient.Count,
+		AddToPredictableIPs: false,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -111,9 +116,25 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
-	if len(ipset.Status.HostIPs) != instance.Spec.VMCount {
-		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.VMCount))
+	if len(ipset.Status.HostIPs) != openstackclient.Count {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", openstackclient.Count))
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	// for now there is only support for a single openstackclient container per cr
+	hostKey := fmt.Sprintf("%s-%d", instance.Name, 0)
+	hostname, err := common.CreateOrGetHostname(instance, hostKey, openstackclient.Role)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	r.Log.Info(fmt.Sprintf("OpenStackClient hostname set to %s", hostname))
+
+	instance.Status.Hostname = hostname
+	instance.Status.IPAddress = ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"]
+	err = r.Client.Status().Update(context.TODO(), instance)
+	if err != nil {
+		r.Log.Error(err, "Failed to update CR status %v")
+		return ctrl.Result{}, err
 	}
 
 	templateParameters := make(map[string]interface{})
@@ -242,31 +263,6 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackClientReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.ObjectMeta.Namespace,
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
-		overcloudIPSet.Spec.Networks = instance.Spec.Networks
-		overcloudIPSet.Spec.Role = "OpenstackClient"
-		overcloudIPSet.Spec.HostCount = 1
-
-		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return overcloudIPSet, op, err
-}
-
 func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
 	var terminationGracePeriodSeconds int64 = 0
 	runAsUser := int64(openstackclient.CloudAdminUID)
@@ -282,8 +278,12 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
-			// TODO: remove hard coded IP
-			Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": `[{"name": "osp-static", "namespace": "openstack", "ips": ["192.168.25.6/24"]}]`},
+			Annotations: map[string]string{
+				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(
+					"[{\"name\": \"osp-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
+					instance.Namespace,
+					instance.Status.IPAddress),
+			},
 		},
 	}
 	pod.Spec = corev1.PodSpec{

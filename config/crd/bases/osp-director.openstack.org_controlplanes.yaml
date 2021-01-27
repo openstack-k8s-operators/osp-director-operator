@@ -44,7 +44,8 @@ spec:
                     VMs
                   type: string
                 baseImageVolumeName:
-                  description: BaseImageVolumeName Optional. If supplied will supplant
+                  description: BaseImageVolumeName Optional. If supplied will be used
+                    as the base volume for the VM instead of BaseImageURL.
                   type: string
                 controllerCount:
                   description: Number of controllers to configure, 1 or 3
