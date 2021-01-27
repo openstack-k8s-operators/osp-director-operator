@@ -16,6 +16,10 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/osp-director-operator-webhook-clean", "start"]
       volumes:
       - name: cert
         secret:

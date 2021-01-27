@@ -38,11 +38,14 @@ import (
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	admissionv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
+
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	//templatev1 "github.com/openshift/api/template/v1"
+	ospdirectoropenstackorgv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -59,12 +62,15 @@ func init() {
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
 	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme))
+	utilruntime.Must(admissionv1beta1.AddToScheme(scheme))
+	utilruntime.Must(ospdirectoropenstackorgv1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var enableWebhooks bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -114,6 +120,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
+		enableWebhooks = true
+	}
+
 	if err = (&controllers.ControlPlaneReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
@@ -128,7 +138,7 @@ func main() {
 		Kclient: kclient,
 		Log:     ctrl.Log.WithName("controllers").WithName("VMSet"),
 		Scheme:  mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, enableWebhooks); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VMSet")
 		os.Exit(1)
 	}
@@ -146,7 +156,7 @@ func main() {
 		Kclient: kclient,
 		Log:     ctrl.Log.WithName("controllers").WithName("BaremetalSet"),
 		Scheme:  mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, enableWebhooks); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BaremetalSet")
 		os.Exit(1)
 	}
@@ -177,7 +187,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OvercloudIPSet")
 		os.Exit(1)
 	}
-	// +kubebuilder:scaffold:builder
+
+	if enableWebhooks {
+		if err = (&ospdirectoropenstackorgv1beta1.BaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BaremetalSet")
+			os.Exit(1)
+		}
+		if err = (&ospdirectorv1beta1.VMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
+			os.Exit(1)
+		}
+		// +kubebuilder:scaffold:builder
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

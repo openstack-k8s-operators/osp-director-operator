@@ -27,9 +27,9 @@ patchesStrategicMerge:
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
 #- patches/cainjection_in_controlplanes.yaml
-#- patches/cainjection_in_vmsets.yaml
+- patches/cainjection_in_vmsets.yaml
 #- patches/cainjection_in_provisionservers.yaml
-#- patches/cainjection_in_baremetalsets.yaml
+- patches/cainjection_in_baremetalsets.yaml
 #- patches/cainjection_in_openstackclients.yaml
 #- patches/cainjection_in_overcloudnets.yaml
 #- patches/cainjection_in_overcloudipsets.yaml

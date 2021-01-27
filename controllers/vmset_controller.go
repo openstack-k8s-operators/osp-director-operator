@@ -38,6 +38,7 @@ import (
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
+	webhook "github.com/openstack-k8s-operators/osp-director-operator/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -87,6 +88,8 @@ func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;deletecollection;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 // Reconcile - controller VMs
 func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -315,7 +318,16 @@ func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, ho
 }
 
 // SetupWithManager -
-func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager, enableWebhooks bool) error {
+
+	if enableWebhooks {
+		// Create webhooks now, as waiting for a reconcile loop could mean that a CR
+		// gets in before the checks exist
+		if err := webhook.EnsureValidationWebhooks(mgr.GetClient(), "vmset"); err != nil {
+			return err
+		}
+	}
+
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
@@ -393,7 +405,7 @@ func (r *VMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirecto
 	}
 
 	// Generate the Network Definition objects
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "network"), data)
+	manifests, err := bindatautil.RenderDir(filepath.Join(bindatautil.ManifestPath, "network"), data)
 	if err != nil {
 		r.Log.Error(err, "Failed to render network manifests : %v")
 		return err
@@ -438,7 +450,7 @@ func (r *VMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.VMSet) 
 	}
 
 	// 01 - create root base volume on StorageClass
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "cdi"), data)
+	manifests, err := bindatautil.RenderDir(filepath.Join(bindatautil.ManifestPath, "cdi"), data)
 	if err != nil {
 		return err
 	}
@@ -486,7 +498,7 @@ func (r *VMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.VMSet, e
 	data.Data["DomainNameUniq"] = ctl.DomainNameUniq
 	data.Data["NetworkDataSecret"] = ctl.NetworkDataSecret
 
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "virtualmachine"), data)
+	manifests, err := bindatautil.RenderDir(filepath.Join(bindatautil.ManifestPath, "virtualmachine"), data)
 	if err != nil {
 		r.Log.Error(err, "Failed to render virtualmachine manifests : %v")
 		return err
