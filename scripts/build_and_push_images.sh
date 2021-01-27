@@ -4,7 +4,7 @@ set -ex
 #
 # Builds and pushes operator, bundle and index images for a given version of an operator
 #
-# NOTE: Requires opm and operator-sdk to be installed!
+# NOTE: Requires make, podman, opm and operator-sdk to be installed!
 #
 
 VERSION=${1:-"0.0.1"}
@@ -23,10 +23,19 @@ IMG=${IMG} make docker-build docker-push
 rm -Rf bundle
 rm -Rf bundle.Dockerfile
 
-# Bundle image
+# Generate bundle manifests
 VERSION=${VERSION} IMG=${IMG} make bundle
+
+# HACK: Inject webhook service into bundle until OLM fixes webhook service inclusion
+# (https://bugzilla.redhat.com/show_bug.cgi?id=1921000)
+cp config/webhook/service.yaml bundle/manifests/osp-director-operator-webhook-service.yaml
+sed -i 's/name: webhook-service/name: osp-director-operator-webhook-service/g' bundle/manifests/osp-director-operator-webhook-service.yaml
+sed -i 's/namespace: system/namespace: openstack/g' bundle/manifests/osp-director-operator-webhook-service.yaml
+
+# Build bundle image
 VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
 
+# Push bundle image
 podman push ${BUNDLE_IMG}
 #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
