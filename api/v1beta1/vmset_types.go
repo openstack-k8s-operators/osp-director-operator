@@ -34,8 +34,8 @@ type VMSetSpec struct {
 	BaseImageURL string `json:"baseImageURL"`
 	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass"`
-	// ImageImportStorageClass used to import base image into the cluster
-	ImageImportStorageClass string `json:"imageImportStorageClass,omitempty"`
+	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
+	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// OSPNetwork

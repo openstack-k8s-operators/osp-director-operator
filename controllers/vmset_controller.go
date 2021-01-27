@@ -238,9 +238,11 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Create base image, controller disks get cloned from this
-	err = r.cdiCreateBaseDisk(instance)
-	if err != nil {
-		return ctrl.Result{}, err
+	if instance.Spec.BaseImageVolumeName == "" {
+		err = r.cdiCreateBaseDisk(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Create network config
@@ -257,6 +259,9 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
 	pvc := &corev1.PersistentVolumeClaim{}
 	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
+	if instance.Spec.BaseImageVolumeName != "" {
+		baseImageName = instance.Spec.BaseImageVolumeName
+	}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && errors.IsNotFound(err) {
 		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcil in 10s", baseImageName))
@@ -348,14 +353,17 @@ func (r *VMSetReconciler) getRenderData(instance *ospdirectorv1beta1.VMSet) (*bi
 	data := bindatautil.MakeRenderData()
 	// Base image used to clone the controller VM images from
 	// adding first 5 char from instance.UID as identifier
-	data.Data["BaseImageName"] = fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
+	if instance.Spec.BaseImageVolumeName == "" {
+		data.Data["BaseImageVolumeName"] = fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
+	} else {
+		data.Data["BaseImageVolumeName"] = instance.Spec.BaseImageVolumeName
+	}
 	data.Data["BaseImageURL"] = instance.Spec.BaseImageURL
 	data.Data["DiskSize"] = instance.Spec.DiskSize
 	data.Data["Namespace"] = instance.Namespace
 	data.Data["Cores"] = instance.Spec.Cores
 	data.Data["Memory"] = instance.Spec.Memory
 	data.Data["StorageClass"] = instance.Spec.StorageClass
-	data.Data["ImageImportStorageClass"] = instance.Spec.ImageImportStorageClass
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
 	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()

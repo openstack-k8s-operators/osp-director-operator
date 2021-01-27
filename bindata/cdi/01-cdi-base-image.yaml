@@ -1,7 +1,7 @@
 apiVersion: cdi.kubevirt.io/v1alpha1
 kind: DataVolume
 metadata:
-  name: {{ .BaseImageName }}
+  name: {{ .BaseImageVolumeName }}
   namespace: {{ .Namespace }}
 spec:
   pvc:
@@ -11,9 +11,7 @@ spec:
       requests:
         storage: {{ .DiskSize }}Gi
     volumeMode: Filesystem
-{{if .ImageImportStorageClass }}
-    storageClassName: {{ .ImageImportStorageClass }}
-{{end}}
+    storageClassName: {{ .StorageClass }}
   source:
     http:
       url: {{ .BaseImageURL }}

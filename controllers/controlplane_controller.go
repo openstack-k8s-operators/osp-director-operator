@@ -155,7 +155,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		ospVMSet.Spec.Memory = instance.Spec.Controller.Memory
 		ospVMSet.Spec.DiskSize = instance.Spec.Controller.DiskSize
 		ospVMSet.Spec.StorageClass = instance.Spec.Controller.StorageClass
-		ospVMSet.Spec.ImageImportStorageClass = instance.Spec.Controller.DeepCopy().ImageImportStorageClass
+		ospVMSet.Spec.BaseImageVolumeName = instance.Spec.Controller.DeepCopy().BaseImageVolumeName
 		ospVMSet.Spec.DeploymentSSHSecret = deploymentSecretName
 		ospVMSet.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
 		ospVMSet.Spec.Networks = instance.Spec.Controller.Networks
