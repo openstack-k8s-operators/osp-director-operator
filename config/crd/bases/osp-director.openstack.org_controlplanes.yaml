@@ -43,6 +43,9 @@ spec:
                   description: Name of the VM base image used to setup the controller
                     VMs
                   type: string
+                baseImageVolumeName:
+                  description: BaseImageVolumeName Optional. If supplied will supplant
+                  type: string
                 controllerCount:
                   description: Number of controllers to configure, 1 or 3
                   type: integer
@@ -54,10 +57,6 @@ spec:
                   description: root Disc size in GB
                   format: int32
                   type: integer
-                imageImportStorageClass:
-                  description: ImageImportStorageClass used to import base image into
-                    the cluster
-                  type: string
                 memory:
                   description: amount of Memory in GB used by the controller VMs
                   format: int32

@@ -17,11 +17,6 @@ spec:
       kind: BaremetalSet
       name: baremetalsets.osp-director.openstack.org
       version: v1beta1
-    - description: VMSet is the Schema for the vmsets API
-      displayName: Controller VM
-      kind: VMSet
-      name: vmsets.osp-director.openstack.org
-      version: v1beta1
     - description: ControlPlane is the Schema for the controlplanes API
       displayName: Control Plane
       kind: ControlPlane
@@ -46,6 +41,11 @@ spec:
       displayName: Provision Server
       kind: ProvisionServer
       name: provisionservers.osp-director.openstack.org
+      version: v1beta1
+    - description: VMSet is the Schema for the vmsets API
+      displayName: VMSet
+      kind: VMSet
+      name: vmsets.osp-director.openstack.org
       version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator

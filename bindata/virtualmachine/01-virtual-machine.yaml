@@ -23,7 +23,7 @@ spec:
         storageClassName: {{ .StorageClass }}
       source:
         pvc:
-          name: {{ .BaseImageName }}
+          name: {{ .BaseImageVolumeName }}
           namespace: {{ .Namespace }}
   running: true
   template:
