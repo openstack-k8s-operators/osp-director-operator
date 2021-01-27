@@ -17,8 +17,6 @@ limitations under the License.
 package controllers
 
 const (
-	// ManifestPath - bindata path
-	ManifestPath = "./bindata"
 	// OwnerUIDLabelSelector -
 	OwnerUIDLabelSelector = "osp-director.openstack.org/uid"
 	// OwnerNameSpaceLabelSelector -

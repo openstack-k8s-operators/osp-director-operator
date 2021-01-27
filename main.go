@@ -68,6 +68,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var enableWebhooks bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -117,6 +118,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
+		enableWebhooks = true
+	}
+
 	if err = (&controllers.ControlPlaneReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
@@ -131,7 +136,7 @@ func main() {
 		Kclient: kclient,
 		Log:     ctrl.Log.WithName("controllers").WithName("VMSet"),
 		Scheme:  mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, enableWebhooks); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VMSet")
 		os.Exit(1)
 	}
@@ -149,7 +154,7 @@ func main() {
 		Kclient: kclient,
 		Log:     ctrl.Log.WithName("controllers").WithName("BaremetalSet"),
 		Scheme:  mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, enableWebhooks); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BaremetalSet")
 		os.Exit(1)
 	}
@@ -181,7 +186,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
+	if enableWebhooks {
 		if err = (&ospdirectoropenstackorgv1beta1.BaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BaremetalSet")
 			os.Exit(1)

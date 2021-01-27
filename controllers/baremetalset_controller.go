@@ -44,6 +44,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	webhook "github.com/openstack-k8s-operators/osp-director-operator/pkg/webhook"
 )
 
 const ()
@@ -89,6 +90,8 @@ func (r *BaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=metal3.io,resources=baremetalhosts/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;deletecollection;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 // Reconcile baremetalset
 func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -155,7 +158,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	if instance.Spec.PasswordSecret != "" {
-		// check if specified password secret exists before creating the controlplane
+		// check if specified password secret exists before creating the computes
 		_, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
@@ -167,7 +170,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
-	// First deploy the provisioning image (Apache) server
+	// Next deploy the provisioning image (Apache) server
 	provisionServer, op, err := r.provisionServerCreateOrUpdate(instance)
 
 	if err != nil {
@@ -228,7 +231,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 }
 
 // SetupWithManager - prepare controller for use with operator manager
-func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager, enableWebhooks bool) error {
 	openshiftMachineAPIBareMetalHostsFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
 		result := []reconcile.Request{}
 		label := o.Meta.GetLabels()
@@ -247,6 +250,12 @@ func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 		return nil
 	})
+
+	if enableWebhooks {
+		if err := webhook.EnsureValidationWebhooks(mgr.GetClient(), "baremetalset"); err != nil {
+			return err
+		}
+	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.BaremetalSet{}).
