@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: osp-director-operator-{{ .Kind }}-validation-webhook
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"
+webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: osp-director-operator-webhook-service
+      namespace: openstack
+      path: /validate-osp-director-openstack-org-v1beta1-{{ .Kind }}
+  failurePolicy: Fail
+  name: v{{ .Kind }}.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - {{ .Kind }}s
