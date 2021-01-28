@@ -6,6 +6,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+    operators.operatorframework.io/internal-objects: '["overcloudipsets.osp-director.openstack.org","provisionservers.osp-director.openstack.org"]'
   name: osp-director-operator.v0.0.0
   namespace: placeholder
 spec:
