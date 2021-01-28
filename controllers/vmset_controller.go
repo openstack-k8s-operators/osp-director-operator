@@ -197,7 +197,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	for i := 0; i < instance.Spec.VMCount; i++ {
 		// TODO: multi nic support with bindata template
 
-		hostKey := fmt.Sprintf("%s-%d", instance.Name, i)
+		hostKey := fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i)
 		hostname, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
 		r.Log.Info(fmt.Sprintf("VMSet VM hostname set to %s", hostname))
 		if err != nil {
