@@ -100,6 +100,43 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, err
 	}
 
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Networks,
+		Role:                openstackclient.Role,
+		HostCount:           openstackclient.Count,
+		AddToPredictableIPs: false,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	if len(ipset.Status.HostIPs) != openstackclient.Count {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", openstackclient.Count))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	// for now there is only support for a single openstackclient container per cr
+	hostKey := fmt.Sprintf("%s-%d", instance.Name, 0)
+	hostname, err := common.CreateOrGetHostname(instance, hostKey, openstackclient.Role)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	r.Log.Info(fmt.Sprintf("OpenStackClient hostname set to %s", hostname))
+
+	instance.Status.Hostname = hostname
+	instance.Status.IPAddress = ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"]
+	err = r.Client.Status().Update(context.TODO(), instance)
+	if err != nil {
+		r.Log.Error(err, "Failed to update CR status %v")
+		return ctrl.Result{}, err
+	}
+
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
 	cms := []common.Template{
@@ -241,8 +278,12 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
-			// TODO: remove hard coded IP
-			Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": `[{"name": "osp-static", "namespace": "openstack", "ips": ["192.168.25.6/24"]}]`},
+			Annotations: map[string]string{
+				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(
+					"[{\"name\": \"osp-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
+					instance.Namespace,
+					instance.Status.IPAddress),
+			},
 		},
 	}
 	pod.Spec = corev1.PodSpec{

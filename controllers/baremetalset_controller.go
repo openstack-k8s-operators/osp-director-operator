@@ -197,7 +197,13 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.BaremetalHostStatus{}
 	}
 
-	ipset, op, err := r.overcloudipsetCreateOrUpdate(instance)
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Networks,
+		Role:                instance.Spec.Role,
+		HostCount:           instance.Spec.Replicas,
+		AddToPredictableIPs: true,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -281,31 +287,6 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 	})
 
 	return provisionServer, op, err
-}
-
-func (r *BaremetalSetReconciler) overcloudipsetCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.ObjectMeta.Namespace,
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, overcloudIPSet, func() error {
-		overcloudIPSet.Spec.Networks = instance.Spec.Networks
-		overcloudIPSet.Spec.Role = instance.Spec.Role
-		overcloudIPSet.Spec.HostCount = instance.Spec.Replicas
-
-		err := controllerutil.SetControllerReference(instance, overcloudIPSet, r.Scheme)
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return overcloudIPSet, op, err
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count

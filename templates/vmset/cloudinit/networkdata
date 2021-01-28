@@ -2,6 +2,6 @@ version: 2
 ethernets:
   eth1:
     addresses: [ {{ .ControllerIP }} ]
-{{if .Gateway }}
+{{- if .Gateway }}
     {{ .Gateway }}
-{{end}}
+{{- end }}

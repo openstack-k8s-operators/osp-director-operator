@@ -6,3 +6,5 @@ metadata:
 spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  networks:
+    - ctlplane

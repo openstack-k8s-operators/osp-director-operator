@@ -14,7 +14,11 @@ spec:
   networks:
     - ctlplane
     - tenant
-  role: worker
+  role: Compute
+  # PasswordSecret the name of the secret used to optionally set the root pwd by adding
+  # NodeRootPassword: <base64 enc pwd>
+  # to the secret data
+  passwordSecret: userpassword
   # The interface on the nodes that will be assigned an IP from the ctlCidr
   ctlplaneInterface: eth2
   # Arbitrary label selector for BaremetalHosts (optional)

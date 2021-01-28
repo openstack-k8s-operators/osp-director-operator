@@ -127,21 +127,15 @@ spec:
                 - ipaddress
                 type: object
               type: object
-            vms:
-              description: VMs are the names of the kubevirt controller vm pods
+            vmpods:
+              description: VMpods are the names of the kubevirt controller vm pods
               items:
                 type: string
               type: array
             vmsReady:
               description: VMsReady is the number of ready  kubevirt controller vm
                 instances
-              format: int32
               type: integer
-          required:
-          - baseImageDVReady
-          - vmHosts
-          - vms
-          - vmsReady
           type: object
       type: object
   version: v1beta1

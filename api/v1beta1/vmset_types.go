@@ -59,12 +59,12 @@ type VMHostStatus struct {
 // VMSetStatus defines the observed state of VMSet
 type VMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
-	BaseImageDVReady bool `json:"baseImageDVReady"`
+	BaseImageDVReady bool `json:"baseImageDVReady,omitempty"`
 	// VMsReady is the number of ready  kubevirt controller vm instances
-	VMsReady int32 `json:"vmsReady"`
-	// VMs are the names of the kubevirt controller vm pods
-	VMs     []string                `json:"vms"`
-	VMHosts map[string]VMHostStatus `json:"vmHosts"`
+	VMsReady int `json:"vmsReady,omitempty"`
+	// VMpods are the names of the kubevirt controller vm pods
+	VMpods  []string                `json:"vmpods,omitempty"`
+	VMHosts map[string]VMHostStatus `json:"vmHosts,omitempty"`
 }
 
 // Host -
