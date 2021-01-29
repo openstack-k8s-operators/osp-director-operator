@@ -197,8 +197,9 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
 			os.Exit(1)
 		}
-		// +kubebuilder:scaffold:builder
 	}
+
+	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
