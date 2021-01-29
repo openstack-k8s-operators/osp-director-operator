@@ -1,4 +1,19 @@
 # Environment file for pre-assigned IPs
+resource_registry:
+{{- range $role, $ports := .RolePortsFromPool }}
+  {{- range $network, $config := $ports }}
+  OS::TripleO::{{ $role }}::Ports::{{ $network }}Port: {{ $config }}
+  {{- end }}
+{{- end }}
 
 parameter_defaults:
-{{.PredictableIps}}
+{{- range $role, $roleIPs := .PredictableIps }}
+  {{ $role }}IPs
+  {{- range $netname, $ips := $roleIPs }}
+    {{ $netname }}
+    {{- range $x, $ip := $ips }}
+    - {{ $ip }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+

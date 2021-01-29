@@ -55,8 +55,7 @@ type ControllerSpec struct {
 
 // ControlPlaneStatus defines the observed state of ControlPlane
 type ControlPlaneStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	VIPStatus map[string]HostStatus `json:"vipStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -82,4 +81,13 @@ type ControlPlaneList struct {
 
 func init() {
 	SchemeBuilder.Register(&ControlPlane{}, &ControlPlaneList{})
+}
+
+// GetHostnames -
+func (vips ControlPlane) GetHostnames() map[string]string {
+	ret := make(map[string]string)
+	for key, val := range vips.Status.VIPStatus {
+		ret[key] = val.Hostname
+	}
+	return ret
 }

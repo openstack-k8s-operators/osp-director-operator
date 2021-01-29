@@ -20,11 +20,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPReservation contains an IP, and Hostname
+// IPReservation contains an IP, Hostname, and a VIP flag
 type IPReservation struct {
 	//IP       net.IP `json:"ip"`
-	IP       string `json:"ip"`
-	Hostname string `json:"hostname"`
+	IDKey               string `json:"idKey"`
+	IP                  string `json:"ip"`
+	Hostname            string `json:"hostname"`
+	VIP                 bool   `json:"vip"`
+	Role                string `json:"role"`
+	AddToPredictableIPs bool   `json:"addToPredictableIPs"`
 }
 
 // OvercloudNetSpec defines the desired state of OvercloudNet

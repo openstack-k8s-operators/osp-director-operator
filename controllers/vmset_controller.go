@@ -167,11 +167,6 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// If VMHosts status map is nil, create it
-	if instance.Status.VMHosts == nil {
-		instance.Status.VMHosts = map[string]ospdirectorv1beta1.VMHostStatus{}
-	}
-
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
 		Role:                instance.Spec.Role,
@@ -185,7 +180,6 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
@@ -288,20 +282,39 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Func to help increase DRY below in NetworkData loops
 	generateNetworkData := func(instance *ospdirectorv1beta1.VMSet, hostKey string) error {
 		// TODO: multi nic support with bindata template
-		hostName, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
+		netName := "ctlplane"
 
+		hostnameDetails := common.Hostname{
+			IDKey:    hostKey, //fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i),
+			Basename: instance.Spec.Role,
+			VIP:      false,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			return err
+		}
+		r.Log.Info(fmt.Sprintf("VMSet %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
+
+		controllerDetails[hostnameDetails.Hostname] = ospdirectorv1beta1.Host{
+			Hostname:          hostnameDetails.Hostname,
+			DomainName:        hostnameDetails.Hostname,
+			DomainNameUniq:    fmt.Sprintf("%s-%s", hostnameDetails.Hostname, instance.UID[0:4]),
+			IPAddress:         ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName],
+			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, hostnameDetails.Hostname),
+			Labels:            secretLabels,
+		}
+
+		err = r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, controllerDetails[hostnameDetails.Hostname])
 		if err != nil {
 			return err
 		}
 
-		host, err := r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, secretLabels, hostName)
-
-		if err != nil {
-			return err
+		// update VMSet network status
+		for _, netName := range instance.Spec.Networks {
+			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
 		}
-
-		controllerDetails[hostName] = host
-		r.setVMHostStatus(instance, hostName, ipset.Status.HostIPs[hostName].IPAddresses["ctlplane"])
+		r.Log.Info(fmt.Sprintf("VMSet network status for Hostname: %s - %s", instance.Status.VMHosts[hostnameDetails.IDKey].Hostname, instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses))
 
 		return nil
 	}
@@ -348,18 +361,9 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.VMSet, ipset *ospdirectorv1beta1.OvercloudIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, secretLabels map[string]string, hostName string) (ospdirectorv1beta1.Host, error) {
-	networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostName)
-
-	host := ospdirectorv1beta1.Host{
-		Hostname:          hostName,
-		DomainName:        hostName,
-		DomainNameUniq:    fmt.Sprintf("%s-%s", hostName, instance.UID[0:4]),
-		IPAddress:         ipset.Status.HostIPs[hostName].IPAddresses["ctlplane"],
-		NetworkDataSecret: networkDataSecretName,
-	}
-
+func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.VMSet, ipset *ospdirectorv1beta1.OvercloudIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
 	templateParameters["ControllerIP"] = host.IPAddress
+
 	gateway := ipset.Status.Networks["ctlplane"].Gateway
 	if gateway != "" {
 		if strings.Contains(gateway, ":") {
@@ -370,22 +374,22 @@ func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirecto
 	}
 	networkdata := []common.Template{
 		{
-			Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostName),
+			Name:           host.NetworkDataSecret,
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeNone,
 			InstanceType:   instance.Kind,
 			AdditionalData: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
-			Labels:         secretLabels,
+			Labels:         host.Labels,
 			ConfigOptions:  templateParameters,
 		},
 	}
 
 	err := common.EnsureSecrets(r, instance, networkdata, envVars)
 	if err != nil {
-		return host, err
+		return err
 	}
 
-	return host, nil
+	return nil
 }
 
 func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.VMSet, vm string) error {
@@ -425,11 +429,23 @@ func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1
 	return nil
 }
 
-func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, hostname string, ipaddress string) {
-	// Set status for vmHosts
-	instance.Status.VMHosts[hostname] = ospdirectorv1beta1.VMHostStatus{
-		Hostname:  hostname,
-		IPAddress: ipaddress,
+func (r *VMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.VMSet, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+
+	// If VMSet status map is nil, create it
+	if instance.Status.VMHosts == nil {
+		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	// Set network information status
+	if instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses == nil {
+		instance.Status.VMHosts[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostnameDetails.Hostname,
+			IPAddresses: map[string]string{
+				netName: ipaddress,
+			},
+		}
+	} else {
+		instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
 	}
 }
 

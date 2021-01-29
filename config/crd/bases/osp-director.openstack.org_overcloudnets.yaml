@@ -62,16 +62,28 @@ spec:
             reservations:
               description: Reservations IP address reservations
               items:
-                description: IPReservation contains an IP, and Hostname
+                description: IPReservation contains an IP, Hostname, and a VIP flag
                 properties:
+                  addToPredictableIPs:
+                    type: boolean
                   hostname:
                     type: string
-                  ip:
+                  idKey:
                     description: IP       net.IP `json:"ip"`
                     type: string
+                  ip:
+                    type: string
+                  role:
+                    type: string
+                  vip:
+                    type: boolean
                 required:
+                - addToPredictableIPs
                 - hostname
+                - idKey
                 - ip
+                - role
+                - vip
                 type: object
               type: array
           required:

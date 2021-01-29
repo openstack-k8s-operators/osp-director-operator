@@ -115,16 +115,18 @@ spec:
               type: boolean
             vmHosts:
               additionalProperties:
-                description: VMHostStatus represents the hostname and IP info for
-                  a specific VM
+                description: HostStatus represents the hostname and IP info for a
+                  specific VM
                 properties:
                   hostname:
                     type: string
-                  ipaddress:
-                    type: string
+                  ipaddresses:
+                    additionalProperties:
+                      type: string
+                    type: object
                 required:
                 - hostname
-                - ipaddress
+                - ipaddresses
                 type: object
               type: object
             vmpods:

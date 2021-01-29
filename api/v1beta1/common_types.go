@@ -35,3 +35,9 @@ type Network struct {
 	BridgeName   string           `json:"bridgeName"`
 	DesiredState nmstateapi.State `json:"desiredState,omitempty"`
 }
+
+// HostStatus represents the hostname and IP info for a specific VM
+type HostStatus struct {
+	Hostname    string            `json:"hostname"`
+	IPAddresses map[string]string `json:"ipaddresses"`
+}

@@ -22,4 +22,10 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "controlplane.osp-director.openstack.org"
+
+	// Count - controlplane count is atm fixed to 1
+	Count = 1
+
+	// Role - controlplane has not tripleo role, set it as const
+	Role = "ControlPlane"
 )

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -113,7 +114,6 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	if len(ipset.Status.HostIPs) != openstackclient.Count {
@@ -122,15 +122,26 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	// for now there is only support for a single openstackclient container per cr
-	hostKey := fmt.Sprintf("%s-%d", instance.Name, 0)
-	hostname, err := common.CreateOrGetHostname(instance, hostKey, openstackclient.Role)
+	hostnameDetails := common.Hostname{
+		IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(openstackclient.Role), 0),
+		Basename: openstackclient.Role,
+		VIP:      false,
+	}
+	err = common.CreateOrGetHostname(instance, &hostnameDetails)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	r.Log.Info(fmt.Sprintf("OpenStackClient hostname set to %s", hostname))
+	r.Log.Info(fmt.Sprintf("OpenStackClient %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
 
-	instance.Status.Hostname = hostname
-	instance.Status.IPAddress = ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"]
+	// TODO: maschuppert - atm the openstackclient only has the ctlplane network.
+	//       for debugging it probably makes sense to attach the openstackclient to all networks?
+
+	// update network status
+	for _, netName := range instance.Spec.Networks {
+		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
+	}
+	r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].Hostname, instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses))
+
 	err = r.Client.Status().Update(context.TODO(), instance)
 	if err != nil {
 		r.Log.Error(err, "Failed to update CR status %v")
@@ -242,13 +253,12 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	// Create or update the pod object
-	op, err = r.podCreateOrUpdate(instance, envVars)
+	op, err = r.podCreateOrUpdate(instance, &hostnameDetails, envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -263,7 +273,27 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
+func (r *OpenStackClientReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackClient, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+
+	// If OpenStackClient status map is nil, create it
+	if instance.Status.OpenStackClientNetStatus == nil {
+		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	// Set network information status
+	if instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses == nil {
+		instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostnameDetails.Hostname,
+			IPAddresses: map[string]string{
+				netName: ipaddress,
+			},
+		}
+	} else {
+		instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
+	}
+}
+
+func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, hostnameDetails *common.Hostname, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
 	var terminationGracePeriodSeconds int64 = 0
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)
@@ -282,7 +312,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(
 					"[{\"name\": \"osp-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
 					instance.Namespace,
-					instance.Status.IPAddress),
+					instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses["ctlplane"]),
 			},
 		},
 	}

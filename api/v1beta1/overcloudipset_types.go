@@ -31,6 +31,12 @@ type OvercloudIPSetSpec struct {
 
 	// HostCount Host count
 	HostCount int `json:"hostCount"`
+
+	// VIP flag to indicate ipset is a request for a VIP
+	VIP bool `json:"vip"`
+
+	// AddToPredictableIPs add/ignore ipset to add entries to Predictable IPs list
+	AddToPredictableIPs bool `json:"addToPredictableIPs"`
 }
 
 // OvercloudIPSetStatus set of hosts with IP information

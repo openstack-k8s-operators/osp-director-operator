@@ -17,8 +17,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,8 +37,7 @@ type OpenStackClientSpec struct {
 
 // OpenStackClientStatus defines the observed state of OpenStackClient
 type OpenStackClientStatus struct {
-	Hostname  string `json:"hostname"`
-	IPAddress string `json:"ipaddress"`
+	OpenStackClientNetStatus map[string]HostStatus `json:"netStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -70,11 +67,20 @@ func init() {
 
 // GetHostnames -
 func (openstackclient OpenStackClient) GetHostnames() map[string]string {
+
 	ret := make(map[string]string)
-	if openstackclient.Status.Hostname != "" {
-		// for now there is only support for a single openstackclient container per cr
-		hostKey := fmt.Sprintf("%s-%d", openstackclient.Name, 0)
-		ret[hostKey] = openstackclient.Status.Hostname
+	for key, val := range openstackclient.Status.OpenStackClientNetStatus {
+		ret[key] = val.Hostname
 	}
 	return ret
+
+	/*
+		ret := make(map[string]string)
+		if openstackclient.Status.Hostname != "" {
+			// for now there is only support for a single openstackclient container per cr
+			hostKey := fmt.Sprintf("%s-%d", openstackclient.Name, 0)
+			ret[hostKey] = openstackclient.Status.Hostname
+		}
+		return ret
+	*/
 }

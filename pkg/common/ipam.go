@@ -24,6 +24,20 @@ type AssignmentError struct {
 	ipnet   net.IPNet
 }
 
+// AssignIPDetails -
+type AssignIPDetails struct {
+	IPnet               net.IPNet
+	RangeStart          net.IP
+	RangeEnd            net.IP
+	Reservelist         []ospdirectorv1beta1.IPReservation
+	ExcludeRanges       []string
+	IDKey               string
+	Hostname            string
+	Role                string
+	VIP                 bool
+	AddToPredictableIPs bool
+}
+
 func (a AssignmentError) Error() string {
 	return fmt.Sprintf("Could not allocate IP in range: ip: %v / - %v / range: %#v", a.firstIP, a.lastIP, a.ipnet)
 }
@@ -38,44 +52,44 @@ type IPReservation struct {
 */
 
 // AssignIP assigns an IP using a range and a reserve list.
-func AssignIP(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, reservelist []ospdirectorv1beta1.IPReservation, hostname string) (net.IPNet, []ospdirectorv1beta1.IPReservation, error) {
+func AssignIP(assignIPDetails AssignIPDetails) (net.IPNet, []ospdirectorv1beta1.IPReservation, error) {
 
 	// Setup the basics here.
 	//_, ipnet, _ := net.ParseCIDR(ipamConf.Range)
 
-	newip, updatedreservelist, err := IterateForAssignment(ipnet, rangeStart, rangeEnd, reservelist, []string{}, hostname)
+	newip, updatedreservelist, err := IterateForAssignment(assignIPDetails)
 	if err != nil {
 		return net.IPNet{}, nil, err
 	}
 
-	return net.IPNet{IP: newip, Mask: ipnet.Mask}, updatedreservelist, nil
+	return net.IPNet{IP: newip, Mask: assignIPDetails.IPnet.Mask}, updatedreservelist, nil
 }
 
 // IterateForAssignment iterates given an IP/IPNet and a list of reserved IPs
-func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, reservelist []ospdirectorv1beta1.IPReservation, excludeRanges []string, hostname string) (net.IP, []ospdirectorv1beta1.IPReservation, error) {
+func IterateForAssignment(assignIPDetails AssignIPDetails) (net.IP, []ospdirectorv1beta1.IPReservation, error) {
 
-	firstip := rangeStart
+	firstip := assignIPDetails.RangeStart
 	var lastip net.IP
-	if rangeEnd != nil {
-		lastip = rangeEnd
+	if assignIPDetails.RangeEnd != nil {
+		lastip = assignIPDetails.RangeEnd
 	} else {
 		var err error
-		firstip, lastip, err = GetIPRange(rangeStart, ipnet)
+		firstip, lastip, err = GetIPRange(assignIPDetails.RangeStart, assignIPDetails.IPnet)
 		if err != nil {
 			//logging.Errorf("GetIPRange request failed with: %v", err)
-			return net.IP{}, reservelist, err
+			return net.IP{}, assignIPDetails.Reservelist, err
 		}
 	}
 	//logging.Debugf("IterateForAssignment input >> ip: %v | ipnet: %v | first IP: %v | last IP: %v", rangeStart, ipnet, firstip, lastip)
 
 	reserved := make(map[string]bool)
-	for _, r := range reservelist {
+	for _, r := range assignIPDetails.Reservelist {
 		ip := BigIntToIP(*IPToBigInt(net.ParseIP(r.IP)))
 		reserved[ip.String()] = true
 	}
 
 	excluded := []*net.IPNet{}
-	for _, v := range excludeRanges {
+	for _, v := range assignIPDetails.ExcludeRanges {
 		_, subnet, _ := net.ParseCIDR(v)
 		excluded = append(excluded, subnet)
 	}
@@ -119,15 +133,22 @@ MAINITERATION:
 		performedassignment = true
 
 		//logging.Debugf("Reserving IP: |%v|", stringip+" "+containerID)
-		reservelist = append(reservelist, ospdirectorv1beta1.IPReservation{IP: assignedip.String(), Hostname: hostname})
+		assignIPDetails.Reservelist = append(assignIPDetails.Reservelist, ospdirectorv1beta1.IPReservation{
+			IDKey:               assignIPDetails.IDKey,
+			Hostname:            assignIPDetails.Hostname,
+			IP:                  assignedip.String(),
+			Role:                assignIPDetails.Role,
+			VIP:                 assignIPDetails.VIP,
+			AddToPredictableIPs: assignIPDetails.AddToPredictableIPs,
+		})
 		break
 	}
 
 	if !performedassignment {
-		return net.IP{}, reservelist, AssignmentError{firstip, lastip, ipnet}
+		return net.IP{}, assignIPDetails.Reservelist, AssignmentError{firstip, lastip, assignIPDetails.IPnet}
 	}
 
-	return assignedip, reservelist, nil
+	return assignedip, assignIPDetails.Reservelist, nil
 }
 
 // GetIPRange returns the first and last IP in a range
@@ -231,6 +252,7 @@ type IPSet struct {
 	Role                string
 	HostCount           int
 	AddToPredictableIPs bool
+	VIP                 bool
 }
 
 // OvercloudipsetCreateOrUpdate -
@@ -249,6 +271,8 @@ func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset I
 		overcloudIPSet.Spec.Networks = ipset.Networks
 		overcloudIPSet.Spec.Role = ipset.Role
 		overcloudIPSet.Spec.HostCount = ipset.HostCount
+		overcloudIPSet.Spec.VIP = ipset.VIP
+		overcloudIPSet.Spec.AddToPredictableIPs = ipset.AddToPredictableIPs
 
 		err := controllerutil.SetControllerReference(obj, overcloudIPSet, r.GetScheme())
 

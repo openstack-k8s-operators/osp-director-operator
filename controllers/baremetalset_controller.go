@@ -174,7 +174,6 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{}, nil
 	}
 
 	if provisionServer.Status.LocalImageURL == "" {
@@ -208,7 +207,6 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.Replicas {
@@ -436,9 +434,12 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
 
-	bmhName, err := common.CreateOrGetHostname(instance, bmh, instance.Spec.Role)
-	r.Log.Info(fmt.Sprintf("CreateOrgGetHostname: bmhName: %s", bmhName))
-
+	hostnameDetails := common.Hostname{
+		IDKey:    bmh,
+		Basename: instance.Spec.Role,
+		VIP:      false,
+	}
+	err := common.CreateOrGetHostname(instance, &hostnameDetails)
 	if err != nil {
 		return err
 	}
@@ -446,7 +447,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	// User data cloud-init secret
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
-	templateParameters["Hostname"] = bmhName
+	templateParameters["Hostname"] = hostnameDetails.Hostname
 
 	if instance.Spec.PasswordSecret != "" {
 		// check if specified password secret exists before creating the controlplane
@@ -478,7 +479,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	sts = append(sts, userDataSt)
-	ipCidr := ipset.Status.HostIPs[bmhName].IPAddresses["ctlplane"]
+	ipCidr := ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses["ctlplane"]
 	ip, network, _ := net.ParseCIDR(ipCidr)
 	netMask := network.Mask
 
@@ -551,7 +552,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 
 	// Set status (add this BaremetalHost entry)
 	instance.Status.BaremetalHosts[foundBaremetalHost.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
-		Hostname:              bmhName,
+		Hostname:              hostnameDetails.Hostname,
 		UserDataSecretName:    userDataSecretName,
 		NetworkDataSecretName: networkDataSecretName,
 		CtlplaneIP:            ipCidr,

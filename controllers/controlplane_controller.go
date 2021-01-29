@@ -119,7 +119,6 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		}
 		if op != controllerutil.OperationResultNone {
 			r.Log.Info(fmt.Sprintf("Secret %s successfully reconciled - operation: %s", deploymentSecret.Name, string(op)))
-			return ctrl.Result{}, nil
 		}
 	} else if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error get secret %s: %v", deploymentSecretName, err)
@@ -139,6 +138,49 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Controller.Networks,
+		Role:                controlplane.Role,
+		HostCount:           controlplane.Count,
+		VIP:                 true,
+		AddToPredictableIPs: false,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
+	if len(ipset.Status.HostIPs) < controlplane.Count {
+		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count))
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	hostnameDetails := common.Hostname{
+		IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(controlplane.Role), 0),
+		Basename: controlplane.Role,
+		VIP:      true,
+	}
+	err = common.CreateOrGetHostname(instance, &hostnameDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// update VIP network status
+	for _, netName := range instance.Spec.Controller.Networks {
+		// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
+		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
+	}
+	err = r.Client.Status().Update(context.TODO(), instance)
+	if err != nil {
+		r.Log.Error(err, "Failed to update CR status %v")
+		return ctrl.Result{}, err
+	}
+	r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.IDKey].Hostname, instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses))
+
 	// Create or update the controllerVM CR object
 	ospVMSet := &ospdirectorv1beta1.VMSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -148,7 +190,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, ospVMSet, func() error {
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, ospVMSet, func() error {
 		ospVMSet.Spec.BaseImageURL = instance.Spec.Controller.BaseImageURL
 		ospVMSet.Spec.VMCount = instance.Spec.Controller.ControllerCount
 		ospVMSet.Spec.Cores = instance.Spec.Controller.Cores
@@ -177,7 +219,6 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{}, nil
 	}
 
 	// get PodIP's from the OSP controller VMs and update openstackclient
@@ -218,9 +259,7 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("OpenStackClient CR successfully reconciled - operation: %s", string(op)))
-		return ctrl.Result{}, nil
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -269,4 +308,24 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				ToRequests: namespacedFn,
 			}).
 		Complete(r)
+}
+
+func (r *ControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.ControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+
+	// If ControlPlane status map is nil, create it
+	if instance.Status.VIPStatus == nil {
+		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	// Set network information status
+	if instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses == nil {
+		instance.Status.VIPStatus[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostnameDetails.Hostname,
+			IPAddresses: map[string]string{
+				netName: ipaddress,
+			},
+		}
+	} else {
+		instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
+	}
 }
