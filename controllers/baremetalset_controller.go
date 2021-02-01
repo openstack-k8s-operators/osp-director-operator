@@ -46,8 +46,6 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 )
 
-const ()
-
 // BaremetalSetReconciler reconciles a BaremetalSet object
 type BaremetalSetReconciler struct {
 	client.Client
@@ -155,7 +153,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	if instance.Spec.PasswordSecret != "" {
-		// check if specified password secret exists before creating the controlplane
+		// check if specified password secret exists before creating the computes
 		_, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
@@ -167,7 +165,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
-	// First deploy the provisioning image (Apache) server
+	// Next deploy the provisioning image (Apache) server
 	provisionServer, op, err := r.provisionServerCreateOrUpdate(instance)
 
 	if err != nil {
