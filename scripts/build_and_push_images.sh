@@ -4,7 +4,7 @@ set -ex
 #
 # Builds and pushes operator, bundle and index images for a given version of an operator
 #
-# NOTE: Requires opm and operator-sdk to be installed!
+# NOTE: Requires yq, make, podman, opm and operator-sdk to be installed!
 #
 
 VERSION=${1:-"0.0.1"}
@@ -23,10 +23,19 @@ IMG=${IMG} make docker-build docker-push
 rm -Rf bundle
 rm -Rf bundle.Dockerfile
 
-# Bundle image
+# Generate bundle manifests
 VERSION=${VERSION} IMG=${IMG} make bundle
+
+# HACKs for webhook deployment to work around: https://bugzilla.redhat.com/show_bug.cgi?id=1921000
+# TODO: Figure out how to do this via Kustomize so that it's automatically rolled into the make
+#       commands above
+sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+
+# Build bundle image
 VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
 
+# Push bundle image
 podman push ${BUNDLE_IMG}
 #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 

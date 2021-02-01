@@ -4,9 +4,11 @@ kind: Service
 metadata:
   name: webhook-service
   namespace: system
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: webhook-server-cert
 spec:
   ports:
-    - port: 443
-      targetPort: 9443
+    - port: 4343
+      targetPort: 4343
   selector:
     control-plane: controller-manager
