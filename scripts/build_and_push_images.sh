@@ -4,7 +4,7 @@ set -ex
 #
 # Builds and pushes operator, bundle and index images for a given version of an operator
 #
-# NOTE: Requires yq, make, podman, opm and operator-sdk to be installed!
+# NOTE: Requires make, podman, opm and operator-sdk to be installed!
 #
 
 VERSION=${1:-"0.0.1"}
