@@ -28,7 +28,7 @@ type BaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
-	// Remote URL pointing to desired RHEL qcow2 image (gzipped format is required)
+	// Remote URL pointing to desired RHEL qcow2 image
 	RhelImageURL string `json:"rhelImageUrl"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`

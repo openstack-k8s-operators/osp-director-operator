@@ -151,8 +151,7 @@ spec:
               minimum: 0
               type: integer
             rhelImageUrl:
-              description: Remote URL pointing to desired RHEL qcow2 image (gzipped
-                format is required)
+              description: Remote URL pointing to desired RHEL qcow2 image
               type: string
             role:
               description: Role the name of the Overcloud role this IPset is associated
