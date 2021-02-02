@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OvercloudIPSet is the Schema for the overcloudipsets API
+      description: OvercloudIPSet represents a group of IP addresses for a specific
+        deployment role within the OpenStack Overcloud
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

@@ -47,7 +47,7 @@ type OvercloudIPHostsStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// OvercloudIPSet is the Schema for the overcloudipsets API
+// OvercloudIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
 type OvercloudIPSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OvercloudNet is the Schema for the overcloudnets API
+      description: OvercloudNet represents the IPAM configuration for baremetal and
+        VM hosts within OpenStack Overcloud deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

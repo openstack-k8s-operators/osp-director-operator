@@ -19,7 +19,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: ControlPlane is the Schema for the controlplanes API
+      description: ControlPlane represents a virtualized OpenStack control plane configuration
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

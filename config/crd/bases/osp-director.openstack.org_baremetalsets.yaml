@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: BaremetalSet is the Schema for the baremetalsets API
+      description: BaremetalSet represent a set of baremetal hosts for a specific
+        role within the Overcloud deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -150,8 +151,8 @@ spec:
               minimum: 0
               type: integer
             rhelImageUrl:
-              description: 'Remote URL pointing to desired RHEL qcow2 image (TODO:
-                currently gzipped only) for the set'
+              description: Remote URL pointing to desired RHEL qcow2 image (gzipped
+                format is required)
               type: string
             role:
               description: Role the name of the Overcloud role this IPset is associated

@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: VMSet is the Schema for the vmsets API
+      description: VMSet represents a set of virtual machines hosts for a specific
+        role within the Overcloud deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

@@ -56,7 +56,7 @@ type OvercloudNetStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// OvercloudNet is the Schema for the overcloudnets API
+// OvercloudNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
 type OvercloudNet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
