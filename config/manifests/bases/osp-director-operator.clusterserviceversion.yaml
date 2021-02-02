@@ -4,6 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Seamless Upgrades
+    operatorframework.io/suggested-namespace: openstack
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
     operators.operatorframework.io/internal-objects: '["overcloudipsets.osp-director.openstack.org","provisionservers.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
