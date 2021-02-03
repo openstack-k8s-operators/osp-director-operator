@@ -46,7 +46,7 @@ type OpenStackClientStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// OpenStackClient is the Schema for the openstackclients API
+// OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
 type OpenStackClient struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

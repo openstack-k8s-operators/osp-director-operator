@@ -28,7 +28,7 @@ type BaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
-	// Remote URL pointing to desired RHEL qcow2 image (TODO: currently gzipped only) for the set
+	// Remote URL pointing to desired RHEL qcow2 image
 	RhelImageURL string `json:"rhelImageUrl"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
@@ -144,7 +144,7 @@ type DiskSSDReq struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// BaremetalSet is the Schema for the baremetalsets API
+// BaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
 type BaremetalSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

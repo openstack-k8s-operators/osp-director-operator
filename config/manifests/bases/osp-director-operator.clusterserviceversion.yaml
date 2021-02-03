@@ -14,27 +14,27 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: BaremetalSet is the Schema for the baremetalsets API
+    - description: BaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
       displayName: Baremetal Set
       kind: BaremetalSet
       name: baremetalsets.osp-director.openstack.org
       version: v1beta1
-    - description: ControlPlane is the Schema for the controlplanes API
+    - description: ControlPlane represents a virtualized OpenStack control plane configuration
       displayName: Control Plane
       kind: ControlPlane
       name: controlplanes.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackClient is the Schema for the openstackclients API
+    - description: OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
       displayName: Open Stack Client
       kind: OpenStackClient
       name: openstackclients.osp-director.openstack.org
       version: v1beta1
-    - description: OvercloudIPSet is the Schema for the overcloudipsets API
+    - description: OvercloudIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
       displayName: Overcloud IPSet
       kind: OvercloudIPSet
       name: overcloudipsets.osp-director.openstack.org
       version: v1beta1
-    - description: OvercloudNet is the Schema for the overcloudnets API
+    - description: OvercloudNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
       displayName: Overcloud Net
       kind: OvercloudNet
       name: overcloudnets.osp-director.openstack.org
@@ -44,7 +44,7 @@ spec:
       kind: ProvisionServer
       name: provisionservers.osp-director.openstack.org
       version: v1beta1
-    - description: VMSet is the Schema for the vmsets API
+    - description: VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
       displayName: VMSet
       kind: VMSet
       name: vmsets.osp-director.openstack.org
@@ -71,9 +71,9 @@ spec:
   - OpenStack
   - Director
   links:
-  - name: Osp Director Operator
-    url: https://osp-director-operator.domain
-  maturity: alpha
+  - name: OSP Director Operator
+    url: https://github.com/openstack-k8s-operators/osp-director-operator
+  maturity: beta
   provider:
     name: Red Hat Inc.
   version: 0.0.0
