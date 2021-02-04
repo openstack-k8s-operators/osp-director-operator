@@ -79,7 +79,7 @@ type Host struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// VMSet is the Schema for the vmsets API
+// VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
 type VMSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

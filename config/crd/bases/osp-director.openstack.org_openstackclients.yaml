@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OpenStackClient is the Schema for the openstackclients API
+      description: OpenStackClient used to create a container for deploying, scaling,
+        and managing the OpenStack Overcloud
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

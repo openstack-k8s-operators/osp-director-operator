@@ -62,7 +62,7 @@ type ControlPlaneStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// ControlPlane is the Schema for the controlplanes API
+// ControlPlane represents a virtualized OpenStack control plane configuration
 type ControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

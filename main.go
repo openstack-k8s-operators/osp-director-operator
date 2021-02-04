@@ -46,6 +46,17 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
+const (
+	// WebhookPort -
+	WebhookPort = 4343
+	// WebhookCertDir -
+	WebhookCertDir = "/apiserver.local.config/certificates"
+	// WebhookCertName -
+	WebhookCertName = "apiserver.crt"
+	// WebhookKeyName -
+	WebhookKeyName = "apiserver.key"
+)
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -65,6 +76,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var enableWebhooks bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -112,6 +124,17 @@ func main() {
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
+	}
+
+	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
+		enableWebhooks = true
+
+		// We're just getting a pointer here and overriding the default values
+		srv := mgr.GetWebhookServer()
+		srv.CertDir = WebhookCertDir
+		srv.CertName = WebhookCertName
+		srv.KeyName = WebhookKeyName
+		srv.Port = WebhookPort
 	}
 
 	if err = (&controllers.ControlPlaneReconciler{
@@ -177,6 +200,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OvercloudIPSet")
 		os.Exit(1)
 	}
+
+	if enableWebhooks {
+		if err = (&ospdirectorv1beta1.BaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BaremetalSet")
+			os.Exit(1)
+		}
+		if err = (&ospdirectorv1beta1.VMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
+			os.Exit(1)
+		}
+	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
