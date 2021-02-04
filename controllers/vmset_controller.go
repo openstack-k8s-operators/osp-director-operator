@@ -509,7 +509,6 @@ func (r *VMSetReconciler) getRenderData(instance *ospdirectorv1beta1.VMSet) (*bi
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
 	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()
-	data.Data["InstanceName"] = instance.Name
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
