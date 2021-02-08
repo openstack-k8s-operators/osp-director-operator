@@ -4,19 +4,19 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:cloud-admin
+  passwordSecret: userpassword
   controller:
-    Role: Controller
+    role: Controller
     controllerCount: 1
-    cores: 2
-    memory: 20
-    diskSize: 50
+    cores: 6
+    memory: 12
+    diskSize: 40
     baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
     storageClass: host-nfs-storageclass
-    #baseImageVolumeName: #optional
+    baseImageVolumeName: openstack-base-img #optional (overrides baseImageURL)
     networks:
       - ctlplane
-    role: controller
     ospNetwork:
       bridgeName: br-osp
       name: osp
