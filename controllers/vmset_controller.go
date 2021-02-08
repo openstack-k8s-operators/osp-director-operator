@@ -33,9 +33,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
@@ -86,7 +83,9 @@ func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=cdi.kubevirt.io,namespace=openstack,resources=datavolumes,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
-// +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
+// FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
+// +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
@@ -452,34 +451,12 @@ func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, ho
 func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
-	openstackVirtualMachinesFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
-		result := []reconcile.Request{}
-		label := o.Meta.GetLabels()
-		// verify object has ownerUIDLabelSelector
-		if uid, ok := label[OwnerUIDLabelSelector]; ok {
-			r.Log.Info(fmt.Sprintf("VirtualMachine object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
-			// return namespace and Name of CR
-			name := client.ObjectKey{
-				Namespace: label[OwnerNameSpaceLabelSelector],
-				Name:      label[OwnerNameLabelSelector],
-			}
-			result = append(result, reconcile.Request{NamespacedName: name})
-		}
-		if len(result) > 0 {
-			return result
-		}
-		return nil
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.VMSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
-		Watches(&source.Kind{Type: &virtv1.VirtualMachine{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: openstackVirtualMachinesFn,
-			}).
+		Owns(&virtv1.VirtualMachine{}).
 		Complete(r)
 }
 
