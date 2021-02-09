@@ -254,13 +254,10 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	oldVmsToRemoveCount := len(existingVirtualMachines) - instance.Spec.VMCount
 
 	if oldVmsToRemoveCount > 0 {
-		oldVmsRemovedCount := 0
-
-		for i := 0; i < oldVmsToRemoveCount; i++ {
-			// First choose VirtualMachines to remove from the prepared list of VirtualMachines
-			// that have the "osp-director.openstack.org/vmset-delete-virtualmachine=yes" annotation
-
-			if len(removalAnnotatedVirtualMachines) > 0 {
+		if len(removalAnnotatedVirtualMachines) > 0 && len(removalAnnotatedVirtualMachines) == oldVmsToRemoveCount {
+			for i := 0; i < oldVmsToRemoveCount; i++ {
+				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
+				// that have the "osp-director.openstack.org/vmset-delete-virtualmachine=yes" annotation
 				err := r.virtualMachineDeprovision(instance, removalAnnotatedVirtualMachines[0])
 
 				if err != nil {
@@ -276,19 +273,9 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				} else {
 					removalAnnotatedVirtualMachines = []string{}
 				}
-
-				// We removed a removal-annotated VirtualMachine, so increment the removed count
-				oldVmsRemovedCount++
-			} else {
-				// Just break, as any further iterations of the loop have nothing upon
-				// which to operate (we'll report this as a warning just below)
-				break
 			}
-		}
-
-		// If we can't satisfy the requested scale-down, explicitly state so
-		if oldVmsRemovedCount < oldVmsToRemoveCount {
-			r.Log.Info(fmt.Sprintf("WARNING: Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found and removed, %d requested)", oldVmsRemovedCount, oldVmsToRemoveCount))
+		} else {
+			r.Log.Info(fmt.Sprintf("WARNING: Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)", len(removalAnnotatedVirtualMachines), oldVmsToRemoveCount))
 		}
 	}
 
