@@ -97,7 +97,6 @@ spec:
               description: Number of VMs to configure, 1 or 3
               type: integer
           required:
-          - baseImageURL
           - cores
           - deploymentSSHSecret
           - diskSize
