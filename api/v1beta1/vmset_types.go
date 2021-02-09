@@ -31,7 +31,7 @@ type VMSetSpec struct {
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
 	// Name of the VM base image used to setup the VMs
-	BaseImageURL string `json:"baseImageURL"`
+	BaseImageURL string `json:"baseImageURL,omitempty"`
 	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass"`
 	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.

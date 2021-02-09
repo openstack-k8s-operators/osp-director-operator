@@ -22,6 +22,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,19 +52,39 @@ var _ webhook.Validator = &VMSet{}
 func (r *VMSet) ValidateCreate() error {
 	vmsetlog.Info("validate create", "name", r.Name)
 
-	return checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role)
+	return r.validateCr()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *VMSet) ValidateUpdate(old runtime.Object) error {
 	vmsetlog.Info("validate update", "name", r.Name)
 
-	return checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role)
+	return r.validateCr()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *VMSet) ValidateDelete() error {
 	vmsetlog.Info("validate delete", "name", r.Name)
+
+	return nil
+}
+
+func (r *VMSet) validateCr() error {
+	if err := r.checkBaseImageReqs(); err != nil {
+		return err
+	}
+
+	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *VMSet) checkBaseImageReqs() error {
+	if r.Spec.BaseImageURL == "" && r.Spec.BaseImageVolumeName == "" {
+		return fmt.Errorf("Either \"baseImageURL\" or \"baseImageVolumeName\" must be provided")
+	}
 
 	return nil
 }
