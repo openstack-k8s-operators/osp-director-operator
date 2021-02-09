@@ -40,7 +40,6 @@ import (
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	virtv1 "kubevirt.io/client-go/api/v1"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -407,7 +406,7 @@ func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1
 
 	// Delete the VirtualMachine
 	virtualMachine := &virtv1.VirtualMachine{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      vm,
 			Namespace: instance.Namespace,
 		},
@@ -421,7 +420,7 @@ func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1
 
 	// Also remove networkdata secret
 	secret := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, vm),
 			Namespace: instance.Namespace,
 		},
