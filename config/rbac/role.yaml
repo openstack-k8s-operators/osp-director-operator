@@ -124,6 +124,13 @@ rules:
   - update
   - watch
 - apiGroups:
+  - kubevirt.io
+  resources:
+  - virtualmachines
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - machine.openshift.io
   resources:
   - '*'

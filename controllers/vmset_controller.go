@@ -41,7 +41,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	//virtv1 "kubevirt.io/client-go/api/v1"
+	virtv1 "kubevirt.io/client-go/api/v1"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
@@ -83,6 +83,8 @@ func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=cdi.kubevirt.io,namespace=openstack,resources=datavolumes,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
+// FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
+// +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
@@ -186,65 +188,9 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
-	if len(ipset.Status.HostIPs) != instance.Spec.VMCount {
+	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
 		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.VMCount))
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-	}
-
-	controllerDetails := map[string]ospdirectorv1beta1.Host{}
-
-	// Generate the Contoller networkdata secrets
-	for i := 0; i < instance.Spec.VMCount; i++ {
-		// TODO: multi nic support with bindata template
-
-		hostKey := fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i)
-		hostname, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
-		r.Log.Info(fmt.Sprintf("VMSet VM hostname set to %s", hostname))
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname)
-
-		controllerDetails[hostname] = ospdirectorv1beta1.Host{
-			Hostname:          hostname,
-			DomainName:        hostname,
-			DomainNameUniq:    fmt.Sprintf("%s-%s", hostname, instance.UID[0:4]),
-			IPAddress:         ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"],
-			NetworkDataSecret: networkDataSecretName,
-		}
-
-		templateParameters["ControllerIP"] = controllerDetails[hostname].IPAddress
-		gateway := ipset.Status.Networks["ctlplane"].Gateway
-		if gateway != "" {
-			if strings.Contains(gateway, ":") {
-				templateParameters["Gateway"] = fmt.Sprintf("gateway6: %s", gateway)
-			} else {
-				templateParameters["Gateway"] = fmt.Sprintf("gateway4: %s", gateway)
-			}
-		}
-		networkdata := []common.Template{
-			{
-				Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostname),
-				Namespace:      instance.Namespace,
-				Type:           common.TemplateTypeNone,
-				InstanceType:   instance.Kind,
-				AdditionalData: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
-				Labels:         secretLabels,
-				ConfigOptions:  templateParameters,
-			},
-		}
-
-		err = common.EnsureSecrets(r, instance, networkdata, &envVars)
-		if err != nil {
-			return ctrl.Result{}, nil
-		}
-
-		r.setVMHostStatus(instance, hostname, ipset.Status.HostIPs[hostKey].IPAddresses["ctlplane"])
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	// Create base image, controller disks get cloned from this
@@ -253,12 +199,6 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	// Create network config
-	err = r.networkCreateAttachmentDefinition(instance)
-	if err != nil {
-		return ctrl.Result{}, err
 	}
 
 	// wait for the base image conversion job to be finished before we create the VMs
@@ -289,14 +229,116 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		instance.Status.BaseImageDVReady = true
 	}
 
-	// Create controller VM objects
+	// How many VMs do we currently have for this VMSet?
+	virtualMachineList, err := common.GetAllVirtualMachinesWithLabel(r, map[string]string{
+		OwnerNameLabelSelector: instance.Name,
+	}, instance.Namespace)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	existingVirtualMachines := map[string]string{}
+	removalAnnotatedVirtualMachines := []string{}
+
+	// Generate a map of existing VMs and also store those annotated for potential removal
+	for _, virtualMachine := range virtualMachineList.Items {
+		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
+
+		if val, ok := virtualMachine.Annotations[vmset.VirtualMachineRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine.ObjectMeta.Name)
+		}
+	}
+
+	// How many VirtualMachine de-allocations do we need (if any)?
+	oldVmsToRemoveCount := len(existingVirtualMachines) - instance.Spec.VMCount
+
+	if oldVmsToRemoveCount > 0 {
+		if len(removalAnnotatedVirtualMachines) > 0 && len(removalAnnotatedVirtualMachines) == oldVmsToRemoveCount {
+			for i := 0; i < oldVmsToRemoveCount; i++ {
+				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
+				// that have the "osp-director.openstack.org/vmset-delete-virtualmachine=yes" annotation
+				err := r.virtualMachineDeprovision(instance, removalAnnotatedVirtualMachines[0])
+
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+
+				// Remove the removal-annotated VirtualMachine from the existingVirtualMachines map
+				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0])
+
+				// Remove the removal-annotated VirtualMachine from the removalAnnotatedVirtualMachines list
+				if len(removalAnnotatedVirtualMachines) > 1 {
+					removalAnnotatedVirtualMachines = removalAnnotatedVirtualMachines[1:]
+				} else {
+					removalAnnotatedVirtualMachines = []string{}
+				}
+			}
+		} else {
+			r.Log.Info(fmt.Sprintf("WARNING: Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)", len(removalAnnotatedVirtualMachines), oldVmsToRemoveCount))
+		}
+	}
+
+	// We will fill this map will newly-added hosts as well as existing ones
+	controllerDetails := map[string]ospdirectorv1beta1.Host{}
+
+	// How many new VirtualMachine allocations do we need (if any)?
+	newVmsNeededCount := instance.Spec.VMCount - len(existingVirtualMachines)
+
+	// Func to help increase DRY below in NetworkData loops
+	generateNetworkData := func(instance *ospdirectorv1beta1.VMSet, hostKey string) error {
+		// TODO: multi nic support with bindata template
+		hostName, err := common.CreateOrGetHostname(instance, hostKey, instance.Spec.Role)
+
+		if err != nil {
+			return err
+		}
+
+		host, err := r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, secretLabels, hostName)
+
+		if err != nil {
+			return err
+		}
+
+		controllerDetails[hostName] = host
+		r.setVMHostStatus(instance, hostName, ipset.Status.HostIPs[hostName].IPAddresses["ctlplane"])
+
+		return nil
+	}
+
+	// Generate new host NetworkData first, if necessary
+	for i := 0; i < newVmsNeededCount; i++ {
+		if err := generateNetworkData(instance, ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Generate existing host NetworkData next
+	for _, virtualMachine := range existingVirtualMachines {
+		if err := generateNetworkData(instance, virtualMachine); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Create network config
+	err = r.networkCreateAttachmentDefinition(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create controller VM objects and finally set VMSet status in etcd
 	if instance.Status.BaseImageDVReady {
-		// Generate the Contoller networkdata secrets
 		for _, ctl := range controllerDetails {
 			err = r.vmCreateInstance(instance, envVars, &ctl)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
+			r.Log.Info(fmt.Sprintf("VMSet VM hostname set to %s", ctl.Hostname))
+		}
+
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
 		r.Log.Info("BaseImageDV is not Ready!")
@@ -304,6 +346,83 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.VMSet, ipset *ospdirectorv1beta1.OvercloudIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, secretLabels map[string]string, hostName string) (ospdirectorv1beta1.Host, error) {
+	networkDataSecretName := fmt.Sprintf("%s-%s-networkdata", instance.Name, hostName)
+
+	host := ospdirectorv1beta1.Host{
+		Hostname:          hostName,
+		DomainName:        hostName,
+		DomainNameUniq:    fmt.Sprintf("%s-%s", hostName, instance.UID[0:4]),
+		IPAddress:         ipset.Status.HostIPs[hostName].IPAddresses["ctlplane"],
+		NetworkDataSecret: networkDataSecretName,
+	}
+
+	templateParameters["ControllerIP"] = host.IPAddress
+	gateway := ipset.Status.Networks["ctlplane"].Gateway
+	if gateway != "" {
+		if strings.Contains(gateway, ":") {
+			templateParameters["Gateway"] = fmt.Sprintf("gateway6: %s", gateway)
+		} else {
+			templateParameters["Gateway"] = fmt.Sprintf("gateway4: %s", gateway)
+		}
+	}
+	networkdata := []common.Template{
+		{
+			Name:           fmt.Sprintf("%s-%s-networkdata", instance.Name, hostName),
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeNone,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
+			Labels:         secretLabels,
+			ConfigOptions:  templateParameters,
+		},
+	}
+
+	err := common.EnsureSecrets(r, instance, networkdata, envVars)
+	if err != nil {
+		return host, err
+	}
+
+	return host, nil
+}
+
+func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.VMSet, vm string) error {
+	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", vm))
+
+	// Delete the VirtualMachine
+	virtualMachine := &virtv1.VirtualMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      vm,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", vm))
+
+	// Also remove networkdata secret
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, vm),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	err = r.Client.Delete(context.TODO(), secret, &client.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
+
+	// Set status (remove this VMHost entry)
+	delete(instance.Status.VMHosts, vm)
+
+	return nil
 }
 
 func (r *VMSetReconciler) setVMHostStatus(instance *ospdirectorv1beta1.VMSet, hostname string, ipaddress string) {
@@ -323,6 +442,7 @@ func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&virtv1.VirtualMachine{}).
 		Complete(r)
 }
 
