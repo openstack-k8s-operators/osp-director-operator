@@ -23,6 +23,9 @@ const (
 	// FinalizerName -
 	FinalizerName = "vmsets.osp-director.openstack.org"
 
+	// VirtualMachineFinalizerName -
+	VirtualMachineFinalizerName = "vmsets.osp-director.openstack.org/virtualmachine"
+
 	// VirtualMachineRemovalAnnotation - Annotation key placed on VirtualMachine resources to target them for VMSet scale-down
 	VirtualMachineRemovalAnnotation = "osp-director.openstack.org/vmset-delete-virtualmachine"
 )
