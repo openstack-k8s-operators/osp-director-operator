@@ -92,7 +92,6 @@ spec:
                   description: StorageClass to be used for the controller disks
                   type: string
               required:
-              - baseImageURL
               - controllerCount
               - cores
               - diskSize
