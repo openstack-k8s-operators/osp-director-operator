@@ -214,7 +214,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && errors.IsNotFound(err) {
-		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcil in 10s", baseImageName))
+		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName))
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err

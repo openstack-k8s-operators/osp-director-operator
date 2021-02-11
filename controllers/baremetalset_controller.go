@@ -184,7 +184,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	} else {
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
 		if err != nil && errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("ProvisionServer %s not found reconcil in 10s", instance.Spec.ProvisionServerName))
+			r.Log.Info(fmt.Sprintf("ProvisionServer %s not found reconcile again in 10 seconds", instance.Spec.ProvisionServerName))
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		} else if err != nil {
 			return ctrl.Result{}, err
