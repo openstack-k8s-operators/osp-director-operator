@@ -29,7 +29,10 @@ type BaremetalSetSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image
-	RhelImageURL string `json:"rhelImageUrl"`
+	RhelImageURL string `json:"rhelImageUrl,omitempty"`
+	// Name of the pre-created ProvisionServer to use. If su
+	// ProvisionServerName Optional. If supplied will be used as the base Image for the baremetalset instead of RhelImageURL.
+	ProvisionServerName string `json:"provisionServerName,omitempty"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// Interface to use for ctlplane network

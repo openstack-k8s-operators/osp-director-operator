@@ -165,21 +165,35 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
-	// Next deploy the provisioning image (Apache) server
-	provisionServer, op, err := r.provisionServerCreateOrUpdate(instance)
+	provisionServer := &ospdirectorv1beta1.ProvisionServer{}
 
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// NOTE: webook validates that either ProvisionServerName or RhelImageUrl is set
+	if instance.Spec.ProvisionServerName == "" {
+		// Next deploy the provisioning image (Apache) server
+		pv, op, err := r.provisionServerCreateOrUpdate(instance)
+		provisionServer = pv
 
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
-		return ctrl.Result{}, nil
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
+			return ctrl.Result{}, nil
+		}
+	} else {
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
+		if err != nil && errors.IsNotFound(err) {
+			r.Log.Info(fmt.Sprintf("ProvisionServer %s not found reconcil in 10s", instance.Spec.ProvisionServerName))
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		} else if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	if provisionServer.Status.LocalImageURL == "" {
 		r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer local image URL not yet available, requeuing and waiting", instance.Name))
-		return ctrl.Result{RequeueAfter: time.Second * 30}, err
+		return ctrl.Result{RequeueAfter: time.Second * 30}, nil
 	}
 
 	// First we need the public SSH key, which should be stored in a secret
