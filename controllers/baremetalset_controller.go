@@ -179,8 +179,9 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		if op != controllerutil.OperationResultNone {
 			r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
+
 	} else {
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
 		if err != nil && errors.IsNotFound(err) {
