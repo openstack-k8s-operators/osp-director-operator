@@ -109,6 +109,52 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	// What VMs do we currently have for this VMSet?
+	virtualMachineList, err := common.GetAllVirtualMachinesWithLabel(r, map[string]string{
+		OwnerNameLabelSelector: instance.Name,
+	}, instance.Namespace)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// examine DeletionTimestamp to determine if object is under deletion
+	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(instance, vmset.FinalizerName) {
+			controllerutil.AddFinalizer(instance, vmset.FinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", vmset.FinalizerName, instance.Name))
+		}
+	} else {
+		// 1. check if finalizer is there
+		// Reconcile if finalizer got already removed
+		if !controllerutil.ContainsFinalizer(instance, vmset.FinalizerName) {
+			return ctrl.Result{}, nil
+		}
+
+		// 2. Clean up resources used by the operator
+		// VirtualMachine resources
+		err := r.virtualMachineListFinalizerCleanup(instance, virtualMachineList)
+		if err != nil && !errors.IsNotFound(err) {
+			// ignore not found errors if the object is already gone
+			return ctrl.Result{}, err
+		}
+
+		// 3. as last step remove the finalizer on the operator CR to finish delete
+		controllerutil.RemoveFinalizer(instance, vmset.FinalizerName)
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
+		return ctrl.Result{}, nil
+	}
+
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets
@@ -208,7 +254,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && errors.IsNotFound(err) {
-		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcil in 10s", baseImageName))
+		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName))
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
@@ -223,24 +269,15 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		instance.Status.BaseImageDVReady = true
 	}
 
-	// How many VMs do we currently have for this VMSet?
-	virtualMachineList, err := common.GetAllVirtualMachinesWithLabel(r, map[string]string{
-		OwnerNameLabelSelector: instance.Name,
-	}, instance.Namespace)
-
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	existingVirtualMachines := map[string]string{}
-	removalAnnotatedVirtualMachines := []string{}
+	removalAnnotatedVirtualMachines := []virtv1.VirtualMachine{}
 
 	// Generate a map of existing VMs and also store those annotated for potential removal
 	for _, virtualMachine := range virtualMachineList.Items {
 		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
 
 		if val, ok := virtualMachine.Annotations[vmset.VirtualMachineRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
-			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine.ObjectMeta.Name)
+			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)
 		}
 	}
 
@@ -252,20 +289,20 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			for i := 0; i < oldVmsToRemoveCount; i++ {
 				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
 				// that have the "osp-director.openstack.org/vmset-delete-virtualmachine=yes" annotation
-				err := r.virtualMachineDeprovision(instance, removalAnnotatedVirtualMachines[0])
+				err := r.virtualMachineDeprovision(instance, &removalAnnotatedVirtualMachines[0])
 
 				if err != nil {
 					return ctrl.Result{}, err
 				}
 
 				// Remove the removal-annotated VirtualMachine from the existingVirtualMachines map
-				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0])
+				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0].Name)
 
 				// Remove the removal-annotated VirtualMachine from the removalAnnotatedVirtualMachines list
 				if len(removalAnnotatedVirtualMachines) > 1 {
 					removalAnnotatedVirtualMachines = removalAnnotatedVirtualMachines[1:]
 				} else {
-					removalAnnotatedVirtualMachines = []string{}
+					removalAnnotatedVirtualMachines = []virtv1.VirtualMachine{}
 				}
 			}
 		} else {
@@ -392,27 +429,29 @@ func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirecto
 	return nil
 }
 
-func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.VMSet, vm string) error {
-	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", vm))
+func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.VMSet, virtualMachine *virtv1.VirtualMachine) error {
+	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
 
-	// Delete the VirtualMachine
-	virtualMachine := &virtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      vm,
-			Namespace: instance.Namespace,
-		},
+	// First check if the finalizer is still there and remove it if so
+	if controllerutil.ContainsFinalizer(virtualMachine, vmset.VirtualMachineFinalizerName) {
+		err := r.virtualMachineFinalizerCleanup(virtualMachine)
+
+		if err != nil {
+			return err
+		}
 	}
 
+	// Delete the VirtualMachine
 	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
 	if err != nil {
 		return err
 	}
-	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", vm))
+	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", virtualMachine.Name))
 
 	// Also remove networkdata secret
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, vm),
+			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name),
 			Namespace: instance.Namespace,
 		},
 	}
@@ -424,7 +463,34 @@ func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1
 	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
 
 	// Set status (remove this VMHost entry)
-	delete(instance.Status.VMHosts, vm)
+	delete(instance.Status.VMHosts, virtualMachine.Name)
+
+	return nil
+}
+
+func (r *VMSetReconciler) virtualMachineListFinalizerCleanup(instance *ospdirectorv1beta1.VMSet, virtualMachineList *virtv1.VirtualMachineList) error {
+	r.Log.Info(fmt.Sprintf("Removing finalizers from VirtualMachines in VMSet: %s", instance.Name))
+
+	for _, virtualMachine := range virtualMachineList.Items {
+		err := r.virtualMachineFinalizerCleanup(&virtualMachine)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *VMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.VirtualMachine) error {
+	controllerutil.RemoveFinalizer(virtualMachine, vmset.VirtualMachineFinalizerName)
+	err := r.Client.Update(context.TODO(), virtualMachine)
+
+	if err != nil {
+		return err
+	}
+
+	r.Log.Info(fmt.Sprintf("VirtualMachine finalizer removed: name %s", virtualMachine.Name))
 
 	return nil
 }
@@ -637,6 +703,10 @@ func (r *VMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.VMSet, e
 		}
 		// merge owner ref label into labels on the objects
 		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
+
+		// Set finalizer to prevent unsanctioned deletion of VirtualMachine
+		finalizers := append(obj.GetFinalizers(), vmset.VirtualMachineFinalizerName)
+		obj.SetFinalizers(finalizers)
 
 		//Todo: mschuppert log vm definition when debug?
 		r.Log.Info(fmt.Sprintf("/n%s/n", obj))

@@ -146,6 +146,11 @@ spec:
                 set the root pwd by adding NodeRootPassword: <base64 enc pwd> to the
                 secret data'
               type: string
+            provisionServerName:
+              description: Name of the pre-created ProvisionServer to use. If su ProvisionServerName
+                Optional. If supplied will be used as the base Image for the baremetalset
+                instead of RhelImageURL.
+              type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               minimum: 0
@@ -161,7 +166,6 @@ spec:
           - ctlplaneInterface
           - deploymentSSHSecret
           - networks
-          - rhelImageUrl
           - role
           type: object
         status:

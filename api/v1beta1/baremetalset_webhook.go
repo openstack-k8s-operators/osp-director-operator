@@ -22,6 +22,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,14 +52,34 @@ var _ webhook.Validator = &BaremetalSet{}
 func (r *BaremetalSet) ValidateCreate() error {
 	baremetalsetlog.Info("validate create", "name", r.Name)
 
-	return checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role)
+	return r.validateCr()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *BaremetalSet) ValidateUpdate(old runtime.Object) error {
 	baremetalsetlog.Info("validate update", "name", r.Name)
 
-	return checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role)
+	return r.validateCr()
+
+}
+
+func (r *BaremetalSet) validateCr() error {
+	if err := r.checkBaseImageReqs(); err != nil {
+		return err
+	}
+
+	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *BaremetalSet) checkBaseImageReqs() error {
+	if r.Spec.RhelImageURL == "" && r.Spec.ProvisionServerName == "" {
+		return fmt.Errorf("Either \"rhelImageUrl\" or \"provisionServerName\" must be provided")
+	}
+
+	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
