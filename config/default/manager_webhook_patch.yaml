@@ -12,7 +12,3 @@ spec:
         - containerPort: 4343
           name: webhook-server
           protocol: TCP
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/osp-director-operator-finalizer-clean", "start"]

@@ -21,13 +21,10 @@ COPY pkg/ pkg/
 COPY controllers/ controllers/
 COPY templates/ templates/
 COPY bindata/ bindata/
-COPY cmd/finalizer_clean/ cmd/finalizer_clean/
 RUN mkdir -p /usr/share/osp-director-operator/templates && mkdir -p /bindata/ && mkdir -p /cmd/
 
 # Build manager
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -a -o manager main.go
-# Build finalizer cleaner
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -a -o osp-director-operator-finalizer-clean ./cmd/finalizer_clean
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM ${OPERATOR_BASE_IMAGE}
@@ -41,7 +38,6 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=builder /workspace/templates /usr/share/osp-director-operator/templates/.
 COPY --from=builder /workspace/bindata /bindata/.
-COPY --from=builder /workspace/osp-director-operator-finalizer-clean .
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]
