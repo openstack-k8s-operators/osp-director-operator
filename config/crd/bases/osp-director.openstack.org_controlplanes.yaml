@@ -113,6 +113,23 @@ spec:
           type: object
         status:
           description: ControlPlaneStatus defines the observed state of ControlPlane
+          properties:
+            vipStatus:
+              additionalProperties:
+                description: HostStatus represents the hostname and IP info for a
+                  specific VM
+                properties:
+                  hostname:
+                    type: string
+                  ipaddresses:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - hostname
+                - ipaddresses
+                type: object
+              type: object
           type: object
       type: object
   version: v1beta1

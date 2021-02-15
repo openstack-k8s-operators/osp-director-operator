@@ -37,6 +37,10 @@ spec:
         spec:
           description: OvercloudIPSetSpec defines the desired state of OvercloudIPSet
           properties:
+            addToPredictableIPs:
+              description: AddToPredictableIPs add/ignore ipset to add entries to
+                Predictable IPs list
+              type: boolean
             hostCount:
               description: HostCount Host count
               type: integer
@@ -50,10 +54,15 @@ spec:
               description: Role the name of the Overcloud role this IPset is associated
                 with. Used to generate hostnames.
               type: string
+            vip:
+              description: VIP flag to indicate ipset is a request for a VIP
+              type: boolean
           required:
+          - addToPredictableIPs
           - hostCount
           - networks
           - role
+          - vip
           type: object
         status:
           description: OvercloudIPSetStatus set of hosts with IP information

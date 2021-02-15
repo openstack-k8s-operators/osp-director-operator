@@ -5,7 +5,4 @@ parameter_defaults:
 {{- range $key, $value := .RoleCount }}
   {{ $key }}: {{ $value }}
 {{- end }}
-  HostnameMap:
-  {{- range $key, $value := .HostnameMap }}
-    {{ $key }}: {{ $value }}
-  {{- end }}
+

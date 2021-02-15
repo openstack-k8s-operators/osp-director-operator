@@ -50,12 +50,6 @@ type VMSetSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// VMHostStatus represents the hostname and IP info for a specific VM
-type VMHostStatus struct {
-	Hostname  string `json:"hostname"`
-	IPAddress string `json:"ipaddress"`
-}
-
 // VMSetStatus defines the observed state of VMSet
 type VMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
@@ -63,17 +57,18 @@ type VMSetStatus struct {
 	// VMsReady is the number of ready  kubevirt controller vm instances
 	VMsReady int `json:"vmsReady,omitempty"`
 	// VMpods are the names of the kubevirt controller vm pods
-	VMpods  []string                `json:"vmpods,omitempty"`
-	VMHosts map[string]VMHostStatus `json:"vmHosts,omitempty"`
+	VMpods  []string              `json:"vmpods,omitempty"`
+	VMHosts map[string]HostStatus `json:"vmHosts,omitempty"`
 }
 
 // Host -
 type Host struct {
-	Hostname          string `json:"hostname"`
-	DomainName        string `json:"domainName"`
-	DomainNameUniq    string `json:"domainNameUniq"`
-	IPAddress         string `json:"ipAddress"`
-	NetworkDataSecret string `json:"networkDataSecret"`
+	Hostname          string            `json:"hostname"`
+	DomainName        string            `json:"domainName"`
+	DomainNameUniq    string            `json:"domainNameUniq"`
+	IPAddress         string            `json:"ipAddress"`
+	NetworkDataSecret string            `json:"networkDataSecret"`
+	Labels            map[string]string `json:"labels"`
 }
 
 // +kubebuilder:object:root=true

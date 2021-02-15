@@ -92,7 +92,6 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPHostsStatus)
 	}
 
-	ctlplaneCidr := ""
 	instance.Status.Networks = make(map[string]ospdirectorv1beta1.OvercloudNetSpec)
 
 	// iterate over the requested hostCount
@@ -114,11 +113,13 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 			instance.Status.Networks[network.Name] = network.Spec
 
-			_, cidr, _ := net.ParseCIDR(network.Spec.Cidr)
-			if network.Name == "ctlplane" {
-				ctlplaneCidr = network.Spec.Cidr
+			_, cidr, err := net.ParseCIDR(network.Spec.Cidr)
+			if err != nil {
+				r.Log.Error(err, fmt.Sprintf("Failed to parse CIDR %s", network.Spec.Cidr))
+				return ctrl.Result{}, err
 			}
 
+			r.Log.Info(fmt.Sprintf("Network %s, cidr %v", network.Name, cidr))
 			// TODO: should we really skip here, or modify AssignIP to just return the ip of an already existing entry?
 			if instance.Status.HostIPs[hostname].IPAddresses[netName] != "" {
 				continue
@@ -142,7 +143,22 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 			if reservationIP == "" {
 				// No reservation found, so create a new one
-				ip, reservation, err := common.AssignIP(*cidr, start, end, network.Status.Reservations, hostname)
+				// TODO: we generate the hostname/host IDKey in different controllers, which needs to be changed
+				//       when using Predictable IPs. The IDKey should remain when a node gets scaled down/deleted.
+				//       Its entry should not be removed from the IP lists and instead needs to be marked deleted.
+				//       For now set the role + count which will break things when removing a node in the middle.
+				ip, reservation, err := common.AssignIP(common.AssignIPDetails{
+					IPnet:               *cidr,
+					RangeStart:          start,
+					RangeEnd:            end,
+					Reservelist:         network.Status.Reservations,
+					ExcludeRanges:       []string{},
+					IDKey:               fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), count),
+					Hostname:            hostname,
+					VIP:                 instance.Spec.VIP,
+					Role:                instance.Spec.Role,
+					AddToPredictableIPs: instance.Spec.AddToPredictableIPs,
+				})
 				if err != nil {
 					r.Log.Error(err, "Failed to do ip reservation %v")
 					return ctrl.Result{}, err
@@ -176,13 +192,23 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// generate pre assigned IPs environment file for Heat
+	overcloudNetList := &ospdirectorv1beta1.OvercloudNetList{}
+	overcloudNetListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.Client.List(context.TODO(), overcloudNetList, overcloudNetListOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	overcloudIPList := &ospdirectorv1beta1.OvercloudIPSetList{}
-	listOpts := []client.ListOption{
+	overcloudIPListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
 		client.MatchingLabels{overcloudipset.AddToPredictableIPsLabel: "true"},
 	}
-	err = r.Client.List(context.TODO(), overcloudIPList, listOpts...)
+	err = r.Client.List(context.TODO(), overcloudIPList, overcloudIPListOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -191,7 +217,11 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance.Name, overcloudipset.AppLabel)
 
-	templateParameters := overcloudipset.CreateConfigMapParams(*overcloudIPList, ctlplaneCidr)
+	//templateParameters, err := overcloudipset.CreateConfigMapParams(r, *overcloudIPList, ctlplaneCidr)
+	templateParameters, err := overcloudipset.CreateConfigMapParams(*overcloudIPList, *overcloudNetList)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	cm := []common.Template{
 		{
@@ -218,5 +248,6 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 func (r *OvercloudIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OvercloudIPSet{}).
+		//		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }

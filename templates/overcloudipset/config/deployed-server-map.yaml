@@ -6,9 +6,17 @@ resource_registry:
 
 parameter_defaults:
   DeployedServerPortMap:
-    control_virtual_ip:
+{{- range $hostname, $portinfo := .CtlPlaneIps }}
+{{- range $netname, $network := $portinfo.Network }}
+{{- if $portinfo.VIP }}
+    {{ $netname }}_virtual_ip:
+{{- else }}
+    {{ $hostname }}-{{ $netname }}:
+{{- end }}
       fixed_ips:
-        - ip_address: 192.168.25.50 #FIXME
+        - ip_address: {{ $network.IPaddr }}
       subnets:
-        - cidr: {{.CtlplaneCidr}}
-{{.DeployedServerPortMap}}
+        - cidr: {{ $network.Cidr }}
+{{- end }}
+{{- end }}
+
