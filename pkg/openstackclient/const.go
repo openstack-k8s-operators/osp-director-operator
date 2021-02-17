@@ -27,9 +27,9 @@ const (
 	ServiceAccount = "osp-director-operator-openstackclient"
 
 	// CloudAdminUID -
-	CloudAdminUID = 1001
+	CloudAdminUID = 42401
 	// CloudAdminGID -
-	CloudAdminGID = 1001
+	CloudAdminGID = 42401
 	// HostsPersistentStorageSize - size in GB
 	HostsPersistentStorageSize = "1G"
 	// CloudAdminPersistentStorageSize - size in GB
