@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: baremetalset-editor-role
+  name: openstackbaremetalset-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org

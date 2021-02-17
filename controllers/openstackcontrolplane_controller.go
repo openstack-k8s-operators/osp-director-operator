@@ -41,8 +41,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ControlPlaneReconciler reconciles a ControlPlane object
-type ControlPlaneReconciler struct {
+// OpenStackControlPlaneReconciler reconciles an OpenStackControlPlane object
+type OpenStackControlPlaneReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -50,28 +50,28 @@ type ControlPlaneReconciler struct {
 }
 
 // GetClient -
-func (r *ControlPlaneReconciler) GetClient() client.Client {
+func (r *OpenStackControlPlaneReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *ControlPlaneReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackControlPlaneReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *ControlPlaneReconciler) GetLogger() logr.Logger {
+func (r *OpenStackControlPlaneReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *ControlPlaneReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=controlplanes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
@@ -80,12 +80,12 @@ func (r *ControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - control plane
-func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("controlplane", req.NamespacedName)
 
 	// Fetch the controller VM instance
-	instance := &ospdirectorv1beta1.ControlPlane{}
+	instance := &ospdirectorv1beta1.OpenStackControlPlane{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -264,14 +264,14 @@ func (r *ControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 }
 
 // SetupWithManager -
-func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
 	namespacedFn := handler.ToRequestsFunc(func(obj handler.MapObject) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all CRs from the same namespace
-		crs := &ospdirectorv1beta1.ControlPlaneList{}
+		crs := &ospdirectorv1beta1.OpenStackControlPlaneList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(obj.Meta.GetNamespace()),
 		}
@@ -297,7 +297,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.ControlPlane{}).
+		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
 		Owns(&ospdirectorv1beta1.VMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
@@ -310,7 +310,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.ControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+func (r *OpenStackControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
 
 	// If ControlPlane status map is nil, create it
 	if instance.Status.VIPStatus == nil {

@@ -177,32 +177,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - controlplanes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - controlplanes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - controlplanes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackbaremetalsets
   verbs:
   - create
@@ -254,6 +228,32 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstackclients/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackcontrolplanes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackcontrolplanes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackcontrolplanes/status
   verbs:
   - get
   - patch

@@ -6,20 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: controlplanes.osp-director.openstack.org
+  name: openstackcontrolplanes.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: ControlPlane
-    listKind: ControlPlaneList
-    plural: controlplanes
-    singular: controlplane
+    kind: OpenStackControlPlane
+    listKind: OpenStackControlPlaneList
+    plural: openstackcontrolplanes
+    singular: openstackcontrolplane
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: ControlPlane represents a virtualized OpenStack control plane configuration
+      description: OpenStackControlPlane represents a virtualized OpenStack control
+        plane configuration
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,10 +35,11 @@ spec:
         metadata:
           type: object
         spec:
-          description: ControlPlaneSpec defines the desired state of ControlPlane
+          description: OpenStackControlPlaneSpec defines the desired state of ControlPlane
           properties:
             controller:
-              description: ControllerSpec - defines the desired state of VMs VMs
+              description: OpenStackControllerSpec - defines the desired state of
+                VMs VMs
               properties:
                 baseImageURL:
                   description: Name of the VM base image used to setup the controller
@@ -112,7 +114,7 @@ spec:
           - openStackClientImageURL
           type: object
         status:
-          description: ControlPlaneStatus defines the observed state of ControlPlane
+          description: OpenStackControlPlaneStatus defines the observed state of ControlPlane
           properties:
             vipStatus:
               additionalProperties:
