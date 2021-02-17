@@ -1,0 +1,9 @@
+#
+# First, create an OvercloudNet
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_overcloudnet.yaml
+    namespaced: true
