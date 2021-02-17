@@ -11,24 +11,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-osp-director-openstack-org-v1beta1-baremetalset
-  failurePolicy: Fail
-  name: vbaremetalset.kb.io
-  rules:
-  - apiGroups:
-    - osp-director.openstack.org
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - baremetalsets
-- clientConfig:
-    caBundle: Cg==
-    service:
-      name: webhook-service
-      namespace: system
       path: /validate-osp-director-openstack-org-v1beta1-controlplane
   failurePolicy: Fail
   name: vcontrolplane.kb.io
@@ -42,6 +24,24 @@ webhooks:
     - UPDATE
     resources:
     - controlplanes
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-baremetalset
+  failurePolicy: Fail
+  name: vbaremetalset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackbaremetalsets
 - clientConfig:
     caBundle: Cg==
     service:

@@ -23,8 +23,8 @@ import (
 // HardwareReqType is used to enumerate the various hardware requests that can be made for the set
 type HardwareReqType string
 
-// BaremetalSetSpec defines the desired state of BaremetalSet
-type BaremetalSetSpec struct {
+// OpenStackBaremetalSetSpec defines the desired state of BaremetalSet
+type OpenStackBaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
@@ -50,13 +50,13 @@ type BaremetalSetSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// BaremetalSetStatus defines the observed state of BaremetalSet
-type BaremetalSetStatus struct {
-	BaremetalHosts map[string]BaremetalHostStatus `json:"baremetalHosts"`
+// OpenStackBaremetalSetStatus defines the observed state of BaremetalSet
+type OpenStackBaremetalSetStatus struct {
+	BaremetalHosts map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts"`
 }
 
-// BaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
-type BaremetalHostStatus struct {
+// OpenStackBaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
+type OpenStackBaremetalHostStatus struct {
 	Hostname              string `json:"hostname"`
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
@@ -65,7 +65,7 @@ type BaremetalHostStatus struct {
 }
 
 // GetHostnames -
-func (bmSet BaremetalSet) GetHostnames() map[string]string {
+func (bmSet OpenStackBaremetalSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
 	for key, val := range bmSet.Status.BaremetalHosts {
 		ret[key] = val.Hostname
@@ -146,24 +146,24 @@ type DiskSSDReq struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// BaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
-type BaremetalSet struct {
+// OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
+type OpenStackBaremetalSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BaremetalSetSpec   `json:"spec,omitempty"`
-	Status BaremetalSetStatus `json:"status,omitempty"`
+	Spec   OpenStackBaremetalSetSpec   `json:"spec,omitempty"`
+	Status OpenStackBaremetalSetStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// BaremetalSetList contains a list of BaremetalSet
-type BaremetalSetList struct {
+// OpenStackBaremetalSetList contains a list of BaremetalSet
+type OpenStackBaremetalSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []BaremetalSet `json:"items"`
+	Items           []OpenStackBaremetalSet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&BaremetalSet{}, &BaremetalSetList{})
+	SchemeBuilder.Register(&OpenStackBaremetalSet{}, &OpenStackBaremetalSetList{})
 }

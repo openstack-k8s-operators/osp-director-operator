@@ -4,5 +4,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: quay.io/openstack-k8s-operators/osp-director-operator
-  newTag: 0.0.1
+  newName: quay.io/dprince/osp-director-operator
+  newTag: 1.3.1

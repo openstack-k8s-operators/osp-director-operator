@@ -6,21 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: baremetalsets.osp-director.openstack.org
+  name: openstackbaremetalsets.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: BaremetalSet
-    listKind: BaremetalSetList
-    plural: baremetalsets
-    singular: baremetalset
+    kind: OpenStackBaremetalSet
+    listKind: OpenStackBaremetalSetList
+    plural: openstackbaremetalsets
+    singular: openstackbaremetalset
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: BaremetalSet represent a set of baremetal hosts for a specific
-        role within the Overcloud deployment
+      description: OpenStackBaremetalSet represent a set of baremetal hosts for a
+        specific role within the Overcloud deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -35,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: BaremetalSetSpec defines the desired state of BaremetalSet
+          description: OpenStackBaremetalSetSpec defines the desired state of BaremetalSet
           properties:
             bmhLabelSelector:
               additionalProperties:
@@ -147,9 +147,8 @@ spec:
                 secret data'
               type: string
             provisionServerName:
-              description: Name of the pre-created ProvisionServer to use. If su ProvisionServerName
-                Optional. If supplied will be used as the base Image for the baremetalset
-                instead of RhelImageURL.
+              description: ProvisionServerName Optional. If supplied will be used
+                as the base Image for the baremetalset instead of RhelImageURL.
               type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
@@ -169,12 +168,12 @@ spec:
           - role
           type: object
         status:
-          description: BaremetalSetStatus defines the observed state of BaremetalSet
+          description: OpenStackBaremetalSetStatus defines the observed state of BaremetalSet
           properties:
             baremetalHosts:
               additionalProperties:
-                description: BaremetalHostStatus represents the observed state of
-                  a particular allocated BaremetalHost resource
+                description: OpenStackBaremetalHostStatus represents the observed
+                  state of a particular allocated BaremetalHost resource
                 properties:
                   ctlplaneIP:
                     type: string

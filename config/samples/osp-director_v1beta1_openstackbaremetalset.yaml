@@ -1,5 +1,5 @@
 apiVersion: osp-director.openstack.org/v1beta1
-kind: BaremetalSet
+kind: OpenStackBaremetalSet
 metadata:
   name: baremetalset-sample
   namespace: openstack
