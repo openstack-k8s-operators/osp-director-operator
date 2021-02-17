@@ -1,9 +1,16 @@
+#
+# Check for:
+#
+# - OvercloudNet
+#
+
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
+kind: OvercloudNet
 metadata:
   name: ctlplane
+  namespace: openstack
 spec:
   allocationEnd: 192.168.25.250
   allocationStart: 192.168.25.100
   cidr: 192.168.25.0/24
-  gateway: 192.168.25.1 # optional
+  gateway: 192.168.25.1

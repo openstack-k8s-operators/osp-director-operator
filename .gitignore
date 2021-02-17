@@ -22,6 +22,8 @@ CI_TOOLS_REPO
 !vendor/**/zz_generated.*
 /bundle/
 config/manager/kustomization.yaml
+kubeconfig
+kuttl-test.json
 
 # editor and IDE paraphernalia
 .idea
