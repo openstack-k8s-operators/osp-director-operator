@@ -1,0 +1,43 @@
+#
+# Check for:
+#
+# - OvercloudNet (should be preserved with all historical reservations)
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OvercloudNet
+metadata:
+  name: ctlplane
+  namespace: openstack
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 192.168.25.100
+    role: ControlPlane
+    vip: true
+  - addToPredictableIPs: false
+    hostname: openstackclient-0
+    idKey: openstackclient-0
+    ip: 192.168.25.101
+    role: OpenstackClient
+    vip: false
+  - addToPredictableIPs: true
+    hostname: controller-0
+    idKey: controller-0
+    ip: 192.168.25.102
+    role: controller
+    vip: false
+  - addToPredictableIPs: true
+    hostname: controller-1
+    idKey: controller-1
+    ip: 192.168.25.103
+    role: controller
+    vip: false
+  - addToPredictableIPs: true
+    hostname: controller-2
+    idKey: controller-2
+    ip: 192.168.25.104
+    role: controller
+    vip: false

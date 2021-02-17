@@ -1,0 +1,57 @@
+#
+# Check for:
+#
+# - ControlPlane (should be removed)
+# - VMSet (should be removed)
+# - VirtualMachines (3 should be removed)
+# - OpenStackClient (should be removed)
+# - OvercloudIpSets (should be removed for VMSet and OpenStackClient)
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: ControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: VMSet
+metadata:
+  name: controller
+  namespace: openstack
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-0
+  namespace: openstack
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-1
+  namespace: openstack
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-2
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackClient
+metadata:
+  name: openstackclient
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OvercloudIPSet
+metadata:
+  name: controller
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OvercloudIPSet
+metadata:
+  name: openstackclient
+  namespace: openstack

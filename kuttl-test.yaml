@@ -1,0 +1,35 @@
+#
+# EXECUTION (from repo root):
+#
+#   kubectl-kuttl test
+#
+# ASSUMPTIONS:
+#
+# 1. Latest version of kuttl is installed at /usr/local/bin/kubectl-kuttl
+#    - wget https://github.com/kudobuilder/kuttl/releases/download/v0.9.0/kubectl-kuttl_0.9.0_linux_x86_64
+#    - mv kubectl-kuttl_0.9.0_linux_x86_64 /usr/local/bin/kubectl-kuttl
+#    - chmod 755 /usr/local/bin/kubectl-kuttl
+# 2. An OCP 4.6+ cluster with OSP Director Operator has been deployed via https://github.com/openstack-k8s-operators/osp-director-dev-tools
+# 3. CLI user has access to $KUBECONFIG
+# 4. There are preferrably NO existing OSP Director Operator CRs deployed
+#    - dev-tools probably installed them, so remove via:
+#        oc delete baremetalset --all
+#        oc delete controlplane --all
+#        oc delete vmset --all
+#        oc delete overcloudnet --all
+#    - Existing OSP Director Operator CRs might cause the tests to either fail or succeed when the opposite should have happened
+#    - The ONE exception is the DataVolume for the base image.  This MUST be pre-existing, otherwise
+#      the tests will take way too long and fail the timeout
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+testDirs:                      # The actual kuttl tests
+  - ./tests/kuttl/tests
+crdDir: ./config/crd/bases     # CRDs needed for our operator
+manifestDirs:                  # YAMLs to apply before each test
+  - ./tests/kuttl/manifests
+reportFormat: JSON
+reportName: kuttl-test
+namespace: openstack
+timeout: 120

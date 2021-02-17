@@ -1,0 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+- apiVersion: osp-director.openstack.org/v1beta1
+  kind: ControlPlane
+  name: overcloud
+  namespace: openstack
