@@ -20,17 +20,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ControlPlaneSpec defines the desired state of ControlPlane
-type ControlPlaneSpec struct {
-	Controller ControllerSpec `json:"controller"`
+// OpenStackControlPlaneSpec defines the desired state of ControlPlane
+type OpenStackControlPlaneSpec struct {
+	Controller OpenStackControllerSpec `json:"controller"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// ControllerSpec - defines the desired state of VMs VMs
-type ControllerSpec struct {
+// OpenStackControllerSpec - defines the desired state of VMs VMs
+type OpenStackControllerSpec struct {
 	// Number of controllers to configure, 1 or 3
 	ControllerCount int `json:"controllerCount"`
 	// number of Cores assigned to the controller VMs
@@ -53,38 +53,38 @@ type ControllerSpec struct {
 	Role string `json:"role"`
 }
 
-// ControlPlaneStatus defines the observed state of ControlPlane
-type ControlPlaneStatus struct {
+// OpenStackControlPlaneStatus defines the observed state of ControlPlane
+type OpenStackControlPlaneStatus struct {
 	VIPStatus map[string]HostStatus `json:"vipStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// ControlPlane represents a virtualized OpenStack control plane configuration
-type ControlPlane struct {
+// OpenStackControlPlane represents a virtualized OpenStack control plane configuration
+type OpenStackControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ControlPlaneSpec   `json:"spec,omitempty"`
-	Status ControlPlaneStatus `json:"status,omitempty"`
+	Spec   OpenStackControlPlaneSpec   `json:"spec,omitempty"`
+	Status OpenStackControlPlaneStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// ControlPlaneList contains a list of ControlPlane
-type ControlPlaneList struct {
+// OpenStackControlPlaneList contains a list of ControlPlane
+type OpenStackControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ControlPlane `json:"items"`
+	Items           []OpenStackControlPlane `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ControlPlane{}, &ControlPlaneList{})
+	SchemeBuilder.Register(&OpenStackControlPlane{}, &OpenStackControlPlaneList{})
 }
 
 // GetHostnames -
-func (vips ControlPlane) GetHostnames() map[string]string {
+func (vips OpenStackControlPlane) GetHostnames() map[string]string {
 	ret := make(map[string]string)
 	for key, val := range vips.Status.VIPStatus {
 		ret[key] = val.Hostname

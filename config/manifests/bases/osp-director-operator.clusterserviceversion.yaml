@@ -14,15 +14,15 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: BaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
-      displayName: Baremetal Set
-      kind: BaremetalSet
-      name: baremetalsets.osp-director.openstack.org
+    - description: OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
+      displayName: OpenStackBaremetal Set
+      kind: OpenStackBaremetalSet
+      name: openstackbaremetalsets.osp-director.openstack.org
       version: v1beta1
-    - description: ControlPlane represents a virtualized OpenStack control plane configuration
-      displayName: Control Plane
-      kind: ControlPlane
-      name: controlplanes.osp-director.openstack.org
+    - description: OpenStackControlPlane represents a virtualized OpenStack control plane configuration
+      displayName: OpenStackControl Plane
+      kind: OpenStackControlPlane
+      name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
       displayName: Open Stack Client
