@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OpenStackControlPlaneSpec defines the desired state of ControlPlane
+// OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
 	Controller OpenStackControllerSpec `json:"controller"`
 	// OpenstackClient image
@@ -53,7 +53,7 @@ type OpenStackControllerSpec struct {
 	Role string `json:"role"`
 }
 
-// OpenStackControlPlaneStatus defines the observed state of ControlPlane
+// OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
 type OpenStackControlPlaneStatus struct {
 	VIPStatus map[string]HostStatus `json:"vipStatus,omitempty"`
 }
@@ -72,7 +72,7 @@ type OpenStackControlPlane struct {
 
 // +kubebuilder:object:root=true
 
-// OpenStackControlPlaneList contains a list of ControlPlane
+// OpenStackControlPlaneList contains a list of OpenStackControlPlane
 type OpenStackControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

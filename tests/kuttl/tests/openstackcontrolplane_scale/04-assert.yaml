@@ -1,21 +1,21 @@
 #
 # Check for:
 #
-# - ControlPlane
+# - OpenStackControlPlane
 # - VMSet
-# - VirtualMachines
+# - VirtualMachine
 # - OvercloudNet (IP reservations)
 # - OvercloudIpSet (IP reservations)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ControlPlane
+kind: OpenStackControlPlane
 metadata:
   name: overcloud
   namespace: openstack
 spec:
   controller:
-    controllerCount: 3
+    controllerCount: 1
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: VMSet
@@ -23,46 +23,14 @@ metadata:
   name: controller
   namespace: openstack
 spec:
-  vmCount: 3
+  vmCount: 1
 status:
   baseImageDVReady: true
   vmHosts:
-    controller-0:
-      hostname: controller-0
-      ipaddresses:
-        ctlplane: 192.168.25.102/24
-    controller-1:
-      hostname: controller-1
-      ipaddresses:
-        ctlplane: 192.168.25.103/24
     controller-2:
       hostname: controller-2
       ipaddresses:
         ctlplane: 192.168.25.104/24
----
-apiVersion: kubevirt.io/v1alpha3
-kind: VirtualMachine
-metadata:
-  name: controller-0
-  namespace: openstack
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-  created: true
-  ready: true
----
-apiVersion: kubevirt.io/v1alpha3
-kind: VirtualMachine
-metadata:
-  name: controller-1
-  namespace: openstack
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-  created: true
-  ready: true
 ---
 apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
@@ -123,7 +91,7 @@ metadata:
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 3
+  hostCount: 1
   networks:
   - ctlplane
   role: controller

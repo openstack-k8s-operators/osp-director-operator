@@ -23,7 +23,7 @@ import (
 // HardwareReqType is used to enumerate the various hardware requests that can be made for the set
 type HardwareReqType string
 
-// OpenStackBaremetalSetSpec defines the desired state of BaremetalSet
+// OpenStackBaremetalSetSpec defines the desired state of OpenStackBaremetalSet
 type OpenStackBaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
@@ -50,7 +50,7 @@ type OpenStackBaremetalSetSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// OpenStackBaremetalSetStatus defines the observed state of BaremetalSet
+// OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
 type OpenStackBaremetalSetStatus struct {
 	BaremetalHosts map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts"`
 }
@@ -157,7 +157,7 @@ type OpenStackBaremetalSet struct {
 
 // +kubebuilder:object:root=true
 
-// OpenStackBaremetalSetList contains a list of BaremetalSet
+// OpenStackBaremetalSetList contains a list of OpenStackBaremetalSet
 type OpenStackBaremetalSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

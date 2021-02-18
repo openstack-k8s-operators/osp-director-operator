@@ -1,7 +1,7 @@
 #
 # Check for:
 #
-# - ControlPlane (should be removed)
+# - OpenStackControlPlane (should be removed)
 # - VMSet (should be removed)
 # - VirtualMachines (3 should be removed)
 # - OpenStackClient (should be removed)
@@ -9,7 +9,7 @@
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ControlPlane
+kind: OpenStackControlPlane
 metadata:
   name: overcloud
   namespace: openstack
