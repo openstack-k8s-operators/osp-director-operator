@@ -345,7 +345,9 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		{
 			ContainerImage: instance.Spec.ImageURL,
 			Commands: []string{
-				"/bin/bash", "-c", "/usr/local/bin/init.sh",
+				"/bin/bash",
+				"-c",
+				"/usr/local/bin/init.sh",
 			},
 			Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
 			Privileged:   false,
