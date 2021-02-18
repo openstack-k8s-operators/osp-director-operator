@@ -1,7 +1,7 @@
 #
 # Check for:
 #
-# - ControlPlane
+# - OpenStackControlPlane
 # - VMSet
 # - VirtualMachines
 # - OvercloudNet (IP reservations)
@@ -9,7 +9,7 @@
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ControlPlane
+kind: OpenStackControlPlane
 metadata:
   name: overcloud
   namespace: openstack
@@ -29,15 +29,15 @@ status:
   vmHosts:
     controller-0:
       hostname: controller-0
-      ipaddresses: 
+      ipaddresses:
         ctlplane: 192.168.25.102/24
     controller-1:
       hostname: controller-1
-      ipaddresses: 
+      ipaddresses:
         ctlplane: 192.168.25.103/24
     controller-2:
       hostname: controller-2
-      ipaddresses: 
+      ipaddresses:
         ctlplane: 192.168.25.104/24
 ---
 apiVersion: kubevirt.io/v1alpha3

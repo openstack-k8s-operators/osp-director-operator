@@ -3,19 +3,19 @@
 #
 # A: 
 #
-# - Create an OvercloudNet and an initially-empty ControlPlane that only spawns an OpenStackClient
+# - Create an OvercloudNet and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
 # - Verify that a predictable IP has been assigned to the OpenStackClient (in the OvercloudNet and the
 #   associated OvercloudIpSet)
-# - Scale the ControlPlane up to 3 controllers
+# - Scale the OpenStackControlPlane up to 3 controllers
 # - Check for IP reservations in the OvercloudNet, associated OvercloudIpSet and VMSet for the 3 
 #    VirtualMachines that should be created
-# - Scale the ControlPlane down to 1 controller
+# - Scale the OpenStackControlPlane down to 1 controller
 # - Check that the IP reservations are removed from the VMSet and OvercloudIpSet, but remain in the
 #   OvercloudNet
-# - Scale the ControlPlane back to 3 controllers
+# - Scale the OpenStackControlPlane back to 3 controllers
 # - Check that the IP reservations in the OvercloudIpSet and VMSet reuse the original IPs from
 #   the original scale-up
-# - Delete the ControlPlane
+# - Delete the OpenStackControlPlane
 # - Check that all sub-resources (VMSets, VirtualMachines, OvercloudIpSets, OpenStackClient, etc)
 #   are removed
 #
@@ -27,7 +27,7 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  - command: oc delete controlplane overcloud -n openstack --ignore-not-found
+  - command: oc delete openstackcontrolplane overcloud -n openstack --ignore-not-found
     namespaced: true
   - command: oc delete vmset controller -n openstack --ignore-not-found
     namespaced: true

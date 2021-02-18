@@ -1,15 +1,15 @@
 #
 # Check for:
 #
-# - ControlPlane
+# - OpenStackControlPlane
 # - VMSet
 # - OpenStackClient
-# - OvercloudNet (IP reservations for ControlPlane and OpenStackClient)
-# - OvercloudIpSets (IP reservations for ControlPlane and OpenStackClient)
+# - OvercloudNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - OvercloudIpSets (IP reservations for OpenStackControlPlane and OpenStackClient)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ControlPlane
+kind: OpenStackControlPlane
 metadata:
   name: overcloud
   namespace: openstack

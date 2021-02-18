@@ -312,7 +312,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 func (r *OpenStackControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
 
-	// If ControlPlane status map is nil, create it
+	// If OpenStackControlPlane status map is nil, create it
 	if instance.Status.VIPStatus == nil {
 		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
