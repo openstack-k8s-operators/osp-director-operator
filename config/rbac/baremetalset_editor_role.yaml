@@ -1,4 +1,4 @@
-# permissions for end users to edit baremetalsets.
+# permissions for end users to edit openstackbaremetalsets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - baremetalsets
+  - openstackbaremetalsets
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - baremetalsets/status
+  - openstackbaremetalsets/status
   verbs:
   - get

@@ -164,13 +164,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ProvisionServer")
 		os.Exit(1)
 	}
-	if err = (&controllers.BaremetalSetReconciler{
+	if err = (&controllers.OpenStackBaremetalSetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("BaremetalSet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackBaremetalSet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BaremetalSet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackBaremetalSet")
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackClientReconciler{
@@ -202,8 +202,8 @@ func main() {
 	}
 
 	if enableWebhooks {
-		if err = (&ospdirectorv1beta1.BaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "BaremetalSet")
+		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")
 			os.Exit(1)
 		}
 		if err = (&ospdirectorv1beta1.ControlPlane{}).SetupWebhookWithManager(mgr); err != nil {

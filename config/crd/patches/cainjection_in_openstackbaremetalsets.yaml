@@ -5,4 +5,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: baremetalsets.osp-director.openstack.org
+  name: openstackbaremetalsets.osp-director.openstack.org

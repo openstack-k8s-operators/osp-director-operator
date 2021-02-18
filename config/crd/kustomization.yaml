@@ -5,7 +5,7 @@ resources:
 - bases/osp-director.openstack.org_controlplanes.yaml
 - bases/osp-director.openstack.org_vmsets.yaml
 - bases/osp-director.openstack.org_provisionservers.yaml
-- bases/osp-director.openstack.org_baremetalsets.yaml
+- bases/osp-director.openstack.org_openstackbaremetalsets.yaml
 - bases/osp-director.openstack.org_openstackclients.yaml
 - bases/osp-director.openstack.org_overcloudnets.yaml
 - bases/osp-director.openstack.org_overcloudipsets.yaml
@@ -17,7 +17,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_controlplanes.yaml
 #- patches/webhook_in_vmsets.yaml
 #- patches/webhook_in_provisionservers.yaml
-#- patches/webhook_in_baremetalsets.yaml
+#- patches/webhook_in_openstackbaremetalsets.yaml
 #- patches/webhook_in_openstackclients.yaml
 #- patches/webhook_in_overcloudnets.yaml
 #- patches/webhook_in_overcloudipsets.yaml
@@ -29,7 +29,7 @@ patchesStrategicMerge:
 - patches/cainjection_in_controlplanes.yaml
 - patches/cainjection_in_vmsets.yaml
 #- patches/cainjection_in_provisionservers.yaml
-- patches/cainjection_in_baremetalsets.yaml
+- patches/cainjection_in_openstackbaremetalsets.yaml
 #- patches/cainjection_in_openstackclients.yaml
 #- patches/cainjection_in_overcloudnets.yaml
 #- patches/cainjection_in_overcloudipsets.yaml

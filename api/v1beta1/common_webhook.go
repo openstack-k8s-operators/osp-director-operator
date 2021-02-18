@@ -38,7 +38,7 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	found := map[string]string{}
 
 	// Get BaremetalSet role names
-	baremetalSetsList := &BaremetalSetList{}
+	baremetalSetsList := &OpenStackBaremetalSetList{}
 	listOpts := []goClient.ListOption{
 		goClient.InNamespace(namespace),
 	}

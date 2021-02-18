@@ -46,8 +46,8 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 )
 
-// BaremetalSetReconciler reconciles a BaremetalSet object
-type BaremetalSetReconciler struct {
+// OpenStackBaremetalSetReconciler reconciles a OpenStackBaremetalSet object
+type OpenStackBaremetalSetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -55,28 +55,28 @@ type BaremetalSetReconciler struct {
 }
 
 // GetClient -
-func (r *BaremetalSetReconciler) GetClient() client.Client {
+func (r *OpenStackBaremetalSetReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *BaremetalSetReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackBaremetalSetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *BaremetalSetReconciler) GetLogger() logr.Logger {
+func (r *OpenStackBaremetalSetReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *BaremetalSetReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackBaremetalSetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=baremetalsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=baremetalsets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=baremetalsets/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
@@ -89,12 +89,12 @@ func (r *BaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile baremetalset
-func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("baremetalset", req.NamespacedName)
 	ctx := context.Background()
 
 	// Fetch the instance
-	instance := &ospdirectorv1beta1.BaremetalSet{}
+	instance := &ospdirectorv1beta1.OpenStackBaremetalSet{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
@@ -106,7 +106,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	finalizerName := "baremetalset.osp-director.openstack.org-" + instance.Name
+	finalizerName := "openstackbaremetalset.osp-director.openstack.org-" + instance.Name
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
@@ -206,7 +206,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	// If BaremetalHosts status map is nil, create it
 	if instance.Status.BaremetalHosts == nil {
-		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.BaremetalHostStatus{}
+		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.OpenStackBaremetalHostStatus{}
 	}
 
 	ipsetDetails := common.IPSet{
@@ -245,7 +245,7 @@ func (r *BaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 }
 
 // SetupWithManager - prepare controller for use with operator manager
-func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	openshiftMachineAPIBareMetalHostsFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
 		result := []reconcile.Request{}
 		label := o.Meta.GetLabels()
@@ -266,7 +266,7 @@ func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.BaremetalSet{}).
+		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.ProvisionServer{}).
 		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}},
 			&handler.EnqueueRequestsFromMapFunc{
@@ -275,7 +275,7 @@ func (r *BaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.BaremetalSet) (*ospdirectorv1beta1.ProvisionServer, controllerutil.OperationResult, error) {
+func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackBaremetalSet) (*ospdirectorv1beta1.ProvisionServer, controllerutil.OperationResult, error) {
 	provisionServer := &ospdirectorv1beta1.ProvisionServer{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      instance.ObjectMeta.Name + "-provisionserver",
@@ -284,7 +284,7 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, provisionServer, func() error {
-		// TODO: Surface the port in BaremetalSet?
+		// TODO: Surface the port in OpenStackBaremetalSet?
 		provisionServer.Spec.Port = 6190
 		provisionServer.Spec.RhelImageURL = instance.Spec.RhelImageURL
 
@@ -301,7 +301,7 @@ func (r *BaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdire
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
-func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.BaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
+func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
@@ -321,7 +321,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 	existingBaremetalHosts := map[string]string{}
 	removalAnnotatedBaremetalHosts := []string{}
 
-	// Find the current BaremetalHosts belonging to this BaremetalSet
+	// Find the current BaremetalHosts belonging to this OpenStackBaremetalSet
 	for _, baremetalHost := range baremetalHostsList.Items {
 		if baremetalHost.Spec.ConsumerRef != nil && (baremetalHost.Spec.ConsumerRef.Kind == instance.Kind && baremetalHost.Spec.ConsumerRef.Name == instance.Name && baremetalHost.Spec.ConsumerRef.Namespace == instance.Namespace) {
 			r.Log.Info(fmt.Sprintf("Existing BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
@@ -402,7 +402,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 			}
 
 			if !hardwareMatch {
-				r.Log.Info(fmt.Sprintf("BaremetalHost %s does not match hardware requirements for BaremetalSet %s", baremetalHost.ObjectMeta.Name, instance.Name))
+				r.Log.Info(fmt.Sprintf("BaremetalHost %s does not match hardware requirements for OpenStackBaremetalSet %s", baremetalHost.ObjectMeta.Name, instance.Name))
 				continue
 			}
 
@@ -431,7 +431,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 		}
 	}
 
-	// Now reconcile existing BaremetalHosts for this BaremetalSet
+	// Now reconcile existing BaremetalHosts for this OpenStackBaremetalSet
 	for bmhName := range existingBaremetalHosts {
 		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret, ipset)
 
@@ -444,7 +444,7 @@ func (r *BaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1bet
 }
 
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
-func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.BaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
+func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OvercloudIPSet) error {
 	// Prepare cloudinit (create secret)
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
@@ -566,7 +566,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 	}
 
 	// Set status (add this BaremetalHost entry)
-	instance.Status.BaremetalHosts[foundBaremetalHost.GetName()] = ospdirectorv1beta1.BaremetalHostStatus{
+	instance.Status.BaremetalHosts[foundBaremetalHost.GetName()] = ospdirectorv1beta1.OpenStackBaremetalHostStatus{
 		Hostname:              hostnameDetails.Hostname,
 		UserDataSecretName:    userDataSecretName,
 		NetworkDataSecretName: networkDataSecretName,
@@ -578,7 +578,7 @@ func (r *BaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1b
 }
 
 // Deprovision a BaremetalHost via Metal3 (and delete its bootstrapping secret)
-func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.BaremetalSet, bmh string) error {
+func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string) error {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, baremetalHost)
 
@@ -641,8 +641,8 @@ func (r *BaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv
 	return nil
 }
 
-// Deprovision all associated BaremetalHosts for this BaremetalSet via Metal3
-func (r *BaremetalSetReconciler) baremetalHostCleanup(instance *ospdirectorv1beta1.BaremetalSet) error {
+// Deprovision all associated BaremetalHosts for this OpenStackBaremetalSet via Metal3
+func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(instance *ospdirectorv1beta1.OpenStackBaremetalSet) error {
 	if instance.Status.BaremetalHosts != nil {
 		for bmhName := range instance.Status.BaremetalHosts {
 			err := r.baremetalHostDeprovision(instance, bmhName)
@@ -661,7 +661,7 @@ func (r *BaremetalSetReconciler) baremetalHostCleanup(instance *ospdirectorv1bet
    List of objects which get cleaned:
    - user-data secret, openshift-machine-api namespace
 */
-func (r *BaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirectorv1beta1.BaremetalSet) error {
+func (r *OpenStackBaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirectorv1beta1.OpenStackBaremetalSet) error {
 	labelSelectorMap := map[string]string{
 		baremetalset.OwnerUIDLabelSelector:       string(instance.UID),
 		baremetalset.OwnerNameSpaceLabelSelector: instance.Namespace,
@@ -686,7 +686,7 @@ func (r *BaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirec
 	return nil
 }
 
-func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta1.BaremetalSet, bmh *metal3v1alpha1.BareMetalHost) (bool, error) {
+func (r *OpenStackBaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh *metal3v1alpha1.BareMetalHost) (bool, error) {
 	// If no requested hardware requirements, we're all set
 	if instance.Spec.HardwareReqs == (ospdirectorv1beta1.HardwareReqs{}) {
 		return true, nil
@@ -694,7 +694,7 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 
 	// Can't make comparisons if the BMH lacks hardware details
 	if bmh.Status.HardwareDetails == nil {
-		r.Log.Info(fmt.Sprintf("WARNING: BaremetalHost %s lacks hardware details in status; cannot verify against BaremetalSet %s hardware requests!", bmh.Name, instance.Name))
+		r.Log.Info(fmt.Sprintf("WARNING: BaremetalHost %s lacks hardware details in status; cannot verify against OpenStackBaremetalSet %s hardware requests!", bmh.Name, instance.Name))
 		return false, nil
 	}
 
@@ -702,14 +702,14 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 
 	// CPU architecture is always exact-match only
 	if cpuReqs.Arch != "" && bmh.Status.HardwareDetails.CPU.Arch != cpuReqs.Arch {
-		r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU arch %s does not match BaremetalSet %s request for '%s'", bmh.Name, bmh.Status.HardwareDetails.CPU.Arch, instance.Name, cpuReqs.Arch))
+		r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU arch %s does not match OpenStackBaremetalSet %s request for '%s'", bmh.Name, bmh.Status.HardwareDetails.CPU.Arch, instance.Name, cpuReqs.Arch))
 		return false, nil
 	}
 
 	// CPU count can be exact-match or (default) greater
 	if cpuReqs.CountReq.Count != 0 && bmh.Status.HardwareDetails.CPU.Count != cpuReqs.CountReq.Count {
 		if cpuReqs.CountReq.ExactMatch || cpuReqs.CountReq.Count > bmh.Status.HardwareDetails.CPU.Count {
-			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU count %d does not match BaremetalSet %s request for '%d'", bmh.Name, bmh.Status.HardwareDetails.CPU.Count, instance.Name, cpuReqs.CountReq.Count))
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU count %d does not match OpenStackBaremetalSet %s request for '%d'", bmh.Name, bmh.Status.HardwareDetails.CPU.Count, instance.Name, cpuReqs.CountReq.Count))
 			return false, nil
 		}
 	}
@@ -718,7 +718,7 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 	if cpuReqs.MhzReq.Mhz != 0 {
 		clockSpeed := int(bmh.Status.HardwareDetails.CPU.ClockMegahertz)
 		if cpuReqs.MhzReq.Mhz != clockSpeed && (cpuReqs.MhzReq.ExactMatch || cpuReqs.MhzReq.Mhz > clockSpeed) {
-			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU mhz %d does not match BaremetalSet %s request for '%d'", bmh.Name, clockSpeed, instance.Name, cpuReqs.MhzReq.Mhz))
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s CPU mhz %d does not match OpenStackBaremetalSet %s request for '%d'", bmh.Name, clockSpeed, instance.Name, cpuReqs.MhzReq.Mhz))
 			return false, nil
 		}
 	}
@@ -732,7 +732,7 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 		memGbBmh := float64(bmh.Status.HardwareDetails.RAMMebibytes) / float64(1024)
 
 		if memGbBmh != memGbBms && (memReqs.GbReq.ExactMatch || memGbBms > memGbBmh) {
-			r.Log.Info(fmt.Sprintf("BaremetalHost %s memory size %v does not match BaremetalSet %s request for '%v'", bmh.Name, memGbBmh, instance.Name, memGbBms))
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s memory size %v does not match OpenStackBaremetalSet %s request for '%v'", bmh.Name, memGbBmh, instance.Name, memGbBms))
 			return false, nil
 		}
 	}
@@ -754,7 +754,7 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 		}
 
 		if foundDisk == nil {
-			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk of size %v that matches BaremetalSet %s request", bmh.Name, diskGbBms, instance.Name))
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk of size %v that matches OpenStackBaremetalSet %s request", bmh.Name, diskGbBms, instance.Name))
 			return false, nil
 		}
 	}
@@ -778,12 +778,12 @@ func (r *BaremetalSetReconciler) verifyHardwareMatch(instance *ospdirectorv1beta
 		}
 
 		if !found {
-			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk with 'rotational' equal to %v that matches BaremetalSet %s request", bmh.Name, diskReqs.SSDReq.SSD, instance.Name))
+			r.Log.Info(fmt.Sprintf("BaremetalHost %s does not contain a disk with 'rotational' equal to %v that matches OpenStackBaremetalSet %s request", bmh.Name, diskReqs.SSDReq.SSD, instance.Name))
 			return false, nil
 		}
 	}
 
-	r.Log.Info(fmt.Sprintf("BaremetalHost %s satisfies BaremetalSet %s hardware requirements", bmh.Name, instance.Name))
+	r.Log.Info(fmt.Sprintf("BaremetalHost %s satisfies OpenStackBaremetalSet %s hardware requirements", bmh.Name, instance.Name))
 
 	return true, nil
 }
