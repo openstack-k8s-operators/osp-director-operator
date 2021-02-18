@@ -4,16 +4,16 @@ projectName: osp-director-operator
 repo: github.com/openstack-k8s-operators/osp-director-operator
 resources:
 - group: osp-director
-  kind: ControlPlane
+  kind: OpenStackControlPlane
   version: v1beta1
 - group: osp-director
-  kind: VMSet
+  kind: OpenStackVMSet
   version: v1beta1
 - group: osp-director
   kind: ProvisionServer
   version: v1beta1
 - group: osp-director
-  kind: BaremetalSet
+  kind: OpenStackBaremetalSet
   version: v1beta1
 - group: osp-director
   kind: OpenStackClient

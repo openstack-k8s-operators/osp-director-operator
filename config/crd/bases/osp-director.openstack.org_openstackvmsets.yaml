@@ -6,21 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: vmsets.osp-director.openstack.org
+  name: openstackvmsets.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: VMSet
-    listKind: VMSetList
-    plural: vmsets
-    singular: vmset
+    kind: OpenStackVMSet
+    listKind: OpenStackVMSetList
+    plural: openstackvmsets
+    singular: openstackvmset
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: VMSet represents a set of virtual machines hosts for a specific
-        role within the Overcloud deployment
+      description: OpenStackVMSet represents a set of virtual machines hosts for a
+        specific role within the Overcloud deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -35,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: VMSetSpec defines the desired state of VMSet
+          description: OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
           properties:
             baseImageURL:
               description: Name of the VM base image used to setup the VMs
@@ -108,7 +108,7 @@ spec:
           - vmCount
           type: object
         status:
-          description: VMSetStatus defines the observed state of VMSet
+          description: OpenStackVMSetStatus defines the observed state of OpenStackVMSet
           properties:
             baseImageDVReady:
               description: BaseImageDVReady is the status of the BaseImage DataVolume

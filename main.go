@@ -146,13 +146,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackControlPlane")
 		os.Exit(1)
 	}
-	if err = (&controllers.VMSetReconciler{
+	if err = (&controllers.OpenStackVMSetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("VMSet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "VMSet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackVMSet")
 		os.Exit(1)
 	}
 	if err = (&controllers.ProvisionServerReconciler{
@@ -210,8 +210,8 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.VMSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
+		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
 			os.Exit(1)
 		}
 	}

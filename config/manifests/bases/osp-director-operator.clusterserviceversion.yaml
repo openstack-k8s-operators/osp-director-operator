@@ -14,20 +14,30 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
+      displayName: VMSet
+      kind: VMSet
+      name: openstackvmsets.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
-      displayName: OpenStackBaremetal Set
+      displayName: Open Stack Baremetal Set
       kind: OpenStackBaremetalSet
       name: openstackbaremetalsets.osp-director.openstack.org
-      version: v1beta1
-    - description: OpenStackControlPlane represents a virtualized OpenStack control plane configuration
-      displayName: OpenStackControl Plane
-      kind: OpenStackControlPlane
-      name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
       displayName: Open Stack Client
       kind: OpenStackClient
       name: openstackclients.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackControlPlane represents a virtualized OpenStack control plane configuration
+      displayName: Open Stack Control Plane
+      kind: OpenStackControlPlane
+      name: openstackcontrolplanes.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
+      displayName: Open Stack VMSet
+      kind: OpenStackVMSet
+      name: openstackvmsets.osp-director.openstack.org
       version: v1beta1
     - description: OvercloudIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
       displayName: Overcloud IPSet
@@ -43,11 +53,6 @@ spec:
       displayName: Provision Server
       kind: ProvisionServer
       name: provisionservers.osp-director.openstack.org
-      version: v1beta1
-    - description: VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
-      displayName: VMSet
-      kind: VMSet
-      name: vmsets.osp-director.openstack.org
       version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator

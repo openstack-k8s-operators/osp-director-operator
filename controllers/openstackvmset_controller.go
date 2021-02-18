@@ -45,8 +45,8 @@ import (
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
-// VMSetReconciler reconciles a VMSet object
-type VMSetReconciler struct {
+// OpenStackVMSetReconciler reconciles a VMSet object
+type OpenStackVMSetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -54,28 +54,28 @@ type VMSetReconciler struct {
 }
 
 // GetClient -
-func (r *VMSetReconciler) GetClient() client.Client {
+func (r *OpenStackVMSetReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *VMSetReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackVMSetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *VMSetReconciler) GetLogger() logr.Logger {
+func (r *OpenStackVMSetReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,namespace=openstack,resources=deployments/finalizers,verbs=update
 // +kubebuilder:rbac:groups=template.openshift.io,namespace=openstack,resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 // +kubebuilder:rbac:groups=core,resources=pods;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
@@ -91,12 +91,12 @@ func (r *VMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
 
 // Reconcile - controller VMs
-func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("vmset", req.NamespacedName)
 
 	// Fetch the controller VM instance
-	instance := &ospdirectorv1beta1.VMSet{}
+	instance := &ospdirectorv1beta1.OpenStackVMSet{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -109,7 +109,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// What VMs do we currently have for this VMSet?
+	// What VMs do we currently have for this OpenStackVMSet?
 	virtualMachineList, err := common.GetAllVirtualMachinesWithLabel(r, map[string]string{
 		OwnerNameLabelSelector: instance.Name,
 	}, instance.Namespace)
@@ -317,7 +317,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	newVmsNeededCount := instance.Spec.VMCount - len(existingVirtualMachines)
 
 	// Func to help increase DRY below in NetworkData loops
-	generateNetworkData := func(instance *ospdirectorv1beta1.VMSet, hostKey string) error {
+	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, hostKey string) error {
 		// TODO: multi nic support with bindata template
 		netName := "ctlplane"
 
@@ -398,7 +398,7 @@ func (r *VMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.VMSet, ipset *ospdirectorv1beta1.OvercloudIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
+func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OvercloudIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
 	templateParameters["ControllerIP"] = host.IPAddress
 
 	gateway := ipset.Status.Networks["ctlplane"].Gateway
@@ -429,7 +429,7 @@ func (r *VMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirecto
 	return nil
 }
 
-func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.VMSet, virtualMachine *virtv1.VirtualMachine) error {
+func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.OpenStackVMSet, virtualMachine *virtv1.VirtualMachine) error {
 	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
 
 	// First check if the finalizer is still there and remove it if so
@@ -468,7 +468,7 @@ func (r *VMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1
 	return nil
 }
 
-func (r *VMSetReconciler) virtualMachineListFinalizerCleanup(instance *ospdirectorv1beta1.VMSet, virtualMachineList *virtv1.VirtualMachineList) error {
+func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(instance *ospdirectorv1beta1.OpenStackVMSet, virtualMachineList *virtv1.VirtualMachineList) error {
 	r.Log.Info(fmt.Sprintf("Removing finalizers from VirtualMachines in VMSet: %s", instance.Name))
 
 	for _, virtualMachine := range virtualMachineList.Items {
@@ -482,7 +482,7 @@ func (r *VMSetReconciler) virtualMachineListFinalizerCleanup(instance *ospdirect
 	return nil
 }
 
-func (r *VMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.VirtualMachine) error {
+func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.VirtualMachine) error {
 	controllerutil.RemoveFinalizer(virtualMachine, vmset.VirtualMachineFinalizerName)
 	err := r.Client.Update(context.TODO(), virtualMachine)
 
@@ -495,7 +495,7 @@ func (r *VMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.
 	return nil
 }
 
-func (r *VMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.VMSet, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+func (r *OpenStackVMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackVMSet, hostnameDetails *common.Hostname, netName string, ipaddress string) {
 
 	// If VMSet status map is nil, create it
 	if instance.Status.VMHosts == nil {
@@ -516,11 +516,11 @@ func (r *VMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.VMSet, hostn
 }
 
 // SetupWithManager -
-func (r *VMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.VMSet{}).
+		For(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
@@ -536,7 +536,7 @@ func setDefaults(instance *ospdirectorv1beta1.VMSet) {
 }
 */
 
-func (r *VMSetReconciler) getRenderData(instance *ospdirectorv1beta1.VMSet) (*bindatautil.RenderData, error) {
+func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.OpenStackVMSet) (*bindatautil.RenderData, error) {
 	data := bindatautil.MakeRenderData()
 	// Base image used to clone the controller VM images from
 	// adding first 5 char from instance.UID as identifier
@@ -575,7 +575,7 @@ func (r *VMSetReconciler) getRenderData(instance *ospdirectorv1beta1.VMSet) (*bi
 	return &data, nil
 }
 
-func (r *VMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.VMSet) error {
+func (r *OpenStackVMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.OpenStackVMSet) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -620,7 +620,7 @@ func (r *VMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirecto
 	return nil
 }
 
-func (r *VMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.VMSet) error {
+func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.OpenStackVMSet) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -664,7 +664,7 @@ func (r *VMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.VMSet) 
 	return nil
 }
 
-func (r *VMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.VMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
+func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err

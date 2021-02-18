@@ -1,5 +1,5 @@
 apiVersion: osp-director.openstack.org/v1beta1
-kind: VMSet
+kind: OpenStackVMSet
 metadata:
   name: osp-controller
   namespace: openstack

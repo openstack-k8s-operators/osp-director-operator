@@ -20,8 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// VMSetSpec defines the desired state of VMSet
-type VMSetSpec struct {
+// OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
+type OpenStackVMSetSpec struct {
 	// Number of VMs to configure, 1 or 3
 	VMCount int `json:"vmCount"`
 	// number of Cores assigned to the VMs
@@ -50,8 +50,8 @@ type VMSetSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// VMSetStatus defines the observed state of VMSet
-type VMSetStatus struct {
+// OpenStackVMSetStatus defines the observed state of OpenStackVMSet
+type OpenStackVMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
 	BaseImageDVReady bool `json:"baseImageDVReady,omitempty"`
 	// VMsReady is the number of ready  kubevirt controller vm instances
@@ -74,17 +74,17 @@ type Host struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
-type VMSet struct {
+// OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
+type OpenStackVMSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   VMSetSpec   `json:"spec,omitempty"`
-	Status VMSetStatus `json:"status,omitempty"`
+	Spec   OpenStackVMSetSpec   `json:"spec,omitempty"`
+	Status OpenStackVMSetStatus `json:"status,omitempty"`
 }
 
 // GetHostnames -
-func (vms VMSet) GetHostnames() map[string]string {
+func (vms OpenStackVMSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
 	for key, val := range vms.Status.VMHosts {
 		ret[key] = val.Hostname
@@ -94,13 +94,13 @@ func (vms VMSet) GetHostnames() map[string]string {
 
 // +kubebuilder:object:root=true
 
-// VMSetList contains a list of VMSet
-type VMSetList struct {
+// OpenStackVMSetList contains a list of OpenStackVMSet
+type OpenStackVMSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []VMSet `json:"items"`
+	Items           []OpenStackVMSet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&VMSet{}, &VMSetList{})
+	SchemeBuilder.Register(&OpenStackVMSet{}, &OpenStackVMSetList{})
 }

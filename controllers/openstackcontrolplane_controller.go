@@ -72,8 +72,8 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/finalizers,verbs=update
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=vmsets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
@@ -182,7 +182,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.IDKey].Hostname, instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses))
 
 	// Create or update the controllerVM CR object
-	ospVMSet := &ospdirectorv1beta1.VMSet{
+	ospVMSet := &ospdirectorv1beta1.OpenStackVMSet{
 		ObjectMeta: metav1.ObjectMeta{
 			// use the role name as the VM CR name
 			Name:      strings.ToLower(instance.Spec.Controller.Role),
@@ -223,7 +223,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 
 	// get PodIP's from the OSP controller VMs and update openstackclient
 	controllerPodList, err := common.GetAllPodsWithLabel(r, map[string]string{
-		"vmsets.osp-director.openstack.org/ospcontroller": "True",
+		"openstackvmsets.osp-director.openstack.org/ospcontroller": "True",
 	}, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -299,7 +299,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
-		Owns(&ospdirectorv1beta1.VMSet{}).
+		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		// watch pods in the same namespace as we want to reconcile if
 		// e.g. a controller vm gets destroyed

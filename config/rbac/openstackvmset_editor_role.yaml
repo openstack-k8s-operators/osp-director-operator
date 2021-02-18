@@ -1,20 +1,24 @@
-# permissions for end users to view vmsets.
+# permissions for end users to edit openstacktvmsets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: vmset-viewer-role
+  name: openstackvmset-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - vmsets
+  - openstackvmsets
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - vmsets/status
+  - openstackvmsets/status
   verbs:
   - get
