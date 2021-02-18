@@ -29,9 +29,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-osp-director-openstack-org-v1beta1-baremetalset
+      path: /validate-osp-director-openstack-org-v1beta1-openstackbaremetalset
   failurePolicy: Fail
-  name: vbaremetalset.kb.io
+  name: vopenstackbaremetalset.kb.io
   rules:
   - apiGroups:
     - osp-director.openstack.org

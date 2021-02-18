@@ -44,7 +44,7 @@ func (r *OpenStackBaremetalSet) SetupWebhookWithManager(mgr ctrl.Manager) error 
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-baremetalset,mutating=false,failurePolicy=fail,groups=osp-director.openstack.org,resources=openstackbaremetalsets,versions=v1beta1,name=vbaremetalset.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=false,failurePolicy=fail,groups=osp-director.openstack.org,resources=openstackbaremetalsets,versions=v1beta1,name=vopenstackbaremetalset.kb.io
 
 var _ webhook.Validator = &OpenStackBaremetalSet{}
 
