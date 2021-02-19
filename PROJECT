@@ -19,7 +19,7 @@ resources:
   kind: OpenStackClient
   version: v1beta1
 - group: osp-director
-  kind: OvercloudNet
+  kind: OpenStackNet
   version: v1beta1
 - group: osp-director
   kind: OvercloudIPSet

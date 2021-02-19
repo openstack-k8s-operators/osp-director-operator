@@ -36,7 +36,7 @@ type deployedServerPortMapType struct {
 }
 
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
-func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OvercloudIPSetList, overcloudNetList ospdirectorv1beta1.OvercloudNetList) (map[string]interface{}, error) {
+func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OvercloudIPSetList, overcloudNetList ospdirectorv1beta1.OpenStackNetList) (map[string]interface{}, error) {
 
 	// network isolation w/ predictable IPs:
 	//	   https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/network_isolation.html

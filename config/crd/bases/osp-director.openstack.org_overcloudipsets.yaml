@@ -45,7 +45,7 @@ spec:
               description: HostCount Host count
               type: integer
             networks:
-              description: Networks the name(s) of the OvercloudNetworks used to generate
+              description: Networks the name(s) of the OpenStackNetworks used to generate
                 IPs
               items:
                 type: string
@@ -81,7 +81,7 @@ spec:
               type: object
             networks:
               additionalProperties:
-                description: OvercloudNetSpec defines the desired state of OvercloudNet
+                description: OpenStackNetSpec defines the desired state of OpenStackNet
                 properties:
                   allocationEnd:
                     description: AllocationEnd a set of IPs that are reserved and

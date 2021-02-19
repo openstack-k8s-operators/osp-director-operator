@@ -60,7 +60,7 @@ spec:
               format: int32
               type: integer
             networks:
-              description: Networks the name(s) of the OvercloudNetworks used to generate
+              description: Networks the name(s) of the OpenStackNetworks used to generate
                 IPs
               items:
                 type: string

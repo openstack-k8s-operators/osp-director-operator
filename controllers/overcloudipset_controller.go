@@ -63,8 +63,8 @@ func (r *OvercloudIPSetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudnets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudnets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
 
@@ -92,7 +92,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPHostsStatus)
 	}
 
-	instance.Status.Networks = make(map[string]ospdirectorv1beta1.OvercloudNetSpec)
+	instance.Status.Networks = make(map[string]ospdirectorv1beta1.OpenStackNetSpec)
 
 	// iterate over the requested hostCount
 	for count := 0; count < instance.Spec.HostCount; count++ {
@@ -101,7 +101,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {
 
-			network := &ospdirectorv1beta1.OvercloudNet{}
+			network := &ospdirectorv1beta1.OpenStackNet{}
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
@@ -192,7 +192,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// generate pre assigned IPs environment file for Heat
-	overcloudNetList := &ospdirectorv1beta1.OvercloudNetList{}
+	overcloudNetList := &ospdirectorv1beta1.OpenStackNetList{}
 	overcloudNetListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),

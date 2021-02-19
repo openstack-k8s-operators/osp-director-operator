@@ -23,7 +23,7 @@ import (
 // OvercloudIPSetSpec defines the desired state of OvercloudIPSet
 type OvercloudIPSetSpec struct {
 
-	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
@@ -42,7 +42,7 @@ type OvercloudIPSetSpec struct {
 // OvercloudIPSetStatus set of hosts with IP information
 type OvercloudIPSetStatus struct {
 	HostIPs  map[string]OvercloudIPHostsStatus `json:"hosts"`
-	Networks map[string]OvercloudNetSpec       `json:"networks"`
+	Networks map[string]OpenStackNetSpec       `json:"networks"`
 }
 
 // OvercloudIPHostsStatus per host IP set

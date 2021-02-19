@@ -261,6 +261,26 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstacknets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstacknets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackvmsets
   verbs:
   - create
@@ -312,26 +332,6 @@ rules:
   - osp-director.openstack.org
   resources:
   - overcloudipsets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - overcloudnets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - overcloudnets/status
   verbs:
   - get
   - patch

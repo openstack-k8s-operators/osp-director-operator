@@ -28,8 +28,8 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
 
-// OvercloudNetReconciler reconciles a OvercloudNet object
-type OvercloudNetReconciler struct {
+// OpenStackNetReconciler reconciles a OvercloudNet object
+type OpenStackNetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -37,30 +37,30 @@ type OvercloudNetReconciler struct {
 }
 
 // GetClient -
-func (r *OvercloudNetReconciler) GetClient() client.Client {
+func (r *OpenStackNetReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *OvercloudNetReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackNetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *OvercloudNetReconciler) GetLogger() logr.Logger {
+func (r *OpenStackNetReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *OvercloudNetReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackNetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudnets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudnets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
 
 // Reconcile -
-func (r *OvercloudNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("overcloudnet", req.NamespacedName)
 
@@ -70,8 +70,8 @@ func (r *OvercloudNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 }
 
 // SetupWithManager -
-func (r *OvercloudNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.OvercloudNet{}).
+		For(&ospdirectorv1beta1.OpenStackNet{}).
 		Complete(r)
 }

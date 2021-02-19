@@ -182,13 +182,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackClient")
 		os.Exit(1)
 	}
-	if err = (&controllers.OvercloudNetReconciler{
+	if err = (&controllers.OpenStackNetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OvercloudNet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackNet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OvercloudNet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackNet")
 		os.Exit(1)
 	}
 	if err = (&controllers.OvercloudIPSetReconciler{

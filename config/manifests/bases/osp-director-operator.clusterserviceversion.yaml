@@ -34,6 +34,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
+      displayName: Open Stack Net
+      kind: OpenStackNet
+      name: openstacknets.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
       displayName: Open Stack VMSet
       kind: OpenStackVMSet
@@ -43,11 +48,6 @@ spec:
       displayName: Overcloud IPSet
       kind: OvercloudIPSet
       name: overcloudipsets.osp-director.openstack.org
-      version: v1beta1
-    - description: OvercloudNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
-      displayName: Overcloud Net
-      kind: OvercloudNet
-      name: overcloudnets.osp-director.openstack.org
       version: v1beta1
     - description: ProvisionServer is the Schema for the provisionservers API
       displayName: Provision Server

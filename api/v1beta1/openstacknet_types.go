@@ -31,8 +31,8 @@ type IPReservation struct {
 	AddToPredictableIPs bool   `json:"addToPredictableIPs"`
 }
 
-// OvercloudNetSpec defines the desired state of OvercloudNet
-type OvercloudNetSpec struct {
+// OpenStackNetSpec defines the desired state of OpenStackNet
+type OpenStackNetSpec struct {
 
 	// +kubebuilder:validation:Required
 	// Cidr the cidr to use for this network
@@ -51,8 +51,8 @@ type OvercloudNetSpec struct {
 	Gateway string `json:"gateway"`
 }
 
-// OvercloudNetStatus defines the observed state of OvercloudNet
-type OvercloudNetStatus struct {
+// OpenStackNetStatus defines the observed state of OpenStackNet
+type OpenStackNetStatus struct {
 	// Reservations IP address reservations
 	Reservations []IPReservation `json:"reservations"`
 }
@@ -60,24 +60,24 @@ type OvercloudNetStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// OvercloudNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
-type OvercloudNet struct {
+// OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
+type OpenStackNet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OvercloudNetSpec   `json:"spec,omitempty"`
-	Status OvercloudNetStatus `json:"status,omitempty"`
+	Spec   OpenStackNetSpec   `json:"spec,omitempty"`
+	Status OpenStackNetStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// OvercloudNetList contains a list of OvercloudNet
-type OvercloudNetList struct {
+// OpenStackNetList contains a list of OpenStackNet
+type OpenStackNetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OvercloudNet `json:"items"`
+	Items           []OpenStackNet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OvercloudNet{}, &OvercloudNetList{})
+	SchemeBuilder.Register(&OpenStackNet{}, &OpenStackNetList{})
 }

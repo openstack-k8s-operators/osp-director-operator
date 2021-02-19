@@ -40,7 +40,7 @@ type OpenStackVMSetSpec struct {
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// OSPNetwork
 	OSPNetwork Network `json:"ospNetwork"`
-	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
 	Role string `json:"role"`
