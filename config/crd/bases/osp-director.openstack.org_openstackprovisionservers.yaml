@@ -6,20 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: provisionservers.osp-director.openstack.org
+  name: openstackprovisionservers.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: ProvisionServer
-    listKind: ProvisionServerList
-    plural: provisionservers
-    singular: provisionserver
+    kind: OpenStackProvisionServer
+    listKind: OpenStackProvisionServerList
+    plural: openstackprovisionservers
+    singular: openstackprovisionserver
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: ProvisionServer is the Schema for the provisionservers API
+      description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: ProvisionServerSpec defines the desired state of ProvisionServer
+          description: OpenStackProvisionServerSpec defines the desired state of OpenStackProvisionServer
           properties:
             port:
               description: The port on which the Apache server should listen
@@ -48,7 +49,8 @@ spec:
           - rhelImageUrl
           type: object
         status:
-          description: ProvisionServerStatus defines the observed state of ProvisionServer
+          description: OpenStackProvisionServerStatus defines the observed state of
+            OpenStackProvisionServer
           properties:
             localImageUrl:
               description: URL of provisioning image on underlying Apache web server

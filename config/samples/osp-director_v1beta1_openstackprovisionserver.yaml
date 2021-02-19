@@ -1,7 +1,7 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: ProvisionServer
 metadata:
-  name: provisionserver-sample
+  name: openstackprovisionserver-sample
   namespace: openstack
 spec:
   port: 8080

@@ -51,8 +51,8 @@ var (
 	}
 )
 
-// ProvisionServerReconciler reconciles a ProvisionServer object
-type ProvisionServerReconciler struct {
+// OpenStackProvisionServerReconciler reconciles a ProvisionServer object
+type OpenStackProvisionServerReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -60,28 +60,28 @@ type ProvisionServerReconciler struct {
 }
 
 // GetClient -
-func (r *ProvisionServerReconciler) GetClient() client.Client {
+func (r *OpenStackProvisionServerReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *ProvisionServerReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackProvisionServerReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *ProvisionServerReconciler) GetLogger() logr.Logger {
+func (r *OpenStackProvisionServerReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *ProvisionServerReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;watch;
@@ -94,12 +94,12 @@ func (r *ProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
 // Reconcile - provision image servers
-func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("provisionserver", req.NamespacedName)
 
 	// Fetch the ProvisionServer instance
-	instance := &ospdirectorv1beta1.ProvisionServer{}
+	instance := &ospdirectorv1beta1.OpenStackProvisionServer{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -195,17 +195,17 @@ func (r *ProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 }
 
 // SetupWithManager - prepare controller for use with operator manager
-func (r *ProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.ProvisionServer{}).
+		For(&ospdirectorv1beta1.OpenStackProvisionServer{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 
-func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.ProvisionServer, provInterfaceName string) (controllerutil.OperationResult, error) {
+func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackProvisionServer, provInterfaceName string) (controllerutil.OperationResult, error) {
 	trueValue := true
 
 	// Get volumes
@@ -324,7 +324,7 @@ func (r *ProvisionServerReconciler) deploymentCreateOrUpdate(instance *ospdirect
 	return op, err
 }
 
-func (r *ProvisionServerReconciler) getLocalImageURL(instance *ospdirectorv1beta1.ProvisionServer) string {
+func (r *OpenStackProvisionServerReconciler) getLocalImageURL(instance *ospdirectorv1beta1.OpenStackProvisionServer) string {
 	baseFilename := instance.Spec.RhelImageURL[strings.LastIndex(instance.Spec.RhelImageURL, "/")+1 : len(instance.Spec.RhelImageURL)]
 	baseFilenameEnd := baseFilename[len(baseFilename)-3:]
 
@@ -335,7 +335,7 @@ func (r *ProvisionServerReconciler) getLocalImageURL(instance *ospdirectorv1beta
 	return fmt.Sprintf("http://%s:%d/images/%s/compressed-%s", instance.Status.ProvisionIP, instance.Spec.Port, baseFilename, baseFilename)
 }
 
-func (r *ProvisionServerReconciler) getProvisioningInterface(instance *ospdirectorv1beta1.ProvisionServer) (string, error) {
+func (r *OpenStackProvisionServerReconciler) getProvisioningInterface(instance *ospdirectorv1beta1.OpenStackProvisionServer) (string, error) {
 	cfg, err := config.GetConfig()
 
 	if err != nil {

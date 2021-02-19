@@ -155,13 +155,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackVMSet")
 		os.Exit(1)
 	}
-	if err = (&controllers.ProvisionServerReconciler{
+	if err = (&controllers.OpenStackProvisionServerReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("ProvisionServer"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackProvisionServer"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ProvisionServer")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackProvisionServer")
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackBaremetalSetReconciler{

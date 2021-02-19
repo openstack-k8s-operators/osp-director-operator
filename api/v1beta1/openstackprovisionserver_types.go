@@ -20,16 +20,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ProvisionServerSpec defines the desired state of ProvisionServer
-type ProvisionServerSpec struct {
+// OpenStackProvisionServerSpec defines the desired state of OpenStackProvisionServer
+type OpenStackProvisionServerSpec struct {
 	// The port on which the Apache server should listen
 	Port int `json:"port"`
 	// URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed -- current implementation is Metal3 pattern)
 	RhelImageURL string `json:"rhelImageUrl"`
 }
 
-// ProvisionServerStatus defines the observed state of ProvisionServer
-type ProvisionServerStatus struct {
+// OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer
+type OpenStackProvisionServerStatus struct {
 	// IP of the provisioning interface on the node running the ProvisionServer pod
 	ProvisionIP string `json:"provisionIp,omitempty"`
 	// URL of provisioning image on underlying Apache web server
@@ -39,24 +39,24 @@ type ProvisionServerStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// ProvisionServer is the Schema for the provisionservers API
-type ProvisionServer struct {
+// OpenStackProvisionServer is the Schema for the openstackprovisionservers API
+type OpenStackProvisionServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProvisionServerSpec   `json:"spec,omitempty"`
-	Status ProvisionServerStatus `json:"status,omitempty"`
+	Spec   OpenStackProvisionServerSpec   `json:"spec,omitempty"`
+	Status OpenStackProvisionServerStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// ProvisionServerList contains a list of ProvisionServer
-type ProvisionServerList struct {
+// OpenStackProvisionServerList contains a list of OpenStackProvisionServer
+type OpenStackProvisionServerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProvisionServer `json:"items"`
+	Items           []OpenStackProvisionServer `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ProvisionServer{}, &ProvisionServerList{})
+	SchemeBuilder.Register(&OpenStackProvisionServer{}, &OpenStackProvisionServerList{})
 }

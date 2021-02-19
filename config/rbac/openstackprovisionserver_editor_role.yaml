@@ -1,13 +1,13 @@
-# permissions for end users to edit provisionservers.
+# permissions for end users to edit openstackprovisionservers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: provisionserver-editor-role
+  name: openstackprovisionserver-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - provisionservers
+  - openstackprovisionservers
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - provisionservers/status
+  - openstackprovisionservers/status
   verbs:
   - get

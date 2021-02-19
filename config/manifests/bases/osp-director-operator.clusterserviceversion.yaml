@@ -6,7 +6,7 @@ metadata:
     capabilities: Seamless Upgrades
     operatorframework.io/suggested-namespace: openstack
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","provisionservers.osp-director.openstack.org"]'
+    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: osp-director-operator.v0.0.0
   namespace: placeholder
@@ -18,6 +18,11 @@ spec:
       displayName: VMSet
       kind: VMSet
       name: openstackvmsets.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackProvisionServer is the Schema for the provisionservers API
+      displayName: OpenStack Provision Server
+      kind: ProvisionServer
+      name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
       displayName: Open Stack Baremetal Set
@@ -44,15 +49,15 @@ spec:
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackProvisionServer is the Schema for the provisionservers API
+      displayName: Open Stack Provision Server
+      kind: OpenStackProvisionServer
+      name: openstackprovisionservers.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
       displayName: Open Stack VMSet
       kind: OpenStackVMSet
       name: openstackvmsets.osp-director.openstack.org
-      version: v1beta1
-    - description: ProvisionServer is the Schema for the provisionservers API
-      displayName: Provision Server
-      kind: ProvisionServer
-      name: provisionservers.osp-director.openstack.org
       version: v1beta1
   description: Install and manage an OpenStack cloud with OSP Director on OpenShift
   displayName: OSP Director Operator

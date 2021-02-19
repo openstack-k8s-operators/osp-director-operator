@@ -10,7 +10,7 @@ resources:
   kind: OpenStackVMSet
   version: v1beta1
 - group: osp-director
-  kind: ProvisionServer
+  kind: OpenStackProvisionServer
   version: v1beta1
 - group: osp-director
   kind: OpenStackBaremetalSet

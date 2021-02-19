@@ -77,9 +77,9 @@ func (r *OpenStackBaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=provisionservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
@@ -165,7 +165,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
-	provisionServer := &ospdirectorv1beta1.ProvisionServer{}
+	provisionServer := &ospdirectorv1beta1.OpenStackProvisionServer{}
 
 	// NOTE: webook validates that either ProvisionServerName or RhelImageUrl is set
 	if instance.Spec.ProvisionServerName == "" {
@@ -267,7 +267,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
-		Owns(&ospdirectorv1beta1.ProvisionServer{}).
+		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
 		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}},
 			&handler.EnqueueRequestsFromMapFunc{
 				ToRequests: openshiftMachineAPIBareMetalHostsFn,
@@ -275,8 +275,8 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackBaremetalSet) (*ospdirectorv1beta1.ProvisionServer, controllerutil.OperationResult, error) {
-	provisionServer := &ospdirectorv1beta1.ProvisionServer{
+func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackBaremetalSet) (*ospdirectorv1beta1.OpenStackProvisionServer, controllerutil.OperationResult, error) {
+	provisionServer := &ospdirectorv1beta1.OpenStackProvisionServer{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      instance.ObjectMeta.Name + "-provisionserver",
 			Namespace: instance.ObjectMeta.Namespace,
@@ -301,7 +301,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
-func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.ProvisionServer, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet) error {
+func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.OpenStackProvisionServer, sshSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
