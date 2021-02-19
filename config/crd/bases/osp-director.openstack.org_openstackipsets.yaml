@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: overcloudipsets.osp-director.openstack.org
+  name: openstackipsets.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: OvercloudIPSet
-    listKind: OvercloudIPSetList
-    plural: overcloudipsets
-    singular: overcloudipset
+    kind: OpenStackIPSet
+    listKind: OpenStackIPSetList
+    plural: openstackipsets
+    singular: openstackipset
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: OvercloudIPSet represents a group of IP addresses for a specific
+      description: OpenStackIPSet represents a group of IP addresses for a specific
         deployment role within the OpenStack Overcloud
       properties:
         apiVersion:
@@ -35,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: OvercloudIPSetSpec defines the desired state of OvercloudIPSet
+          description: OpenStackIPSetSpec defines the desired state of OpenStackIPSet
           properties:
             addToPredictableIPs:
               description: AddToPredictableIPs add/ignore ipset to add entries to
@@ -65,11 +65,11 @@ spec:
           - vip
           type: object
         status:
-          description: OvercloudIPSetStatus set of hosts with IP information
+          description: OpenStackIPSetStatus set of hosts with IP information
           properties:
             hosts:
               additionalProperties:
-                description: OvercloudIPHostsStatus per host IP set
+                description: OpenStackIPHostsStatus per host IP set
                 properties:
                   ipaddresses:
                     additionalProperties:

@@ -1,20 +1,24 @@
-# permissions for end users to view overcloudipsets.
+# permissions for end users to edit openstackipsets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: overcloudipset-viewer-role
+  name: openstackipset-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudipsets
+  - openstackipsets
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudipsets/status
+  - openstackipsets/status
   verbs:
   - get

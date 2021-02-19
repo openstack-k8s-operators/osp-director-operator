@@ -35,8 +35,8 @@ import (
 	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
 )
 
-// OvercloudIPSetReconciler reconciles a OvercloudIPSet object
-type OvercloudIPSetReconciler struct {
+// OpenStackIPSetReconciler reconciles a OvercloudIPSet object
+type OpenStackIPSetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -44,37 +44,37 @@ type OvercloudIPSetReconciler struct {
 }
 
 // GetClient -
-func (r *OvercloudIPSetReconciler) GetClient() client.Client {
+func (r *OpenStackIPSetReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *OvercloudIPSetReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackIPSetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *OvercloudIPSetReconciler) GetLogger() logr.Logger {
+func (r *OpenStackIPSetReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *OvercloudIPSetReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=overcloudipsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 
 // Reconcile - reconcile OvercloudIpSet objects
-func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("overcloudipset", req.NamespacedName)
+	_ = r.Log.WithValues("openstackipset", req.NamespacedName)
 
 	// Fetch the controller VM instance
-	instance := &ospdirectorv1beta1.OvercloudIPSet{}
+	instance := &ospdirectorv1beta1.OpenStackIPSet{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -89,7 +89,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if instance.Status.HostIPs == nil {
 		//instance.Status.IPAddresses = make(map[string]string)
-		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OvercloudIPHostsStatus)
+		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OpenStackIPHostsStatus)
 	}
 
 	instance.Status.Networks = make(map[string]ospdirectorv1beta1.OpenStackNetSpec)
@@ -176,7 +176,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 
 			if instance.Status.HostIPs[hostname].IPAddresses == nil {
-				instance.Status.HostIPs[hostname] = ospdirectorv1beta1.OvercloudIPHostsStatus{IPAddresses: map[string]string{netName: reservationIP}}
+				instance.Status.HostIPs[hostname] = ospdirectorv1beta1.OpenStackIPHostsStatus{IPAddresses: map[string]string{netName: reservationIP}}
 			} else {
 				instance.Status.HostIPs[hostname].IPAddresses[netName] = reservationIP
 			}
@@ -202,7 +202,7 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	overcloudIPList := &ospdirectorv1beta1.OvercloudIPSetList{}
+	overcloudIPList := &ospdirectorv1beta1.OpenStackIPSetList{}
 	overcloudIPListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
@@ -245,9 +245,9 @@ func (r *OvercloudIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 }
 
 // SetupWithManager -
-func (r *OvercloudIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.OvercloudIPSet{}).
+		For(&ospdirectorv1beta1.OpenStackIPSet{}).
 		//		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }

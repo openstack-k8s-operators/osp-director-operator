@@ -6,7 +6,7 @@ metadata:
     capabilities: Seamless Upgrades
     operatorframework.io/suggested-namespace: openstack
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/internal-objects: '["overcloudipsets.osp-director.openstack.org","provisionservers.osp-director.openstack.org"]'
+    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","provisionservers.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: osp-director-operator.v0.0.0
   namespace: placeholder
@@ -34,6 +34,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
+      displayName: Open Stack IPSet
+      kind: OpenStackIPSet
+      name: openstackipsets.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
       displayName: Open Stack Net
       kind: OpenStackNet
@@ -43,11 +48,6 @@ spec:
       displayName: Open Stack VMSet
       kind: OpenStackVMSet
       name: openstackvmsets.osp-director.openstack.org
-      version: v1beta1
-    - description: OvercloudIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
-      displayName: Overcloud IPSet
-      kind: OvercloudIPSet
-      name: overcloudipsets.osp-director.openstack.org
       version: v1beta1
     - description: ProvisionServer is the Schema for the provisionservers API
       displayName: Provision Server

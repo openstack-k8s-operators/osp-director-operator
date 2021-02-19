@@ -20,8 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OvercloudIPSetSpec defines the desired state of OvercloudIPSet
-type OvercloudIPSetSpec struct {
+// OpenStackIPSetSpec defines the desired state of OpenStackIPSet
+type OpenStackIPSetSpec struct {
 
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
@@ -39,38 +39,38 @@ type OvercloudIPSetSpec struct {
 	AddToPredictableIPs bool `json:"addToPredictableIPs"`
 }
 
-// OvercloudIPSetStatus set of hosts with IP information
-type OvercloudIPSetStatus struct {
-	HostIPs  map[string]OvercloudIPHostsStatus `json:"hosts"`
+// OpenStackIPSetStatus set of hosts with IP information
+type OpenStackIPSetStatus struct {
+	HostIPs  map[string]OpenStackIPHostsStatus `json:"hosts"`
 	Networks map[string]OpenStackNetSpec       `json:"networks"`
 }
 
-// OvercloudIPHostsStatus per host IP set
-type OvercloudIPHostsStatus struct {
+// OpenStackIPHostsStatus per host IP set
+type OpenStackIPHostsStatus struct {
 	IPAddresses map[string]string `json:"ipaddresses"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// OvercloudIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
-type OvercloudIPSet struct {
+// OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
+type OpenStackIPSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OvercloudIPSetSpec   `json:"spec,omitempty"`
-	Status OvercloudIPSetStatus `json:"status,omitempty"`
+	Spec   OpenStackIPSetSpec   `json:"spec,omitempty"`
+	Status OpenStackIPSetStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// OvercloudIPSetList contains a list of OvercloudIPSet
-type OvercloudIPSetList struct {
+// OpenStackIPSetList contains a list of OpenStackIPSet
+type OpenStackIPSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OvercloudIPSet `json:"items"`
+	Items           []OpenStackIPSet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OvercloudIPSet{}, &OvercloudIPSetList{})
+	SchemeBuilder.Register(&OpenStackIPSet{}, &OpenStackIPSetList{})
 }
