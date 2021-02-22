@@ -75,8 +75,8 @@ func (r *OpenStackBaremetalSet) validateCr() error {
 	return nil
 }
 func (r *OpenStackBaremetalSet) checkBaseImageReqs() error {
-	if r.Spec.RhelImageURL == "" && r.Spec.ProvisionServerName == "" {
-		return fmt.Errorf("Either \"rhelImageUrl\" or \"provisionServerName\" must be provided")
+	if r.Spec.BaseImageURL == "" && r.Spec.ProvisionServerName == "" {
+		return fmt.Errorf("Either \"baseImageUrl\" or \"provisionServerName\" must be provided")
 	}
 
 	return nil

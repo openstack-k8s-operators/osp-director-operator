@@ -37,6 +37,9 @@ spec:
         spec:
           description: OpenStackBaremetalSetSpec defines the desired state of BaremetalSet
           properties:
+            baseImageUrl:
+              description: Remote URL pointing to desired RHEL qcow2 image
+              type: string
             bmhLabelSelector:
               additionalProperties:
                 type: string
@@ -148,15 +151,12 @@ spec:
               type: string
             provisionServerName:
               description: ProvisionServerName Optional. If supplied will be used
-                as the base Image for the baremetalset instead of RhelImageURL.
+                as the base Image for the baremetalset instead of baseImageURL.
               type: string
             replicas:
               description: Replicas The number of baremetalhosts to attempt to aquire
               minimum: 0
               type: integer
-            rhelImageUrl:
-              description: Remote URL pointing to desired RHEL qcow2 image
-              type: string
             role:
               description: Role the name of the Overcloud role this IPset is associated
                 with. Used to generate hostnames.

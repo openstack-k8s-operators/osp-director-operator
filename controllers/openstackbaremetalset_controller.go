@@ -167,7 +167,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 
 	provisionServer := &ospdirectorv1beta1.OpenStackProvisionServer{}
 
-	// NOTE: webook validates that either ProvisionServerName or RhelImageUrl is set
+	// NOTE: webook validates that either ProvisionServerName or baseImageUrl is set
 	if instance.Spec.ProvisionServerName == "" {
 		// Next deploy the provisioning image (Apache) server
 		pv, op, err := r.provisionServerCreateOrUpdate(instance)
@@ -286,7 +286,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, provisionServer, func() error {
 		// TODO: Surface the port in OpenStackBaremetalSet?
 		provisionServer.Spec.Port = 6190
-		provisionServer.Spec.RhelImageURL = instance.Spec.RhelImageURL
+		provisionServer.Spec.BaseImageURL = instance.Spec.BaseImageURL
 
 		err := controllerutil.SetControllerReference(instance, provisionServer, r.Scheme)
 

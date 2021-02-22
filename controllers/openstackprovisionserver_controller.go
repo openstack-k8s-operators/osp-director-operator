@@ -302,7 +302,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 				Env: []corev1.EnvVar{
 					{
 						Name:  "RHEL_IMAGE_URL",
-						Value: instance.Spec.RhelImageURL,
+						Value: instance.Spec.BaseImageURL,
 					},
 				},
 				Privileged:   false,
@@ -325,7 +325,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 }
 
 func (r *OpenStackProvisionServerReconciler) getLocalImageURL(instance *ospdirectorv1beta1.OpenStackProvisionServer) string {
-	baseFilename := instance.Spec.RhelImageURL[strings.LastIndex(instance.Spec.RhelImageURL, "/")+1 : len(instance.Spec.RhelImageURL)]
+	baseFilename := instance.Spec.BaseImageURL[strings.LastIndex(instance.Spec.BaseImageURL, "/")+1 : len(instance.Spec.BaseImageURL)]
 	baseFilenameEnd := baseFilename[len(baseFilename)-3:]
 
 	if baseFilenameEnd == ".gz" || baseFilenameEnd == ".xz" {
