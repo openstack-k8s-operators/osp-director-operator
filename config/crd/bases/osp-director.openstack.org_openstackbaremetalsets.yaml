@@ -136,7 +136,7 @@ spec:
                   type: object
               type: object
             networks:
-              description: Networks the name(s) of the OvercloudNetworks used to generate
+              description: Networks the name(s) of the OpenStackNetworks used to generate
                 IPs
               items:
                 type: string

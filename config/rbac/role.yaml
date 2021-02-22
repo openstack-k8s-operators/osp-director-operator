@@ -261,7 +261,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudipsets
+  - openstackipsets
   verbs:
   - create
   - delete
@@ -273,7 +273,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudipsets/finalizers
+  - openstackipsets/finalizers
   verbs:
   - create
   - delete
@@ -285,7 +285,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudipsets/status
+  - openstackipsets/status
   verbs:
   - get
   - patch
@@ -293,7 +293,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudnets
+  - openstacknets
   verbs:
   - create
   - delete
@@ -305,7 +305,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - overcloudnets/status
+  - openstacknets/status
   verbs:
   - get
   - patch
@@ -313,7 +313,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - provisionservers
+  - openstackprovisionservers
   verbs:
   - create
   - delete
@@ -325,7 +325,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - provisionservers/finalizers
+  - openstackprovisionservers/finalizers
   verbs:
   - create
   - delete
@@ -337,7 +337,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - provisionservers/status
+  - openstackprovisionservers/status
   verbs:
   - get
   - patch
@@ -345,7 +345,7 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - vmsets
+  - openstackvmsets
   verbs:
   - create
   - delete
@@ -357,13 +357,13 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - vmsets/finalizers
+  - openstackvmsets/finalizers
   verbs:
   - update
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - vmsets/status
+  - openstackvmsets/status
   verbs:
   - get
   - patch

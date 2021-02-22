@@ -256,8 +256,8 @@ type IPSet struct {
 }
 
 // OvercloudipsetCreateOrUpdate -
-func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset IPSet) (*ospdirectorv1beta1.OvercloudIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OvercloudIPSet{
+func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset IPSet) (*ospdirectorv1beta1.OpenStackIPSet, controllerutil.OperationResult, error) {
+	overcloudIPSet := &ospdirectorv1beta1.OpenStackIPSet{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      obj.GetName(),
 			Namespace: obj.GetNamespace(),

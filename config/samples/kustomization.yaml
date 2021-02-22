@@ -1,10 +1,10 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - osp-director_v1beta1_openstackcontrolplane.yaml
-- osp-director_v1beta1_vmset.yaml
-- osp-director_v1beta1_provisionserver.yaml
+- osp-director_v1beta1_openstackvmset.yaml
+- osp-director_v1beta1_openstackprovisionserver.yaml
 - osp-director_v1beta1_openstackbaremetalset.yaml
 - osp-director_v1beta1_openstackclient.yaml
-- osp-director_v1beta1_overcloudnet.yaml
-- osp-director_v1beta1_overcloudipset.yaml
+- osp-director_v1beta1_openstacknet.yaml
+- osp-director_v1beta1_openstackipset.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

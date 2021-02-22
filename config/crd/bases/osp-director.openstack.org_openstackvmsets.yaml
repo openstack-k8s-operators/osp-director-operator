@@ -1,0 +1,153 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: openstackvmsets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackVMSet
+    listKind: OpenStackVMSetList
+    plural: openstackvmsets
+    singular: openstackvmset
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: OpenStackVMSet represents a set of virtual machines hosts for a
+        specific role within the Overcloud deployment
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
+          properties:
+            baseImageURL:
+              description: Name of the VM base image used to setup the VMs
+              type: string
+            baseImageVolumeName:
+              description: BaseImageVolumeName Optional. If supplied will be used
+                as the base volume for the VM instead of BaseImageURL.
+              type: string
+            cores:
+              description: number of Cores assigned to the VMs
+              format: int32
+              type: integer
+            deploymentSSHSecret:
+              description: name of secret holding the stack-admin ssh keys
+              type: string
+            diskSize:
+              description: root Disc size in GB
+              format: int32
+              type: integer
+            memory:
+              description: amount of Memory in GB used by the VMs
+              format: int32
+              type: integer
+            networks:
+              description: Networks the name(s) of the OpenStackNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
+            ospNetwork:
+              description: OSPNetwork
+              properties:
+                bridgeName:
+                  type: string
+                desiredState:
+                  description: "State contains the namestatectl yaml [1] as string
+                    instead of golang struct so we don't need to be in sync with the
+                    schema. \n [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
+                  type: object
+                name:
+                  type: string
+              required:
+              - bridgeName
+              - name
+              type: object
+            passwordSecret:
+              description: 'PasswordSecret the name of the secret used to optionally
+                set the root pwd by adding NodeRootPassword: <base64 enc pwd> to the
+                secret data'
+              type: string
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate hostnames.
+              type: string
+            storageClass:
+              description: StorageClass to be used for the disks
+              type: string
+            vmCount:
+              description: Number of VMs to configure, 1 or 3
+              type: integer
+          required:
+          - cores
+          - deploymentSSHSecret
+          - diskSize
+          - memory
+          - networks
+          - ospNetwork
+          - role
+          - storageClass
+          - vmCount
+          type: object
+        status:
+          description: OpenStackVMSetStatus defines the observed state of OpenStackVMSet
+          properties:
+            baseImageDVReady:
+              description: BaseImageDVReady is the status of the BaseImage DataVolume
+              type: boolean
+            vmHosts:
+              additionalProperties:
+                description: HostStatus represents the hostname and IP info for a
+                  specific VM
+                properties:
+                  hostname:
+                    type: string
+                  ipaddresses:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - hostname
+                - ipaddresses
+                type: object
+              type: object
+            vmpods:
+              description: VMpods are the names of the kubevirt controller vm pods
+              items:
+                type: string
+              type: array
+            vmsReady:
+              description: VMsReady is the number of ready  kubevirt controller vm
+                instances
+              type: integer
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

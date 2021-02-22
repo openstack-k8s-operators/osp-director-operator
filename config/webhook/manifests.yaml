@@ -47,9 +47,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-osp-director-openstack-org-v1beta1-vmset
+      path: /validate-osp-director-openstack-org-v1beta1-openstackvmset
   failurePolicy: Fail
-  name: vvmset.kb.io
+  name: vopenstackvmset.kb.io
   rules:
   - apiGroups:
     - osp-director.openstack.org
@@ -59,4 +59,4 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - vmsets
+    - openstackvmsets

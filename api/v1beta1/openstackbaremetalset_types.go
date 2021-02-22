@@ -40,7 +40,7 @@ type OpenStackBaremetalSetSpec struct {
 	BmhLabelSelector map[string]string `json:"bmhLabelSelector,omitempty"`
 	// Hardware requests for sub-selection of BaremetalHosts with certain hardware specs
 	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
-	// Networks the name(s) of the OvercloudNetworks used to generate IPs
+	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
 	Role string `json:"role"`

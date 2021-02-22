@@ -146,22 +146,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackControlPlane")
 		os.Exit(1)
 	}
-	if err = (&controllers.VMSetReconciler{
+	if err = (&controllers.OpenStackVMSetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("VMSet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "VMSet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackVMSet")
 		os.Exit(1)
 	}
-	if err = (&controllers.ProvisionServerReconciler{
+	if err = (&controllers.OpenStackProvisionServerReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("ProvisionServer"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackProvisionServer"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ProvisionServer")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackProvisionServer")
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackBaremetalSetReconciler{
@@ -182,22 +182,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackClient")
 		os.Exit(1)
 	}
-	if err = (&controllers.OvercloudNetReconciler{
+	if err = (&controllers.OpenStackNetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OvercloudNet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackNet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OvercloudNet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackNet")
 		os.Exit(1)
 	}
-	if err = (&controllers.OvercloudIPSetReconciler{
+	if err = (&controllers.OpenStackIPSetReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OvercloudIPSet"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackIPSet"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OvercloudIPSet")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackIPSet")
 		os.Exit(1)
 	}
 
@@ -210,8 +210,8 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.VMSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "VMSet")
+		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
 			os.Exit(1)
 		}
 	}

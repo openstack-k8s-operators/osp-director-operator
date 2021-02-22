@@ -1,0 +1,103 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: openstacknets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackNet
+    listKind: OpenStackNetList
+    plural: openstacknets
+    singular: openstacknet
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: OpenStackNet represents the IPAM configuration for baremetal and
+        VM hosts within OpenStack Overcloud deployment
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: OpenStackNetSpec defines the desired state of OpenStackNet
+          properties:
+            allocationEnd:
+              description: AllocationEnd a set of IPs that are reserved and will not
+                be assigned
+              type: string
+            allocationStart:
+              description: AllocationStart a set of IPs that are reserved and will
+                not be assigned
+              type: string
+            cidr:
+              description: Cidr the cidr to use for this network
+              type: string
+            gateway:
+              description: Gateway optional gateway for the network
+              type: string
+          required:
+          - allocationEnd
+          - allocationStart
+          - cidr
+          type: object
+        status:
+          description: OpenStackNetStatus defines the observed state of OpenStackNet
+          properties:
+            reservations:
+              description: Reservations IP address reservations
+              items:
+                description: IPReservation contains an IP, Hostname, and a VIP flag
+                properties:
+                  addToPredictableIPs:
+                    type: boolean
+                  hostname:
+                    type: string
+                  idKey:
+                    description: IP       net.IP `json:"ip"`
+                    type: string
+                  ip:
+                    type: string
+                  role:
+                    type: string
+                  vip:
+                    type: boolean
+                required:
+                - addToPredictableIPs
+                - hostname
+                - idKey
+                - ip
+                - role
+                - vip
+                type: object
+              type: array
+          required:
+          - reservations
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

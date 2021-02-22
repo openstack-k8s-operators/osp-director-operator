@@ -18,11 +18,11 @@ package overcloudipset
 
 const (
 	// AppLabel -
-	AppLabel = "osp-overcloudipset"
+	AppLabel = "osp-openstackipset"
 
 	// AddToPredictableIPsLabel -
 	AddToPredictableIPsLabel = "addToPredictableIPsLabel"
 
 	// FinalizerName -
-	FinalizerName = "overcloudipset.osp-director.openstack.org"
+	FinalizerName = "openstackipset.osp-director.openstack.org"
 )

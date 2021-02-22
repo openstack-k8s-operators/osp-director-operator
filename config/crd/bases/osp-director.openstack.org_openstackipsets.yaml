@@ -1,0 +1,121 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: openstackipsets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackIPSet
+    listKind: OpenStackIPSetList
+    plural: openstackipsets
+    singular: openstackipset
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: OpenStackIPSet represents a group of IP addresses for a specific
+        deployment role within the OpenStack Overcloud
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: OpenStackIPSetSpec defines the desired state of OpenStackIPSet
+          properties:
+            addToPredictableIPs:
+              description: AddToPredictableIPs add/ignore ipset to add entries to
+                Predictable IPs list
+              type: boolean
+            hostCount:
+              description: HostCount Host count
+              type: integer
+            networks:
+              description: Networks the name(s) of the OpenStackNetworks used to generate
+                IPs
+              items:
+                type: string
+              type: array
+            role:
+              description: Role the name of the Overcloud role this IPset is associated
+                with. Used to generate hostnames.
+              type: string
+            vip:
+              description: VIP flag to indicate ipset is a request for a VIP
+              type: boolean
+          required:
+          - addToPredictableIPs
+          - hostCount
+          - networks
+          - role
+          - vip
+          type: object
+        status:
+          description: OpenStackIPSetStatus set of hosts with IP information
+          properties:
+            hosts:
+              additionalProperties:
+                description: OpenStackIPHostsStatus per host IP set
+                properties:
+                  ipaddresses:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - ipaddresses
+                type: object
+              type: object
+            networks:
+              additionalProperties:
+                description: OpenStackNetSpec defines the desired state of OpenStackNet
+                properties:
+                  allocationEnd:
+                    description: AllocationEnd a set of IPs that are reserved and
+                      will not be assigned
+                    type: string
+                  allocationStart:
+                    description: AllocationStart a set of IPs that are reserved and
+                      will not be assigned
+                    type: string
+                  cidr:
+                    description: Cidr the cidr to use for this network
+                    type: string
+                  gateway:
+                    description: Gateway optional gateway for the network
+                    type: string
+                required:
+                - allocationEnd
+                - allocationStart
+                - cidr
+                type: object
+              type: object
+          required:
+          - hosts
+          - networks
+          type: object
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

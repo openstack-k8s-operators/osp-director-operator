@@ -171,7 +171,7 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, nil
 	}
 
-	// get tripleo-deploy-config-custom, created/rendered by overcloudipset controller
+	// get tripleo-deploy-config-custom, created/rendered by openstackipset controller
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-custom", instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -180,7 +180,7 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
-	// get tripleo-deploy-config, created/rendered by overcloudipset controller
+	// get tripleo-deploy-config, created/rendered by openstackipset controller
 	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {

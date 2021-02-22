@@ -53,7 +53,7 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	// Get VMSet role names
-	vmSetsList := &VMSetList{}
+	vmSetsList := &OpenStackVMSetList{}
 
 	err = webhookClient.List(context.TODO(), vmSetsList, listOpts...)
 	if err != nil {

@@ -1,0 +1,11 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  name: controllers
+spec:
+  hostCount: 1
+  role: Controller
+  networks:
+    - ctlplane
+    - storage
+    - tenant
