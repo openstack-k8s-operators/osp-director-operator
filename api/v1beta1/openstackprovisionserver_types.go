@@ -25,7 +25,7 @@ type OpenStackProvisionServerSpec struct {
 	// The port on which the Apache server should listen
 	Port int `json:"port"`
 	// URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed -- current implementation is Metal3 pattern)
-	RhelImageURL string `json:"rhelImageUrl"`
+	BaseImageURL string `json:"baseImageUrl"`
 }
 
 // OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer

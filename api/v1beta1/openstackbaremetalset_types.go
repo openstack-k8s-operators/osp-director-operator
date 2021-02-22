@@ -29,8 +29,8 @@ type OpenStackBaremetalSetSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	Replicas int `json:"replicas,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image
-	RhelImageURL string `json:"rhelImageUrl,omitempty"`
-	// ProvisionServerName Optional. If supplied will be used as the base Image for the baremetalset instead of RhelImageURL.
+	BaseImageURL string `json:"baseImageUrl,omitempty"`
+	// ProvisionServerName Optional. If supplied will be used as the base Image for the baremetalset instead of baseImageURL.
 	ProvisionServerName string `json:"provisionServerName,omitempty"`
 	// Name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`

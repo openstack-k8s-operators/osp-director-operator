@@ -7,7 +7,7 @@ spec:
   # How many nodes to provision
   replicas: 1
   # The image to install on the provisioned nodes
-  rhelImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz
+  baseImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-baremetalset-ssh-keys
   # Networks to associate with this host
