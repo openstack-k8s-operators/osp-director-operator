@@ -1,11 +1,11 @@
 #
 # Check for:
 #
-# - OvercloudNet (should be preserved with all historical reservations)
+# - OpenStackNet (should be preserved with all historical reservations)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OvercloudNet
+kind: OpenStackNet
 metadata:
   name: ctlplane
   namespace: openstack

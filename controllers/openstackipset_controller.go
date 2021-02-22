@@ -35,7 +35,7 @@ import (
 	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
 )
 
-// OpenStackIPSetReconciler reconciles a OvercloudIPSet object
+// OpenStackIPSetReconciler reconciles a OpenStackIPSet object
 type OpenStackIPSetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
@@ -68,7 +68,7 @@ func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 
-// Reconcile - reconcile OvercloudIpSet objects
+// Reconcile - reconcile OpenStackIPSet objects
 func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("openstackipset", req.NamespacedName)
@@ -105,7 +105,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					r.Log.Info(fmt.Sprintf("OvercloudNet named %s not found!", netName))
+					r.Log.Info(fmt.Sprintf("OpenStackNet named %s not found!", netName))
 				}
 				// Error reading the object - requeue the request.
 				return ctrl.Result{}, err
@@ -133,8 +133,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			// Do we already have a reservation for this hostname on the network?
 			for _, reservation := range network.Status.Reservations {
 				if reservation.Hostname == hostname {
-					// We also need the netmask (which is not stored in the OvercloudNet status),
-					// so we acquire it from the OvercloudIpSet spec
+					// We also need the netmask (which is not stored in the OpenStackNet status),
+					// so we acquire it from the OpenStackIPSet spec
 					cidrPieces := strings.Split(network.Spec.Cidr, "/")
 					reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
 					break
@@ -166,11 +166,11 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 				reservationIP = ip.String()
 
-				// record the reservation on the OvercloudNet
+				// record the reservation on the OpenStackNet
 				network.Status.Reservations = reservation
 				err = r.Client.Status().Update(context.TODO(), network)
 				if err != nil {
-					r.Log.Error(err, "Failed to update OvercloudNet status %v")
+					r.Log.Error(err, "Failed to update OpenStackNet status %v")
 					return ctrl.Result{}, err
 				}
 			}
@@ -187,7 +187,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// update the IPs for each IPSet
 	err = r.Client.Status().Update(context.TODO(), instance)
 	if err != nil {
-		r.Log.Error(err, "Failed to update OvercloudIpSet status %v")
+		r.Log.Error(err, "Failed to update OpenStackIPSet status %v")
 		return ctrl.Result{}, err
 	}
 

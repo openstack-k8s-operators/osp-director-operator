@@ -2,10 +2,10 @@
 # Check for:
 #
 # - OpenStackControlPlane
-# - VMSet
+# - OpenStackVMSet
 # - VirtualMachine
-# - OvercloudNet (IP reservations)
-# - OvercloudIpSet (IP reservations)
+# - OpenStackNet (IP reservations)
+# - OpenStackIPSet (IP reservations)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -18,7 +18,7 @@ spec:
     controllerCount: 1
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: VMSet
+kind: OpenStackVMSet
 metadata:
   name: controller
   namespace: openstack
@@ -45,7 +45,7 @@ status:
   ready: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OvercloudNet
+kind: OpenStackNet
 metadata:
   name: ctlplane
   namespace: openstack
@@ -83,7 +83,7 @@ status:
     vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OvercloudIPSet
+kind: OpenStackIPSet
 metadata:
   labels:
     addToPredictableIPsLabel: "true"

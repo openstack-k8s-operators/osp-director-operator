@@ -3,20 +3,20 @@
 #
 # A: 
 #
-# - Create an OvercloudNet and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
-# - Verify that a predictable IP has been assigned to the OpenStackClient (in the OvercloudNet and the
-#   associated OvercloudIpSet)
+# - Create an OpenStackNet and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
+# - Verify that a predictable IP has been assigned to the OpenStackClient (in the OpenStackNet and the
+#   associated OpenStackIPSet)
 # - Scale the OpenStackControlPlane up to 3 controllers
-# - Check for IP reservations in the OvercloudNet, associated OvercloudIpSet and VMSet for the 3 
+# - Check for IP reservations in the OpenStackNet, associated OpenStackIPSet and OpenStackVMSet for the 3 
 #    VirtualMachines that should be created
 # - Scale the OpenStackControlPlane down to 1 controller
-# - Check that the IP reservations are removed from the VMSet and OvercloudIpSet, but remain in the
-#   OvercloudNet
+# - Check that the IP reservations are removed from the OpenStackVMSet and OpenStackIPSet, but remain in the
+#   OpenStackNet
 # - Scale the OpenStackControlPlane back to 3 controllers
-# - Check that the IP reservations in the OvercloudIpSet and VMSet reuse the original IPs from
+# - Check that the IP reservations in the OpenStackIPSet and OpenStackVMSet reuse the original IPs from
 #   the original scale-up
 # - Delete the OpenStackControlPlane
-# - Check that all sub-resources (VMSets, VirtualMachines, OvercloudIpSets, OpenStackClient, etc)
+# - Check that all sub-resources (OpenStackVMSets, VirtualMachines, OpenStackIPSets, OpenStackClient, etc)
 #   are removed
 #
 
@@ -29,7 +29,7 @@ kind: TestStep
 commands:
   - command: oc delete openstackcontrolplane overcloud -n openstack --ignore-not-found
     namespaced: true
-  - command: oc delete vmset controller -n openstack --ignore-not-found
+  - command: oc delete openstackvmset controller -n openstack --ignore-not-found
     namespaced: true
-  - command: oc delete overcloudnet ctlplane -n openstack --ignore-not-found
+  - command: oc delete openstacknet ctlplane -n openstack --ignore-not-found
     namespaced: true

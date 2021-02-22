@@ -2,10 +2,10 @@
 # Check for:
 #
 # - OpenStackControlPlane (should be removed)
-# - VMSet (should be removed)
+# - OpenStackVMSet (should be removed)
 # - VirtualMachines (3 should be removed)
 # - OpenStackClient (should be removed)
-# - OvercloudIpSets (should be removed for VMSet and OpenStackClient)
+# - OpenStackIPSets (should be removed for OpenStackVMSet and OpenStackClient)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -15,7 +15,7 @@ metadata:
   namespace: openstack
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: VMSet
+kind: OpenStackVMSet
 metadata:
   name: controller
   namespace: openstack
@@ -45,13 +45,13 @@ metadata:
   namespace: openstack
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OvercloudIPSet
+kind: OpenStackIPSet
 metadata:
   name: controller
   namespace: openstack
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OvercloudIPSet
+kind: OpenStackIPSet
 metadata:
   name: openstackclient
   namespace: openstack

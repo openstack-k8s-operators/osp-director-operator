@@ -1,15 +1,15 @@
 #
-# Annotate 2 VMSet VMs for deletion and scale OpenStackControlPlane down to 1 controller
+# Annotate 2 OpenStackVMSet VMs for deletion and scale OpenStackControlPlane down to 1 controller
 #
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - command: |
-      oc annotate vm controller-0 osp-director.openstack.org/vmset-delete-virtualmachine=true
+      oc annotate vm controller-0 osp-director.openstack.org/openstackvmset-delete-virtualmachine=true
     namespaced: true
   - command: |
-      oc annotate vm controller-1 osp-director.openstack.org/vmset-delete-virtualmachine=true
+      oc annotate vm controller-1 osp-director.openstack.org/openstackvmset-delete-virtualmachine=true
     namespaced: true
   - command: |
       oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/controller/controllerCount", "value":1}]'

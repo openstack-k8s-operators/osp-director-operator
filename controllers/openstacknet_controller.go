@@ -28,7 +28,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
 
-// OpenStackNetReconciler reconciles a OvercloudNet object
+// OpenStackNetReconciler reconciles a OpenStackNet object
 type OpenStackNetReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
