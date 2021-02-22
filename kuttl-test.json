@@ -1,0 +1,24 @@
+{
+   "name": "",
+   "tests": 1,
+   "failures": 0,
+   "time": "181.947",
+   "testsuite": [
+     {
+       "tests": 1,
+       "failures": 0,
+       "timestamp": "2021-02-22T15:34:58.528549466Z",
+       "time": "171.795",
+       "name": "./tests/kuttl/tests",
+       "testcase": [
+         {
+           "classname": "tests",
+           "name": "openstackcontrolplane_scale",
+           "timestamp": "2021-02-22T15:34:58.541905083Z",
+           "time": "171.782",
+           "assertions": 37
+         }
+       ]
+     }
+   ]
+ }

@@ -24,7 +24,7 @@ spec:
   # Arbitrary label selector for BaremetalHosts (optional)
   bmhLabelSelector:
     arbitraryKey: arbitraryValue
-  # Hardware specs required for the BaremetalHost replicas in this BaremetalSet (optional)
+  # Hardware specs required for the BaremetalHost replicas in this OpenStackBaremetalSet (optional)
   hardwareReqs:
     cpuReqs:
       # x86_64 or ppc64le (optional)

@@ -30,7 +30,7 @@ spec:
     metadata:
       labels:
         kubevirt.io/vm: {{ .DomainName }}
-        vmsets.osp-director.openstack.org/ospcontroller: "True"
+        openstackvmsets.osp-director.openstack.org/ospcontroller: "True"
     spec:
       domain:
         cpu:

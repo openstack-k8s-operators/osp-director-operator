@@ -35,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: OpenStackControlPlaneSpec defines the desired state of ControlPlane
+          description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
           properties:
             controller:
               description: OpenStackControllerSpec - defines the desired state of
@@ -114,7 +114,7 @@ spec:
           - openStackClientImageURL
           type: object
         status:
-          description: OpenStackControlPlaneStatus defines the observed state of ControlPlane
+          description: OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
           properties:
             vipStatus:
               additionalProperties:

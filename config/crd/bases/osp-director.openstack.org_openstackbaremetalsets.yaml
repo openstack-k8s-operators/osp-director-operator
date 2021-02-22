@@ -35,7 +35,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: OpenStackBaremetalSetSpec defines the desired state of BaremetalSet
+          description: OpenStackBaremetalSetSpec defines the desired state of OpenStackBaremetalSet
           properties:
             baseImageUrl:
               description: Remote URL pointing to desired RHEL qcow2 image
@@ -168,7 +168,7 @@ spec:
           - role
           type: object
         status:
-          description: OpenStackBaremetalSetStatus defines the observed state of BaremetalSet
+          description: OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
           properties:
             baremetalHosts:
               additionalProperties:

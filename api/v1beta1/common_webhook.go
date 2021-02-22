@@ -15,7 +15,7 @@ import (
 // to any particular webhook)
 var webhookClient goClient.Client
 
-// checkRoleNameExists - This function is needed by webhooks for both BaremetalSets and VMSets
+// checkRoleNameExists - This function is needed by webhooks for both OpenStackBaremetalSets and VMSets
 // to help ensure that role names are unique across a given namespace
 func checkRoleNameExists(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta, role string) error {
 	existing, err := getRoleNames(objectMeta.Namespace)
@@ -37,7 +37,7 @@ func checkRoleNameExists(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta,
 func getRoleNames(namespace string) (map[string]string, error) {
 	found := map[string]string{}
 
-	// Get BaremetalSet role names
+	// Get OpenStackBaremetalSet role names
 	baremetalSetsList := &OpenStackBaremetalSetList{}
 	listOpts := []goClient.ListOption{
 		goClient.InNamespace(namespace),
