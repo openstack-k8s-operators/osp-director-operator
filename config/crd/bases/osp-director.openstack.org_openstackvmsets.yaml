@@ -55,6 +55,10 @@ spec:
               description: root Disc size in GB
               format: int32
               type: integer
+            isTripleoRole:
+              description: in case of external functionality, like 3rd party network
+                controllers, set to false to ignore role in rendered overcloud templates.
+              type: boolean
             memory:
               description: amount of Memory in GB used by the VMs
               format: int32
@@ -87,8 +91,8 @@ spec:
                 secret data'
               type: string
             role:
-              description: Role the name of the Overcloud role this IPset is associated
-                with. Used to generate hostnames.
+              description: Role the name of the Overcloud role this RoleSpec is associated
+                with. If it is a TripleO role, the name must match.
               type: string
             storageClass:
               description: StorageClass to be used for the disks
@@ -100,6 +104,7 @@ spec:
           - cores
           - deploymentSSHSecret
           - diskSize
+          - isTripleoRole
           - memory
           - networks
           - ospNetwork

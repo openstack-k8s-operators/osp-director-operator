@@ -70,9 +70,11 @@ func (r *OpenStackControlPlane) ValidateDelete() error {
 }
 
 func (r *OpenStackControlPlane) checkBaseImageReqs() error {
-	if r.Spec.Controller.BaseImageURL == "" && r.Spec.Controller.BaseImageVolumeName == "" {
-		return fmt.Errorf("Either \"baseImageURL\" or \"baseImageVolumeName\" must be provided")
-	}
+	for _, role := range r.Spec.VirtualMachineRoles {
+		if role.BaseImageURL == "" && role.BaseImageVolumeName == "" {
+			return fmt.Errorf(fmt.Sprintf("Either \"baseImageURL\" or \"baseImageVolumeName\" must be provided for role %s", role.Role))
+		}
 
+	}
 	return nil
 }

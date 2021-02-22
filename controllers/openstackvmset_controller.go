@@ -217,7 +217,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		Networks:            instance.Spec.Networks,
 		Role:                instance.Spec.Role,
 		HostCount:           instance.Spec.VMCount,
-		AddToPredictableIPs: true,
+		AddToPredictableIPs: instance.Spec.IsTripleoRole,
 	}
 	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {

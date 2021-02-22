@@ -104,7 +104,7 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 	}
 
 	// create role specific parameters from ipsets
-	// ipsets where overcloudipset.AddToPredictableIPsLabel: "true" will be skipped (openstackclient, controlplane)
+	// ipsets where _not_ overcloudipset.AddToPredictableIPsLabel: "true" will be skipped (openstackclient, controlplane)
 	for _, ipset := range overcloudIPList.Items {
 		// set <Role>HostnameFormat
 		hostnameFormat[fmt.Sprintf("%sHostnameFormat", ipset.Spec.Role)] = fmt.Sprintf("%s-%%index%%", strings.ToLower(ipset.Spec.Role))

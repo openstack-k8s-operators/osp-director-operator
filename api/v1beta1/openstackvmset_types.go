@@ -42,8 +42,10 @@ type OpenStackVMSetSpec struct {
 	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
+	// Role the name of the Overcloud role this RoleSpec is associated with. If it is a TripleO role, the name must match.
 	Role string `json:"role"`
+	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
+	IsTripleoRole bool `json:"isTripleoRole"`
 	// PasswordSecret the name of the secret used to optionally set the root pwd by adding
 	// NodeRootPassword: <base64 enc pwd>
 	// to the secret data

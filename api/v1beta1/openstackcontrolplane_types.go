@@ -22,17 +22,18 @@ import (
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
-	Controller OpenStackControllerSpec `json:"controller"`
+	// List of controller roles
+	VirtualMachineRoles []OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// OpenStackControllerSpec - defines the desired state of VMs VMs
-type OpenStackControllerSpec struct {
-	// Number of controllers to configure, 1 or 3
-	ControllerCount int `json:"controllerCount"`
+// OpenStackVirtualMachineRoleSpec - defines the desired state of controller VMs
+type OpenStackVirtualMachineRoleSpec struct {
+	// Number of VMs for the role
+	RoleCount int `json:"roleCount"`
 	// number of Cores assigned to the controller VMs
 	Cores uint32 `json:"cores"`
 	// amount of Memory in GB used by the controller VMs
@@ -49,8 +50,10 @@ type OpenStackControllerSpec struct {
 	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
+	// Role the name of the Overcloud role this RoleSpec is associated with. If it is a TripleO role, the name must match.
 	Role string `json:"role"`
+	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
+	IsTripleoRole bool `json:"isTripleoRole"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
