@@ -90,7 +90,7 @@ func (r *OpenStackBaremetalSetReconciler) GetScheme() *runtime.Scheme {
 
 // Reconcile baremetalset
 func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("baremetalset", req.NamespacedName)
+	_ = r.Log.WithValues("openstackbaremetalset", req.NamespacedName)
 	ctx := context.Background()
 
 	// Fetch the instance
@@ -178,13 +178,13 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		}
 
 		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
+			r.Log.Info(fmt.Sprintf("OpenStackBaremetalSet %s OpenStackProvisionServer successfully reconciled - operation: %s", instance.Name, string(op)))
 		}
 
 	} else {
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
 		if err != nil && errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("ProvisionServer %s not found reconcile again in 10 seconds", instance.Spec.ProvisionServerName))
+			r.Log.Info(fmt.Sprintf("OpenStackProvisionServer %s not found reconcile again in 10 seconds", instance.Spec.ProvisionServerName))
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		} else if err != nil {
 			return ctrl.Result{}, err
@@ -192,7 +192,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	}
 
 	if provisionServer.Status.LocalImageURL == "" {
-		r.Log.Info(fmt.Sprintf("BaremetalSet %s ProvisionServer local image URL not yet available, requeuing and waiting", instance.Name))
+		r.Log.Info(fmt.Sprintf("OpenStackBaremetalSet %s OpenStackProvisionServer local image URL not yet available, requeuing and waiting", instance.Name))
 		return ctrl.Result{RequeueAfter: time.Second * 30}, nil
 	}
 
@@ -221,11 +221,11 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	}
 
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.Replicas {
-		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.Replicas))
+		r.Log.Info(fmt.Sprintf("OpenStackIPSet has not yet reached the required replicas %d", instance.Spec.Replicas))
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
@@ -278,7 +278,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackBaremetalSet) (*ospdirectorv1beta1.OpenStackProvisionServer, controllerutil.OperationResult, error) {
 	provisionServer := &ospdirectorv1beta1.OpenStackProvisionServer{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.ObjectMeta.Name + "-provisionserver",
+			Name:      instance.ObjectMeta.Name + "-openstackprovisionserver",
 			Namespace: instance.ObjectMeta.Namespace,
 		},
 	}

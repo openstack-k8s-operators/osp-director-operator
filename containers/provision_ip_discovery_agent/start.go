@@ -34,10 +34,10 @@ var (
 		provServerNamespace string
 	}
 
-	provisionServerGVR = schema.GroupVersionResource{
+	openstackProvisionServerGVR = schema.GroupVersionResource{
 		Group:    "osp-director.openstack.org",
 		Version:  "v1beta1",
-		Resource: "provisionservers",
+		Resource: "openstackprovisionservers",
 	}
 )
 
@@ -101,7 +101,7 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 
 	dClient := dynamic.NewForConfigOrDie(config)
 
-	provServerClient := dClient.Resource(provisionServerGVR)
+	provServerClient := dClient.Resource(openstackProvisionServerGVR)
 
 	ip := ""
 
@@ -142,7 +142,7 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 		}
 
 		if curIP == "" {
-			glog.V(0).Infof("WARNING: Unable to find provisioning IP for ProvisionServer %s (namespace %s) on interface %s!\n", startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
+			glog.V(0).Infof("WARNING: Unable to find provisioning IP for OpenStackProvisionServer %s (namespace %s) on interface %s!\n", startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
 		} else if ip != curIP {
 
 			unstructured.Object["status"] = map[string]interface{}{
@@ -152,10 +152,10 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 			_, err = provServerClient.Namespace(startOpts.provServerNamespace).UpdateStatus(context.Background(), unstructured, metav1.UpdateOptions{})
 
 			if err != nil {
-				glog.V(0).Infof("Error updating ProvisionServer %s (namespace %s) \"provisionIp\" status: %s\n", startOpts.provServerName, startOpts.provServerNamespace, err)
+				glog.V(0).Infof("Error updating OpenStackProvisionServer %s (namespace %s) \"provisionIp\" status: %s\n", startOpts.provServerName, startOpts.provServerNamespace, err)
 			} else {
 				ip = curIP
-				glog.V(0).Infof("Updated ProvisionServer %s (namespace %s) with status \"provisionIp\": %s\n", startOpts.provServerName, startOpts.provServerNamespace, ip)
+				glog.V(0).Infof("Updated OpenStackProvisionServer %s (namespace %s) with status \"provisionIp\": %s\n", startOpts.provServerName, startOpts.provServerNamespace, ip)
 
 			}
 		}

@@ -96,7 +96,7 @@ func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // Reconcile - provision image servers
 func (r *OpenStackProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("provisionserver", req.NamespacedName)
+	_ = r.Log.WithValues("openstackprovisionserver", req.NamespacedName)
 
 	// Fetch the ProvisionServer instance
 	instance := &ospdirectorv1beta1.OpenStackProvisionServer{}
@@ -172,7 +172,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.R
 		curURL, err := url.Parse(instance.Status.LocalImageURL)
 
 		if err != nil {
-			r.Log.Error(err, "Failed to parse existing LocalImageURL for ProvisionServer %s: %s", instance.Name, instance.Status.LocalImageURL)
+			r.Log.Error(err, "Failed to parse existing LocalImageURL for OpenStackProvisionServer %s: %s", instance.Name, instance.Status.LocalImageURL)
 			return ctrl.Result{}, err
 		}
 
@@ -187,7 +187,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.R
 				return ctrl.Result{}, err
 			}
 
-			r.Log.Info(fmt.Sprintf("ProvisionServer %s status' LocalImageURL updated: %s", instance.Name, instance.Status.LocalImageURL))
+			r.Log.Info(fmt.Sprintf("OpenStackProvisionServer %s status' LocalImageURL updated: %s", instance.Name, instance.Status.LocalImageURL))
 		}
 	}
 
@@ -214,7 +214,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 	volumes := provisionserver.GetVolumes(instance.Name)
 
 	labels := common.GetLabels(instance.Name, provisionserver.AppLabel)
-	labels["deployment"] = instance.Name + "-provisionserver-deployment"
+	labels["deployment"] = instance.Name + "-openstackprovisionserver-deployment"
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +223,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-provisionserver-deployment"},
+				MatchLabels: map[string]string{"deployment": instance.Name + "-openstackprovisionserver-deployment"},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -276,7 +276,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 					Args:    []string{"start"},
 					Command: []string{"provision-ip-discovery-agent"},
 					// TODO: Create an openstack-k8s-operators quay image/tag for this
-					Image: "quay.io/abays/provision-ip-discovery-agent:0.0.11",
+					Image: "quay.io/abays/provision-ip-discovery-agent:0.0.1",
 					Env: []corev1.EnvVar{
 						{
 							Name:  "PROV_INTF",

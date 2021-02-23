@@ -20,8 +20,8 @@ const (
 	// AppLabel -
 	AppLabel = "osp-baremetalset"
 
-	// BaremetalHostRemovalAnnotation - Annotation key placed on BaremetalHost resources to target them for BaremetalSet scale-down
-	BaremetalHostRemovalAnnotation = "osp-director.openstack.org/baremetalset-delete-baremetalhost"
+	// BaremetalHostRemovalAnnotation - Annotation key placed on BaremetalHost resources to target them for OpenStackBaremetalSet scale-down
+	BaremetalHostRemovalAnnotation = "osp-director.openstack.org/openstackbaremetalset-delete-baremetalhost"
 
 	// CloudInitUserDataSecretName - Naming template used for generating BaremetalHost cloudinit userdata secrets
 	CloudInitUserDataSecretName = "%s-cloudinit-userdata-%s"
@@ -29,12 +29,12 @@ const (
 	CloudInitNetworkDataSecretName = "%s-cloudinit-networkdata-%s"
 
 	// FinalizerName -
-	FinalizerName = "baremetalsets.osp-director.openstack.org"
+	FinalizerName = "openstackbaremetalsets.osp-director.openstack.org"
 
 	// OwnerUIDLabelSelector - Ownership label for UID
-	OwnerUIDLabelSelector = "baremetalset.osp-director.openstack.org/uid"
+	OwnerUIDLabelSelector = "openstackbaremetalset.osp-director.openstack.org/uid"
 	// OwnerNameSpaceLabelSelector - Ownership label for Namespace
-	OwnerNameSpaceLabelSelector = "baremetalset.osp-director.openstack.org/namespace"
+	OwnerNameSpaceLabelSelector = "openstackbaremetalset.osp-director.openstack.org/namespace"
 	// OwnerNameLabelSelector - Ownership label for Name
-	OwnerNameLabelSelector = "baremetalset.osp-director.openstack.org/name"
+	OwnerNameLabelSelector = "openstackbaremetalset.osp-director.openstack.org/name"
 )
