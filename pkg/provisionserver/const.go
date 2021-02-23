@@ -21,15 +21,15 @@ const (
 	AppLabel = "osp-provisionserver"
 
 	// FinalizerName -
-	FinalizerName = "provisionservers.osp-director.openstack.org"
+	FinalizerName = "openstackprovisionservers.osp-director.openstack.org"
 
 	// OwnerUIDLabelSelector -
-	OwnerUIDLabelSelector = "provisionservers.osp-director.openstack.org/uid"
+	OwnerUIDLabelSelector = "openstackprovisionservers.osp-director.openstack.org/uid"
 	// OwnerNameSpaceLabelSelector -
-	OwnerNameSpaceLabelSelector = "provisionservers.osp-director.openstack.org/namespace"
+	OwnerNameSpaceLabelSelector = "openstackprovisionservers.osp-director.openstack.org/namespace"
 	// OwnerNameLabelSelector -
-	OwnerNameLabelSelector = "provisionservers.osp-director.openstack.org/name"
+	OwnerNameLabelSelector = "openstackprovisionservers.osp-director.openstack.org/name"
 
 	// ServiceAccount -
-	ServiceAccount = "osp-director-operator-provisionserver"
+	ServiceAccount = "osp-director-operator-openstackprovisionserver"
 )

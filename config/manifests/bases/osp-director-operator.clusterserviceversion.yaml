@@ -49,7 +49,7 @@ spec:
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackProvisionServer is the Schema for the provisionservers API
+    - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers API
       displayName: Open Stack Provision Server
       kind: OpenStackProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
