@@ -13,10 +13,10 @@
 # 3. CLI user has access to $KUBECONFIG
 # 4. There are preferrably NO existing OSP Director Operator CRs deployed
 #    - dev-tools probably installed them, so remove via:
-#        oc delete baremetalset --all
-#        oc delete controlplane --all
-#        oc delete vmset --all
-#        oc delete overcloudnet --all
+#        oc delete openstackbaremetalset --all
+#        oc delete openstackcontrolplane --all
+#        oc delete openstackvmset --all
+#        oc delete openstacknet --all
 #    - Existing OSP Director Operator CRs might cause the tests to either fail or succeed when the opposite should have happened
 #    - The ONE exception is the DataVolume for the base image.  This MUST be pre-existing, otherwise
 #      the tests will take way too long and fail the timeout
