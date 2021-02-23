@@ -106,7 +106,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 	}
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	finalizerName := "openstackbaremetalset.osp-director.openstack.org-" + instance.Name
+	finalizerName := "baremetalset.osp-director.openstack.org-" + instance.Name
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
@@ -278,7 +278,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackBaremetalSet) (*ospdirectorv1beta1.OpenStackProvisionServer, controllerutil.OperationResult, error) {
 	provisionServer := &ospdirectorv1beta1.OpenStackProvisionServer{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      instance.ObjectMeta.Name + "-openstackprovisionserver",
+			Name:      instance.ObjectMeta.Name + "-provisionserver",
 			Namespace: instance.ObjectMeta.Namespace,
 		},
 	}
