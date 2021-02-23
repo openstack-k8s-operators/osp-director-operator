@@ -214,7 +214,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 	volumes := provisionserver.GetVolumes(instance.Name)
 
 	labels := common.GetLabels(instance.Name, provisionserver.AppLabel)
-	labels["deployment"] = instance.Name + "-openstackprovisionserver-deployment"
+	labels["deployment"] = instance.Name + "-provisionserver-deployment"
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +223,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-openstackprovisionserver-deployment"},
+				MatchLabels: map[string]string{"deployment": instance.Name + "-provisionserver-deployment"},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
