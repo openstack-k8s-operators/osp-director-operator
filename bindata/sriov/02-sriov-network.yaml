@@ -1,0 +1,10 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: {{ .Network }}-network
+  namespace: openshift-sriov-network-operator
+spec:
+  spoofChk: "off"
+  trust: "on"
+  resourceName: {{ .Network }}sriovnics
+  networkNamespace: {{ .Namespace }}

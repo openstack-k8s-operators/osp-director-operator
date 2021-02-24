@@ -32,8 +32,16 @@ type Hash struct {
 // TODO: that might change depending on our outcome of network config
 type Network struct {
 	Name         string           `json:"name"`
-	BridgeName   string           `json:"bridgeName"`
+	BridgeName   string           `json:"bridgeName,omitempty"`
 	DesiredState nmstateapi.State `json:"desiredState,omitempty"`
+	SriovState   SriovState       `json:"sriovState,omitempty"`
+}
+
+// SriovState - If set, is chosen over DesiredState to configure SRIOV instead
+type SriovState struct {
+	Port       string `json:"port"`
+	RootDevice string `json:"rootDevice"`
+	// TODO: Add MTU, VFs, device type, etc
 }
 
 // HostStatus represents the hostname and IP info for a specific VM

@@ -82,8 +82,19 @@ spec:
                       type: object
                     name:
                       type: string
+                    sriovState:
+                      description: SriovState - If set, is chosen over DesiredState
+                        to configure SRIOV instead
+                      properties:
+                        port:
+                          type: string
+                        rootDevice:
+                          type: string
+                      required:
+                      - port
+                      - rootDevice
+                      type: object
                   required:
-                  - bridgeName
                   - name
                   type: object
                 role:

@@ -38,6 +38,8 @@ import (
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
+
+	//sriovnetworkv1 "github.com/openshift/sriov-network-operator/pkg/apis/sriovnetwork/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -371,7 +373,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Create network config
-	err = r.networkCreateAttachmentDefinition(instance)
+	err = r.createNetworkConfig(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -557,6 +559,9 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
 	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()
+	// SRIOV config
+	data.Data["Port"] = instance.Spec.OSPNetwork.SriovState.Port
+	data.Data["RootDevice"] = instance.Spec.OSPNetwork.SriovState.RootDevice
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
@@ -578,7 +583,7 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	return &data, nil
 }
 
-func (r *OpenStackVMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.OpenStackVMSet) error {
+func (r *OpenStackVMSetReconciler) createNetworkConfig(instance *ospdirectorv1beta1.OpenStackVMSet) error {
 	data, err := r.getRenderData(instance)
 	if err != nil {
 		return err
@@ -597,10 +602,16 @@ func (r *OpenStackVMSetReconciler) networkCreateAttachmentDefinition(instance *o
 		labelSelector[k] = v
 	}
 
-	// Generate the Network Definition objects
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "network"), data)
+	// Generate the Network Definition or SRIOV config objects
+	manifestType := "network"
+
+	if instance.Spec.OSPNetwork.SriovState.Port != "" {
+		manifestType = "sriov"
+	}
+
+	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, manifestType), data)
 	if err != nil {
-		r.Log.Error(err, "Failed to render network manifests : %v")
+		r.Log.Error(err, "Failed to render %s manifests : %v", manifestType)
 		return err
 	}
 	objs = append(objs, manifests...)
