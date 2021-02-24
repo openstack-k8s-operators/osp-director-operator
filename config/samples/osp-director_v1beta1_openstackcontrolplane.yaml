@@ -9,7 +9,6 @@ spec:
   # TODO update kuttl
   virtualMachineRoles:
   - role: Controller
-    isTripleoRole: true
     roleCount: 1
     cores: 2
     memory: 20

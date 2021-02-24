@@ -1,6 +1,6 @@
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
@@ -15,93 +15,92 @@ spec:
     plural: openstackclients
     singular: openstackclient
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: OpenStackClient used to create a container for deploying, scaling,
-        and managing the OpenStack Overcloud
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: OpenStackClientSpec defines the desired state of OpenStackClient
-          properties:
-            cloudName:
-              description: cloudname passed in via OS_CLOUDNAME
-              type: string
-            deploymentSSHSecret:
-              description: name of secret holding the stack-admin ssh keys
-              type: string
-            hostAliases:
-              description: additional Hostaliases added to the openstackclient hosts
-                file
-              items:
-                description: HostAlias holds the mapping between IP and hostnames
-                  that will be injected as an entry in the pod's hosts file.
-                properties:
-                  hostnames:
-                    description: Hostnames for the above IP address.
-                    items:
-                      type: string
-                    type: array
-                  ip:
-                    description: IP address of the host file entry.
-                    type: string
-                type: object
-              type: array
-            imageURL:
-              description: Name of the image
-              type: string
-            networks:
-              description: Networks the name(s) of the OpenStackNetworks used to generate
-                IPs
-              items:
-                type: string
-              type: array
-          required:
-          - cloudName
-          - deploymentSSHSecret
-          - hostAliases
-          - imageURL
-          - networks
-          type: object
-        status:
-          description: OpenStackClientStatus defines the observed state of OpenStackClient
-          properties:
-            netStatus:
-              additionalProperties:
-                description: HostStatus represents the hostname and IP info for a
-                  specific VM
-                properties:
-                  hostname:
-                    type: string
-                  ipaddresses:
-                    additionalProperties:
-                      type: string
-                    type: object
-                required:
-                - hostname
-                - ipaddresses
-                type: object
-              type: object
-          type: object
-      type: object
-  version: v1beta1
   versions:
   - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackClient used to create a container for deploying, scaling,
+          and managing the OpenStack Overcloud
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackClientSpec defines the desired state of OpenStackClient
+            properties:
+              cloudName:
+                description: cloudname passed in via OS_CLOUDNAME
+                type: string
+              deploymentSSHSecret:
+                description: name of secret holding the stack-admin ssh keys
+                type: string
+              hostAliases:
+                description: additional Hostaliases added to the openstackclient hosts
+                  file
+                items:
+                  description: HostAlias holds the mapping between IP and hostnames
+                    that will be injected as an entry in the pod's hosts file.
+                  properties:
+                    hostnames:
+                      description: Hostnames for the above IP address.
+                      items:
+                        type: string
+                      type: array
+                    ip:
+                      description: IP address of the host file entry.
+                      type: string
+                  type: object
+                type: array
+              imageURL:
+                description: Name of the image
+                type: string
+              networks:
+                description: Networks the name(s) of the OpenStackNetworks used to
+                  generate IPs
+                items:
+                  type: string
+                type: array
+            required:
+            - cloudName
+            - deploymentSSHSecret
+            - hostAliases
+            - imageURL
+            - networks
+            type: object
+          status:
+            description: OpenStackClientStatus defines the observed state of OpenStackClient
+            properties:
+              netStatus:
+                additionalProperties:
+                  description: HostStatus represents the hostname and IP info for
+                    a specific VM
+                  properties:
+                    hostname:
+                      type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                  - hostname
+                  - ipaddresses
+                  type: object
+                type: object
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

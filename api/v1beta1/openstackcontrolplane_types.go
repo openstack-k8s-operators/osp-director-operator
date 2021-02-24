@@ -53,7 +53,8 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// Role the name of the Overcloud role this RoleSpec is associated with. If it is a TripleO role, the name must match.
 	Role string `json:"role"`
 	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
-	IsTripleoRole bool `json:"isTripleoRole"`
+	// +kubebuilder:default=true
+	IsTripleoRole bool `json:"isTripleoRole,omitempty"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
