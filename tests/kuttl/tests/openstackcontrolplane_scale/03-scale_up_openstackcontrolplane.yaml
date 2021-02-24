@@ -1,0 +1,10 @@
+#
+# Scale OpenStackControlPlane to 3 controllers
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/controller/controllerCount", "value":3}]'
+    namespaced: true

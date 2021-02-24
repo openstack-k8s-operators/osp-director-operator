@@ -1,0 +1,35 @@
+#
+# Q: WHAT IS TESTED HERE?
+#
+# A: 
+#
+# - Create an OpenStackNet and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
+# - Verify that a predictable IP has been assigned to the OpenStackClient (in the OpenStackNet and the
+#   associated OpenStackIPSet)
+# - Scale the OpenStackControlPlane up to 3 controllers
+# - Check for IP reservations in the OpenStackNet, associated OpenStackIPSet and OpenStackVMSet for the 3 
+#    VirtualMachines that should be created
+# - Scale the OpenStackControlPlane down to 1 controller
+# - Check that the IP reservations are removed from the OpenStackVMSet and OpenStackIPSet, but remain in the
+#   OpenStackNet
+# - Scale the OpenStackControlPlane back to 3 controllers
+# - Check that the IP reservations in the OpenStackIPSet and OpenStackVMSet reuse the original IPs from
+#   the original scale-up
+# - Delete the OpenStackControlPlane
+# - Check that all sub-resources (OpenStackVMSets, VirtualMachines, OpenStackIPSets, OpenStackClient, etc)
+#   are removed
+#
+
+#
+# Attempt to "clear the field" if necessary
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc delete openstackcontrolplane overcloud -n openstack --ignore-not-found
+    namespaced: true
+  - command: oc delete openstackvmset controller -n openstack --ignore-not-found
+    namespaced: true
+  - command: oc delete openstacknet ctlplane -n openstack --ignore-not-found
+    namespaced: true

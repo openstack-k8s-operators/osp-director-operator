@@ -7,13 +7,13 @@ spec:
   openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
   controller:
     Role: Controller
-    controllerCount: 1
+    controllerCount: 0
     cores: 2
     memory: 20
     diskSize: 50
     baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
     storageClass: host-nfs-storageclass
-    #baseImageVolumeName: #optional
+    baseImageVolumeName: openstack-base-img #optional
     networks:
       - ctlplane
     role: controller
