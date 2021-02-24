@@ -93,8 +93,19 @@ spec:
                           on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                         type: object
                     type: object
+                  sriovState:
+                    description: SriovState - If set, is chosen over DesiredState
+                      to configure SRIOV instead
+                    properties:
+                      port:
+                        type: string
+                      rootDevice:
+                        type: string
+                    required:
+                    - port
+                    - rootDevice
+                    type: object
                 required:
-                - bridgeName
                 - name
                 type: object
               passwordSecret:
