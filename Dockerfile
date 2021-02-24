@@ -2,6 +2,7 @@ ARG GOLANG_BUILDER=golang:1.13
 ARG OPERATOR_BASE_IMAGE=gcr.io/distroless/static:nonroot
 
 # Build the manager binary
+# Testing Depends-on
 FROM ${GOLANG_BUILDER} AS builder
 
 ARG GO_BUILD_EXTRA_ARGS
