@@ -28,7 +28,6 @@ testDirs:                      # The actual kuttl tests
   - ./tests/kuttl/tests
 crdDir: ./config/crd/bases     # CRDs needed for our operator
 manifestDirs:                  # YAMLs to apply before each test
-  - ./tests/kuttl/manifests
 reportFormat: JSON
 reportName: kuttl-test
 namespace: openstack

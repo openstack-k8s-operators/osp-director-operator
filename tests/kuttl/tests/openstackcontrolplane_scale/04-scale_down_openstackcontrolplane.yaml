@@ -12,5 +12,5 @@ commands:
       oc annotate vm controller-1 osp-director.openstack.org/openstackvmset-delete-virtualmachine=true
     namespaced: true
   - command: |
-      oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/controller/controllerCount", "value":1}]'
+      oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/0/roleCount", "value":1}]'
     namespaced: true

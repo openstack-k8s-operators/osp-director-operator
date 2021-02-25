@@ -14,8 +14,8 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  controller:
-    controllerCount: 3
+  virtualMachineRoles:
+  - roleCount: 3
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -99,19 +99,19 @@ status:
     hostname: controller-0
     idKey: controller-0
     ip: 192.168.25.102
-    role: controller
+    role: Controller
     vip: false
   - addToPredictableIPs: true
     hostname: controller-1
     idKey: controller-1
     ip: 192.168.25.103
-    role: controller
+    role: Controller
     vip: false
   - addToPredictableIPs: true
     hostname: controller-2
     idKey: controller-2
     ip: 192.168.25.104
-    role: controller
+    role: Controller
     vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -126,7 +126,7 @@ spec:
   hostCount: 3
   networks:
   - ctlplane
-  role: controller
+  role: Controller
   vip: false
 status:
   hosts:
