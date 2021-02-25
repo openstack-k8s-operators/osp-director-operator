@@ -20,7 +20,9 @@ spec:
           requests:
             storage: {{ .DiskSize }}Gi
         volumeMode: Filesystem
+{{- if .StorageClass }}
         storageClassName: {{ .StorageClass }}
+{{- end }}
       source:
         pvc:
           name: {{ .BaseImageVolumeName }}
