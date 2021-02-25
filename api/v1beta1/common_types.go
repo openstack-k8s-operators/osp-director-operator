@@ -31,9 +31,9 @@ type Hash struct {
 // Network - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 // TODO: that might change depending on our outcome of network config
 type Network struct {
-	Name         string           `json:"name"`
-	BridgeName   string           `json:"bridgeName"`
-	DesiredState nmstateapi.State `json:"desiredState,omitempty"`
+	Name                           string                                        `json:"name"`
+	BridgeName                     string                                        `json:"bridgeName"`
+	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
 }
 
 // HostStatus represents the hostname and IP info for a specific VM

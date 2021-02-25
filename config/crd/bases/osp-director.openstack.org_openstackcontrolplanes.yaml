@@ -40,25 +40,52 @@ spec:
               openStackClientImageURL:
                 description: OpenstackClient image
                 type: string
+              ospNetwork:
+                description: OSPNetwork
+                properties:
+                  bridgeName:
+                    type: string
+                  name:
+                    type: string
+                  nodeNetworkConfigurationPolicy:
+                    description: NodeNetworkConfigurationPolicySpec defines the desired
+                      state of NodeNetworkConfigurationPolicy
+                    properties:
+                      desiredState:
+                        description: The desired configuration of the policy
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: 'NodeSelector is a selector which must be true
+                          for the policy to be applied to the node. Selector which
+                          must match a node''s labels for the policy to be scheduled
+                          on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                        type: object
+                    type: object
+                required:
+                - bridgeName
+                - name
+                type: object
               passwordSecret:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string
               virtualMachineRoles:
-                description: List of controller roles
+                description: List of VirtualMachine roles
                 items:
                   description: OpenStackVirtualMachineRoleSpec - defines the desired
-                    state of controller VMs
+                    state of VMs
                   properties:
                     baseImageURL:
-                      description: Name of the VM base image used to setup the controller
-                        VMs
+                      description: Name of the VM base image used to setup the VM
                       type: string
                     baseImageVolumeName:
                       description: BaseImageVolumeName Optional. If supplied will
                         be used as the base volume for the VM instead of BaseImageURL.
                       type: string
                     cores:
-                      description: number of Cores assigned to the controller VMs
+                      description: number of Cores assigned to the VM
                       format: int32
                       type: integer
                     diskSize:
@@ -72,7 +99,7 @@ spec:
                         overcloud templates.
                       type: boolean
                     memory:
-                      description: amount of Memory in GB used by the controller VMs
+                      description: amount of Memory in GB used by the VM
                       format: int32
                       type: integer
                     networks:
@@ -81,22 +108,6 @@ spec:
                       items:
                         type: string
                       type: array
-                    ospNetwork:
-                      description: OSPNetwork
-                      properties:
-                        bridgeName:
-                          type: string
-                        desiredState:
-                          description: "State contains the namestatectl yaml [1] as
-                            string instead of golang struct so we don't need to be
-                            in sync with the schema. \n [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
-                          type: object
-                        name:
-                          type: string
-                      required:
-                      - bridgeName
-                      - name
-                      type: object
                     role:
                       description: Role the name of the Overcloud role this RoleSpec
                         is associated with. If it is a TripleO role, the name must
@@ -113,13 +124,13 @@ spec:
                   - diskSize
                   - memory
                   - networks
-                  - ospNetwork
                   - role
                   - roleCount
                   type: object
                 type: array
             required:
             - openStackClientImageURL
+            - ospNetwork
             - virtualMachineRoles
             type: object
           status:

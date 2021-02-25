@@ -22,32 +22,32 @@ import (
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
-	// List of controller roles
+	// List of VirtualMachine roles
 	VirtualMachineRoles []OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
+	// OSPNetwork
+	OSPNetwork Network `json:"ospNetwork"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// OpenStackVirtualMachineRoleSpec - defines the desired state of controller VMs
+// OpenStackVirtualMachineRoleSpec - defines the desired state of VMs
 type OpenStackVirtualMachineRoleSpec struct {
 	// Number of VMs for the role
 	RoleCount int `json:"roleCount"`
-	// number of Cores assigned to the controller VMs
+	// number of Cores assigned to the VM
 	Cores uint32 `json:"cores"`
-	// amount of Memory in GB used by the controller VMs
+	// amount of Memory in GB used by the VM
 	Memory uint32 `json:"memory"`
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
-	// Name of the VM base image used to setup the controller VMs
+	// Name of the VM base image used to setup the VM
 	BaseImageURL string `json:"baseImageURL,omitempty"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass,omitempty"`
 	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
-	// OSPNetwork
-	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 	// Role the name of the Overcloud role this RoleSpec is associated with. If it is a TripleO role, the name must match.

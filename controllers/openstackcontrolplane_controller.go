@@ -200,9 +200,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 			if vmRole.StorageClass != "" {
 				vmSet.Spec.StorageClass = vmRole.StorageClass
 			}
-			vmSet.Spec.BaseImageVolumeName = vmRole.BaseImageVolumeName
+			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
-			vmSet.Spec.OSPNetwork = vmRole.OSPNetwork
+			vmSet.Spec.OSPNetwork = instance.Spec.OSPNetwork
 			vmSet.Spec.Networks = vmRole.Networks
 			vmSet.Spec.Role = vmRole.Role
 			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
