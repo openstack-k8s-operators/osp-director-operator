@@ -37,8 +37,8 @@ spec:
       domain:
         cpu:
           cores: {{ .Cores }}
-{{- if .Port }}
-        # TODO: parameterize this stuff
+{{- if .SriovPort }}
+        # TODO: parameterize this stuff?
           sockets: 2
           threads: 1
           dedicatedCpuPlacement: true
@@ -59,7 +59,7 @@ spec:
           - masquerade: {}
             model: virtio
             name: default
-{{- if .Port }}
+{{- if .SriovPort }}
           - sriov: {}
 {{- else }}
           - bridge: {}
@@ -89,7 +89,7 @@ spec:
       - name: default
         pod: {}
       - multus:
-{{- if .Port }}
+{{- if .SriovPort }}
           networkName: {{ .Namespace }}/{{ .Network }}-network
 {{- else }}
           networkName: {{ .Network }}

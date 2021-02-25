@@ -8,10 +8,9 @@ spec:
   mtu: 9000
   nicSelector:
     rootDevices:
-    #- "0000:06:00.0"
-    - {{ .RootDevice }}
+    - {{ .SriovRootDevice }}
     pfNames:
-    - {{ .Port }}
+    - {{ .SriovPort }}
   nodeSelector:
     node-role.kubernetes.io/worker: ""
   numVfs: 1
