@@ -42,7 +42,7 @@ type OpenStackControllerSpec struct {
 	// Name of the VM base image used to setup the controller VMs
 	BaseImageURL string `json:"baseImageURL,omitempty"`
 	// StorageClass to be used for the controller disks
-	StorageClass string `json:"storageClass"`
+	StorageClass string `json:"storageClass,omitempty"`
 	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 	// OSPNetwork

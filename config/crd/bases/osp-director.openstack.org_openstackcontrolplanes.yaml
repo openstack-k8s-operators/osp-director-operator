@@ -101,7 +101,6 @@ spec:
               - networks
               - ospNetwork
               - role
-              - storageClass
               type: object
             openStackClientImageURL:
               description: OpenstackClient image

@@ -550,7 +550,10 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	data.Data["Namespace"] = instance.Namespace
 	data.Data["Cores"] = instance.Spec.Cores
 	data.Data["Memory"] = instance.Spec.Memory
-	data.Data["StorageClass"] = instance.Spec.StorageClass
+	data.Data["StorageClass"] = ""
+	if instance.Spec.StorageClass != "" {
+		data.Data["StorageClass"] = instance.Spec.StorageClass
+	}
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
 	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()

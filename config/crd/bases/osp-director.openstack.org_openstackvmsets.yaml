@@ -104,7 +104,6 @@ spec:
           - networks
           - ospNetwork
           - role
-          - storageClass
           - vmCount
           type: object
         status:
