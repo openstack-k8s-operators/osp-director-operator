@@ -196,7 +196,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		ospVMSet.Spec.Cores = instance.Spec.Controller.Cores
 		ospVMSet.Spec.Memory = instance.Spec.Controller.Memory
 		ospVMSet.Spec.DiskSize = instance.Spec.Controller.DiskSize
-		ospVMSet.Spec.StorageClass = instance.Spec.Controller.StorageClass
+		if instance.Spec.Controller.StorageClass != "" {
+			ospVMSet.Spec.StorageClass = instance.Spec.Controller.StorageClass
+		}
 		ospVMSet.Spec.BaseImageVolumeName = instance.Spec.Controller.DeepCopy().BaseImageVolumeName
 		ospVMSet.Spec.DeploymentSSHSecret = deploymentSecretName
 		ospVMSet.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
