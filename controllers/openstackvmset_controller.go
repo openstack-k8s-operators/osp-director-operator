@@ -215,7 +215,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
-		Role:                instance.Spec.Role,
+		Role:                instance.Spec.RoleName,
 		HostCount:           instance.Spec.VMCount,
 		AddToPredictableIPs: instance.Spec.IsTripleoRole,
 	}
@@ -323,7 +323,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 		hostnameDetails := common.Hostname{
 			IDKey:    hostKey, //fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i),
-			Basename: instance.Spec.Role,
+			Basename: instance.Spec.RoleName,
 			VIP:      false,
 		}
 

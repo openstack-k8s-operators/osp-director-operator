@@ -50,9 +50,9 @@ spec:
                 items:
                   type: string
                 type: array
-              role:
-                description: Role the name of the Overcloud role this IPset is associated
-                  with. Used to generate hostnames.
+              roleName:
+                description: RoleName the name of the TripleO role this VM Spec is
+                  associated with. If it is a TripleO role, the name must match.
                 type: string
               vip:
                 description: VIP flag to indicate ipset is a request for a VIP
@@ -61,7 +61,7 @@ spec:
             - addToPredictableIPs
             - hostCount
             - networks
-            - role
+            - roleName
             - vip
             type: object
           status:

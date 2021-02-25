@@ -554,9 +554,9 @@ func (in *OpenStackControlPlaneSpec) DeepCopyInto(out *OpenStackControlPlaneSpec
 	*out = *in
 	if in.VirtualMachineRoles != nil {
 		in, out := &in.VirtualMachineRoles, &out.VirtualMachineRoles
-		*out = make([]OpenStackVirtualMachineRoleSpec, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = make(map[string]OpenStackVirtualMachineRoleSpec, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 	in.OSPNetwork.DeepCopyInto(&out.OSPNetwork)

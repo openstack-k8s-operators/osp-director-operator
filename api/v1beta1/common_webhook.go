@@ -49,7 +49,7 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	for _, bmSet := range baremetalSetsList.Items {
-		found[fmt.Sprintf("%s/%s", bmSet.Kind, bmSet.Name)] = bmSet.Spec.Role
+		found[fmt.Sprintf("%s/%s", bmSet.Kind, bmSet.Name)] = bmSet.Spec.RoleName
 	}
 
 	// Get VMSet role names
@@ -61,7 +61,7 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	for _, vmSet := range vmSetsList.Items {
-		found[fmt.Sprintf("%s/%s", vmSet.Kind, vmSet.Name)] = vmSet.Spec.Role
+		found[fmt.Sprintf("%s/%s", vmSet.Kind, vmSet.Name)] = vmSet.Spec.RoleName
 	}
 
 	return found, nil

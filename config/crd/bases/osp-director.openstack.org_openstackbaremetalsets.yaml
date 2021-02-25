@@ -157,15 +157,15 @@ spec:
                 description: Replicas The number of baremetalhosts to attempt to aquire
                 minimum: 0
                 type: integer
-              role:
-                description: Role the name of the Overcloud role this IPset is associated
-                  with. Used to generate hostnames.
+              roleName:
+                description: RoleName the name of the TripleO role this VM Spec is
+                  associated with. If it is a TripleO role, the name must match.
                 type: string
             required:
             - ctlplaneInterface
             - deploymentSSHSecret
             - networks
-            - role
+            - roleName
             type: object
           status:
             description: OpenStackBaremetalSetStatus defines the observed state of

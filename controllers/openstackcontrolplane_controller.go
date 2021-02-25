@@ -186,7 +186,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
 			ObjectMeta: metav1.ObjectMeta{
 				// use the role name as the VM CR name
-				Name:      strings.ToLower(vmRole.Role),
+				Name:      strings.ToLower(vmRole.RoleName),
 				Namespace: instance.Namespace,
 			},
 		}
@@ -204,7 +204,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
 			vmSet.Spec.OSPNetwork = instance.Spec.OSPNetwork
 			vmSet.Spec.Networks = vmRole.Networks
-			vmSet.Spec.Role = vmRole.Role
+			vmSet.Spec.RoleName = vmRole.RoleName
 			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
 			if instance.Spec.PasswordSecret != "" {
 				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret

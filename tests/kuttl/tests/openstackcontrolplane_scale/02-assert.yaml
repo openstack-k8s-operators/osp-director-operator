@@ -34,17 +34,18 @@ spec:
           state: up
           type: linux-bridge
   virtualMachineRoles:
-  - role: Controller
-    roleCount: 0
-    cores: 2
-    isTripleoRole: true
-    memory: 20
-    diskSize: 50
-    baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
-    storageClass: host-nfs-storageclass
-    baseImageVolumeName: openstack-base-img #optional
-    networks:
-    - ctlplane
+    controller:
+      roleName: Controller
+      roleCount: 0
+      cores: 2
+      isTripleoRole: true
+      memory: 20
+      diskSize: 50
+      baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+      storageClass: host-nfs-storageclass
+      baseImageVolumeName: openstack-base-img #optional
+      networks:
+      - ctlplane
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -78,7 +79,7 @@ spec:
           name: br-osp # must be same as bridgeName
           state: up
           type: linux-bridge
-  role: Controller
+  roleName: Controller
   storageClass: host-nfs-storageclass
   vmCount: 0
 status:
@@ -134,7 +135,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
-  role: ControlPlane
+  roleName: ControlPlane
   vip: true
 status:
   hosts:
@@ -160,7 +161,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
-  role: OpenstackClient
+  roleName: OpenstackClient
   vip: false
 status:
   hosts:

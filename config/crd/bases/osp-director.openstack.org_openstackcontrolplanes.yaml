@@ -72,8 +72,7 @@ spec:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string
               virtualMachineRoles:
-                description: List of VirtualMachine roles
-                items:
+                additionalProperties:
                   description: OpenStackVirtualMachineRoleSpec - defines the desired
                     state of VMs
                   properties:
@@ -108,14 +107,14 @@ spec:
                       items:
                         type: string
                       type: array
-                    role:
-                      description: Role the name of the Overcloud role this RoleSpec
-                        is associated with. If it is a TripleO role, the name must
-                        match.
-                      type: string
                     roleCount:
                       description: Number of VMs for the role
                       type: integer
+                    roleName:
+                      description: RoleName the name of the TripleO role this VM Spec
+                        is associated with. If it is a TripleO role, the name must
+                        match.
+                      type: string
                     storageClass:
                       description: StorageClass to be used for the controller disks
                       type: string
@@ -124,10 +123,11 @@ spec:
                   - diskSize
                   - memory
                   - networks
-                  - role
                   - roleCount
+                  - roleName
                   type: object
-                type: array
+                description: List of VirtualMachine roles
+                type: object
             required:
             - openStackClientImageURL
             - ospNetwork

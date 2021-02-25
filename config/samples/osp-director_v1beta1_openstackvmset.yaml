@@ -31,4 +31,4 @@ spec:
           type: linux-bridge
   networks:
     - ctlplane
-  role: Controller
+  roleName: Controller

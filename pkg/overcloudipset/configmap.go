@@ -107,19 +107,19 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 	// ipsets where _not_ overcloudipset.AddToPredictableIPsLabel: "true" will be skipped (openstackclient, controlplane)
 	for _, ipset := range overcloudIPList.Items {
 		// set <Role>HostnameFormat
-		hostnameFormat[fmt.Sprintf("%sHostnameFormat", ipset.Spec.Role)] = fmt.Sprintf("%s-%%index%%", strings.ToLower(ipset.Spec.Role))
+		hostnameFormat[fmt.Sprintf("%sHostnameFormat", ipset.Spec.RoleName)] = fmt.Sprintf("%s-%%index%%", strings.ToLower(ipset.Spec.RoleName))
 		// set <Role>Count
-		roleCount[fmt.Sprintf("%sCount", ipset.Spec.Role)] = strconv.Itoa(ipset.Spec.HostCount)
+		roleCount[fmt.Sprintf("%sCount", ipset.Spec.RoleName)] = strconv.Itoa(ipset.Spec.HostCount)
 		// create PortsFromPool map for network isolation to set Ports resource_registry entries
 		for _, net := range ipset.Spec.Networks {
 			if net == "ctlplane" {
 				continue
 			}
 			portConfig := fmt.Sprintf("/usr/share/openstack-tripleo-heat-templates/network/ports/%s_from_pool.yaml", net)
-			if rolePortsFromPool[ipset.Spec.Role][GetNetName(net)] == "" {
-				rolePortsFromPool[ipset.Spec.Role] = map[string]string{GetNetName(net): portConfig}
+			if rolePortsFromPool[ipset.Spec.RoleName][GetNetName(net)] == "" {
+				rolePortsFromPool[ipset.Spec.RoleName] = map[string]string{GetNetName(net): portConfig}
 			} else {
-				rolePortsFromPool[ipset.Spec.Role][GetNetName(net)] = portConfig
+				rolePortsFromPool[ipset.Spec.RoleName][GetNetName(net)] = portConfig
 			}
 		}
 

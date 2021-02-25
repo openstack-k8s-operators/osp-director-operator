@@ -102,8 +102,8 @@ spec:
                   set the root pwd by adding NodeRootPassword: <base64 enc pwd> to
                   the secret data'
                 type: string
-              role:
-                description: Role the name of the Overcloud role this RoleSpec is
+              roleName:
+                description: RoleName the name of the TripleO role this VM Spec is
                   associated with. If it is a TripleO role, the name must match.
                 type: string
               storageClass:
@@ -120,7 +120,7 @@ spec:
             - memory
             - networks
             - ospNetwork
-            - role
+            - roleName
             - vmCount
             type: object
           status:

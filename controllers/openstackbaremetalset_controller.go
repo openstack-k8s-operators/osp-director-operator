@@ -211,7 +211,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
-		Role:                instance.Spec.Role,
+		Role:                instance.Spec.RoleName,
 		HostCount:           instance.Spec.Replicas,
 		AddToPredictableIPs: true,
 	}
@@ -451,7 +451,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 
 	hostnameDetails := common.Hostname{
 		IDKey:    bmh,
-		Basename: instance.Spec.Role,
+		Basename: instance.Spec.RoleName,
 		VIP:      false,
 	}
 	err := common.CreateOrGetHostname(instance, &hostnameDetails)

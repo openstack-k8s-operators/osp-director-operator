@@ -24,25 +24,26 @@ spec:
           state: up
           type: linux-bridge
   virtualMachineRoles:
-  - role: Controller
-    roleCount: 0
-    cores: 2
-    memory: 20
-    diskSize: 50
-    baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
-    storageClass: host-nfs-storageclass
-    baseImageVolumeName: openstack-base-img #optional
-    networks:
-    - ctlplane
-
-  - role: SomeCustomVM
-    isTripleoRole: false
-    roleCount: 0
-    cores: 2
-    memory: 20
-    diskSize: 50
-    baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
-    storageClass: host-nfs-storageclass
-    #baseImageVolumeName: #optional
-    networks:
-    - ctlplane
+    controller:
+      roleName: Controller
+      roleCount: 0
+      cores: 2
+      memory: 20
+      diskSize: 50
+      baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+      storageClass: host-nfs-storageclass
+      baseImageVolumeName: openstack-base-img #optional
+      networks:
+      - ctlplane
+    somecustomrole:
+      roleName: SomeCustomRole
+      isTripleoRole: false
+      roleCount: 0
+      cores: 2
+      memory: 20
+      diskSize: 50
+      baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+      storageClass: host-nfs-storageclass
+      #baseImageVolumeName: #optional
+      networks:
+      - ctlplane

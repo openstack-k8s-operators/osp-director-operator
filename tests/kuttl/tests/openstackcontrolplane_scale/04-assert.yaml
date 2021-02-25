@@ -15,7 +15,8 @@ metadata:
   namespace: openstack
 spec:
   virtualMachineRoles:
-  - roleCount: 1
+    controller:
+      roleCount: 1
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -94,7 +95,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
-  role: Controller
+  roleName: Controller
   vip: false
 status:
   hosts:

@@ -23,7 +23,7 @@ import (
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
 	// List of VirtualMachine roles
-	VirtualMachineRoles []OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
+	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
 	// OSPNetwork
 	OSPNetwork Network `json:"ospNetwork"`
 	// OpenstackClient image
@@ -50,8 +50,8 @@ type OpenStackVirtualMachineRoleSpec struct {
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this RoleSpec is associated with. If it is a TripleO role, the name must match.
-	Role string `json:"role"`
+	// RoleName the name of the TripleO role this VM Spec is associated with. If it is a TripleO role, the name must match.
+	RoleName string `json:"roleName"`
 	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
 	// +kubebuilder:default=true
 	IsTripleoRole bool `json:"isTripleoRole,omitempty"`
