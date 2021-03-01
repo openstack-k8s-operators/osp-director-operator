@@ -42,8 +42,8 @@ type OpenStackBaremetalSetSpec struct {
 	HardwareReqs HardwareReqs `json:"hardwareReqs,omitempty"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
-	Role string `json:"role"`
+	// RoleName the name of the TripleO role this VM Spec is associated with. If it is a TripleO role, the name must match.
+	RoleName string `json:"roleName"`
 	// PasswordSecret the name of the secret used to optionally set the root pwd by adding
 	// NodeRootPassword: <base64 enc pwd>
 	// to the secret data

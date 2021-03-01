@@ -4,6 +4,8 @@ metadata:
   name: {{ .BridgeName }}
 spec:
   nodeSelector:
-    node-role.kubernetes.io/worker: ""
+{{- range $label, $selector := .NodeNetworkConfigurationPolicyNodeSelector }}
+    {{ $label }}: {{ $selector }}
+{{- end }}
   desiredState:
-    {{ .DesiredState | nindent 4 }}
+    {{ .NodeNetworkConfigurationPolicyDesiredState | nindent 4 }}

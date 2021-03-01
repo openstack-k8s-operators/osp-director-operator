@@ -138,89 +138,92 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
-	ipsetDetails := common.IPSet{
-		Networks:            instance.Spec.Controller.Networks,
-		Role:                controlplane.Role,
-		HostCount:           controlplane.Count,
-		VIP:                 true,
-		AddToPredictableIPs: false,
-	}
-	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
-
-	if len(ipset.Status.HostIPs) < controlplane.Count {
-		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count))
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-	}
-
-	hostnameDetails := common.Hostname{
-		IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(controlplane.Role), 0),
-		Basename: controlplane.Role,
-		VIP:      true,
-	}
-	err = common.CreateOrGetHostname(instance, &hostnameDetails)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// update VIP network status
-	for _, netName := range instance.Spec.Controller.Networks {
-		// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
-		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
-	}
-	err = r.Client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		r.Log.Error(err, "Failed to update CR status %v")
-		return ctrl.Result{}, err
-	}
-	r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.IDKey].Hostname, instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses))
-
-	// Create or update the controllerVM CR object
-	ospVMSet := &ospdirectorv1beta1.OpenStackVMSet{
-		ObjectMeta: metav1.ObjectMeta{
-			// use the role name as the VM CR name
-			Name:      strings.ToLower(instance.Spec.Controller.Role),
-			Namespace: instance.Namespace,
-		},
-	}
-
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, ospVMSet, func() error {
-		ospVMSet.Spec.BaseImageURL = instance.Spec.Controller.BaseImageURL
-		ospVMSet.Spec.VMCount = instance.Spec.Controller.ControllerCount
-		ospVMSet.Spec.Cores = instance.Spec.Controller.Cores
-		ospVMSet.Spec.Memory = instance.Spec.Controller.Memory
-		ospVMSet.Spec.DiskSize = instance.Spec.Controller.DiskSize
-		if instance.Spec.Controller.StorageClass != "" {
-			ospVMSet.Spec.StorageClass = instance.Spec.Controller.StorageClass
+	for _, vmRole := range instance.Spec.VirtualMachineRoles {
+		ipsetDetails := common.IPSet{
+			Networks:            vmRole.Networks,
+			Role:                controlplane.Role,
+			HostCount:           controlplane.Count,
+			VIP:                 true,
+			AddToPredictableIPs: false,
 		}
-		ospVMSet.Spec.BaseImageVolumeName = instance.Spec.Controller.DeepCopy().BaseImageVolumeName
-		ospVMSet.Spec.DeploymentSSHSecret = deploymentSecretName
-		ospVMSet.Spec.OSPNetwork = instance.Spec.Controller.OSPNetwork
-		ospVMSet.Spec.Networks = instance.Spec.Controller.Networks
-		ospVMSet.Spec.Role = instance.Spec.Controller.Role
-		if instance.Spec.PasswordSecret != "" {
-			ospVMSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
-		}
-
-		err := controllerutil.SetControllerReference(instance, ospVMSet, r.Scheme)
+		ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 		if err != nil {
-			return err
+			return ctrl.Result{}, err
 		}
 
-		return nil
-	})
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		}
 
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		if len(ipset.Status.HostIPs) < controlplane.Count {
+			r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+
+		hostnameDetails := common.Hostname{
+			IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(controlplane.Role), 0),
+			Basename: controlplane.Role,
+			VIP:      true,
+		}
+		err = common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// update VIP network status
+		for _, netName := range vmRole.Networks {
+			// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
+			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
+		}
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.IDKey].Hostname, instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses))
+
+		// Create or update the vmSet CR object
+		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
+			ObjectMeta: metav1.ObjectMeta{
+				// use the role name as the VM CR name
+				Name:      strings.ToLower(vmRole.RoleName),
+				Namespace: instance.Namespace,
+			},
+		}
+
+		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, vmSet, func() error {
+			vmSet.Spec.BaseImageURL = vmRole.BaseImageURL
+			vmSet.Spec.VMCount = vmRole.RoleCount
+			vmSet.Spec.Cores = vmRole.Cores
+			vmSet.Spec.Memory = vmRole.Memory
+			vmSet.Spec.DiskSize = vmRole.DiskSize
+			if vmRole.StorageClass != "" {
+				vmSet.Spec.StorageClass = vmRole.StorageClass
+			}
+			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
+			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
+			vmSet.Spec.OSPNetwork = instance.Spec.OSPNetwork
+			vmSet.Spec.Networks = vmRole.Networks
+			vmSet.Spec.RoleName = vmRole.RoleName
+			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
+			if instance.Spec.PasswordSecret != "" {
+				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
+			}
+
+			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		}
 	}
 
 	// get PodIP's from the OSP controller VMs and update openstackclient
@@ -242,11 +245,12 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 			Namespace: instance.Namespace,
 		},
 	}
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
-		openstackclient.Spec.Networks = instance.Spec.Controller.Networks
+		// openstackclient pod is only connected to the ctlplane network
+		openstackclient.Spec.Networks = []string{"ctlplane"}
 		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)
 
 		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)

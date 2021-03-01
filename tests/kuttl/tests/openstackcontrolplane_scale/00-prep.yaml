@@ -33,3 +33,7 @@ commands:
     namespaced: true
   - command: oc delete openstacknet ctlplane -n openstack --ignore-not-found
     namespaced: true
+  - command: oc delete NodeNetworkConfigurationPolicy -n openstack br-osp --ignore-not-found
+    namespaced: true
+  - command: oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found
+    namespaced: true

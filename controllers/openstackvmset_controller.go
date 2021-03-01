@@ -215,9 +215,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
-		Role:                instance.Spec.Role,
+		Role:                instance.Spec.RoleName,
 		HostCount:           instance.Spec.VMCount,
-		AddToPredictableIPs: true,
+		AddToPredictableIPs: instance.Spec.IsTripleoRole,
 	}
 	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
@@ -323,7 +323,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 		hostnameDetails := common.Hostname{
 			IDKey:    hostKey, //fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i),
-			Basename: instance.Spec.Role,
+			Basename: instance.Spec.RoleName,
 			VIP:      false,
 		}
 
@@ -528,14 +528,6 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-/* mpryc: golangci - comment out unused function
-func setDefaults(instance *ospdirectorv1beta1.VMSet) {
-	if instance.Spec.VMCount < 1 {
-		instance.Spec.VMCount = 1
-	}
-}
-*/
-
 func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.OpenStackVMSet) (*bindatautil.RenderData, error) {
 	data := bindatautil.MakeRenderData()
 	// Base image used to clone the controller VM images from
@@ -556,7 +548,9 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	}
 	data.Data["Network"] = instance.Spec.OSPNetwork.Name
 	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
-	data.Data["DesiredState"] = instance.Spec.OSPNetwork.DesiredState.String()
+	// TODO: mschuppert - create NodeNetworkConfigurationPolicy not using unstructured ?
+	data.Data["NodeNetworkConfigurationPolicyNodeSelector"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.NodeSelector
+	data.Data["NodeNetworkConfigurationPolicyDesiredState"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.DesiredState.String()
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)

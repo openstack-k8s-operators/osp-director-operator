@@ -4,7 +4,7 @@ metadata:
   name: controllers
 spec:
   hostCount: 1
-  role: Controller
+  roleName: Controller
   networks:
     - ctlplane
     - storage

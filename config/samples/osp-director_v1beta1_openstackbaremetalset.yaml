@@ -14,7 +14,7 @@ spec:
   networks:
     - ctlplane
     - tenant
-  role: Compute
+  roleName: Compute
   # PasswordSecret the name of the secret used to optionally set the root pwd by adding
   # NodeRootPassword: <base64 enc pwd>
   # to the secret data

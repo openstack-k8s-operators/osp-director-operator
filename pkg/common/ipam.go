@@ -269,7 +269,7 @@ func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset I
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), overcloudIPSet, func() error {
 		overcloudIPSet.Spec.Networks = ipset.Networks
-		overcloudIPSet.Spec.Role = ipset.Role
+		overcloudIPSet.Spec.RoleName = ipset.Role
 		overcloudIPSet.Spec.HostCount = ipset.HostCount
 		overcloudIPSet.Spec.VIP = ipset.VIP
 		overcloudIPSet.Spec.AddToPredictableIPs = ipset.AddToPredictableIPs

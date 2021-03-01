@@ -68,7 +68,7 @@ func (r *OpenStackBaremetalSet) validateCr() error {
 		return err
 	}
 
-	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.Role); err != nil {
+	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.RoleName); err != nil {
 		return err
 	}
 

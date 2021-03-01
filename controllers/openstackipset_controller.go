@@ -96,7 +96,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// iterate over the requested hostCount
 	for count := 0; count < instance.Spec.HostCount; count++ {
-		hostname := fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), count)
+		hostname := fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.RoleName), count)
 
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {
@@ -153,10 +153,10 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					RangeEnd:            end,
 					Reservelist:         network.Status.Reservations,
 					ExcludeRanges:       []string{},
-					IDKey:               fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), count),
+					IDKey:               fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.RoleName), count),
 					Hostname:            hostname,
 					VIP:                 instance.Spec.VIP,
-					Role:                instance.Spec.Role,
+					Role:                instance.Spec.RoleName,
 					AddToPredictableIPs: instance.Spec.AddToPredictableIPs,
 				})
 				if err != nil {

@@ -14,18 +14,13 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  controller:
-    Role: Controller
-    baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
-    baseImageVolumeName: openstack-base-img
-    controllerCount: 0
-    cores: 2
-    diskSize: 50
-    memory: 20
-    networks:
-    - ctlplane
-    ospNetwork:
-      bridgeName: br-osp
+  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  ospNetwork:
+    bridgeName: br-osp
+    name: osp
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
       desiredState:
         interfaces:
         - bridge:
@@ -35,13 +30,22 @@ spec:
             port:
             - name: enp6s0
           description: Linux bridge with enp6s0 as a port
-          name: br-osp
+          name: br-osp # must be same as bridgeName
           state: up
           type: linux-bridge
-      name: osp
-    role: controller
-    storageClass: host-nfs-storageclass
-  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  virtualMachineRoles:
+    controller:
+      roleName: Controller
+      roleCount: 0
+      cores: 2
+      isTripleoRole: true
+      memory: 20
+      diskSize: 50
+      baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+      storageClass: host-nfs-storageclass
+      baseImageVolumeName: openstack-base-img #optional
+      networks:
+      - ctlplane
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -59,20 +63,23 @@ spec:
   - ctlplane
   ospNetwork:
     bridgeName: br-osp
-    desiredState:
-      interfaces:
-      - bridge:
-          options:
-            stp:
-              enabled: false
-          port:
-          - name: enp6s0
-        description: Linux bridge with enp6s0 as a port
-        name: br-osp
-        state: up
-        type: linux-bridge
     name: osp
-  role: controller
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp # must be same as bridgeName
+          state: up
+          type: linux-bridge
+  roleName: Controller
   storageClass: host-nfs-storageclass
   vmCount: 0
 status:
@@ -128,7 +135,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
-  role: ControlPlane
+  roleName: ControlPlane
   vip: true
 status:
   hosts:
@@ -154,7 +161,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
-  role: OpenstackClient
+  roleName: OpenstackClient
   vip: false
 status:
   hosts:
@@ -167,4 +174,29 @@ status:
       allocationStart: 192.168.25.100
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
-
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-vmset
+    cr: controller
+    osp-director.openstack.org/name: controller
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: br-osp
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp6s0
+      description: Linux bridge with enp6s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""

@@ -22,35 +22,39 @@ import (
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
-	Controller OpenStackControllerSpec `json:"controller"`
+	// List of VirtualMachine roles
+	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
+	// OSPNetwork
+	OSPNetwork Network `json:"ospNetwork"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// OpenStackControllerSpec - defines the desired state of VMs VMs
-type OpenStackControllerSpec struct {
-	// Number of controllers to configure, 1 or 3
-	ControllerCount int `json:"controllerCount"`
-	// number of Cores assigned to the controller VMs
+// OpenStackVirtualMachineRoleSpec - defines the desired state of VMs
+type OpenStackVirtualMachineRoleSpec struct {
+	// Number of VMs for the role
+	RoleCount int `json:"roleCount"`
+	// number of Cores assigned to the VM
 	Cores uint32 `json:"cores"`
-	// amount of Memory in GB used by the controller VMs
+	// amount of Memory in GB used by the VM
 	Memory uint32 `json:"memory"`
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
-	// Name of the VM base image used to setup the controller VMs
+	// Name of the VM base image used to setup the VM
 	BaseImageURL string `json:"baseImageURL,omitempty"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass,omitempty"`
 	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
-	// OSPNetwork
-	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
-	// Role the name of the Overcloud role this IPset is associated with. Used to generate hostnames.
-	Role string `json:"role"`
+	// RoleName the name of the TripleO role this VM Spec is associated with. If it is a TripleO role, the name must match.
+	RoleName string `json:"roleName"`
+	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
+	// +kubebuilder:default=true
+	IsTripleoRole bool `json:"isTripleoRole,omitempty"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane

@@ -14,19 +14,21 @@ spec:
   deploymentSSHSecret: osp-controlplane-ssh-keys
   ospNetwork:
     bridgeName: br-osp
-    name: osp
-    desiredState:
-      interfaces:
-      - name: br-osp # must be same as bridgeName
-        description: Linux bridge with enp6s0 as a port
-        type: linux-bridge
-        state: up
-        bridge:
-          options:
-            stp:
-              enabled: false
-          port:
-          - name: enp6s0
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp # must be same as bridgeName
+          state: up
+          type: linux-bridge
   networks:
     - ctlplane
-  role: Controller
+  roleName: Controller

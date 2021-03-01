@@ -1,6 +1,6 @@
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
@@ -15,129 +15,150 @@ spec:
     plural: openstackcontrolplanes
     singular: openstackcontrolplane
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: OpenStackControlPlane represents a virtualized OpenStack control
-        plane configuration
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
-          properties:
-            controller:
-              description: OpenStackControllerSpec - defines the desired state of
-                VMs VMs
-              properties:
-                baseImageURL:
-                  description: Name of the VM base image used to setup the controller
-                    VMs
-                  type: string
-                baseImageVolumeName:
-                  description: BaseImageVolumeName Optional. If supplied will be used
-                    as the base volume for the VM instead of BaseImageURL.
-                  type: string
-                controllerCount:
-                  description: Number of controllers to configure, 1 or 3
-                  type: integer
-                cores:
-                  description: number of Cores assigned to the controller VMs
-                  format: int32
-                  type: integer
-                diskSize:
-                  description: root Disc size in GB
-                  format: int32
-                  type: integer
-                memory:
-                  description: amount of Memory in GB used by the controller VMs
-                  format: int32
-                  type: integer
-                networks:
-                  description: Networks the name(s) of the OpenStackNetworks used
-                    to generate IPs
-                  items:
-                    type: string
-                  type: array
-                ospNetwork:
-                  description: OSPNetwork
-                  properties:
-                    bridgeName:
-                      type: string
-                    desiredState:
-                      description: "State contains the namestatectl yaml [1] as string
-                        instead of golang struct so we don't need to be in sync with
-                        the schema. \n [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
-                      type: object
-                    name:
-                      type: string
-                  required:
-                  - bridgeName
-                  - name
-                  type: object
-                role:
-                  description: Role the name of the Overcloud role this IPset is associated
-                    with. Used to generate hostnames.
-                  type: string
-                storageClass:
-                  description: StorageClass to be used for the controller disks
-                  type: string
-              required:
-              - controllerCount
-              - cores
-              - diskSize
-              - memory
-              - networks
-              - ospNetwork
-              - role
-              type: object
-            openStackClientImageURL:
-              description: OpenstackClient image
-              type: string
-            passwordSecret:
-              description: PasswordSecret used to e.g specify root pwd
-              type: string
-          required:
-          - controller
-          - openStackClientImageURL
-          type: object
-        status:
-          description: OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
-          properties:
-            vipStatus:
-              additionalProperties:
-                description: HostStatus represents the hostname and IP info for a
-                  specific VM
-                properties:
-                  hostname:
-                    type: string
-                  ipaddresses:
-                    additionalProperties:
-                      type: string
-                    type: object
-                required:
-                - hostname
-                - ipaddresses
-                type: object
-              type: object
-          type: object
-      type: object
-  version: v1beta1
   versions:
   - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackControlPlane represents a virtualized OpenStack control
+          plane configuration
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
+            properties:
+              openStackClientImageURL:
+                description: OpenstackClient image
+                type: string
+              ospNetwork:
+                description: OSPNetwork
+                properties:
+                  bridgeName:
+                    type: string
+                  name:
+                    type: string
+                  nodeNetworkConfigurationPolicy:
+                    description: NodeNetworkConfigurationPolicySpec defines the desired
+                      state of NodeNetworkConfigurationPolicy
+                    properties:
+                      desiredState:
+                        description: The desired configuration of the policy
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: 'NodeSelector is a selector which must be true
+                          for the policy to be applied to the node. Selector which
+                          must match a node''s labels for the policy to be scheduled
+                          on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                        type: object
+                    type: object
+                required:
+                - bridgeName
+                - name
+                type: object
+              passwordSecret:
+                description: PasswordSecret used to e.g specify root pwd
+                type: string
+              virtualMachineRoles:
+                additionalProperties:
+                  description: OpenStackVirtualMachineRoleSpec - defines the desired
+                    state of VMs
+                  properties:
+                    baseImageURL:
+                      description: Name of the VM base image used to setup the VM
+                      type: string
+                    baseImageVolumeName:
+                      description: BaseImageVolumeName Optional. If supplied will
+                        be used as the base volume for the VM instead of BaseImageURL.
+                      type: string
+                    cores:
+                      description: number of Cores assigned to the VM
+                      format: int32
+                      type: integer
+                    diskSize:
+                      description: root Disc size in GB
+                      format: int32
+                      type: integer
+                    isTripleoRole:
+                      default: true
+                      description: in case of external functionality, like 3rd party
+                        network controllers, set to false to ignore role in rendered
+                        overcloud templates.
+                      type: boolean
+                    memory:
+                      description: amount of Memory in GB used by the VM
+                      format: int32
+                      type: integer
+                    networks:
+                      description: Networks the name(s) of the OpenStackNetworks used
+                        to generate IPs
+                      items:
+                        type: string
+                      type: array
+                    roleCount:
+                      description: Number of VMs for the role
+                      type: integer
+                    roleName:
+                      description: RoleName the name of the TripleO role this VM Spec
+                        is associated with. If it is a TripleO role, the name must
+                        match.
+                      type: string
+                    storageClass:
+                      description: StorageClass to be used for the controller disks
+                      type: string
+                  required:
+                  - cores
+                  - diskSize
+                  - memory
+                  - networks
+                  - roleCount
+                  - roleName
+                  type: object
+                description: List of VirtualMachine roles
+                type: object
+            required:
+            - openStackClientImageURL
+            - ospNetwork
+            - virtualMachineRoles
+            type: object
+          status:
+            description: OpenStackControlPlaneStatus defines the observed state of
+              OpenStackControlPlane
+            properties:
+              vipStatus:
+                additionalProperties:
+                  description: HostStatus represents the hostname and IP info for
+                    a specific VM
+                  properties:
+                    hostname:
+                      type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                  - hostname
+                  - ipaddresses
+                  type: object
+                type: object
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

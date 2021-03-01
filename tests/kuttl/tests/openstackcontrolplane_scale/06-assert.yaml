@@ -27,17 +27,17 @@ status:
     hostname: controller-0
     idKey: controller-0
     ip: 192.168.25.102
-    role: controller
+    role: Controller
     vip: false
   - addToPredictableIPs: true
     hostname: controller-1
     idKey: controller-1
     ip: 192.168.25.103
-    role: controller
+    role: Controller
     vip: false
   - addToPredictableIPs: true
     hostname: controller-2
     idKey: controller-2
     ip: 192.168.25.104
-    role: controller
+    role: Controller
     vip: false
