@@ -13,6 +13,9 @@ spec:
     kind: OpenStackVMSet
     listKind: OpenStackVMSetList
     plural: openstackvmsets
+    shortNames:
+    - osvmset
+    - osvmsets
     singular: openstackvmset
   scope: Namespaced
   versions:

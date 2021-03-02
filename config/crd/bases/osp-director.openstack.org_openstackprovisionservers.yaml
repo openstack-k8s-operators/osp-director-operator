@@ -13,6 +13,9 @@ spec:
     kind: OpenStackProvisionServer
     listKind: OpenStackProvisionServerList
     plural: openstackprovisionservers
+    shortNames:
+    - osprovserver
+    - osprovservers
     singular: openstackprovisionserver
   scope: Namespaced
   versions:

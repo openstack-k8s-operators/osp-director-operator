@@ -38,6 +38,8 @@ type OpenStackProvisionServerStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osprovserver;osprovservers
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack ProvisionServer"
 
 // OpenStackProvisionServer is the Schema for the openstackprovisionservers API
 type OpenStackProvisionServer struct {

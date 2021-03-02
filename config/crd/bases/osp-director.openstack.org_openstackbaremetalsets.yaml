@@ -13,6 +13,9 @@ spec:
     kind: OpenStackBaremetalSet
     listKind: OpenStackBaremetalSetList
     plural: openstackbaremetalsets
+    shortNames:
+    - osbmset
+    - osbmsets
     singular: openstackbaremetalset
   scope: Namespaced
   versions:

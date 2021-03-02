@@ -52,6 +52,8 @@ type OpenStackIPHostsStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osipset;osipsets
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack IpSet"
 
 // OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
 type OpenStackIPSet struct {
