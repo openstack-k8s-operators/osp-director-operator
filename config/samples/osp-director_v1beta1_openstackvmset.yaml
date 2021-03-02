@@ -12,7 +12,9 @@ spec:
   storageClass: host-nfs-storageclass
   #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  isTripleoRole: true
   ospNetwork:
+    name: osp
     bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
