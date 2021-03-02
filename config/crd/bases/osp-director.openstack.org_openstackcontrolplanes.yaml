@@ -15,7 +15,7 @@ spec:
     plural: openstackcontrolplanes
     shortNames:
     - osctlplane
-    - osctlplane
+    - osctlplanes
     singular: openstackcontrolplane
   scope: Namespaced
   versions:

@@ -64,7 +64,7 @@ type OpenStackControlPlaneStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=osctlplane;osctlplane
+// +kubebuilder:resource:shortName=osctlplane;osctlplanes
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack ControlPlane"
 
 // OpenStackControlPlane represents a virtualized OpenStack control plane configuration
