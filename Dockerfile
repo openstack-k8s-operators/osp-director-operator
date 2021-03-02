@@ -32,7 +32,7 @@ FROM ${OPERATOR_BASE_IMAGE}
 ENV USER_UID=1001 \
     OPERATOR_BINDATA_DIR=/bindata/ \
     OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/ \
-    WATCH_NAMESPACE=openstack,openshift-machine-api
+    WATCH_NAMESPACE=openstack,openshift-machine-api,openshift-sriov-network-operator
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

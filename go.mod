@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-logr/logr v0.2.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b

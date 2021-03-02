@@ -16,6 +16,7 @@ func MergeMetadataForUpdate(current, updated *uns.Unstructured) error {
 
 	mergeAnnotations(current, updated)
 	mergeLabels(current, updated)
+	mergeFinalizers(current, updated)
 
 	return nil
 }
@@ -52,4 +53,32 @@ func mergeLabels(current, updated *uns.Unstructured) {
 	}
 
 	updated.SetLabels(curLabels)
+}
+
+// mergeFinalizers copies over any finalizers from current to updated,
+// with updated winning if there's a conflict
+func mergeFinalizers(current, updated *uns.Unstructured) {
+	updatedFinalizers := updated.GetFinalizers()
+	curFinalizers := current.GetFinalizers()
+
+	if curFinalizers == nil {
+		curFinalizers = []string{}
+	}
+
+	for _, v := range updatedFinalizers {
+		found := false
+
+		for _, v2 := range curFinalizers {
+			if v2 == v {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			curFinalizers = append(curFinalizers, v)
+		}
+	}
+
+	updated.SetFinalizers(curFinalizers)
 }

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/common/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -33,13 +34,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 
-	//sriovnetworkv1 "github.com/openshift/sriov-network-operator/pkg/apis/sriovnetwork/v1"
+	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -91,6 +95,7 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
+// FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-sriov-network-operator" namespace?
 // +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworknodepolicies;sriovnetworks,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile - controller VMs
@@ -145,6 +150,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		err := r.virtualMachineListFinalizerCleanup(instance, virtualMachineList)
 		if err != nil && !errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
+			return ctrl.Result{}, err
+		}
+		// SRIOV resources
+		err = r.sriovResourceCleanup(instance)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -498,6 +508,54 @@ func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine
 	return nil
 }
 
+func (r *OpenStackVMSetReconciler) sriovResourceCleanup(instance *ospdirectorv1beta1.OpenStackVMSet) error {
+	labelSelectorMap := map[string]string{
+		OwnerUIDLabelSelector:       string(instance.UID),
+		OwnerNameSpaceLabelSelector: instance.Namespace,
+		OwnerNameLabelSelector:      instance.Name,
+	}
+
+	// Delete sriovnetworks in openshift-sriov-network-operator namespace
+	sriovNetworks, err := vmset.GetSriovNetworksWithLabel(r.Client, labelSelectorMap, "openshift-sriov-network-operator")
+
+	if err != nil {
+		return err
+	}
+
+	for _, sn := range sriovNetworks.Items {
+		//sn := &sriovNetworks.Items[idx]
+
+		err = r.Client.Delete(context.Background(), &sn, &client.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		log.Info(fmt.Sprintf("SriovNetwork deleted: name %s - %s", sn.Name, sn.UID))
+	}
+
+	// Delete sriovnetworknodepolicies in openshift-sriov-network-operator namespace
+	sriovNetworkNodePolicies, err := vmset.GetSriovNetworkNodePoliciesWithLabel(r.Client, labelSelectorMap, "openshift-sriov-network-operator")
+
+	if err != nil {
+		return err
+	}
+
+	for _, snnp := range sriovNetworkNodePolicies.Items {
+		//snnp := &sriovNetworkNodePolicies.Items[idx]
+
+		err = r.Client.Delete(context.Background(), &snnp, &client.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		log.Info(fmt.Sprintf("SriovNetworkNodePolicy deleted: name %s - %s", snnp.Name, snnp.UID))
+	}
+
+	return nil
+}
+
 func (r *OpenStackVMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackVMSet, hostnameDetails *common.Hostname, netName string, ipaddress string) {
 
 	// If VMSet status map is nil, create it
@@ -522,12 +580,58 @@ func (r *OpenStackVMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.Ope
 func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
+	sriovNetworkFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+		result := []reconcile.Request{}
+		label := o.Meta.GetLabels()
+		// verify object has ownerUIDLabelSelector
+		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+			r.Log.Info(fmt.Sprintf("SriovNetwork object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			// return namespace and Name of CR
+			name := client.ObjectKey{
+				Namespace: label[OwnerNameSpaceLabelSelector],
+				Name:      label[OwnerNameLabelSelector],
+			}
+			result = append(result, reconcile.Request{NamespacedName: name})
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
+	sriovNetworkNodePolicyFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+		result := []reconcile.Request{}
+		label := o.Meta.GetLabels()
+		// verify object has ownerUIDLabelSelector
+		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+			r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			// return namespace and Name of CR
+			name := client.ObjectKey{
+				Namespace: label[OwnerNameSpaceLabelSelector],
+				Name:      label[OwnerNameLabelSelector],
+			}
+			result = append(result, reconcile.Request{NamespacedName: name})
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: sriovNetworkFn,
+			}).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: sriovNetworkNodePolicyFn,
+			}).
 		Complete(r)
 }
 
