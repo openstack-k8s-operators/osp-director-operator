@@ -125,6 +125,12 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 
 	}
 
+	// the DefaultCount for the Compute is 1, set ComputeCount to 0 in the rendered deploy environment file
+	// if no Compute baremetalset got created that we can deploy a controlplane only overcloud.
+	if _, ok := roleCount["ComputeCount"]; !ok {
+		roleCount["ComputeCount"] = "0"
+	}
+
 	templateParameters := make(map[string]interface{})
 	// TODO: make sure the list order won't change
 	templateParameters["PredictableIps"] = roleIPSets
