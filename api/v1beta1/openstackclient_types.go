@@ -42,6 +42,8 @@ type OpenStackClientStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osclient;osclients
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Client"
 
 // OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
 type OpenStackClient struct {

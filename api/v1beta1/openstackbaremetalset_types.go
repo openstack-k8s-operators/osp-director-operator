@@ -145,6 +145,8 @@ type DiskSSDReq struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osbmset;osbmsets
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack BaremetalSet"
 
 // OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
 type OpenStackBaremetalSet struct {

@@ -13,6 +13,9 @@ spec:
     kind: OpenStackControlPlane
     listKind: OpenStackControlPlaneList
     plural: openstackcontrolplanes
+    shortNames:
+    - osctlplane
+    - osctlplanes
     singular: openstackcontrolplane
   scope: Namespaced
   versions:

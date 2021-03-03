@@ -13,6 +13,9 @@ spec:
     kind: OpenStackNet
     listKind: OpenStackNetList
     plural: openstacknets
+    shortNames:
+    - osnet
+    - osnets
     singular: openstacknet
   scope: Namespaced
   versions:

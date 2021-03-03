@@ -13,6 +13,9 @@ spec:
     kind: OpenStackIPSet
     listKind: OpenStackIPSetList
     plural: openstackipsets
+    shortNames:
+    - osipset
+    - osipsets
     singular: openstackipset
   scope: Namespaced
   versions:

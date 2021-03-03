@@ -59,6 +59,8 @@ type OpenStackNetStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osnet;osnets
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Net"
 
 // OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
 type OpenStackNet struct {
