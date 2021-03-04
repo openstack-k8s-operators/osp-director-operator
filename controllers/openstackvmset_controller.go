@@ -659,8 +659,9 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	data.Data["NodeNetworkConfigurationPolicyNodeSelector"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.NodeSelector
 	data.Data["NodeNetworkConfigurationPolicyDesiredState"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.DesiredState.String()
 	// SRIOV config
-	data.Data["SriovPort"] = instance.Spec.OSPNetwork.SriovState.Port
-	data.Data["SriovRootDevice"] = instance.Spec.OSPNetwork.SriovState.RootDevice
+	data.Data["NodeSriovConfigurationPolicyNodeSelector"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.NodeSelector
+	data.Data["SriovPort"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.Port
+	data.Data["SriovRootDevice"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.RootDevice
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
@@ -704,13 +705,13 @@ func (r *OpenStackVMSetReconciler) createNetworkConfig(instance *ospdirectorv1be
 	// Generate the Network Definition or SRIOV config objects
 	manifestType := "network"
 
-	if instance.Spec.OSPNetwork.SriovState.Port != "" {
+	if instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
 		manifestType = "sriov"
 	}
 
 	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, manifestType), data)
 	if err != nil {
-		r.Log.Error(err, "Failed to render %s manifests : %v", manifestType)
+		r.Log.Error(err, "Failed to render manifests : %v")
 		return err
 	}
 	objs = append(objs, manifests...)

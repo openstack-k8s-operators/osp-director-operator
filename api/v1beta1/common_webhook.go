@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	yaml "gopkg.in/yaml.v2"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -65,4 +67,73 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	return found, nil
+}
+
+// checkOspNetworkDefinition - Currently, this function:
+// - Checks to make sure a BridgeName is provided if a NodeNetworkConfigurationPolicy was also provided in a Network object
+// - Checks to make sure the BridgeName provided in NodeNetworkConfigurationPolicy matches that provided in the Network object
+func checkOspNetworkDefinition(objectMeta metav1.ObjectMeta, ospNetwork Network) error {
+	if ospNetwork.NodeNetworkConfigurationPolicy.DesiredState.String() != "" {
+		if ospNetwork.BridgeName == "" {
+			return fmt.Errorf("nodeNetworkConfigurationPolicy requires a \"bridgeName\" in the encompassing network object")
+		}
+
+		rawState := map[string]interface{}{}
+
+		err := yaml.Unmarshal(ospNetwork.NodeNetworkConfigurationPolicy.DesiredState.Raw, rawState)
+
+		if err != nil {
+			return err
+		}
+
+		// Looking for something like this:
+		//
+		// interfaces:
+		// - bridge:
+		//     options:
+		//       stp:
+		//         enabled: false
+		//     port:
+		//     - name: enp6s0
+		//   description: Linux bridge with enp6s0 as a port
+		//   name: br-osp      <----- checking this
+		//   state: up
+		//   type: linux-bridge
+
+		foundBridgeName := false
+
+		//BLAH map[interfaces:[map[bridge:map[options:map[stp:map[enabled:false]] port:[map[name:enp6s0]]] description:Linux bridge with enp6s0 as a port name:br-osp state:up type:linux-bridge]]]
+		//return fmt.Errorf("BLAH %v", rawState)
+
+		if interfaces, ok := rawState["interfaces"].([]interface{}); ok {
+			for _, interfaceItemIntf := range interfaces {
+				if interfaceItem, ok := interfaceItemIntf.(map[interface{}]interface{}); ok {
+					if _, ok := interfaceItem["bridge"]; ok {
+						if name, ok := interfaceItem["name"].(string); ok {
+							if name == ospNetwork.BridgeName {
+								foundBridgeName = true
+								break
+							} else {
+								return fmt.Errorf("fourth not okay")
+							}
+						} else {
+							return fmt.Errorf("third not okay")
+						}
+					} else {
+						return fmt.Errorf("second not okay")
+					}
+				} else {
+					return fmt.Errorf("array not okay: %v", interfaceItemIntf)
+				}
+			}
+		} else {
+			return fmt.Errorf("first not okay")
+		}
+
+		if !foundBridgeName {
+			return fmt.Errorf("nodeNetworkConfigurationPolicy's \"desiredState\" must contain a bridge name that matches the encompassing network object's \"bridgeName\"")
+		}
+	}
+
+	return nil
 }

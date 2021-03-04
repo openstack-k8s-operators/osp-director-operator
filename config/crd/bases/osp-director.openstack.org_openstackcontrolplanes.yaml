@@ -67,17 +67,26 @@ spec:
                           on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                         type: object
                     type: object
-                  sriovState:
-                    description: SriovState - If set, is chosen over DesiredState
-                      to configure SRIOV instead
+                  nodeSriovConfigurationPolicy:
+                    description: NodeSriovConfigurationPolicy - Node selector and
+                      desired state for SRIOV network
                     properties:
-                      port:
-                        type: string
-                      rootDevice:
-                        type: string
-                    required:
-                    - port
-                    - rootDevice
+                      desiredState:
+                        description: SriovState - SRIOV-specific configuration details
+                          for an OSP network
+                        properties:
+                          port:
+                            type: string
+                          rootDevice:
+                            type: string
+                        required:
+                        - port
+                        - rootDevice
+                        type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        type: object
                     type: object
                 required:
                 - name
