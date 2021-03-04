@@ -102,9 +102,6 @@ func checkOspNetworkDefinition(objectMeta metav1.ObjectMeta, ospNetwork Network)
 
 		foundBridgeName := false
 
-		//BLAH map[interfaces:[map[bridge:map[options:map[stp:map[enabled:false]] port:[map[name:enp6s0]]] description:Linux bridge with enp6s0 as a port name:br-osp state:up type:linux-bridge]]]
-		//return fmt.Errorf("BLAH %v", rawState)
-
 		if interfaces, ok := rawState["interfaces"].([]interface{}); ok {
 			for _, interfaceItemIntf := range interfaces {
 				if interfaceItem, ok := interfaceItemIntf.(map[interface{}]interface{}); ok {
@@ -113,21 +110,11 @@ func checkOspNetworkDefinition(objectMeta metav1.ObjectMeta, ospNetwork Network)
 							if name == ospNetwork.BridgeName {
 								foundBridgeName = true
 								break
-							} else {
-								return fmt.Errorf("fourth not okay")
 							}
-						} else {
-							return fmt.Errorf("third not okay")
 						}
-					} else {
-						return fmt.Errorf("second not okay")
 					}
-				} else {
-					return fmt.Errorf("array not okay: %v", interfaceItemIntf)
 				}
 			}
-		} else {
-			return fmt.Errorf("first not okay")
 		}
 
 		if !foundBridgeName {
