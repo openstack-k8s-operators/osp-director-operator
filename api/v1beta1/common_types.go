@@ -28,16 +28,22 @@ type Hash struct {
 	Hash string `json:"hash,omitempty"`
 }
 
-// Network - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
+// Network - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition, or NodeSriovConfigurationPolicy
 // TODO: that might change depending on our outcome of network config
 type Network struct {
 	Name                           string                                        `json:"name"`
 	BridgeName                     string                                        `json:"bridgeName,omitempty"`
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
-	SriovState                     SriovState                                    `json:"sriovState,omitempty"`
+	NodeSriovConfigurationPolicy   NodeSriovConfigurationPolicy                  `json:"nodeSriovConfigurationPolicy,omitempty"`
 }
 
-// SriovState - If set, is chosen over DesiredState to configure SRIOV instead
+// NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network
+type NodeSriovConfigurationPolicy struct {
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	DesiredState SriovState        `json:"desiredState,omitempty"`
+}
+
+// SriovState - SRIOV-specific configuration details for an OSP network
 type SriovState struct {
 	Port       string `json:"port"`
 	RootDevice string `json:"rootDevice"`

@@ -12,7 +12,13 @@ spec:
     pfNames:
     - {{ .SriovPort }}
   nodeSelector:
-    node-role.kubernetes.io/worker: ""
+{{- range $label, $selector := .NodeSriovConfigurationPolicyNodeSelector }}
+  {{- if eq $selector "" }}
+    {{ $label }}: ""
+  {{- else }}
+    {{ $label }}: {{ $selector }}
+  {{- end }}
+{{- end }}
   numVfs: 1
   priority: 5
   resourceName: {{ .Network }}sriovnics

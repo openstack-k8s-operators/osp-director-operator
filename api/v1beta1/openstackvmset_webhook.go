@@ -70,11 +70,16 @@ func (r *OpenStackVMSet) ValidateDelete() error {
 }
 
 func (r *OpenStackVMSet) validateCr() error {
+
 	if err := r.checkBaseImageReqs(); err != nil {
 		return err
 	}
 
 	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.RoleName); err != nil {
+		return err
+	}
+
+	if err := checkOspNetworkDefinition(r.ObjectMeta, r.Spec.OSPNetwork); err != nil {
 		return err
 	}
 
