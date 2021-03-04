@@ -36,4 +36,11 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        # This is another possible approach to WATCH_NAMESPACE that would take the namespaces
+        # listed in the OperatorGroup's targetNamespaces and put them into the env var
+        # env:
+        # - name: WATCH_NAMESPACE
+        #   valueFrom:
+        #     fieldRef:
+        #       fieldPath: metadata.annotations.olm.targetNamespaces
       terminationGracePeriodSeconds: 10

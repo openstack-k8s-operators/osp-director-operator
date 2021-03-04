@@ -4,11 +4,13 @@ metadata:
   name: {{ .Network }}-policy
   namespace: openshift-sriov-network-operator
 spec:
-  deviceType: vfio-pci
-  mtu: 9000
+  deviceType: {{ .SriovDeviceType }}
+  mtu: {{ .SriovMtu }}
   nicSelector:
+{{- if .SriovRootDevice }}
     rootDevices:
     - {{ .SriovRootDevice }}
+{{- end }}
     pfNames:
     - {{ .SriovPort }}
   nodeSelector:
@@ -19,6 +21,6 @@ spec:
     {{ $label }}: {{ $selector }}
   {{- end }}
 {{- end }}
-  numVfs: 1
+  numVfs: {{ .SriovNumVfs }}
   priority: 5
   resourceName: {{ .Network }}sriovnics

@@ -46,8 +46,12 @@ type NodeSriovConfigurationPolicy struct {
 // SriovState - SRIOV-specific configuration details for an OSP network
 type SriovState struct {
 	Port       string `json:"port"`
-	RootDevice string `json:"rootDevice"`
-	// TODO: Add MTU, VFs, device type, etc
+	RootDevice string `json:"rootDevice,omitempty"`
+	// +kubebuilder:default=9000
+	Mtu    uint32 `json:"mtu,omitempty"`
+	NumVfs uint32 `json:"numVfs"`
+	// +kubebuilder:default=vfio-pci
+	DeviceType string `json:"deviceType,omitempty"`
 }
 
 // HostStatus represents the hostname and IP info for a specific VM

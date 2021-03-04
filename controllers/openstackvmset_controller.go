@@ -662,6 +662,9 @@ func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.Op
 	data.Data["NodeSriovConfigurationPolicyNodeSelector"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.NodeSelector
 	data.Data["SriovPort"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.Port
 	data.Data["SriovRootDevice"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.RootDevice
+	data.Data["SriovMtu"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.Mtu
+	data.Data["SriovNumVfs"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.NumVfs
+	data.Data["SriovDeviceType"] = instance.Spec.OSPNetwork.NodeSriovConfigurationPolicy.DesiredState.DeviceType
 
 	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
 	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
