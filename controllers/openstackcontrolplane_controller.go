@@ -248,8 +248,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
-		// openstackclient pod is only connected to the ctlplane network
-		openstackclient.Spec.Networks = []string{"ctlplane"}
+		if len(instance.Spec.OpenStackClientNetworks) > 0 {
+			openstackclient.Spec.Networks = instance.Spec.OpenStackClientNetworks
+		}
 		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)
 
 		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)

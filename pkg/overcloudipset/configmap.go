@@ -50,14 +50,31 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 	hostnameFormat := make(map[string]string)
 	roleCount := make(map[string]string)
 	rolePortsFromPool := make(map[string]map[string]string)
+	networkVipMap := make(map[string]string)
 
 	for _, net := range overcloudNetList.Items {
+
+		// CR names won't allow '_', need to change tripleo nets using those
+		switch net.Name {
+		case "internalapi":
+			net.Name = InternalAPIName
+		case "storagemgmt":
+			net.Name = StorageMgmtName
+		}
 
 		for _, reservation := range net.Status.Reservations {
 
 			// if ctlplane network add to DeployedServerPortMap
 			if net.Name == "ctlplane" {
-				netNameLower := GetNetNameLower("ctlplane")
+
+				// in case of control plane vip the DeployedServerPortMap is
+				// named control_virtual_ip instead of ctlplane_virtual_ip
+				netName := net.Name
+				if reservation.VIP {
+					netName = GetNetNameLower("ctlplane")
+					networkVipMap["ControlPlaneIP"] = reservation.IP
+				}
+
 				// create ctlPlaneIps for the host if it does not exist
 				if ctlPlaneIps[reservation.Hostname] == nil {
 					ctlPlaneIps[reservation.Hostname] = &deployedServerPortMapType{
@@ -67,28 +84,17 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 					}
 				}
 
-				if reservation.VIP {
-					if ctlPlaneIps[reservation.Hostname].Network[netNameLower] == nil {
-						ctlPlaneIps[reservation.Hostname].Network[netNameLower] = &network{
-							IPaddr: reservation.IP,
-							Cidr:   net.Spec.Cidr,
-						}
-					} else {
-						ctlPlaneIps[reservation.Hostname].Network[netNameLower].IPaddr = reservation.IP
-						ctlPlaneIps[reservation.Hostname].Network[netNameLower].Cidr = net.Spec.Cidr
+				if ctlPlaneIps[reservation.Hostname].Network[netName] == nil {
+					ctlPlaneIps[reservation.Hostname].Network[netName] = &network{
+						IPaddr: reservation.IP,
+						Cidr:   net.Spec.Cidr,
 					}
-				} else if reservation.AddToPredictableIPs {
-
-					if ctlPlaneIps[reservation.Hostname].Network[net.Name] == nil {
-						ctlPlaneIps[reservation.Hostname].Network[net.Name] = &network{
-							IPaddr: reservation.IP,
-							Cidr:   net.Spec.Cidr,
-						}
-					} else {
-						ctlPlaneIps[reservation.Hostname].Network[net.Name].IPaddr = reservation.IP
-						ctlPlaneIps[reservation.Hostname].Network[net.Name].Cidr = net.Spec.Cidr
-					}
+				} else {
+					ctlPlaneIps[reservation.Hostname].Network[netName].IPaddr = reservation.IP
+					ctlPlaneIps[reservation.Hostname].Network[netName].Cidr = net.Spec.Cidr
 				}
+			} else if reservation.VIP {
+				networkVipMap[fmt.Sprintf("%sNetworkVip", GetNetName(net.Name))] = reservation.IP
 			} else if reservation.AddToPredictableIPs {
 				// Add host to hostnamemap
 				//hostnameMap[fmt.Sprintf("overcloud-%s", reservation.IDKey)] = reservation.Hostname
@@ -115,8 +121,17 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 			if net == "ctlplane" {
 				continue
 			}
+
+			// CR names won't allow '_', need to change tripleo nets using those
+			switch net {
+			case "internalapi":
+				net = InternalAPIName
+			case "storagemgmt":
+				net = StorageMgmtName
+			}
+
 			portConfig := fmt.Sprintf("/usr/share/openstack-tripleo-heat-templates/network/ports/%s_from_pool.yaml", net)
-			if rolePortsFromPool[ipset.Spec.RoleName][GetNetName(net)] == "" {
+			if rolePortsFromPool[ipset.Spec.RoleName] == nil {
 				rolePortsFromPool[ipset.Spec.RoleName] = map[string]string{GetNetName(net): portConfig}
 			} else {
 				rolePortsFromPool[ipset.Spec.RoleName][GetNetName(net)] = portConfig
@@ -138,6 +153,7 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 	templateParameters["RoleCount"] = roleCount
 	templateParameters["HostnameFormat"] = hostnameFormat
 	templateParameters["RolePortsFromPool"] = rolePortsFromPool
+	templateParameters["NetworkVip"] = networkVipMap
 
 	return templateParameters, nil
 

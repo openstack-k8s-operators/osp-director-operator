@@ -8,9 +8,9 @@ resource_registry:
 
 parameter_defaults:
 {{- range $role, $roleIPs := .PredictableIps }}
-  {{ $role }}IPs
+  {{ $role }}IPs:
   {{- range $netname, $ips := $roleIPs }}
-    {{ $netname }}
+    {{ $netname }}:
     {{- range $x, $ip := $ips }}
     - {{ $ip }}
     {{- end }}

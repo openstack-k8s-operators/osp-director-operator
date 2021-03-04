@@ -43,6 +43,15 @@ spec:
               openStackClientImageURL:
                 description: OpenstackClient image
                 type: string
+              openStackClientNetworks:
+                default:
+                - ctlplane
+                - external
+                description: OpenStackClientNetworks the name(s) of the OpenStackClientNetworks
+                  used to attach the openstackclient to
+                items:
+                  type: string
+                type: array
               passwordSecret:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string
@@ -77,6 +86,13 @@ spec:
                       format: int32
                       type: integer
                     networks:
+                      default:
+                      - ctlplane
+                      - external
+                      - internalapi
+                      - tenant
+                      - storage
+                      - storagemgmt
                       description: Networks the name(s) of the OpenStackNetworks used
                         to generate IPs
                       items:

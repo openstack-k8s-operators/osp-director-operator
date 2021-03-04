@@ -40,8 +40,11 @@ type OpenStackVMSetSpec struct {
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
+
+	// +kubebuilder:default={ctlplane,external,internalapi,tenant,storage,storagemgmt}
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
+
 	// RoleName the name of the TripleO role this VM Spec is associated with. If it is a TripleO role, the name must match.
 	RoleName string `json:"roleName"`
 	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.

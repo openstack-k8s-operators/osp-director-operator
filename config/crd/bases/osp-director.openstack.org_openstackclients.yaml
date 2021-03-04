@@ -67,6 +67,9 @@ spec:
                 description: Name of the image
                 type: string
               networks:
+                default:
+                - ctlplane
+                - external
                 description: Networks the name(s) of the OpenStackNetworks used to
                   generate IPs
                 items:

@@ -126,7 +126,7 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		Namespace: instance.Namespace,
 		Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
 		Data: map[string]string{
-			"NetName":    instance.Name,
+			"Name":       instance.Name,
 			"BridgeName": bridgeName.String(),
 			"Vlan":       vlan,
 		},
@@ -139,7 +139,9 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// create static nad used for openstackclient
-	nad.Name = fmt.Sprintf("%s-static", instance.Name)
+	name := fmt.Sprintf("%s-static", instance.Name)
+	nad.Name = name
+	nad.Data["Name"] = name
 	nad.Data["Static"] = "true"
 
 	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)

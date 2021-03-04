@@ -67,6 +67,13 @@ spec:
                 format: int32
                 type: integer
               networks:
+                default:
+                - ctlplane
+                - external
+                - internalapi
+                - tenant
+                - storage
+                - storagemgmt
                 description: Networks the name(s) of the OpenStackNetworks used to
                   generate IPs
                 items:

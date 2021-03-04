@@ -322,15 +322,23 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	volumes := openstackclient.GetVolumes(instance)
 
 	envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
+
+	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
+	annotation := "["
+	for id, net := range instance.Spec.Networks {
+		annotation += fmt.Sprintf("{\"name\": \"%s-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", net, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses[net])
+		if id < len(instance.Spec.Networks)-1 {
+			annotation += ", "
+		}
+	}
+	annotation += "]"
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
 			Annotations: map[string]string{
-				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(
-					"[{\"name\": \"ctlplane-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
-					instance.Namespace,
-					instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses["ctlplane"]),
+				"k8s.v1.cni.cncf.io/networks": annotation,
 			},
 		},
 	}
