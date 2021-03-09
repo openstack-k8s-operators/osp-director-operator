@@ -16,6 +16,8 @@ limitations under the License.
 
 package common
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // GetLabels - get labels to be set on objects created by controller
 func GetLabels(name string, appLabel string) map[string]string {
 	return map[string]string{
@@ -23,4 +25,19 @@ func GetLabels(name string, appLabel string) map[string]string {
 		"cr":    name,
 		"app":   appLabel,
 	}
+}
+
+// GetLabelSelector - get labelselector for CR
+func GetLabelSelector(obj metav1.Object, label string) map[string]string {
+	// Labels for all objects
+	labelSelector := map[string]string{
+		OwnerUIDLabelSelector:       string(obj.GetUID()),
+		OwnerNameSpaceLabelSelector: obj.GetNamespace(),
+		OwnerNameLabelSelector:      obj.GetName(),
+	}
+	for k, v := range GetLabels(obj.GetName(), label) {
+		labelSelector[k] = v
+	}
+
+	return labelSelector
 }

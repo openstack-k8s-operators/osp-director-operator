@@ -133,8 +133,20 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 	r.Log.Info(fmt.Sprintf("OpenStackClient %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
 
-	// TODO: maschuppert - atm the openstackclient only has the ctlplane network.
-	//       for debugging it probably makes sense to attach the openstackclient to all networks?
+	// Create network config
+	nad := common.NetworkAttachmentDefinition{
+		Name:      fmt.Sprintf("%s-static", instance.Spec.OSPNetwork.Name),
+		Namespace: instance.Namespace,
+		Labels:    common.GetLabelSelector(instance, openstackclient.AppLabel),
+		Data: map[string]string{
+			"BridgeName": instance.Spec.OSPNetwork.BridgeName,
+			"Static":     "true",
+		},
+	}
+	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// update network status
 	for _, netName := range instance.Spec.Networks {
