@@ -15,11 +15,7 @@ spec:
     - {{ .SriovPort }}
   nodeSelector:
 {{- range $label, $selector := .NodeSriovConfigurationPolicyNodeSelector }}
-  {{- if eq $selector "" }}
-    {{ $label }}: ""
-  {{- else }}
-    {{ $label }}: {{ $selector }}
-  {{- end }}
+    {{ $label }}: "{{ $selector }}"
 {{- end }}
   numVfs: {{ .SriovNumVfs }}
   priority: 5

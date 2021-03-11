@@ -39,7 +39,7 @@ spec:
           cores: {{ .Cores }}
 {{- if .SriovPort }}
         # TODO: parameterize this stuff?
-          sockets: 2
+          sockets: 1
           threads: 1
           dedicatedCpuPlacement: true
           isolateEmulatorThread: true

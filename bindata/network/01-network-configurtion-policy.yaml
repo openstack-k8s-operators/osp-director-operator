@@ -5,7 +5,7 @@ metadata:
 spec:
   nodeSelector:
 {{- range $label, $selector := .NodeNetworkConfigurationPolicyNodeSelector }}
-    {{ $label }}: {{ $selector }}
+    {{ $label }}: "{{ $selector }}"
 {{- end }}
   desiredState:
     {{ .NodeNetworkConfigurationPolicyDesiredState | nindent 4 }}
