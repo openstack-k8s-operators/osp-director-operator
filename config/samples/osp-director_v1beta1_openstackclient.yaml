@@ -6,5 +6,23 @@ metadata:
 spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  ospNetwork:
+    name: osp
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp # must be same as bridgeName
+          state: up
+          type: linux-bridge
   networks:
     - ctlplane

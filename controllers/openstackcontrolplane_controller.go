@@ -249,6 +249,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
+		openstackclient.Spec.OSPNetwork = instance.Spec.OSPNetwork
 		// openstackclient pod is only connected to the ctlplane network
 		openstackclient.Spec.Networks = []string{"ctlplane"}
 		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)

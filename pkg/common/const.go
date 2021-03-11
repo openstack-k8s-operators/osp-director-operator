@@ -21,4 +21,10 @@ const (
 	OwnerLabel = "osp-director"
 	// GroupLabel -
 	GroupLabel = OwnerLabel + ".openstack.org"
+	// OwnerUIDLabelSelector -
+	OwnerUIDLabelSelector = GroupLabel + "/uid"
+	// OwnerNameSpaceLabelSelector -
+	OwnerNameSpaceLabelSelector = GroupLabel + "/namespace"
+	// OwnerNameLabelSelector -
+	OwnerNameLabelSelector = GroupLabel + "/name"
 )

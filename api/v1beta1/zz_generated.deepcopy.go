@@ -451,6 +451,7 @@ func (in *OpenStackClientSpec) DeepCopyInto(out *OpenStackClientSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.OSPNetwork.DeepCopyInto(&out.OSPNetwork)
 	if in.Networks != nil {
 		in, out := &in.Networks, &out.Networks
 		*out = make([]string, len(*in))

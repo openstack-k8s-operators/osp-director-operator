@@ -18,31 +18,31 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	bindatautil "github.com/openstack-k8s-operators/osp-director-operator/pkg/bindata_util"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	virtv1 "kubevirt.io/client-go/api/v1"
-	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 // OpenStackVMSetReconciler reconciles a VMSet object
@@ -316,6 +316,17 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// How many new VirtualMachine allocations do we need (if any)?
 	newVmsNeededCount := instance.Spec.VMCount - len(existingVirtualMachines)
 
+	// generate NodeNetworkConfigurationPolicy
+	ncp := common.NetworkConfigurationPolicy{
+		Name:                           instance.Spec.OSPNetwork.BridgeName,
+		Labels:                         common.GetLabelSelector(instance, vmset.AppLabel),
+		NodeNetworkConfigurationPolicy: instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy,
+	}
+	err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Func to help increase DRY below in NetworkData loops
 	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, hostKey string) error {
 		// TODO: multi nic support with bindata template
@@ -371,7 +382,15 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Create network config
-	err = r.networkCreateAttachmentDefinition(instance)
+	nad := common.NetworkAttachmentDefinition{
+		Name:      instance.Spec.OSPNetwork.Name,
+		Namespace: instance.Namespace,
+		Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+		Data: map[string]string{
+			"BridgeName": instance.Spec.OSPNetwork.BridgeName,
+		},
+	}
+	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -396,6 +415,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	return ctrl.Result{}, nil
+
 }
 
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
@@ -525,193 +545,260 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
+		Owns(&networkv1.NetworkAttachmentDefinition{}).
 		Complete(r)
 }
 
-func (r *OpenStackVMSetReconciler) getRenderData(instance *ospdirectorv1beta1.OpenStackVMSet) (*bindatautil.RenderData, error) {
-	data := bindatautil.MakeRenderData()
-	// Base image used to clone the controller VM images from
-	// adding first 5 char from instance.UID as identifier
-	if instance.Spec.BaseImageVolumeName == "" {
-		data.Data["BaseImageVolumeName"] = fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
-	} else {
-		data.Data["BaseImageVolumeName"] = instance.Spec.BaseImageVolumeName
-	}
-	data.Data["BaseImageURL"] = instance.Spec.BaseImageURL
-	data.Data["DiskSize"] = instance.Spec.DiskSize
-	data.Data["Namespace"] = instance.Namespace
-	data.Data["Cores"] = instance.Spec.Cores
-	data.Data["Memory"] = instance.Spec.Memory
-	data.Data["StorageClass"] = ""
-	if instance.Spec.StorageClass != "" {
-		data.Data["StorageClass"] = instance.Spec.StorageClass
-	}
-	data.Data["Network"] = instance.Spec.OSPNetwork.Name
-	data.Data["BridgeName"] = instance.Spec.OSPNetwork.BridgeName
-	// TODO: mschuppert - create NodeNetworkConfigurationPolicy not using unstructured ?
-	data.Data["NodeNetworkConfigurationPolicyNodeSelector"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.NodeSelector
-	data.Data["NodeNetworkConfigurationPolicyDesiredState"] = instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy.DesiredState.String()
-
-	// get deployment user ssh pub key from Spec.DeploymentSSHSecret
-	secret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil {
-		r.Log.Info("DeploymentSSHSecret secret not found!!")
-		return nil, err
-	}
-	data.Data["AuthorizedKeys"] = secret.Data["authorized_keys"]
-
-	// get deployment userdata from secret
-	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
-	secret, _, err = common.GetSecret(r, userdataSecret, instance.Namespace)
-	if err != nil {
-		r.Log.Info("CloudInit userdata secret not found!!")
-		return nil, err
-	}
-	data.Data["UserDataSecret"] = secret.Name
-
-	return &data, nil
-}
-
-func (r *OpenStackVMSetReconciler) networkCreateAttachmentDefinition(instance *ospdirectorv1beta1.OpenStackVMSet) error {
-	data, err := r.getRenderData(instance)
-	if err != nil {
-		return err
-	}
-
-	objs := []*uns.Unstructured{}
-	oref := metav1.NewControllerRef(instance, instance.GroupVersionKind())
-
-	// Labels for all objects
-	labelSelector := map[string]string{
-		OwnerUIDLabelSelector:       string(instance.UID),
-		OwnerNameSpaceLabelSelector: instance.Namespace,
-		OwnerNameLabelSelector:      instance.Name,
-	}
-	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
-		labelSelector[k] = v
-	}
-
-	// Generate the Network Definition objects
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "network"), data)
-	if err != nil {
-		r.Log.Error(err, "Failed to render network manifests : %v")
-		return err
-	}
-	objs = append(objs, manifests...)
-
-	// Apply the objects to the cluster
-	for _, obj := range objs {
-		// Set owner reference on objects in the same namespace as the operator
-		if obj.GetNamespace() == instance.Namespace {
-			obj.SetOwnerReferences([]metav1.OwnerReference{*oref})
-		}
-		// merge owner ref label into labels on the objects
-		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
-
-		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
-			r.Log.Error(err, "Failed to apply objects")
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.OpenStackVMSet) error {
-	data, err := r.getRenderData(instance)
+
+	fsMode := corev1.PersistentVolumeFilesystem
+
+	cdi := cdiv1.DataVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Spec.BaseImageVolumeName,
+			Namespace: instance.Namespace,
+			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+		},
+		Spec: cdiv1.DataVolumeSpec{
+			PVC: &corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					"ReadWriteOnce",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.DiskSize)),
+					},
+				},
+				VolumeMode: &fsMode,
+			},
+			Source: cdiv1.DataVolumeSource{
+				HTTP: &cdiv1.DataVolumeSourceHTTP{
+					URL: instance.Spec.BaseImageURL,
+				},
+			},
+		},
+	}
+
+	cdi.Kind = "DataVolume"
+	cdi.APIVersion = "cdi.kubevirt.io/v1alpha1"
+
+	if instance.Spec.StorageClass != "" {
+		cdi.Spec.PVC.StorageClassName = &instance.Spec.StorageClass
+	}
+
+	b, err := json.Marshal(cdi.DeepCopyObject())
 	if err != nil {
 		return err
 	}
 
-	objs := []*uns.Unstructured{}
-	oref := metav1.NewControllerRef(instance, instance.GroupVersionKind())
-
-	// Labels for all objects
-	labelSelector := map[string]string{
-		OwnerUIDLabelSelector:       string(instance.UID),
-		OwnerNameSpaceLabelSelector: instance.Namespace,
-		OwnerNameLabelSelector:      instance.Name,
-	}
-	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
-		labelSelector[k] = v
-	}
-
-	// 01 - create root base volume on StorageClass
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "cdi"), data)
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
-	objs = append(objs, manifests...)
 
-	// Apply the objects to the cluster
-	for _, obj := range objs {
-		// Set owner reference on objects in the same namespace as the operator
-		if obj.GetNamespace() == instance.Namespace {
-			obj.SetOwnerReferences([]metav1.OwnerReference{*oref})
-		}
-		// merge owner ref label into labels on the objects
-		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
-
-		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
-			r.Log.Error(err, "Failed to apply objects")
-			return err
-		}
+	// apply object using server side apply
+	if err := common.SSAApplyYaml(context.TODO(), cfg, instance.Kind, b); err != nil {
+		r.Log.Error(err, fmt.Sprintf("Failed to apply object %s", cdi.GetName()))
+		return err
 	}
 
-	return nil
+	return err
 }
 
 func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
-	data, err := r.getRenderData(instance)
+
+	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
+	fsMode := corev1.PersistentVolumeFilesystem
+	trueValue := true
+	terminationGracePeriodSeconds := int64(0)
+
+	// get deployment userdata from secret
+	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
+	secret, _, err := common.GetSecret(r, userdataSecret, instance.Namespace)
 	if err != nil {
+		r.Log.Info("CloudInit userdata secret not found!!")
 		return err
 	}
 
-	objs := []*uns.Unstructured{}
-	oref := metav1.NewControllerRef(instance, instance.GroupVersionKind())
-
-	// Labels for all objects
-	labelSelector := map[string]string{
-		OwnerUIDLabelSelector:       string(instance.UID),
-		OwnerNameSpaceLabelSelector: instance.Namespace,
-		OwnerNameLabelSelector:      instance.Name,
+	// dvTemplateSpec for the VM
+	dvTemplateSpec := virtv1.DataVolumeTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ctl.DomainNameUniq,
+			Namespace: instance.Namespace,
+		},
+		Spec: cdiv1.DataVolumeSpec{
+			PVC: &corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					"ReadWriteOnce",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.DiskSize)),
+					},
+				},
+				VolumeMode: &fsMode,
+			},
+			Source: cdiv1.DataVolumeSource{
+				PVC: &cdiv1.DataVolumeSourcePVC{
+					Name:      instance.Spec.BaseImageVolumeName,
+					Namespace: instance.Namespace,
+				},
+			},
+		},
 	}
-	for k, v := range common.GetLabels(instance.Name, vmset.AppLabel) {
-		labelSelector[k] = v
+	// set StorageClasseName when specified in the CR
+	if instance.Spec.StorageClass != "" {
+		dvTemplateSpec.Spec.PVC.StorageClassName = &instance.Spec.StorageClass
 	}
 
-	// Generate the Contoller VM object
-	data.Data["DomainName"] = ctl.DomainName
-	data.Data["DomainNameUniq"] = ctl.DomainNameUniq
-	data.Data["NetworkDataSecret"] = ctl.NetworkDataSecret
-
-	manifests, err := bindatautil.RenderDir(filepath.Join(ManifestPath, "virtualmachine"), data)
-	if err != nil {
-		r.Log.Error(err, "Failed to render virtualmachine manifests : %v")
-		return err
+	rootDisk := virtv1.Disk{
+		Name: "rootdisk",
+		DiskDevice: virtv1.DiskDevice{
+			Disk: &virtv1.DiskTarget{
+				Bus: "virtio",
+			},
+		},
 	}
-	objs = append(objs, manifests...)
 
-	// Apply the objects to the cluster
-	for _, obj := range objs {
-		// Set owner reference on objects in the same namespace as the operator
-		if obj.GetNamespace() == instance.Namespace {
-			obj.SetOwnerReferences([]metav1.OwnerReference{*oref})
+	cloudinitdisk := virtv1.Disk{
+		Name: "cloudinitdisk",
+		DiskDevice: virtv1.DiskDevice{
+			Disk: &virtv1.DiskTarget{
+				Bus: "virtio",
+			},
+		},
+	}
+
+	// TODO, mschuppert create multiple for network isolation + add logic to use sriov
+	ospNetworkInterface := virtv1.Interface{
+		Name:  "osp",
+		Model: "virtio",
+		InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
+			Bridge: &virtv1.InterfaceBridge{},
+		},
+	}
+
+	vmTemplate := virtv1.VirtualMachineInstanceTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"kubevirt.io/vm": ctl.DomainName,
+				"openstackvmsets.osp-director.openstack.org/ospcontroller": "True",
+			},
+		},
+		Spec: virtv1.VirtualMachineInstanceSpec{
+			Hostname:                      ctl.DomainName,
+			EvictionStrategy:              &evictionStrategy,
+			TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
+			Domain: virtv1.DomainSpec{
+				CPU: &virtv1.CPU{
+					Cores: instance.Spec.Cores,
+				},
+				Devices: virtv1.Devices{
+					Disks: []virtv1.Disk{
+						rootDisk,
+						cloudinitdisk,
+					},
+					Interfaces: []virtv1.Interface{
+						{
+							Name:  "default",
+							Model: "virtio",
+							InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
+								Masquerade: &virtv1.InterfaceMasquerade{},
+							},
+						},
+						// TODO: osp network isolation interfaces + sriov
+						ospNetworkInterface,
+					},
+					NetworkInterfaceMultiQueue: &trueValue,
+					Rng:                        &virtv1.Rng{},
+				},
+				Machine: virtv1.Machine{
+					Type: "",
+				},
+				Resources: virtv1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.Memory)),
+					},
+				},
+			},
+			Volumes: []virtv1.Volume{
+				{
+					Name: "rootdisk",
+					VolumeSource: virtv1.VolumeSource{
+						DataVolume: &virtv1.DataVolumeSource{
+							Name: ctl.DomainNameUniq,
+						},
+					},
+				},
+				{
+					Name: "cloudinitdisk",
+					VolumeSource: virtv1.VolumeSource{
+						CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
+							UserDataSecretRef: &corev1.LocalObjectReference{
+								Name: secret.Name,
+							},
+							NetworkDataSecretRef: &corev1.LocalObjectReference{
+								Name: ctl.NetworkDataSecret,
+							},
+						},
+					},
+				},
+			},
+			Networks: []virtv1.Network{
+				{
+					Name: "default",
+					NetworkSource: virtv1.NetworkSource{
+						Pod: &virtv1.PodNetwork{},
+					},
+				},
+				{
+					// TODO: osp network isolation
+					Name: "osp",
+					NetworkSource: virtv1.NetworkSource{
+						Multus: &virtv1.MultusNetwork{
+							NetworkName: instance.Spec.OSPNetwork.Name,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// VM
+	vm := &virtv1.VirtualMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ctl.DomainName,
+			Namespace: instance.Namespace,
+			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+		},
+		Spec: virtv1.VirtualMachineSpec{},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vm, func() error {
+
+		vm.Annotations = map[string]string{
+			// TODO: mschuppert for network isolation attach each network interface
+			networkv1.NetworkAttachmentAnnot: fmt.Sprintf("%s/%s", instance.Namespace, instance.Spec.OSPNetwork.Name),
 		}
-		// merge owner ref label into labels on the objects
-		obj.SetLabels(labels.Merge(obj.GetLabels(), labelSelector))
 
-		// Set finalizer to prevent unsanctioned deletion of VirtualMachine
-		finalizers := append(obj.GetFinalizers(), vmset.VirtualMachineFinalizerName)
-		obj.SetFinalizers(finalizers)
+		vm.Labels = common.GetLabelSelector(instance, vmset.AppLabel)
 
-		//Todo: mschuppert log vm definition when debug?
-		r.Log.Info(fmt.Sprintf("/n%s/n", obj))
-		if err := bindatautil.ApplyObject(context.TODO(), r.Client, obj); err != nil {
-			r.Log.Error(err, "Failed to apply objects")
+		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
+		vm.Spec.Running = &trueValue
+		vm.Spec.Template = &vmTemplate
+
+		err := controllerutil.SetControllerReference(instance, vm, r.Scheme)
+
+		if err != nil {
 			return err
 		}
+
+		return nil
+	})
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("VirtualMachine %s successfully reconciled - operation: %s", vm.Name, string(op)))
 	}
 
-	return nil
+	return err
 }

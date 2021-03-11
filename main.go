@@ -34,6 +34,9 @@ import (
 
 	"github.com/prometheus/common/log"
 
+	//cni "github.com/containernetworking/cni/pkg/types"
+	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	virtv1 "kubevirt.io/client-go/api/v1"
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
@@ -67,6 +70,8 @@ func init() {
 	utilruntime.Must(ospdirectorv1beta1.AddToScheme(scheme))
 	//utilruntime.Must(templatev1.AddToScheme(scheme))
 	utilruntime.Must(virtv1.AddToScheme(scheme))
+	utilruntime.Must(nmstate.AddToScheme(scheme))
+	utilruntime.Must(networkv1.AddToScheme(scheme))
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
 	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme))
