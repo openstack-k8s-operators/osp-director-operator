@@ -16,6 +16,8 @@ limitations under the License.
 
 package common
 
+import "encoding/json"
+
 // Functions available for all templates
 
 // GetOr returns the value of m[key] if it exists, fallback otherwise.
@@ -43,4 +45,10 @@ func IsSet(m map[string]interface{}, key string) interface{} {
 		return false
 	}
 	return val
+}
+
+// check if string is json format
+func isJSON(s string) error {
+	var js map[string]interface{}
+	return json.Unmarshal([]byte(s), &js)
 }
