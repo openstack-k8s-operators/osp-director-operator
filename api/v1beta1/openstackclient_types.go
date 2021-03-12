@@ -31,8 +31,6 @@ type OpenStackClientSpec struct {
 	CloudName string `json:"cloudName"`
 	// additional Hostaliases added to the openstackclient hosts file
 	HostAliases []corev1.HostAlias `json:"hostAliases"`
-	// OSPNetwork
-	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 }

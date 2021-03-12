@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,8 +40,6 @@ type OpenStackVMSetSpec struct {
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
-	// OSPNetwork
-	OSPNetwork Network `json:"ospNetwork"`
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
 	// RoleName the name of the TripleO role this VM Spec is associated with. If it is a TripleO role, the name must match.
@@ -65,12 +65,14 @@ type OpenStackVMSetStatus struct {
 
 // Host -
 type Host struct {
-	Hostname          string            `json:"hostname"`
-	DomainName        string            `json:"domainName"`
-	DomainNameUniq    string            `json:"domainNameUniq"`
-	IPAddress         string            `json:"ipAddress"`
-	NetworkDataSecret string            `json:"networkDataSecret"`
-	Labels            map[string]string `json:"labels"`
+	Hostname          string                                            `json:"hostname"`
+	DomainName        string                                            `json:"domainName"`
+	DomainNameUniq    string                                            `json:"domainNameUniq"`
+	IPAddress         string                                            `json:"ipAddress"`
+	NetworkDataSecret string                                            `json:"networkDataSecret"`
+	Labels            map[string]string                                 `json:"labels"`
+	NNCP              map[string]nmstate.NodeNetworkConfigurationPolicy `json:"nncp"`
+	NAD               map[string]networkv1.NetworkAttachmentDefinition  `json:"nad"`
 }
 
 // +kubebuilder:object:root=true

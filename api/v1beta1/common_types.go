@@ -32,7 +32,7 @@ type Hash struct {
 // TODO: that might change depending on our outcome of network config
 type Network struct {
 	Name                           string                                        `json:"name"`
-	BridgeName                     string                                        `json:"bridgeName"`
+	BridgeName                     string                                        `json:"bridgeName,omitempty"`
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
 }
 

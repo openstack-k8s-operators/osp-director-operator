@@ -25,6 +25,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -67,6 +68,29 @@ func CreateOrUpdateNetworkConfigurationPolicy(r ReconcilerCommon, obj metav1.Obj
 	return nil
 }
 
+// GetAllNetworkConfigurationPolicies - get all NetworkConfigurationPolicy
+func GetAllNetworkConfigurationPolicies(r ReconcilerCommon, labelSelectorMap map[string]string) (map[string]nmstate.NodeNetworkConfigurationPolicy, error) {
+
+	nncpMap := make(map[string]nmstate.NodeNetworkConfigurationPolicy)
+
+	nncpList := &nmstate.NodeNetworkConfigurationPolicyList{}
+
+	nncpListOpts := []client.ListOption{
+		client.MatchingLabels(labelSelectorMap),
+	}
+
+	err := r.GetClient().List(context.TODO(), nncpList, nncpListOpts...)
+	if err != nil {
+		return nncpMap, err
+	}
+
+	for _, nncp := range nncpList.Items {
+		nncpMap[nncp.Name] = nncp
+	}
+
+	return nncpMap, nil
+}
+
 // NetworkAttachmentDefinition -
 type NetworkAttachmentDefinition struct {
 	Name      string
@@ -80,13 +104,13 @@ const (
 	cniConfigTemplate = `
 {
     "cniVersion": "0.3.1",
-    "name": "{{ .BridgeName }}-config",
+    "name": "{{ .NetName }}",
     "plugins": [
 	{
 	    "type": "bridge",
 	    "bridge": "{{ .BridgeName }}",
-{{- if .Vlan }}
-            "vlan": "{{ .Vlan }}",
+{{- if ne .Vlan "0"}}
+            "vlan": {{ .Vlan }},
 {{- end }}
 	    "ipam": {
 {{- if .Static }}
@@ -108,12 +132,11 @@ func CreateOrUpdateNetworkAttachmentDefinition(r ReconcilerCommon, obj metav1.Ob
 	// render CNIConfigTemplate
 	CNIConfig := ExecuteTemplateData(cniConfigTemplate, nad.Data)
 	if err := isJSON(CNIConfig); err != nil {
-		return fmt.Errorf("Failure rendering CNIConfig for NetworkAttachmentDefinition %s", nad.Name)
+		return fmt.Errorf("Failure rendering CNIConfig for NetworkAttachmentDefinition %s: %v", nad.Name, nad.Data)
 	}
 
 	networkAttachmentDefinition := networkv1.NetworkAttachmentDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			// TODO: mschuppert for isolated networks create networkattachmentdefinition per network
 			Name:      nad.Name,
 			Namespace: nad.Namespace,
 			Annotations: map[string]string{
@@ -148,4 +171,27 @@ func CreateOrUpdateNetworkAttachmentDefinition(r ReconcilerCommon, obj metav1.Ob
 	}
 
 	return nil
+}
+
+// GetAllNetworkAttachmentDefinitions - get all NetworkAttachmentDefinition
+func GetAllNetworkAttachmentDefinitions(r ReconcilerCommon, obj metav1.Object) (map[string]networkv1.NetworkAttachmentDefinition, error) {
+
+	nadMap := make(map[string]networkv1.NetworkAttachmentDefinition)
+
+	nadList := &networkv1.NetworkAttachmentDefinitionList{}
+
+	nadListOpts := []client.ListOption{
+		client.InNamespace(obj.GetNamespace()),
+	}
+
+	err := r.GetClient().List(context.TODO(), nadList, nadListOpts...)
+	if err != nil {
+		return nadMap, err
+	}
+
+	for _, nad := range nadList.Items {
+		nadMap[nad.Name] = nad
+	}
+
+	return nadMap, nil
 }

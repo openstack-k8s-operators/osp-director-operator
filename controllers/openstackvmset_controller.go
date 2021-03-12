@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	//networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
@@ -81,12 +81,11 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=pods;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=cdi.kubevirt.io,namespace=openstack,resources=datavolumes,verbs=create;delete;get;list;patch;update;watch
-// FIXME: Temporarily switching next annotation to cluster-scope, as controller is watching for these in other namespaces
-// +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=get;list
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
 // FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
-// +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=get;list
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
@@ -214,6 +213,27 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
+	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
+	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{"owner": "osp-director"})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, net := range instance.Spec.Networks {
+		if _, ok := nncMap[net]; !ok {
+			r.Log.Error(err, fmt.Sprintf("NetworkConfigurationPolicy for network %s does not exist!", net))
+			return ctrl.Result{}, err
+		}
+		if _, ok := nadMap[net]; !ok {
+			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not exist!", net))
+			return ctrl.Result{}, err
+		}
+	}
+
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
 		Role:                instance.Spec.RoleName,
@@ -317,17 +337,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// How many new VirtualMachine allocations do we need (if any)?
 	newVmsNeededCount := instance.Spec.VMCount - len(existingVirtualMachines)
 
-	// generate NodeNetworkConfigurationPolicy
-	ncp := common.NetworkConfigurationPolicy{
-		Name:                           instance.Spec.OSPNetwork.BridgeName,
-		Labels:                         common.GetLabelSelector(instance, vmset.AppLabel),
-		NodeNetworkConfigurationPolicy: instance.Spec.OSPNetwork.NodeNetworkConfigurationPolicy,
-	}
-	err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Func to help increase DRY below in NetworkData loops
 	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, hostKey string) error {
 		// TODO: multi nic support with bindata template
@@ -352,6 +361,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			IPAddress:         ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName],
 			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, hostnameDetails.Hostname),
 			Labels:            secretLabels,
+			NNCP:              nncMap,
+			NAD:               nadMap,
 		}
 
 		err = r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, controllerDetails[hostnameDetails.Hostname])
@@ -382,20 +393,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	// Create network config
-	nad := common.NetworkAttachmentDefinition{
-		Name:      instance.Spec.OSPNetwork.Name,
-		Namespace: instance.Namespace,
-		Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
-		Data: map[string]string{
-			"BridgeName": instance.Spec.OSPNetwork.BridgeName,
-		},
-	}
-	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Create controller VM objects and finally set VMSet status in etcd
 	if instance.Status.BaseImageDVReady {
 		for _, ctl := range controllerDetails {
@@ -416,7 +413,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	return ctrl.Result{}, nil
-
 }
 
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
@@ -546,7 +542,6 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
-		Owns(&networkv1.NetworkAttachmentDefinition{}).
 		Complete(r)
 }
 
@@ -670,15 +665,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		},
 	}
 
-	// TODO, mschuppert create multiple for network isolation + add logic to use sriov
-	ospNetworkInterface := virtv1.Interface{
-		Name:  "osp",
-		Model: "virtio",
-		InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
-			Bridge: &virtv1.InterfaceBridge{},
-		},
-	}
-
 	vmTemplate := virtv1.VirtualMachineInstanceTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -707,8 +693,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 								Masquerade: &virtv1.InterfaceMasquerade{},
 							},
 						},
-						// TODO: osp network isolation interfaces + sriov
-						ospNetworkInterface,
 					},
 					NetworkInterfaceMultiQueue: &trueValue,
 					Rng:                        &virtv1.Rng{},
@@ -752,15 +736,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 						Pod: &virtv1.PodNetwork{},
 					},
 				},
-				{
-					// TODO: osp network isolation
-					Name: "osp",
-					NetworkSource: virtv1.NetworkSource{
-						Multus: &virtv1.MultusNetwork{
-							NetworkName: instance.Spec.OSPNetwork.Name,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -772,21 +747,35 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 			Namespace: instance.Namespace,
 			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
 		},
-		Spec: virtv1.VirtualMachineSpec{},
+		Spec: virtv1.VirtualMachineSpec{
+			Template: &vmTemplate,
+		},
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vm, func() error {
-
-		vm.Annotations = map[string]string{
-			// TODO: mschuppert for network isolation attach each network interface
-			networkv1.NetworkAttachmentAnnot: fmt.Sprintf("%s/%s", instance.Namespace, instance.Spec.OSPNetwork.Name),
-		}
 
 		vm.Labels = common.GetLabelSelector(instance, vmset.AppLabel)
 
 		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
 		vm.Spec.Running = &trueValue
-		vm.Spec.Template = &vmTemplate
+
+		// merge additional networks
+		for _, net := range instance.Spec.Networks {
+
+			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
+				vm.Spec.Template.Spec.Domain.Devices.Interfaces,
+				vmset.InterfaceSetterMap{
+					net: vmset.Interface(net),
+				},
+			)
+
+			vm.Spec.Template.Spec.Networks = vmset.MergeVMNetworks(
+				vm.Spec.Template.Spec.Networks,
+				vmset.NetSetterMap{
+					net: vmset.Network(net),
+				},
+			)
+		}
 
 		err := controllerutil.SetControllerReference(instance, vm, r.Scheme)
 
@@ -797,9 +786,13 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("VirtualMachine %s successfully reconciled - operation: %s", vm.Name, string(op)))
 	}
 
-	return err
+	return nil
 }

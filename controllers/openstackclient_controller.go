@@ -133,19 +133,25 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 	r.Log.Info(fmt.Sprintf("OpenStackClient %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
 
-	// Create network config
-	nad := common.NetworkAttachmentDefinition{
-		Name:      fmt.Sprintf("%s-static", instance.Spec.OSPNetwork.Name),
-		Namespace: instance.Namespace,
-		Labels:    common.GetLabelSelector(instance, openstackclient.AppLabel),
-		Data: map[string]string{
-			"BridgeName": instance.Spec.OSPNetwork.BridgeName,
-			"Static":     "true",
-		},
-	}
-	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
+	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
+	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{"owner": "osp-director"})
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, net := range instance.Spec.Networks {
+		if _, ok := nncMap[net]; !ok {
+			r.Log.Error(err, fmt.Sprintf("NetworkConfigurationPolicy for network %s does not exist!", net))
+			return ctrl.Result{}, err
+		}
+		if _, ok := nadMap[net]; !ok {
+			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not exist!", net))
+			return ctrl.Result{}, err
+		}
 	}
 
 	// update network status
@@ -322,7 +328,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 			Namespace: instance.Namespace,
 			Annotations: map[string]string{
 				"k8s.v1.cni.cncf.io/networks": fmt.Sprintf(
-					"[{\"name\": \"osp-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
+					"[{\"name\": \"ctlplane-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}]",
 					instance.Namespace,
 					instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses["ctlplane"]),
 			},

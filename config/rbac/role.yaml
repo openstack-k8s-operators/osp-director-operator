@@ -124,18 +124,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - k8s.cni.cncf.io
-  resources:
-  - network-attachment-definitions
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - kubevirt.io
   resources:
   - virtualmachines
@@ -317,6 +305,12 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstacknets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstacknets/status
   verbs:
   - get
@@ -407,6 +401,18 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - kubevirt.io
   resources:

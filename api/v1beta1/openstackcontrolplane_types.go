@@ -24,8 +24,6 @@ import (
 type OpenStackControlPlaneSpec struct {
 	// List of VirtualMachine roles
 	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
-	// OSPNetwork
-	OSPNetwork Network `json:"ospNetwork"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
 	// PasswordSecret used to e.g specify root pwd

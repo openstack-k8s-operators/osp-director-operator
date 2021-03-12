@@ -72,34 +72,6 @@ spec:
                 items:
                   type: string
                 type: array
-              ospNetwork:
-                description: OSPNetwork
-                properties:
-                  bridgeName:
-                    type: string
-                  name:
-                    type: string
-                  nodeNetworkConfigurationPolicy:
-                    description: NodeNetworkConfigurationPolicySpec defines the desired
-                      state of NodeNetworkConfigurationPolicy
-                    properties:
-                      desiredState:
-                        description: The desired configuration of the policy
-                        type: object
-                        x-kubernetes-preserve-unknown-fields: true
-                      nodeSelector:
-                        additionalProperties:
-                          type: string
-                        description: 'NodeSelector is a selector which must be true
-                          for the policy to be applied to the node. Selector which
-                          must match a node''s labels for the policy to be scheduled
-                          on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
-                        type: object
-                    type: object
-                required:
-                - bridgeName
-                - name
-                type: object
               passwordSecret:
                 description: 'PasswordSecret the name of the secret used to optionally
                   set the root pwd by adding NodeRootPassword: <base64 enc pwd> to
@@ -122,7 +94,6 @@ spec:
             - isTripleoRole
             - memory
             - networks
-            - ospNetwork
             - roleName
             - vmCount
             type: object
