@@ -107,6 +107,9 @@ func CreateOrUpdateNetworkAttachmentDefinition(r ReconcilerCommon, obj metav1.Ob
 
 	// render CNIConfigTemplate
 	CNIConfig := ExecuteTemplateData(cniConfigTemplate, nad.Data)
+	if err := isJSON(CNIConfig); err != nil {
+		return fmt.Errorf("Failure rendering CNIConfig for NetworkAttachmentDefinition %s", nad.Name)
+	}
 
 	networkAttachmentDefinition := networkv1.NetworkAttachmentDefinition{
 		ObjectMeta: metav1.ObjectMeta{
