@@ -202,7 +202,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 			}
 			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
-			vmSet.Spec.OSPNetwork = instance.Spec.OSPNetwork
 			vmSet.Spec.Networks = vmRole.Networks
 			vmSet.Spec.RoleName = vmRole.RoleName
 			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
@@ -249,7 +248,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
-		openstackclient.Spec.OSPNetwork = instance.Spec.OSPNetwork
 		// openstackclient pod is only connected to the ctlplane network
 		openstackclient.Spec.Networks = []string{"ctlplane"}
 		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)

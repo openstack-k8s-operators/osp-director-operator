@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,12 +32,22 @@ type IPReservation struct {
 	AddToPredictableIPs bool   `json:"addToPredictableIPs"`
 }
 
+// NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
+type NetworkConfiguration struct {
+	BridgeName                     string                                        `json:"bridgeName,omitempty"`
+	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
+}
+
 // OpenStackNetSpec defines the desired state of OpenStackNet
 type OpenStackNetSpec struct {
 
 	// +kubebuilder:validation:Required
 	// Cidr the cidr to use for this network
 	Cidr string `json:"cidr"`
+
+	// +kubebuilder:validation:Optional
+	// Vlan ID of the network
+	Vlan int `json:"vlan"`
 
 	// +kubebuilder:validation:Required
 	// AllocationStart a set of IPs that are reserved and will not be assigned
@@ -49,6 +60,10 @@ type OpenStackNetSpec struct {
 	// +kubebuilder:validation:Optional
 	// Gateway optional gateway for the network
 	Gateway string `json:"gateway"`
+
+	// +kubebuilder:validation:Required
+	// AttachConfiguration used for NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
+	AttachConfiguration NetworkConfiguration `json:"attachConfiguration"`
 }
 
 // OpenStackNetStatus defines the observed state of OpenStackNet

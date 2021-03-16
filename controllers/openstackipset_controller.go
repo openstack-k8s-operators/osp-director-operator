@@ -32,7 +32,7 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
 )
 
 // OpenStackIPSetReconciler reconciles a OpenStackIPSet object
@@ -206,7 +206,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	overcloudIPListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
-		client.MatchingLabels{overcloudipset.AddToPredictableIPsLabel: "true"},
+		client.MatchingLabels{openstackipset.AddToPredictableIPsLabel: "true"},
 	}
 	err = r.Client.List(context.TODO(), overcloudIPList, overcloudIPListOpts...)
 	if err != nil {
@@ -215,10 +215,10 @@ func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// write it all to a configmap
 	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance.Name, overcloudipset.AppLabel)
+	cmLabels := common.GetLabels(instance.Name, openstackipset.AppLabel)
 
 	//templateParameters, err := overcloudipset.CreateConfigMapParams(r, *overcloudIPList, ctlplaneCidr)
-	templateParameters, err := overcloudipset.CreateConfigMapParams(*overcloudIPList, *overcloudNetList)
+	templateParameters, err := openstackipset.CreateConfigMapParams(*overcloudIPList, *overcloudNetList)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
