@@ -81,7 +81,8 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=pods;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=cdi.kubevirt.io,namespace=openstack,resources=datavolumes,verbs=create;delete;get;list;patch;update;watch
-// +kubebuilder:rbac:groups=k8s.cni.cncf.io,namespace=openstack,resources=network-attachment-definitions,verbs=get;list
+// FIXME: Cluster-scope required below for now, as the operator watches openshift-machine-api namespace as well
+// +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
 // FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
@@ -225,12 +226,12 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	for _, net := range instance.Spec.Networks {
 		if _, ok := nncMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkConfigurationPolicy for network %s does not exist!", net))
-			return ctrl.Result{}, err
+			r.Log.Info(fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 		if _, ok := nadMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not exist!", net))
-			return ctrl.Result{}, err
+			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
 

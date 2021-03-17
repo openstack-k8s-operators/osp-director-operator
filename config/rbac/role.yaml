@@ -124,6 +124,13 @@ rules:
   - update
   - watch
 - apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
+  verbs:
+  - get
+  - list
+- apiGroups:
   - kubevirt.io
   resources:
   - virtualmachines
