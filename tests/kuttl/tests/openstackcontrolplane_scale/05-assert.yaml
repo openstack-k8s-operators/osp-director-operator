@@ -1,11 +1,11 @@
 #
 # Check for:
 #
-# - OpenStackControlPlane
-# - OpenStackVMSet
-# - VirtualMachines
-# - OpenStackNet (IP reservations)
-# - OpenStackIPSet (IP reservations)
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 3 VirtualMachines
+# - 1 OpenStackNet (IP reservations)
+# - 1 OpenStackIPSet (IP reservations)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1

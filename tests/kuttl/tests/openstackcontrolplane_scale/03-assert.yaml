@@ -1,11 +1,11 @@
 #
 # Check for:
 #
-# - OpenStackControlPlane
-# - OpenStackVMSet
-# - VirtualMachines
-# - OpenStackNet (IP reservations)
-# - OpenStackIPSet (IP reservations)
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 3 VirtualMachines
+# - 1 OpenStackNet (IP reservations)
+# - 1 OpenStackIPSet (IP reservations)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -140,3 +140,27 @@ status:
     controller-2:
       ipaddresses:
         ctlplane: 192.168.25.104/24
+  networks:
+    ctlplane:
+      allocationEnd: 192.168.25.250
+      allocationStart: 192.168.25.100
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 192.168.25.0/24
+      gateway: 192.168.25.1
+      vlan: 0

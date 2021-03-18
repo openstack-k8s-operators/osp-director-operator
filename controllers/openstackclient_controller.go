@@ -145,12 +145,12 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	for _, net := range instance.Spec.Networks {
 		if _, ok := nncMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkConfigurationPolicy for network %s does not exist!", net))
-			return ctrl.Result{}, err
+			r.Log.Info(fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 		if _, ok := nadMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not exist!", net))
-			return ctrl.Result{}, err
+			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
 
