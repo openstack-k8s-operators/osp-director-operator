@@ -2,8 +2,6 @@
 
 set -eux
 
-# in case of --output-only no rc is set when successful
-sudo sed -i "/# We only get here if no errors/a \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rc=0" /usr/lib/python3.6/site-packages/tripleoclient/v1/tripleo_deploy.py
 # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
 sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' /usr/share/openstack-tripleo-heat-templates/network/scripts/run-os-net-config.sh
 
