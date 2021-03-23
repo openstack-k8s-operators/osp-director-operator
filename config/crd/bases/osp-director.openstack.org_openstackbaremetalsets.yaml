@@ -16,6 +16,7 @@ spec:
     shortNames:
     - osbmset
     - osbmsets
+    - osbms
     singular: openstackbaremetalset
   scope: Namespaced
   versions:

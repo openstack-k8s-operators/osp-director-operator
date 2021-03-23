@@ -16,6 +16,7 @@ spec:
     shortNames:
     - osipset
     - osipsets
+    - osips
     singular: openstackipset
   scope: Namespaced
   versions:

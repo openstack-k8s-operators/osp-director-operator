@@ -77,7 +77,7 @@ type Host struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=osvmset;osvmsets
+// +kubebuilder:resource:shortName=osvmset;osvmsets;osvms
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack VMSet"
 
 // OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment

@@ -16,6 +16,7 @@ spec:
     shortNames:
     - osvmset
     - osvmsets
+    - osvms
     singular: openstackvmset
   scope: Namespaced
   versions:
