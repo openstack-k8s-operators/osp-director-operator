@@ -18,6 +18,7 @@ spec:
   openStackClientNetworks:
     - ctlplane
     - external
+  openStackClientStorageClass: host-nfs-storageclass
   virtualMachineRoles:
     controller:
       baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
@@ -76,6 +77,7 @@ spec:
   networks:
   - ctlplane
   - external
+  storageClass: host-nfs-storageclass
 status:
   netStatus:
     openstackclient-0:

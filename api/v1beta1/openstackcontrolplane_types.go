@@ -26,6 +26,8 @@ type OpenStackControlPlaneSpec struct {
 	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
 	// OpenstackClient image
 	OpenStackClientImageURL string `json:"openStackClientImageURL"`
+	// OpenStackClientStorageClass storage class
+	OpenStackClientStorageClass string `json:"openStackClientStorageClass,omitempty"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 

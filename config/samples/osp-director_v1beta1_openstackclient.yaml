@@ -8,3 +8,4 @@ spec:
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
     - ctlplane
+  storageClass: host-nfs-storageclass

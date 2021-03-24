@@ -52,6 +52,9 @@ spec:
                 items:
                   type: string
                 type: array
+              openStackClientStorageClass:
+                description: OpenStackClientStorageClass storage class
+                type: string
               passwordSecret:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string

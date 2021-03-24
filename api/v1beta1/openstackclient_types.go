@@ -35,6 +35,9 @@ type OpenStackClientSpec struct {
 	// +kubebuilder:default={ctlplane,external}
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`
+
+	// StorageClass to be used for the openstackclient persistent storage
+	StorageClass string `json:"storageClass,omitempty"`
 }
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

@@ -75,6 +75,10 @@ spec:
                 items:
                   type: string
                 type: array
+              storageClass:
+                description: StorageClass to be used for the openstackclient persistent
+                  storage
+                type: string
             required:
             - cloudName
             - deploymentSSHSecret
