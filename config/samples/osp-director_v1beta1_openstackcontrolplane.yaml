@@ -5,6 +5,9 @@ metadata:
   namespace: openstack
 spec:
   openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  openStackClientNetworks:
+    - ctlplane
+    - external
   virtualMachineRoles:
     controller:
       roleName: Controller
@@ -17,3 +20,8 @@ spec:
       baseImageVolumeName: openstack-base-img #optional
       networks:
       - ctlplane
+      - external
+      - internalapi
+      - tenant
+      - storage
+      - storagemgmt

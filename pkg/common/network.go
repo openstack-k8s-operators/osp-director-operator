@@ -104,7 +104,7 @@ const (
 	cniConfigTemplate = `
 {
     "cniVersion": "0.3.1",
-    "name": "{{ .NetName }}",
+    "name": "{{ .Name }}",
     "plugins": [
 	{
 	    "type": "bridge",

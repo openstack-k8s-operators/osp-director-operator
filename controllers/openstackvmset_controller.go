@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -761,8 +762,10 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		vm.Spec.Running = &trueValue
 
 		// merge additional networks
-		for _, net := range instance.Spec.Networks {
-
+		networks := instance.Spec.Networks
+		// sort networks to get an expected ordering for easier ooo nic template creation
+		sort.Strings(networks)
+		for _, net := range networks {
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
 				vm.Spec.Template.Spec.Domain.Devices.Interfaces,
 				vmset.InterfaceSetterMap{
