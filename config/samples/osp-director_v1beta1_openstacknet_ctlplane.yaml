@@ -1,0 +1,26 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: ctlplane
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1 # optional
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge

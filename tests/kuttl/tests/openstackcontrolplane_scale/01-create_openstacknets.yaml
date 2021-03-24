@@ -1,0 +1,20 @@
+#
+# First, create all OpenStackNets
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_ctlplane.yaml
+    namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_external.yaml
+    namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_internalapi.yaml
+    namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_tenant.yaml
+    namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_storage.yaml
+    namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_storagemgmt.yaml
+    namespaced: true
+  
