@@ -39,6 +39,7 @@ import (
 	//networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,6 +92,9 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list
+// FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-sriov-network-operator" namespace?
+// +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworknodepolicies;sriovnetworks,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile - controller VMs
 func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -215,7 +219,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
+	// Get mapping of OSNets to binding type for this namespace
+	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(r, instance.Namespace)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
 	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{"owner": "osp-director"})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -225,14 +236,41 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
+	// ...verify that SriovNetwork and SriovNetworkNodePolicy exists for each SRIOV-configured network
+	sriovLabelSelectorMap := map[string]string{
+		"app":                       openstacknet.AppLabel,
+		OwnerNameSpaceLabelSelector: instance.Namespace,
+	}
+	snMap, err := openstacknet.GetSriovNetworksWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	snnpMap, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	for _, net := range instance.Spec.Networks {
-		if _, ok := nncMap[net]; !ok {
-			r.Log.Info(fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
-		if _, ok := nadMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		if osNetBindings[net] == "" {
+			// Non-SRIOV networks should have a NetworkConfigurationPolicy and a NetworkAttachmentDefinition
+			if _, ok := nncMap[net]; !ok {
+				r.Log.Info(fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
+			if _, ok := nadMap[net]; !ok {
+				r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
+		} else if osNetBindings[net] == "sriov" {
+			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
+			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", net)]; !ok {
+				r.Log.Info(fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
+			if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", net)]; !ok {
+				r.Log.Error(err, fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
 		}
 	}
 
@@ -398,7 +436,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Create controller VM objects and finally set VMSet status in etcd
 	if instance.Status.BaseImageDVReady {
 		for _, ctl := range controllerDetails {
-			err = r.vmCreateInstance(instance, envVars, &ctl)
+			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -603,7 +641,7 @@ func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta
 	return err
 }
 
-func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host) error {
+func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	fsMode := corev1.PersistentVolumeFilesystem
@@ -766,17 +804,24 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		// sort networks to get an expected ordering for easier ooo nic template creation
 		sort.Strings(networks)
 		for _, net := range networks {
+			ok := false
+			osNetBinding := ""
+
+			if osNetBinding, ok = osNetBindings[net]; !ok {
+				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found for network %s", net)
+			}
+
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
 				vm.Spec.Template.Spec.Domain.Devices.Interfaces,
 				vmset.InterfaceSetterMap{
-					net: vmset.Interface(net),
+					net: vmset.Interface(net, osNetBinding),
 				},
 			)
 
 			vm.Spec.Template.Spec.Networks = vmset.MergeVMNetworks(
 				vm.Spec.Template.Spec.Networks,
 				vmset.NetSetterMap{
-					net: vmset.Network(net),
+					net: vmset.Network(net, osNetBinding),
 				},
 			)
 		}

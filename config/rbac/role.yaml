@@ -386,6 +386,19 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - sriovnetwork.openshift.io
+  resources:
+  - sriovnetworknodepolicies
+  - sriovnetworks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

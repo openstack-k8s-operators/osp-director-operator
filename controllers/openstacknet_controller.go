@@ -30,8 +30,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
@@ -91,6 +93,48 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		}
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
+	}
+
+	// examine DeletionTimestamp to determine if object is under deletion
+	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(instance, openstacknet.FinalizerName) {
+			controllerutil.AddFinalizer(instance, openstacknet.FinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", openstacknet.FinalizerName, instance.Name))
+		}
+	} else {
+		// 1. check if finalizer is there
+		// Reconcile if finalizer got already removed
+		if !controllerutil.ContainsFinalizer(instance, openstacknet.FinalizerName) {
+			return ctrl.Result{}, nil
+		}
+
+		// 2. Clean up resources used by the operator
+		// SRIOV resources
+		err = r.sriovResourceCleanup(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// 3. as last step remove the finalizer on the operator CR to finish delete
+		controllerutil.RemoveFinalizer(instance, openstacknet.FinalizerName)
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
+		return ctrl.Result{}, nil
+	}
+
+	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
+		if err := r.ensureSriov(instance); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// generate NodeNetworkConfigurationPolicy
@@ -158,4 +202,128 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&networkv1.NetworkAttachmentDefinition{}).
 		Complete(r)
+}
+
+func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenStackNet) error {
+	// Labels for all SRIOV objects
+	labelSelector := map[string]string{
+		OwnerUIDLabelSelector:       string(instance.UID),
+		OwnerNameSpaceLabelSelector: instance.Namespace,
+		OwnerNameLabelSelector:      instance.Name,
+	}
+
+	for k, v := range common.GetLabels(instance.Name, openstacknet.AppLabel) {
+		labelSelector[k] = v
+	}
+
+	sriovNet := &sriovnetworkv1.SriovNetwork{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-sriov-network", instance.Name),
+			Namespace: "openshift-sriov-network-operator",
+			Labels:    labelSelector,
+		},
+		Spec: sriovnetworkv1.SriovNetworkSpec{
+			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
+			Trust:            instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Trust,
+			ResourceName:     fmt.Sprintf("%s_sriovnics", instance.Name),
+			NetworkNamespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovNet, func() error {
+		sriovNet.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("SriovNetwork %s successfully reconciled - operation: %s", sriovNet.Name, string(op)))
+	}
+
+	sriovPolicy := &sriovnetworkv1.SriovNetworkNodePolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-sriov-policy", instance.Name),
+			Namespace: "openshift-sriov-network-operator",
+			Labels:    labelSelector,
+		},
+		Spec: sriovnetworkv1.SriovNetworkNodePolicySpec{
+			DeviceType: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.DeviceType,
+			Mtu:        int(instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Mtu),
+			NicSelector: sriovnetworkv1.SriovNetworkNicSelector{
+				PfNames: []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port},
+			},
+			NodeSelector: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.NodeSelector,
+			NumVfs:       int(instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.NumVfs),
+			Priority:     5,
+			ResourceName: fmt.Sprintf("%s_sriovnics", instance.Name),
+		},
+	}
+
+	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice != "" {
+		sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
+	}
+
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovPolicy, func() error {
+		sriovNet.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy %s successfully reconciled - operation: %s", sriovPolicy.Name, string(op)))
+	}
+
+	return nil
+}
+
+func (r *OpenStackNetReconciler) sriovResourceCleanup(instance *ospdirectorv1beta1.OpenStackNet) error {
+	labelSelectorMap := map[string]string{
+		OwnerUIDLabelSelector:       string(instance.UID),
+		OwnerNameSpaceLabelSelector: instance.Namespace,
+		OwnerNameLabelSelector:      instance.Name,
+	}
+
+	// Delete sriovnetworks in openshift-sriov-network-operator namespace
+	sriovNetworks, err := openstacknet.GetSriovNetworksWithLabel(r, labelSelectorMap, "openshift-sriov-network-operator")
+
+	if err != nil {
+		return err
+	}
+
+	for _, sn := range sriovNetworks {
+		err = r.Client.Delete(context.Background(), &sn, &client.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		r.Log.Info(fmt.Sprintf("SriovNetwork deleted: name %s - %s", sn.Name, sn.UID))
+	}
+
+	// Delete sriovnetworknodepolicies in openshift-sriov-network-operator namespace
+	sriovNetworkNodePolicies, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, labelSelectorMap, "openshift-sriov-network-operator")
+
+	if err != nil {
+		return err
+	}
+
+	for _, snnp := range sriovNetworkNodePolicies {
+		err = r.Client.Delete(context.Background(), &snnp, &client.DeleteOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy deleted: name %s - %s", snnp.Name, snnp.UID))
+	}
+
+	return nil
 }

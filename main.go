@@ -41,6 +41,7 @@ import (
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
@@ -75,6 +76,7 @@ func init() {
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
 	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme))
+	utilruntime.Must(sriovnetworkv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
