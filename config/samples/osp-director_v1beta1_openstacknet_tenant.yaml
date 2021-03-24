@@ -1,0 +1,26 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: tenant
+spec:
+  cidr: 172.16.0.0/24
+  vlan: 50
+  allocationStart: 172.16.0.4
+  allocationEnd: 172.16.0.250
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge

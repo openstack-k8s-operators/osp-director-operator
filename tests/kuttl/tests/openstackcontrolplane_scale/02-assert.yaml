@@ -4,7 +4,7 @@
 # - 1 OpenStackControlPlane
 # - 1 OpenStackVMSet
 # - 1 OpenStackClient
-# - 1 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
 #
 
@@ -15,6 +15,9 @@ metadata:
   namespace: openstack
 spec:
   openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  openStackClientNetworks:
+    - ctlplane
+    - external
   virtualMachineRoles:
     controller:
       baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
@@ -25,6 +28,11 @@ spec:
       memory: 20
       networks:
       - ctlplane
+      - external
+      - internalapi
+      - tenant
+      - storage
+      - storagemgmt
       roleCount: 0
       roleName: Controller
       storageClass: host-nfs-storageclass
@@ -44,6 +52,11 @@ spec:
   memory: 20
   networks:
   - ctlplane
+  - external
+  - internalapi
+  - tenant
+  - storage
+  - storagemgmt
   roleName: Controller
   storageClass: host-nfs-storageclass
   vmCount: 0
@@ -58,15 +71,18 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  hostAliases: []
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
   networks:
   - ctlplane
+  - external
 status:
   netStatus:
     openstackclient-0:
       hostname: openstackclient-0
       ipaddresses:
         ctlplane: 192.168.25.101/24
+        external: 10.0.0.5/24
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -111,6 +127,193 @@ status:
     vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: external
+  namespace: openstack
+spec:
+  allocationEnd: 10.0.0.250
+  allocationStart: 10.0.0.4
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  vlan: 10
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 10.0.0.4
+    role: ControlPlane
+    vip: true
+  - addToPredictableIPs: false
+    hostname: openstackclient-0
+    idKey: openstackclient-0
+    ip: 10.0.0.5
+    role: OpenstackClient
+    vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: internalapi
+  namespace: openstack
+spec:
+  allocationEnd: 172.16.2.250
+  allocationStart: 172.16.2.4
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 172.16.2.0/24
+  vlan: 20
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 172.16.2.4
+    role: ControlPlane
+    vip: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: tenant
+  namespace: openstack
+spec:
+  allocationEnd: 172.16.0.250
+  allocationStart: 172.16.0.4
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 172.16.0.0/24
+  vlan: 50
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 172.16.0.4
+    role: ControlPlane
+    vip: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: storage
+  namespace: openstack
+spec:
+  allocationEnd: 172.16.1.250
+  allocationStart: 172.16.1.4
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 172.16.1.0/24
+  vlan: 30
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 172.16.1.4
+    role: ControlPlane
+    vip: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: storagemgmt
+  namespace: openstack
+spec:
+  allocationEnd: 172.16.3.250
+  allocationStart: 172.16.3.4
+  attachConfiguration:
+    bridgeName: br-osp
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 172.16.3.0/24
+  vlan: 40
+status:
+  reservations:
+  - addToPredictableIPs: false
+    hostname: controlplane-0
+    idKey: controlplane-0
+    ip: 172.16.3.4
+    role: ControlPlane
+    vip: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
   labels:
@@ -122,6 +325,11 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
+  - external
+  - internalapi
+  - tenant
+  - storage
+  - storagemgmt
   roleName: ControlPlane
   vip: true
 status:
@@ -153,6 +361,121 @@ status:
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
       vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 10
+    internalapi:
+      allocationEnd: 172.16.2.250
+      allocationStart: 172.16.2.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 172.16.2.0/24
+      gateway: ""
+      vlan: 20
+    storage:
+      allocationEnd: 172.16.1.250
+      allocationStart: 172.16.1.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 172.16.1.0/24
+      gateway: ""
+      vlan: 30
+    storagemgmt:
+      allocationEnd: 172.16.3.250
+      allocationStart: 172.16.3.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 172.16.3.0/24
+      gateway: ""
+      vlan: 40
+    tenant:
+      allocationEnd: 172.16.0.250
+      allocationStart: 172.16.0.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 172.16.0.0/24
+      gateway: ""
+      vlan: 50
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -166,6 +489,11 @@ spec:
   hostCount: 0
   networks:
   - ctlplane
+  - external
+  - internalapi
+  - tenant
+  - storage
+  - storagemgmt
   roleName: Controller
   vip: false
 status:
@@ -184,6 +512,7 @@ spec:
   hostCount: 1
   networks:
   - ctlplane
+  - external
   roleName: OpenstackClient
   vip: false
 status:
@@ -191,6 +520,7 @@ status:
     openstackclient-0:
       ipaddresses:
         ctlplane: 192.168.25.101/24
+        external: 10.0.0.5/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -215,6 +545,29 @@ status:
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
       vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.4
+      attachConfiguration:
+        bridgeName: br-osp
+        nodeNetworkConfigurationPolicy:
+          desiredState:
+            interfaces:
+            - bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                - name: enp6s0
+              description: Linux bridge with enp6s0 as a port
+              name: br-osp
+              state: up
+              type: linux-bridge
+          nodeSelector:
+            node-role.kubernetes.io/worker: ""
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 10
 ---
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy

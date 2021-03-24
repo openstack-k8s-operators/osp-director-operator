@@ -31,7 +31,7 @@ commands:
     namespaced: true
   - command: oc delete openstackvmset controller -n openstack --ignore-not-found
     namespaced: true
-  - command: oc delete openstacknet ctlplane -n openstack --ignore-not-found
+  - command: oc delete openstacknet --all -n openstack
     namespaced: true
   - command: oc delete NodeNetworkConfigurationPolicy -n openstack br-osp --ignore-not-found
     namespaced: true
