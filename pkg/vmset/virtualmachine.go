@@ -17,6 +17,8 @@ limitations under the License.
 package vmset
 
 import (
+	"fmt"
+
 	virtv1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -27,11 +29,23 @@ type NetSetter func(*virtv1.Network)
 type NetSetterMap map[string]NetSetter
 
 // Network - create additional multus virtv1.Network
-func Network(networkName string) NetSetter {
+func Network(networkName string, bindingMethod string) NetSetter {
 	return func(net *virtv1.Network) {
 		net.Name = networkName
+		actualNetworkName := networkName
+
+		if bindingMethod == "sriov" {
+			// SRIOV networks use "<network>-sriov-network" format for the actual network name
+			// FIXME?: We could just change the OpenStackNet controller so that it uses the instance
+			//         name without the "-sriov-network" suffix, but it is currently doing this
+			//         because all SRIOV resources are created in a shared namespace
+			//         (openshift-sriov-network-operator), so we're trying to avoid possible naming
+			//         conflicts by appending this suffix
+			actualNetworkName = fmt.Sprintf("%s-sriov-network", networkName)
+		}
+
 		net.NetworkSource.Multus = &virtv1.MultusNetwork{
-			NetworkName: networkName,
+			NetworkName: actualNetworkName,
 		}
 	}
 }
@@ -64,13 +78,25 @@ type InterfaceSetter func(*virtv1.Interface)
 type InterfaceSetterMap map[string]InterfaceSetter
 
 // Interface - create additional Intercface, ATM only bridge
-func Interface(ifName string) InterfaceSetter {
+func Interface(ifName string, bindingMethod string) InterfaceSetter {
 	return func(iface *virtv1.Interface) {
 		iface.Name = ifName
-		iface.Model = "virtio"
-		iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
-			Bridge: &virtv1.InterfaceBridge{},
+
+		model := "virtio"
+
+		// We currently support SRIOV and bridge interfaces, with anything other than "sriov" indicating a bridge
+		if bindingMethod == "sriov" {
+			model = ""
+			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
+				SRIOV: &virtv1.InterfaceSRIOV{},
+			}
+		} else {
+			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
+				Bridge: &virtv1.InterfaceBridge{},
+			}
 		}
+
+		iface.Model = model
 	}
 }
 

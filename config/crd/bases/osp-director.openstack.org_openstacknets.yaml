@@ -71,6 +71,49 @@ spec:
                           on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                         type: object
                     type: object
+                  nodeSriovConfigurationPolicy:
+                    description: NodeSriovConfigurationPolicy - Node selector and
+                      desired state for SRIOV network
+                    properties:
+                      desiredState:
+                        description: SriovState - SRIOV-specific configuration details
+                          for an OSP network
+                        properties:
+                          deviceType:
+                            default: vfio-pci
+                            type: string
+                          mtu:
+                            default: 9000
+                            format: int32
+                            type: integer
+                          numVfs:
+                            format: int32
+                            type: integer
+                          port:
+                            type: string
+                          rootDevice:
+                            type: string
+                          spoofCheck:
+                            default: "on"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          trust:
+                            default: "off"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                        required:
+                        - numVfs
+                        - port
+                        type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                 type: object
               cidr:
                 description: Cidr the cidr to use for this network
