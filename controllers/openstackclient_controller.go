@@ -237,7 +237,7 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		Namespace:    instance.Namespace,
 		Size:         openstackclient.HostsPersistentStorageSize,
 		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
-		StorageClass: openstackclient.PersistentStorageClass,
+		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
 		},
@@ -256,7 +256,7 @@ func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		Namespace:    instance.Namespace,
 		Size:         openstackclient.CloudAdminPersistentStorageSize,
 		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
-		StorageClass: openstackclient.PersistentStorageClass,
+		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
 		},

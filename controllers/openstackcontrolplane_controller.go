@@ -248,6 +248,8 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
+		openstackclient.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
+
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			openstackclient.Spec.Networks = instance.Spec.OpenStackClientNetworks
 		}

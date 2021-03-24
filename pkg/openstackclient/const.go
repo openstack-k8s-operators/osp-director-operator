@@ -34,9 +34,6 @@ const (
 	HostsPersistentStorageSize = "1G"
 	// CloudAdminPersistentStorageSize - size in GB
 	CloudAdminPersistentStorageSize = "4G"
-	// PersistentStorageClass -
-	// TODO: move to be CRD parameter PersistentStorageClass
-	PersistentStorageClass = "host-nfs-storageclass"
 	// Count - openstackclient count is atm fixed to 1
 	Count = 1
 	// Role - openstackclient has not tripleo role, set it as const

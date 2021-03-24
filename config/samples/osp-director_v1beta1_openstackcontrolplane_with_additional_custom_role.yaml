@@ -8,6 +8,7 @@ spec:
   openStackClientNetworks:
     - ctlplane
     - external
+  openStackClientStorageClass: host-nfs-storageclass
   virtualMachineRoles:
     controller:
       roleName: Controller
