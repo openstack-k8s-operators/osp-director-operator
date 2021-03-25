@@ -34,9 +34,13 @@ type IPReservation struct {
 
 // NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 type NetworkConfiguration struct {
-	BridgeName                     string                                        `json:"bridgeName,omitempty"`
+	BridgeName string `json:"bridgeName,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
-	NodeSriovConfigurationPolicy   NodeSriovConfigurationPolicy                  `json:"nodeSriovConfigurationPolicy,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
+	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy,omitempty"`
 }
 
 // NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network

@@ -221,7 +221,12 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
 			os.Exit(1)
 		}
+		if err = (&ospdirectorv1beta1.OpenStackNet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
+			os.Exit(1)
+		}
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

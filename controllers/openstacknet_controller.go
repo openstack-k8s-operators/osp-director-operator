@@ -131,66 +131,68 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 
+	// If we have an SRIOV definition on this network, use that.  Otherwise assume the
+	// non-SRIOV configuration must be present
 	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
 		if err := r.ensureSriov(instance); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
+	} else {
+		// generate NodeNetworkConfigurationPolicy
+		ncp := common.NetworkConfigurationPolicy{
+			Name:                           instance.Name,
+			Labels:                         common.GetLabelSelector(instance, openstacknet.AppLabel),
+			NodeNetworkConfigurationPolicy: instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
+		}
+		err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// generate NodeNetworkConfigurationPolicy
-	ncp := common.NetworkConfigurationPolicy{
-		Name:                           instance.Name,
-		Labels:                         common.GetLabelSelector(instance, openstacknet.AppLabel),
-		NodeNetworkConfigurationPolicy: instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
-	}
-	err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		// create NetworkAttachmentDefinition
+		// the desired state is raw json, marshal -> unmarshal to parse it
+		desiredStateByte, err := json.Marshal(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy)
+		if err != nil {
+			r.Log.Error(err, fmt.Sprintf("Error marshal NodeNetworkConfigurationPolicy desired state: %v", instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy))
+			return ctrl.Result{}, err
+		}
 
-	// create NetworkAttachmentDefinition
-	// the desired state is raw json, marshal -> unmarshal to parse it
-	desiredStateByte, err := json.Marshal(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy)
-	if err != nil {
-		r.Log.Error(err, fmt.Sprintf("Error marshal NodeNetworkConfigurationPolicy desired state: %v", instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy))
-		return ctrl.Result{}, err
-	}
+		var desiredState map[string]json.RawMessage //interface{}
+		err = json.Unmarshal(desiredStateByte, &desiredState)
+		if err != nil {
+			r.Log.Error(err, fmt.Sprintf("Error unmarshal NodeNetworkConfigurationPolicy desired state: %v", string(desiredStateByte)))
+			return ctrl.Result{}, err
+		}
 
-	var desiredState map[string]json.RawMessage //interface{}
-	err = json.Unmarshal(desiredStateByte, &desiredState)
-	if err != nil {
-		r.Log.Error(err, fmt.Sprintf("Error unmarshal NodeNetworkConfigurationPolicy desired state: %v", string(desiredStateByte)))
-		return ctrl.Result{}, err
-	}
+		bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0]
+		vlan := strconv.Itoa(instance.Spec.Vlan)
+		nad := common.NetworkAttachmentDefinition{
+			Name:      instance.Name,
+			Namespace: instance.Namespace,
+			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+			Data: map[string]string{
+				"Name":       instance.Name,
+				"BridgeName": bridgeName.String(),
+				"Vlan":       vlan,
+			},
+		}
 
-	bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0]
-	vlan := strconv.Itoa(instance.Spec.Vlan)
-	nad := common.NetworkAttachmentDefinition{
-		Name:      instance.Name,
-		Namespace: instance.Namespace,
-		Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
-		Data: map[string]string{
-			"Name":       instance.Name,
-			"BridgeName": bridgeName.String(),
-			"Vlan":       vlan,
-		},
-	}
+		// create nad
+		err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// create nad
-	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		// create static nad used for openstackclient
+		name := fmt.Sprintf("%s-static", instance.Name)
+		nad.Name = name
+		nad.Data["Name"] = name
+		nad.Data["Static"] = "true"
 
-	// create static nad used for openstackclient
-	name := fmt.Sprintf("%s-static", instance.Name)
-	nad.Name = name
-	nad.Data["Name"] = name
-	nad.Data["Static"] = "true"
-
-	err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
-	if err != nil {
-		return ctrl.Result{}, err
+		err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

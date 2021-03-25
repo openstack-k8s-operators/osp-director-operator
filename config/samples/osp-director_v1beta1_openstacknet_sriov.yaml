@@ -1,0 +1,20 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: ctlplane
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1 # optional
+  attachConfiguration:
+    nodeSriovConfigurationPolicy:
+      desiredState:
+        deviceType: vfio-pci
+        mtu: 9000
+        numVfs: 4
+        port: enp6s0
+        spoofCheck: "off"
+        trust: "on"
+      nodeSelector:
+        node-role.kubernetes.io/worker-sriov: ""
