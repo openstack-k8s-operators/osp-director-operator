@@ -31,6 +31,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
@@ -200,9 +203,55 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager -
 func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	sriovNetworkFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+		result := []reconcile.Request{}
+		label := o.Meta.GetLabels()
+		// verify object has ownerUIDLabelSelector
+		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+			r.Log.Info(fmt.Sprintf("SriovNetwork object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			// return namespace and Name of CR
+			name := client.ObjectKey{
+				Namespace: label[OwnerNameSpaceLabelSelector],
+				Name:      label[OwnerNameLabelSelector],
+			}
+			result = append(result, reconcile.Request{NamespacedName: name})
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
+	sriovNetworkNodePolicyFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+		result := []reconcile.Request{}
+		label := o.Meta.GetLabels()
+		// verify object has ownerUIDLabelSelector
+		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+			r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			// return namespace and Name of CR
+			name := client.ObjectKey{
+				Namespace: label[OwnerNameSpaceLabelSelector],
+				Name:      label[OwnerNameLabelSelector],
+			}
+			result = append(result, reconcile.Request{NamespacedName: name})
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&networkv1.NetworkAttachmentDefinition{}).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: sriovNetworkFn,
+			}).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: sriovNetworkNodePolicyFn,
+			}).
 		Complete(r)
 }
 
@@ -224,16 +273,16 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 			Namespace: "openshift-sriov-network-operator",
 			Labels:    labelSelector,
 		},
-		Spec: sriovnetworkv1.SriovNetworkSpec{
-			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
-			Trust:            instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Trust,
-			ResourceName:     fmt.Sprintf("%s_sriovnics", instance.Name),
-			NetworkNamespace: instance.Namespace,
-		},
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovNet, func() error {
 		sriovNet.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+		sriovNet.Spec = sriovnetworkv1.SriovNetworkSpec{
+			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
+			Trust:            instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Trust,
+			ResourceName:     fmt.Sprintf("%s_sriovnics", instance.Name),
+			NetworkNamespace: instance.Namespace,
+		}
 
 		return nil
 	})
@@ -252,7 +301,15 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 			Namespace: "openshift-sriov-network-operator",
 			Labels:    labelSelector,
 		},
-		Spec: sriovnetworkv1.SriovNetworkNodePolicySpec{
+	}
+
+	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice != "" {
+		sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
+	}
+
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovPolicy, func() error {
+		sriovPolicy.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+		sriovPolicy.Spec = sriovnetworkv1.SriovNetworkNodePolicySpec{
 			DeviceType: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.DeviceType,
 			Mtu:        int(instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Mtu),
 			NicSelector: sriovnetworkv1.SriovNetworkNicSelector{
@@ -262,15 +319,11 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 			NumVfs:       int(instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.NumVfs),
 			Priority:     5,
 			ResourceName: fmt.Sprintf("%s_sriovnics", instance.Name),
-		},
-	}
+		}
 
-	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice != "" {
-		sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
-	}
-
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovPolicy, func() error {
-		sriovNet.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+		if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice != "" {
+			sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
+		}
 
 		return nil
 	})
