@@ -12,6 +12,8 @@ ARG REMOTE_SOURCE_DIR=/remote-source
 ARG REMOTE_SOURCE_SUBDIR=
 ARG DEST_ROOT=/dest-root
 
+ARG GO_BUILD_EXTRA_ARGS
+
 COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
 WORKDIR ${REMOTE_SOURCE_DIR}/${REMOTE_SOURCE_SUBDIR}
 
@@ -29,7 +31,7 @@ RUN if [ ! -f $CACHITO_ENV_FILE ]; then go mod download ; fi
 #RUN mkdir -p /usr/share/osp-director-operator/templates && mkdir -p /cmd/
 
 # Build manager
-RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=0  GO111MODULE=on ${GO_BUILD_EXTRA_VARS} go build ${GO_BUILD_EXTRA_ARGS} -v -a -o ${DEST_ROOT}/manager main.go
+RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=0  GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -v -a -o ${DEST_ROOT}/manager main.go
 
 RUN cp -r templates ${DEST_ROOT}/templates
 
