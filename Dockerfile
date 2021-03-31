@@ -52,7 +52,7 @@ LABEL com.redhat.component="osp-director-operator-container" \
 
 ENV USER_UID=1001 \
     OPERATOR_TEMPLATES=/usr/share/osp-director-operator/templates/ \
-    WATCH_NAMESPACE=openstack,openshift-machine-api
+    WATCH_NAMESPACE=openstack,openshift-machine-api,openshift-sriov-network-operator
 
 WORKDIR /
 

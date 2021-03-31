@@ -59,7 +59,7 @@ spec:
   config:
     env:
     - name: WATCH_NAMESPACE
-      value: $TARGET_NAMESPACE
+      value: $TARGET_NAMESPACE,openshift-machine-api,openshift-sriov-network-operator
   source: osp-director-operator-index
   sourceNamespace: $TARGET_NAMESPACE
   name: osp-director-operator
