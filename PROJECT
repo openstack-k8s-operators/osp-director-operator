@@ -3,27 +3,55 @@ layout: go.kubebuilder.io/v2
 projectName: osp-director-operator
 repo: github.com/openstack-k8s-operators/osp-director-operator
 resources:
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackControlPlane
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackVMSet
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackProvisionServer
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackBaremetalSet
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackClient
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackNet
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-- group: osp-director
+-
+  controller: true
+  domain: openstack.org
+  group: osp-director
   kind: OpenStackIPSet
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
-version: 3-alpha
+version: "3"
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

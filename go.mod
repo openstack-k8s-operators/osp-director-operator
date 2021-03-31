@@ -5,8 +5,7 @@ go 1.13
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/containernetworking/cni v0.7.1 // indirect
-	github.com/go-logr/logr v0.2.1
+	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
@@ -28,7 +27,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	kubevirt.io/client-go v0.34.2
 	kubevirt.io/containerized-data-importer v1.23.5
-	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/controller-runtime v0.7.2
 )
 
 replace (
