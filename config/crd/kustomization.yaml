@@ -31,7 +31,7 @@ patchesStrategicMerge:
 #- patches/cainjection_in_openstackprovisionservers.yaml
 - patches/cainjection_in_openstackbaremetalsets.yaml
 #- patches/cainjection_in_openstackclients.yaml
-#- patches/cainjection_in_openstacknets.yaml
+- patches/cainjection_in_openstacknets.yaml
 #- patches/cainjection_in_openstackipsets.yaml
 #- patches/cainjection_in_openstackpredictableips.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch

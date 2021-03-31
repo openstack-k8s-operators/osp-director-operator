@@ -34,8 +34,36 @@ type IPReservation struct {
 
 // NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 type NetworkConfiguration struct {
-	BridgeName                     string                                        `json:"bridgeName,omitempty"`
+	BridgeName string `json:"bridgeName,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
+	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy,omitempty"`
+}
+
+// NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network
+type NodeSriovConfigurationPolicy struct {
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	DesiredState SriovState        `json:"desiredState,omitempty"`
+}
+
+// SriovState - SRIOV-specific configuration details for an OSP network
+type SriovState struct {
+	// +kubebuilder:default=vfio-pci
+	DeviceType string `json:"deviceType,omitempty"`
+	// +kubebuilder:default=9000
+	Mtu        uint32 `json:"mtu,omitempty"`
+	NumVfs     uint32 `json:"numVfs"`
+	Port       string `json:"port"`
+	RootDevice string `json:"rootDevice,omitempty"`
+	// +kubebuilder:validation:Enum={"on","off"}
+	// +kubebuilder:default=on
+	SpoofCheck string `json:"spoofCheck,omitempty"`
+	// +kubebuilder:validation:Enum={"on","off"}
+	// +kubebuilder:default=off
+	Trust string `json:"trust,omitempty"`
 }
 
 // OpenStackNetSpec defines the desired state of OpenStackNet
