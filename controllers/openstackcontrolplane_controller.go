@@ -80,8 +80,7 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - control plane
-func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("controlplane", req.NamespacedName)
 
 	// Fetch the controller VM instance
@@ -275,13 +274,13 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
-	namespacedFn := handler.ToRequestsFunc(func(obj handler.MapObject) []reconcile.Request {
+	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all CRs from the same namespace
 		crs := &ospdirectorv1beta1.OpenStackControlPlaneList{}
 		listOpts := []client.ListOption{
-			client.InNamespace(obj.Meta.GetNamespace()),
+			client.InNamespace(obj.GetNamespace()),
 		}
 		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
 			r.Log.Error(err, "Unable to retrieve CRs %v")
@@ -289,7 +288,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		}
 
 		for _, cr := range crs.Items {
-			if obj.Meta.GetNamespace() == cr.Namespace {
+			if obj.GetNamespace() == cr.Namespace {
 				// return namespace and Name of CR
 				name := client.ObjectKey{
 					Namespace: cr.Namespace,
@@ -311,10 +310,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		// watch pods in the same namespace as we want to reconcile if
 		// e.g. a controller vm gets destroyed
-		Watches(&source.Kind{Type: &corev1.Pod{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: namespacedFn,
-			}).
+		Watches(&source.Kind{Type: &corev1.Pod{}}, namespacedFn).
 		Complete(r)
 }
 

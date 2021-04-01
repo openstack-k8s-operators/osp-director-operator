@@ -89,9 +89,8 @@ func (r *OpenStackBaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile baremetalset
-func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackbaremetalset", req.NamespacedName)
-	ctx := context.Background()
 
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackBaremetalSet{}
@@ -246,12 +245,12 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(req ctrl.Request) (ctrl.Resu
 
 // SetupWithManager - prepare controller for use with operator manager
 func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	openshiftMachineAPIBareMetalHostsFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+	openshiftMachineAPIBareMetalHostsFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
-		label := o.Meta.GetLabels()
+		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
 		if uid, ok := label[baremetalset.OwnerUIDLabelSelector]; ok {
-			r.Log.Info(fmt.Sprintf("BareMetalHost object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			r.Log.Info(fmt.Sprintf("BareMetalHost object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
 				Namespace: label[baremetalset.OwnerNameSpaceLabelSelector],
@@ -268,10 +267,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
-		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: openshiftMachineAPIBareMetalHostsFn,
-			}).
+		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
 

@@ -94,8 +94,7 @@ func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
 // Reconcile - provision image servers
-func (r *OpenStackProvisionServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackprovisionserver", req.NamespacedName)
 
 	// Fetch the ProvisionServer instance

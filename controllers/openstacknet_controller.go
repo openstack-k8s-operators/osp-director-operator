@@ -80,8 +80,7 @@ func (r *OpenStackNetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile -
-func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("overcloudnet", req.NamespacedName)
 
 	// Fetch the controller VM instance
@@ -203,12 +202,12 @@ func (r *OpenStackNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 // SetupWithManager -
 func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	sriovNetworkFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+	sriovNetworkFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
-		label := o.Meta.GetLabels()
+		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
 		if uid, ok := label[OwnerUIDLabelSelector]; ok {
-			r.Log.Info(fmt.Sprintf("SriovNetwork object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			r.Log.Info(fmt.Sprintf("SriovNetwork object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
 				Namespace: label[OwnerNameSpaceLabelSelector],
@@ -222,12 +221,12 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return nil
 	})
 
-	sriovNetworkNodePolicyFn := handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+	sriovNetworkNodePolicyFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
-		label := o.Meta.GetLabels()
+		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
 		if uid, ok := label[OwnerUIDLabelSelector]; ok {
-			r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy object %s marked with OSP owner ref: %s", o.Meta.GetName(), uid))
+			r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
 				Namespace: label[OwnerNameSpaceLabelSelector],
@@ -244,14 +243,8 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&networkv1.NetworkAttachmentDefinition{}).
-		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: sriovNetworkFn,
-			}).
-		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: sriovNetworkNodePolicyFn,
-			}).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}}, sriovNetworkFn).
+		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}}, sriovNetworkNodePolicyFn).
 		Complete(r)
 }
 

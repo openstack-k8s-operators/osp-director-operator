@@ -97,8 +97,7 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworknodepolicies;sriovnetworks,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile - controller VMs
-func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("vmset", req.NamespacedName)
 
 	// Fetch the controller VM instance
@@ -131,7 +130,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, vmset.FinalizerName) {
 			controllerutil.AddFinalizer(instance, vmset.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", vmset.FinalizerName, instance.Name))
