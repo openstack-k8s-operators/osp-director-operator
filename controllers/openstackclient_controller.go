@@ -73,8 +73,7 @@ func (r *OpenStackClientReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - openstackclient
-func (r *OpenStackClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackclient", req.NamespacedName)
 
 	// Fetch the controller VM instance

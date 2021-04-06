@@ -99,7 +99,7 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	podman build . -t ${IMG}
+	podman build -t ${IMG} .
 
 # Push the docker image
 docker-push:

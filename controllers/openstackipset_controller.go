@@ -69,8 +69,7 @@ func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 
 // Reconcile - reconcile OpenStackIPSet objects
-func (r *OpenStackIPSetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackipset", req.NamespacedName)
 
 	// Fetch the controller VM instance
