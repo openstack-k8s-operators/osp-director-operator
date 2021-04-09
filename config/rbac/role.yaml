@@ -30,6 +30,16 @@ rules:
   - update
   - watch
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+- apiGroups:
   - ""
   resources:
   - configmaps
@@ -324,6 +334,32 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstacknets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackplaybookgenerators
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackplaybookgenerators/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackplaybookgenerators/status
   verbs:
   - get
   - patch

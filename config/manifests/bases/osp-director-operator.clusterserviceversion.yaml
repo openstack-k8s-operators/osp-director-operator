@@ -49,6 +49,11 @@ spec:
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators API
+      displayName: OpenStack Playbook Generator
+      kind: OpenStackPlaybookGenerator
+      name: openstackplaybookgenerators.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers API
       displayName: OpenStack ProvisionServer
       kind: OpenStackProvisionServer

@@ -20,26 +20,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // OpenStackPlaybookGeneratorSpec defines the desired state of OpenStackPlaybookGenerator
 type OpenStackPlaybookGeneratorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of OpenStackPlaybookGenerator. Edit openstackplaybookgenerator_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Name of the image
+	ImageURL string `json:"imageURL"`
+	// name of secret holding the stack-admin ssh keys
+	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
+	// name of the associated OpenStackClient resource
+	OpenStackClientName string `json:"openstackClientName"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator
 type OpenStackPlaybookGeneratorStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// PlaybookHash hash
+	PlaybookHash string `json:"playbookHash"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osplaybookgenerator;osplaybookgenerators
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
 
 // OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators API
 type OpenStackPlaybookGenerator struct {

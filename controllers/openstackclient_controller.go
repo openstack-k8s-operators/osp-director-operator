@@ -165,54 +165,12 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
-	cms := []common.Template{
-		// Custom CM holding Tripleo deployment environment parameter files
-		{
-			Name:      "tripleo-deploy-config-custom",
-			Namespace: instance.Namespace,
-			Type:      common.TemplateTypeCustom,
-			Labels:    cmLabels,
-		},
-		// Custom CM holding Tripleo net-config files then used in parameter files
-		{
-			Name:      "tripleo-net-config",
-			Namespace: instance.Namespace,
-			Type:      common.TemplateTypeCustom,
-			Labels:    cmLabels,
-		},
-	}
-	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
-	if err != nil {
-		return ctrl.Result{}, nil
-	}
-
-	// get tripleo-deploy-config-custom, created/rendered by openstackipset controller
-	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-custom", instance.Namespace)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
-	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
-
-	// get tripleo-deploy-config, created/rendered by openstackipset controller
-	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
-	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			return ctrl.Result{RequeueAfter: time.Second * 10}, err
-		}
-		return ctrl.Result{}, err
-	}
-
-	tripleoDeployFiles := tripleoDeployCM.Data
-	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 
 	// create cm holding deployment script and render deployment script.
 	// All yaml files from tripleo-deploy-config-custom and tripleo-deploy-config
 	// are added as environment files.
-	cms = []common.Template{
+	cms := []common.Template{
 		// ScriptsConfigMap
 		{
 			Name:           "openstackclient-sh",
@@ -220,7 +178,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Type:           common.TemplateTypeScripts,
 			InstanceType:   instance.Kind,
 			AdditionalData: map[string]string{},
-			ConfigOptions:  templateParameters,
+			ConfigOptions:  make(map[string]interface{}),
 			Labels:         cmLabels,
 		},
 	}
@@ -257,7 +215,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
 		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteOnce,
+			corev1.ReadWriteMany,
 		},
 	}
 
