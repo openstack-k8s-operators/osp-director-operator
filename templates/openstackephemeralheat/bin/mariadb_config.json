@@ -1,0 +1,11 @@
+{
+    "command": "/usr/libexec/mysqld --user=mysql",
+    "config_files": [
+        {
+            "source": "/var/lib/config-data/galera.cnf",
+            "dest": "/etc/my.cnf.d/galera.cnf",
+            "owner": "root",
+            "perm": "0600"
+        }
+    ]
+}

@@ -1,0 +1,24 @@
+{
+    "command": "/usr/local/bin/mariadb_init.sh",
+    "config_files": [
+        {
+            "source": "/var/lib/config-data/galera.cnf",
+            "dest": "/etc/my.cnf.d/galera.cnf",
+            "owner": "root",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/mariadb_init.sh",
+            "dest": "/usr/local/bin/mariadb_init.sh",
+            "owner": "root",
+            "perm": "0755"
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/var/lib/mysql",
+            "owner": "mysql:mysql",
+            "recurse": "true"
+        }
+    ]
+}

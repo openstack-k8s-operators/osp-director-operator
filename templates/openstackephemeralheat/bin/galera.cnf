@@ -1,0 +1,39 @@
+[client]
+port = 3306
+socket = /var/lib/mysql/mysql.sock
+
+[isamchk]
+key_buffer_size = 16M
+
+[mysqld]
+basedir = /usr
+bind-address = 127.0.0.1
+datadir = /var/lib/mysql
+expire_logs_days = 10
+innodb_file_per_table = ON
+key_buffer_size = 16M
+max_allowed_packet = 16M
+max_binlog_size = 100M
+max_connections = 4096
+open_files_limit = 65536
+pid-file = /var/lib/mysql/mariadb.pid
+port = 3306
+query_cache_limit = 1M
+query_cache_size = 16M
+skip-external-locking
+socket = /var/lib/mysql/mysql.sock
+ssl = false
+thread_cache_size = 8
+thread_stack = 256K
+tmpdir = /tmp
+user = mysql
+
+[mysqld_safe]
+nice = 0
+pid-file = /var/lib/mysql/mariadb.pid
+socket = /var/lib/mysql/mysql.sock
+
+[mysqldump]
+max_allowed_packet = 16M
+quick
+quote-names
