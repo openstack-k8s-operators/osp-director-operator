@@ -293,9 +293,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
+	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
+	if instance.Spec.BaseImageVolumeName != "" {
+		baseImageName = instance.Spec.BaseImageVolumeName
+	}
+
 	// Create base image, controller disks get cloned from this
 	if instance.Spec.BaseImageVolumeName == "" {
-		err = r.cdiCreateBaseDisk(instance)
+		err = r.cdiCreateBaseDisk(instance, baseImageName)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -308,10 +313,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// - when import done
 	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
 	pvc := &corev1.PersistentVolumeClaim{}
-	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
-	if instance.Spec.BaseImageVolumeName != "" {
-		baseImageName = instance.Spec.BaseImageVolumeName
-	}
+
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && errors.IsNotFound(err) {
 		r.Log.Info(fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName))
@@ -435,7 +437,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Create controller VM objects and finally set VMSet status in etcd
 	if instance.Status.BaseImageDVReady {
 		for _, ctl := range controllerDetails {
-			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings)
+			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings, baseImageName)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -584,13 +586,13 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.OpenStackVMSet) error {
+func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.OpenStackVMSet, baseImageVolumeName string) error {
 
 	fsMode := corev1.PersistentVolumeFilesystem
 
 	cdi := cdiv1.DataVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Spec.BaseImageVolumeName,
+			Name:      baseImageVolumeName,
 			Namespace: instance.Namespace,
 			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
 		},
@@ -640,7 +642,7 @@ func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta
 	return err
 }
 
-func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string) error {
+func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string, baseImageVolumeName string) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	fsMode := corev1.PersistentVolumeFilesystem
@@ -675,7 +677,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 			},
 			Source: cdiv1.DataVolumeSource{
 				PVC: &cdiv1.DataVolumeSourcePVC{
-					Name:      instance.Spec.BaseImageVolumeName,
+					Name:      baseImageVolumeName,
 					Namespace: instance.Namespace,
 				},
 			},
