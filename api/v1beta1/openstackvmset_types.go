@@ -73,6 +73,7 @@ type Host struct {
 	DomainNameUniq    string                                            `json:"domainNameUniq"`
 	IPAddress         string                                            `json:"ipAddress"`
 	NetworkDataSecret string                                            `json:"networkDataSecret"`
+	BaseImageName     string                                            `json:"baseImageName"`
 	Labels            map[string]string                                 `json:"labels"`
 	NNCP              map[string]nmstate.NodeNetworkConfigurationPolicy `json:"nncp"`
 	NAD               map[string]networkv1.NetworkAttachmentDefinition  `json:"nad"`
