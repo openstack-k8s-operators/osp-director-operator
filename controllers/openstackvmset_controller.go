@@ -437,7 +437,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Create controller VM objects and finally set VMSet status in etcd
 	if instance.Status.BaseImageDVReady {
 		for _, ctl := range controllerDetails {
-			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings, baseImageName)
+			// Add chosen baseImageName to controller details, then create the VM instance
+			ctl.BaseImageName = baseImageName
+			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -642,7 +644,7 @@ func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta
 	return err
 }
 
-func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string, baseImageVolumeName string) error {
+func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	fsMode := corev1.PersistentVolumeFilesystem
@@ -677,7 +679,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 			},
 			Source: cdiv1.DataVolumeSource{
 				PVC: &cdiv1.DataVolumeSourcePVC{
-					Name:      baseImageVolumeName,
+					Name:      ctl.BaseImageName,
 					Namespace: instance.Namespace,
 				},
 			},
