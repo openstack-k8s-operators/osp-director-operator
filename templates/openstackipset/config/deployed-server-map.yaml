@@ -22,6 +22,9 @@ parameter_defaults:
         - ip_address: {{ $network.IPaddr }}
       subnets:
         - cidr: {{ $network.Cidr }}
+      network:
+        tags:
+          - {{ $network.Cidr }}
 {{- end }}
 {{- end }}
 {{- range $viptyp, $ip := .NetworkVip }}
