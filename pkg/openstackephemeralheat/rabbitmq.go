@@ -8,39 +8,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// MariadbGetLabels -
-func MariadbGetLabels(name string) map[string]string {
-	return map[string]string{"owner": "osp-director-operator", "cr": name, "app": "mariadb"}
+// RabbitmqGetLabels -
+func RabbitmqGetLabels(name string) map[string]string {
+	return map[string]string{"owner": "osp-director-operator", "cr": name, "app": "rabbitmq"}
 }
 
 // Pod -
-func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
+func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
-			Labels:    MariadbGetLabels(instance.Name),
+			Labels:    RabbitmqGetLabels(instance.Name),
 		},
 		Spec: corev1.PodSpec{
-			//ServiceAccountName: "mariadb",
 			Containers: []corev1.Container{
 				{
-					Name:  "mariadb",
-					Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Name:  "rabbitmq",
+					Image: "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo", //FIXME
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
 							Value: "COPY_ALWAYS",
 						},
 					},
-					VolumeMounts: getMariadbVolumeMounts(),
+					VolumeMounts: getRabbitmqVolumeMounts(),
 				},
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name:  "mariadb-init",
-					Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Name:  "rabbitmq-init",
+					Image: "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo", //FIXME
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -51,36 +50,32 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 							Value: "true",
 						},
 						{
-							Name:  "DB_MAX_TIMEOUT",
-							Value: "60",
-						},
-						{
-							Name:  "DB_ROOT_PASSWORD",
+							Name:  "RABBITMQ_CLUSTER_COOKIE",
 							Value: "foobar123", //FIXME
 						},
 					},
-					VolumeMounts: getMariadbInitVolumeMounts(),
+					VolumeMounts: getRabbitmqVolumeMounts(),
 				},
 			},
-			Volumes: getMariadbVolumes(instance.Name),
+			Volumes: getRabbitmqVolumes(instance.Name),
 		},
 	}
 	return pod
 }
 
 // Service func
-func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
+func RabbitmqService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
-			Labels:    MariadbGetLabels(instance.Name),
+			Labels:    RabbitmqGetLabels(instance.Name),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{"app": "mariadb"},
+			Selector: map[string]string{"app": "rabbitmq"},
 			Ports: []corev1.ServicePort{
-				{Name: "database", Port: 3306, Protocol: corev1.ProtocolTCP},
+				{Name: "rabbitmq", Port: 5672, Protocol: corev1.ProtocolTCP},
 			},
 		},
 	}
@@ -88,7 +83,7 @@ func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme 
 	return svc
 }
 
-func getMariadbVolumes(name string) []corev1.Volume {
+func getRabbitmqVolumes(name string) []corev1.Volume {
 
 	return []corev1.Volume{
 
@@ -101,23 +96,7 @@ func getMariadbVolumes(name string) []corev1.Volume {
 					},
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "mariadb_config.json",
-							Path: "config.json",
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: "kolla-config-init",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
-					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "mariadb_init_config.json",
+							Key:  "rabbitmq_config.json",
 							Path: "config.json",
 						},
 					},
@@ -133,12 +112,12 @@ func getMariadbVolumes(name string) []corev1.Volume {
 					},
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "galera.cnf",
-							Path: "galera.cnf",
+							Key:  "rabbitmq.config",
+							Path: "rabbitmq.config",
 						},
 						{
-							Key:  "mariadb_init.sh",
-							Path: "mariadb_init.sh",
+							Key:  "rabbitmq-env.conf",
+							Path: "rabbitmq-env.conf",
 						},
 					},
 				},
@@ -154,7 +133,7 @@ func getMariadbVolumes(name string) []corev1.Volume {
 
 }
 
-func getMariadbVolumeMounts() []corev1.VolumeMount {
+func getRabbitmqVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
 			MountPath: "/var/lib/config-data",
@@ -167,28 +146,7 @@ func getMariadbVolumeMounts() []corev1.VolumeMount {
 			Name:      "kolla-config",
 		},
 		{
-			MountPath: "/var/lib/mysql",
-			ReadOnly:  false,
-			Name:      "lib-data",
-		},
-	}
-
-}
-
-func getMariadbInitVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
-		{
-			MountPath: "/var/lib/config-data",
-			ReadOnly:  true,
-			Name:      "config-data",
-		},
-		{
-			MountPath: "/var/lib/kolla/config_files",
-			ReadOnly:  true,
-			Name:      "kolla-config-init",
-		},
-		{
-			MountPath: "/var/lib/mysql",
+			MountPath: "/var/lib/rabbitmq",
 			ReadOnly:  false,
 			Name:      "lib-data",
 		},

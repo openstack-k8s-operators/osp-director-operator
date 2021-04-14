@@ -1,0 +1,24 @@
+{
+    "command": "/usr/lib/rabbitmq/bin/rabbitmq-server",
+    "config_files": [
+        {
+            "source": "/var/lib/config-data/rabbitmq.config",
+            "dest": "/etc/rabbitmq/rabbitmq.config",
+            "owner": "rabbitmq",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/rabbitmq-env.conf",
+            "dest": "/etc/rabbitmq/rabbitmq-env.conf",
+            "owner": "rabbitmq",
+            "perm": "0600"
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/var/lib/rabbitmq",
+            "owner": "rabbitmq:rabbitmq",
+            "recurse": "true"
+        }
+    ]
+}

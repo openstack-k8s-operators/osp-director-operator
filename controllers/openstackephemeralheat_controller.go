@@ -114,9 +114,9 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// MariaDB Pod
-	pod := openstackephemeralheat.MariadbPod(instance)
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
-		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
+	mariadbPod := openstackephemeralheat.MariadbPod(instance)
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbPod, func() error {
+		err := controllerutil.SetControllerReference(instance, mariadbPod, r.Scheme)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("MariaDB Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// MariaDB Service
@@ -137,6 +137,39 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 		r.Log.Info("Creating MariaDB Service", "Service.Namespace", mariadbService.Namespace, "Service.Name", mariadbService.Name)
 		err = r.Client.Create(context.TODO(), mariadbService)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// RabbitMQ Pod
+	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitmqPod, func() error {
+		err := controllerutil.SetControllerReference(instance, rabbitmqPod, r.Scheme)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("RabbitMQ Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
+	// RabbitMQ Service
+	rabbitMQService := openstackephemeralheat.RabbitmqService(instance, r.Scheme)
+	foundService = &corev1.Service{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: rabbitMQService.Name, Namespace: rabbitMQService.Namespace}, foundService)
+	if err != nil && k8s_errors.IsNotFound(err) {
+
+		r.Log.Info("Creating RabbitMQ Service", "Service.Namespace", rabbitMQService.Namespace, "Service.Name", rabbitMQService.Name)
+		err = r.Client.Create(context.TODO(), rabbitMQService)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
