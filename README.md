@@ -26,10 +26,15 @@ Installation
 
 ## Prerequisite:
 - OCP 4.6 installed
-- OpenShift Virtualization 2.5
+- OpenShift Virtualization 2.6+
 
 ## Install the OSP Director Operator
 The OSP Director Operator is installed and managed via the OLM [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager). OLM is installed automatically with your OpenShift installation. To obtain the latest OSP Director Operator snapshot you need to create the appropriate CatalogSource, OperatorGroup, and Subscription to drive the installation with OLM:
+
+### Create the "openstack" Namespace
+```bash
+oc create project openstack
+```
 
 ### Create a CatalogSource (using 'openstack' namespace, and our upstream quay.io tag)
 ```yaml
@@ -77,6 +82,41 @@ spec:
 We have a script to automate the installation here with OLM for a specific tag: [script to automate the installation](https://github.com/openstack-k8s-operators/osp-director-operator/blob/master/scripts/deploy-with-olm.sh)
 
 NOTE: At some point in the future we may integrate automatically into OperatorHub so that OSP Director Operator is available automatically in your OCP installations default OLM Catalog sources.
+
+## Creating a RHEL data volume (optional)
+
+It may be desirable to create a base RHEL data volume prior to deploying OpenStack.  This will greatly increase the speed at which controller VMs are provisioned via OpenShift Virtualization.  Certain OSP Director Operator CRDs allow the user to supply the name of a pre-existing data volume within the cluster for use as the base RHEL image in OpenShift Virtualization virtual machines, rather than providing a remote URL that must be downloaded and converted during provisioning.  The approach to doing this is as follows:
+
+1) Install the KubeVirt CLI tool, `virtctl`:
+```
+sudo subscription-manager repos --enable=cnv-2.6-for-rhel-8-x86_64-rpms
+sudo dnf install -y kubevirt-virtctl
+```
+2) Download the RHEL QCOW2 you wish to use.  For example:
+```
+curl -O http://download.eng.bos.redhat.com/brewroot/packages/rhel-guest-image/8.4/916/images/rhel-guest-image-8.4-916.x86_64.qcow2
+```
+3) If your local machine cannot resolve hostnames for within the cluster, add the following to your `/etc/hosts`:
+```
+<cluster ingress VIP>     cdi-uploadproxy-openshift-cnv.apps.<cluster name>.<domain name>
+```
+4) Upload the image to OpenShift Virtualization via `virtctl`:
+```
+virtctl image-upload dv openstack-base-img -n openstack --size=40Gi --image-path=<local path to image> --storage-class <desired storage class> --insecure
+```
+For the `storage-class` above, pick one you want to use from those shown in:
+```
+oc get storageclass
+```
+5) Now, when you create the `OpenStackControlPlane` below (as well as for individual `OpenStackVmSet`s), you may substitute `baseImageVolumeName` for `baseImageUrl` in the CR:
+```yaml
+...
+spec:
+...
+  baseImageVolumeName: openstack-base-img
+...
+```
+This will cause OpenShift Virtualization to clone that base image volume and use it for the VM(s), which is significantly faster than downloading and converting it on-the-fly.
 
 ## Deploying OpenStack once you have the OSP Director Operator installed
 
