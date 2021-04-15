@@ -263,11 +263,18 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 			Containers: []corev1.Container{
 				{
 					Name:  "osp-httpd",
-					Image: "quay.io/abays/httpd:2.4-alpine",
+					Image: "quay.io/centos7/httpd-24-centos7:latest",
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &trueValue,
 					},
-					Env:          []corev1.EnvVar{},
+					Env: []corev1.EnvVar{},
+					// FIXME: Everything else I've tried has failed to inject the desired httpd.conf,
+					//        so we're hacking it this way for now
+					Command: []string{
+						"/bin/bash",
+						"-ec",
+						"cp -f /usr/local/apache2/conf/httpd.conf /etc/httpd/conf/httpd.conf && /usr/bin/run-httpd",
+					},
 					VolumeMounts: volumeMounts,
 				},
 				{

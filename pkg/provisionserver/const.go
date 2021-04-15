@@ -23,6 +23,9 @@ const (
 	// FinalizerName -
 	FinalizerName = "provisionservers.osp-director.openstack.org"
 
+	// HttpdConfPath -
+	HttpdConfPath = "/usr/local/apache2/conf/httpd.conf"
+
 	// OwnerUIDLabelSelector -
 	OwnerUIDLabelSelector = "provisionservers.osp-director.openstack.org/uid"
 	// OwnerNameSpaceLabelSelector -

@@ -33,16 +33,6 @@ func GetVolumes(name string) []corev1.Volume {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: name + "-httpd-config",
 					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "httpd.conf",
-							Path: "httpd.conf",
-						},
-						{
-							Key:  "mime.types",
-							Path: "mime.types",
-						},
-					},
 				},
 			},
 		},
@@ -58,7 +48,8 @@ func GetInitVolumeMounts(name string) []corev1.VolumeMount {
 		},
 		{
 			Name:      name + "-httpd-config",
-			MountPath: "/usr/local/apache2/conf",
+			MountPath: HttpdConfPath,
+			SubPath:   "httpd.conf",
 			ReadOnly:  false,
 		},
 	}
@@ -73,7 +64,8 @@ func GetVolumeMounts(name string) []corev1.VolumeMount {
 		},
 		{
 			Name:      name + "-httpd-config",
-			MountPath: "/usr/local/apache2/conf",
+			MountPath: HttpdConfPath,
+			SubPath:   "httpd.conf",
 			ReadOnly:  true,
 		},
 	}
