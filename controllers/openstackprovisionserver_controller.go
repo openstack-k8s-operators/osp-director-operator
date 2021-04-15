@@ -263,7 +263,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 			Containers: []corev1.Container{
 				{
 					Name:  "osp-httpd",
-					Image: "quay.io/centos7/httpd-24-centos7:latest",
+					Image: "quay.io/centos7/httpd-24-centos7:2.4",
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &trueValue,
 					},
