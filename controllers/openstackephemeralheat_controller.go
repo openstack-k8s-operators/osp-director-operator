@@ -179,7 +179,57 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
+	// Heat API (this creates the Heat Database and runs DBsync)
+	heatApiPod := openstackephemeralheat.HeatAPIPod(instance)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatApiPod, func() error {
+		err := controllerutil.SetControllerReference(instance, heatApiPod, r.Scheme)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("RabbitMQ Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
+	// Heat Service
+	heatApiService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
+	foundService = &corev1.Service{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: heatApiService.Name, Namespace: heatApiService.Namespace}, foundService)
+	if err != nil && k8s_errors.IsNotFound(err) {
+
+		r.Log.Info("Creating Heat API Service", "Service.Namespace", heatApiService.Namespace, "Service.Name", heatApiService.Name)
+		err = r.Client.Create(context.TODO(), heatApiService)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Heat Engine Replicaset
+	heatEngineReplicaset := openstackephemeralheat.HeatEngineReplicaSet(instance, 3)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatEngineReplicaset, func() error {
+		err := controllerutil.SetControllerReference(instance, heatEngineReplicaset, r.Scheme)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Heat Engine Replicaset %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
 	return ctrl.Result{}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
