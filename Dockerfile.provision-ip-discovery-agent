@@ -1,15 +1,47 @@
-FROM registry.svc.ci.openshift.org/ocp/builder:rhel-8-golang-1.15-openshift-4.7 AS builder
-WORKDIR /go/src/github.com/openstack-k8s-operators/osp-director-operator
-COPY . .
-RUN go mod vendor
-RUN BIN_PATH=build/_output/cmd ./containers/provision_ip_discovery_agent/build-provision-ip-discovery-agent.sh
+ARG GOLANG_BUILDER=golang:1.14
+ARG OPERATOR_BASE_IMAGE=gcr.io/distroless/base
 
-FROM registry.svc.ci.openshift.org/ocp/4.7:base
-RUN yum -y update && yum clean all
+# Build the manager binary
+FROM ${GOLANG_BUILDER} AS builder
+
+#Arguments required by OSBS build system
+ARG CACHITO_ENV_FILE=/remote-source/cachito.env
+
+ARG REMOTE_SOURCE=.
+ARG REMOTE_SOURCE_DIR=/remote-source
+ARG REMOTE_SOURCE_SUBDIR=
+ARG DEST_ROOT=/dest-root
+ARG WHAT=provision-ip-discovery-agent
+
+ARG GO_BUILD_EXTRA_ARGS=
+
+COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
+WORKDIR ${REMOTE_SOURCE_DIR}/${REMOTE_SOURCE_SUBDIR}
+
+RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=1 go build ${GO_BUILD_EXTRA_ARGS} -o ${DEST_ROOT}/${WHAT} ./containers/provision_ip_discovery_agent
+
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM ${OPERATOR_BASE_IMAGE}
+
+# Those arguments must match ones from builder
+ARG DEST_ROOT=/dest-root
+ARG WHAT=provision-ip-discovery-agent
+
 LABEL io.k8s.display-name="OSP-Director-Operator provision-ip-discovery-agent" \
       io.k8s.description="This is an agent that discovers the IP of a designated provisioning interface on a given host" \
       io.openshift.tags="openstack,director" \
       maintainer="Andrew Bays <abays@redhat.com>"
-COPY --from=builder /go/src/github.com/openstack-k8s-operators/osp-director-operator/build/_output/cmd/provision-ip-discovery-agent /usr/bin/
 
-CMD ["/usr/bin/provision-ip-discovery-agent"]
+LABEL com.redhat.component="osp-director-provisioner-container" \
+      name="osp-director-provisioner-container" \
+      version="1.0"
+
+WORKDIR /
+
+# Install binary to WORKDIR
+COPY --from=builder ${DEST_ROOT}/${WHAT} .
+
+ENV PATH="/:${PATH}"
+
+ENTRYPOINT ["/provision-ip-discovery-agent"]

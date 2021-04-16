@@ -12,15 +12,10 @@ ARG REMOTE_SOURCE_DIR=/remote-source
 ARG REMOTE_SOURCE_SUBDIR=
 ARG DEST_ROOT=/dest-root
 
-ARG GO_BUILD_EXTRA_ARGS
+ARG GO_BUILD_EXTRA_ARGS=
 
 COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
 WORKDIR ${REMOTE_SOURCE_DIR}/${REMOTE_SOURCE_SUBDIR}
-
-RUN go version
-RUN go env
-RUN if [ -f $CACHITO_ENV_FILE ] ; then echo $CACHITO_ENV_FILE; cat $CACHITO_ENV_FILE ; fi
-RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi && go env
 
 RUN mkdir -p ${DEST_ROOT}/usr/local/bin/
 
@@ -28,10 +23,8 @@ RUN mkdir -p ${DEST_ROOT}/usr/local/bin/
 # and so that source changes don't invalidate our downloaded layer
 RUN if [ ! -f $CACHITO_ENV_FILE ]; then go mod download ; fi
 
-#RUN mkdir -p /usr/share/osp-director-operator/templates && mkdir -p /cmd/
-
 # Build manager
-RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=0  GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -v -a -o ${DEST_ROOT}/manager main.go
+RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=0  GO111MODULE=on go build ${GO_BUILD_EXTRA_ARGS} -a -o ${DEST_ROOT}/manager main.go
 
 RUN cp -r templates ${DEST_ROOT}/templates
 
@@ -63,5 +56,7 @@ COPY --from=builder ${DEST_ROOT}/manager .
 COPY --from=builder ${DEST_ROOT}/templates ${OPERATOR_TEMPLATES}
 
 USER ${USER_ID}
+
+ENV PATH="/:${PATH}"
 
 ENTRYPOINT ["/manager"]
