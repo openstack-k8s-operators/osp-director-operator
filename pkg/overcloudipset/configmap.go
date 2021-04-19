@@ -65,7 +65,7 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 		for _, reservation := range net.Status.Reservations {
 
 			// if ctlplane network add to DeployedServerPortMap
-			if net.Name == "ctlplane" {
+			if net.Name == "ctlplane" && reservation.AddToPredictableIPs {
 
 				// in case of control plane vip the DeployedServerPortMap is
 				// named control_virtual_ip instead of ctlplane_virtual_ip

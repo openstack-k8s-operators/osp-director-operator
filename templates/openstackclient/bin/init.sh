@@ -16,6 +16,21 @@
 set -ex
 
 # if the pvc is an empty volume, copy the existing hosts file to it
-if [ ! -f /mnt/hosts ]; then
-  cp /etc/hosts /mnt
+if [ ! -f /mnt/etc/hosts ]; then
+  cp /etc/hosts /mnt/etc/
 fi
+
+mkdir -p /home/cloud-admin/tripleo-deploy/validations
+rm -rf /home/cloud-admin/tripleo-deploy/overcloud-ansible*
+
+# add cloud-admin ssh keys to EmptyDir Vol mount to /root/.ssh in openstackclient
+sudo mkdir -p /root/.ssh
+sudo cp /mnt/ssh-config/* /root/.ssh/
+sudo chmod 600 /root/.ssh/id_rsa
+sudo chown -R root: /root/.ssh
+
+# add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
+mkdir -p /home/cloud-admin/.ssh
+cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
+chmod 600 /home/cloud-admin/.ssh/id_rsa
+chown -R cloud-admin: /home/cloud-admin/.ssh

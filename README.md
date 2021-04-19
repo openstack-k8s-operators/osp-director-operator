@@ -263,8 +263,158 @@ oc create -f compute.yaml
 
 ```bash
 oc rsh openstackclient
+bash
 cd /home/cloud-admin
-bash tripleo-deploy.sh
+unset OS_CLOUD
+openstack overcloud roles generate -o /home/cloud-admin/roles_data.yaml Controller Compute
+cp tripleo-deploy.sh tripleo-deploy-custom.sh
+sed -i 's/ROLESFILE/~\/roles_data.yaml/' tripleo-deploy-custom.sh
+# render ansible playbooks
+./tripleo-deploy-custom.sh -r
+# run ansible driven OpenStack deployment
+./tripleo-deploy-custom.sh -p
 ```
 
 This will create an ephemeral heat stack which is used to export Ansible playbooks. These Ansible playbooks are then used to deploy OSP on the configured hosts.
+
+
+Deploy Ceph via tripleo using ComputeHCI
+----------------------------------------
+
+It is possible to deploy tripleo's Hyper-Converged Infrastructure where compute nodes also act as Ceph OSD nodes.
+The workflow to install Ceph via tripleo would be:
+
+## Control Plane
+
+Until ceph-ansible gets added to the default openstackclient container image, make sure to use `quay.io/openstack-k8s-operators/tripleo-deploy:ceph-ansible`
+as the `openStackClientImageURL` in the openstackcontrolplane CR.
+
+## Baremetalset
+
+Have compute nodes with extra disks to be used as OSDs and create a baremetalset for the ComputeHCI role which has
+the storagemgmt network in addition to the default compute networks and the `IsHCI` parameter set to true.
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: computehci
+  namespace: openstack
+spec:
+  # How many nodes to provision
+  replicas: 2
+  # The image to install on the provisioned nodes
+  baseImageUrl: http://172.22.0.1/images/rhel-guest-image-8.4-825.x86_64.qcow2
+  provisionServerName: openstack
+  # The secret containing the SSH pub key to place on the provisioned nodes
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  # The interface on the nodes that will be assigned an IP from the mgmtCidr
+  ctlplaneInterface: eth2
+  # Networks to associate with this host
+  networks:
+    - ctlplane
+    - internalapi
+    - tenant
+    - storage
+    - storagemgmt
+  roleName: ComputeHCI
+  passwordSecret: userpassword
+```
+
+## Custom deployment parameters
+
+* update the Net-Config to have the storagemgmt network for the ComputeHCI network config template
+* add Ceph related deployment parameters to the Tripleo Deploy custom configMap, e.g.
+
+```yaml
+parameter_defaults:
+  # needed for now because of the repo used to create tripleo-deploy image
+  CephAnsibleRepo: "rhelosp-ceph-4-tools"
+  CephAnsiblePlaybookVerbosity: 3
+  CinderEnableIscsiBackend: false
+  CinderEnableRbdBackend: true
+  CinderEnableNfsBackend: false
+  NovaEnableRbdBackend: true
+  GlanceBackend: rbd
+  CinderRbdPoolName: "volumes"
+  NovaRbdPoolName: "vms"
+  GlanceRbdPoolName: "images"
+  CephPoolDefaultPgNum: 32
+  CephPoolDefaultSize: 2
+  CephAnsibleDisksConfig:
+    devices:
+      - '/dev/sdb'
+      - '/dev/sdc'
+      - '/dev/sdd'
+    osd_scenario: lvm
+    osd_objectstore: bluestore
+    journal_size: 512
+  CephAnsibleExtraConfig:
+    is_hci: true
+  CephConfigOverrides:
+    rgw_swift_enforce_content_length: true
+    rgw_swift_versioning_enabled: true
+```
+
+Once you customize the above template/examples for your environment you can create/update configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config' ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
+
+```bash
+# create the configmap for tripleo-deploy-config-custom
+oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run -o yaml | oc apply -f -
+
+# create the configmap for netconfig
+oc create configmap -n openstack tripleo-net-config --from-file=net-config/ --dry-run -o yaml | oc apply -f -
+```
+
+## Render playbooks and apply them
+
+* In openstackclient create the roles file for the overcloud, like Controller + ComputeHCI
+
+```bash
+unset OS_CLOUD
+openstack overcloud roles generate -o /home/cloud-admin/roles_data_hci.yaml Controller ComputeHCI
+```
+
+* create the tripleo-deploy-custom.sh deployment script and update to use the custom roles file
+
+
+```bash
+cd
+cp tripleo-deploy.sh tripleo-deploy-custom.sh
+sed -i 's/ROLESFILE/~\/roles_data_hci.yaml/' tripleo-deploy-custom.sh
+```
+
+* add the `ceph-ansible.yaml` environment file and to the `openstack tripleo deploy` command
+
+```bash
+     -e /usr/share/openstack-tripleo-heat-templates/environments/docker-ha.yaml \
++    -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+     -e ~/config/deployed-server-map.yaml \
+```
+
+* for now add skipping opendev-validation-ceph when run ansible playbooks
+
+```bash
+   time ansible-playbook -i inventory.yaml \
+     --private-key /home/cloud-admin/.ssh/id_rsa \
++    --skip-tags opendev-validation-ceph \
+     --become deploy_steps_playbook.yaml
+```
+
+* render the ansible playbooks
+
+```bash
+./tripleo-deploy-custom.sh -r
+```
+
+* Install the pre-requisites on overcloud systems for ceph-ansible
+
+```bash
+ansible -i tripleo-deploy/overcloud-ansible/inventory.yaml overcloud -a "sudo sudo dnf -y install python3 lvm2"
+```
+
+* Run the playbooks
+
+```bash
+./tripleo-deploy-custom.sh -p
+```

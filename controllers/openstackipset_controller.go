@@ -216,7 +216,6 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance.Name, openstackipset.AppLabel)
 
-	//templateParameters, err := overcloudipset.CreateConfigMapParams(r, *overcloudIPList, ctlplaneCidr)
 	templateParameters, err := openstackipset.CreateConfigMapParams(*overcloudIPList, *overcloudNetList)
 	if err != nil {
 		return ctrl.Result{}, err

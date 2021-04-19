@@ -27,8 +27,7 @@ import (
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
-			Name: fmt.Sprintf("%s-hosts", instance.Name),
-			//MountPath: "/mnt",
+			Name:      fmt.Sprintf("%s-hosts", instance.Name),
 			MountPath: "/etc/hosts",
 			SubPath:   "hosts",
 			ReadOnly:  false,
@@ -39,21 +38,8 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			ReadOnly:  false,
 		},
 		{
-			Name:      "id-rsa",
-			MountPath: "/home/cloud-admin/.ssh/id_rsa",
-			SubPath:   "id_rsa",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/home/cloud-admin/.ssh/id_rsa.pub",
-			SubPath:   "id_rsa.pub",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/home/cloud-admin/.ssh/config",
-			SubPath:   "config",
+			Name:      "root-ssh",
+			MountPath: "/root/.ssh",
 			ReadOnly:  true,
 		},
 		{
@@ -92,8 +78,36 @@ func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.
 		},
 		{
 			Name:      fmt.Sprintf("%s-hosts", instance.Name),
-			MountPath: "/mnt",
+			MountPath: "/mnt/etc",
 			ReadOnly:  false,
+		},
+		{
+			Name:      fmt.Sprintf("%s-cloud-admin", instance.Name),
+			MountPath: "/home/cloud-admin",
+			ReadOnly:  false,
+		},
+		{
+			Name:      "root-ssh",
+			MountPath: "/root/.ssh",
+			ReadOnly:  false,
+		},
+		{
+			Name:      "ssh-config",
+			MountPath: "/mnt/ssh-config/id_rsa",
+			SubPath:   "id_rsa",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "ssh-config",
+			MountPath: "/mnt/ssh-config/id_rsa.pub",
+			SubPath:   "id_rsa.pub",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "ssh-config",
+			MountPath: "/mnt/ssh-config/config",
+			SubPath:   "config",
+			ReadOnly:  true,
 		},
 	}
 }
@@ -106,21 +120,6 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 
 	return []corev1.Volume{
 		{
-			Name: "id-rsa",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0600AccessMode,
-					SecretName:  instance.Spec.DeploymentSSHSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "identity",
-							Path: "id_rsa",
-						},
-					},
-				},
-			},
-		},
-		{
 			Name: "ssh-config",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -128,15 +127,26 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 					SecretName:  instance.Spec.DeploymentSSHSecret,
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "config",
-							Path: "config",
+							Key:  "identity",
+							Path: "id_rsa",
+							Mode: &config0600AccessMode,
 						},
 						{
 							Key:  "authorized_keys",
 							Path: "id_rsa.pub",
 						},
+						{
+							Key:  "config",
+							Path: "config",
+						},
 					},
 				},
+			},
+		},
+		{
+			Name: "root-ssh",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
 			},
 		},
 		{
