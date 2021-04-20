@@ -40,7 +40,7 @@ spec:
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
-      displayName: Open Stack Ephemeral Heat
+      displayName: OpenStack Ephemeral Heat
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
       version: v1beta1

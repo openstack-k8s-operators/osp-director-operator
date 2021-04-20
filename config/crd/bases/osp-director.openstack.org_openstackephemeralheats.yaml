@@ -13,6 +13,9 @@ spec:
     kind: OpenStackEphemeralHeat
     listKind: OpenStackEphemeralHeatList
     plural: openstackephemeralheats
+    shortNames:
+    - osephemeralheat
+    - osephemeralheats
     singular: openstackephemeralheat
   scope: Namespaced
   versions:

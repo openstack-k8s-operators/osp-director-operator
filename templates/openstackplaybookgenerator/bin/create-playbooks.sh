@@ -1,32 +1,61 @@
 #!/bin/bash
 
-set -eux
+unset OS_CLOUD
+export OS_AUTH_TYPE=none
+export OS_ENDPOINT=http://{{.HeatServiceName}}:8004/v1/admin
 
-# in case of --output-only no rc is set when successful
-sudo sed -i "/# We only get here if no errors/a \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rc=0" /usr/lib/python3.6/site-packages/tripleoclient/v1/tripleo_deploy.py
-# disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
-sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' /usr/share/openstack-tripleo-heat-templates/network/scripts/run-os-net-config.sh
+TEMPLATES_DIR=$HOME/tripleo-deploy-test/tripleo-heat-installer-templates
+rm -Rf "$TEMPLATES_DIR"
+mkdir $TEMPLATES_DIR
+
+cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
+pushd $TEMPLATES_DIR
+python3 tools/process-templates.py -r /usr/share/openstack-tripleo-heat-templates/roles_data.yaml -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml
+
+until openstack stack list &> /dev/null; do
+  echo "waiting for Heat to start..."
+  sleep 1
+done
+
+set -eux
 
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
-unset OS_CLOUD
 
-sudo openstack tripleo deploy \
-    --templates /usr/share/openstack-tripleo-heat-templates \
-    -r /usr/share/openstack-tripleo-heat-templates/roles_data.yaml \
-    -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml \
-    -e /usr/share/openstack-tripleo-heat-templates/overcloud-resource-registry-puppet.yaml \
-    -e /usr/share/openstack-tripleo-heat-templates/environments/deployed-server-environment.yaml \
-    -e /usr/share/openstack-tripleo-heat-templates/environments/docker-ha.yaml \
+#FIXME: need a way to generate the ~/tripleo-overcloud-passwords.yaml below
+time openstack stack create --wait \
+    -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
+    -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
+    -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
+    -e $TEMPLATES_DIR/environments/docker-ha.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}
     -e ~/config/{{ $key }} \
 {{- end }}
 {{- range $key, $value := .TripleoCustomDeployFiles }}
     -e ~/config-custom/{{ $key }} \
 {{- end }}
-    --stack overcloud \
-    --output-dir ~/tripleo-deploy \
-    --standalone \
-    --local-ip 192.168.25.101 \
-    --deployment-user $(id -u -n) \
-    --output-only
+    -e ~/tripleo-overcloud-passwords.yaml \
+    -t overcloud.yaml overcloud
+
+# FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
+/usr/bin/python3 - <<"EOF_PYTHON"
+from tripleoclient import utils as oooutils
+from osc_lib import utils
+API_NAME = 'tripleoclient'
+API_VERSIONS = {
+    '1': 'heatclient.v1.client.Client',
+}
+api_port='8004'
+heat_client = utils.get_client_class(
+    API_NAME,
+    '1',
+    API_VERSIONS)
+client = heat_client(
+    endpoint='http://{{.HeatServiceName}}:%s/v1/admin' % api_port,
+    username='admin',
+    password='fake',
+    region_name='regionOne',
+    token='fake',
+)
+oooutils.download_ansible_playbooks(client, 'overcloud', output_dir='/home/cloud-admin/ansible')
+EOF_PYTHON

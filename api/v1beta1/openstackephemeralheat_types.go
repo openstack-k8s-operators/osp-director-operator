@@ -40,6 +40,8 @@ type OpenStackEphemeralHeatStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osephemeralheat;osephemeralheats
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Ephemeral Heat"
 
 // OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
 type OpenStackEphemeralHeat struct {

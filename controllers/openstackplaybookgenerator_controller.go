@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -154,6 +155,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	tripleoDeployFiles := tripleoDeployCM.Data
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
+	templateParameters["HeatServiceName"] = "heat-" + instance.Name
 
 	cms = []common.Template{
 		{
@@ -169,6 +171,29 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
 	if err != nil {
 		return ctrl.Result{}, nil
+	}
+
+	// Create ephemeral heat
+	heat := &ospdirectorv1beta1.OpenStackEphemeralHeat{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Name,
+			Namespace: instance.Namespace,
+		},
+	}
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
+
+		err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("OpenStackEphemeralHeat successfully reconciled - operation: %s", string(op)))
 	}
 
 	// Define a new Job object
@@ -195,11 +220,9 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 		}
 	}
-	// db sync completed... okay to store the hash to disable it
 	if err := r.setPlaybookHash(instance, jobHash); err != nil {
 		return ctrl.Result{}, err
 	}
-	// delete the job
 	_, err = common.DeleteJob(job, r.Kclient, r.Log)
 	if err != nil {
 		return ctrl.Result{}, err
