@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // HeatGetLabels -
@@ -40,8 +39,8 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			InitContainers: []corev1.Container{
 				{
 					Name:    "drop-heat",
-					Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
-					Command: []string{"sh", "-c", "mysql -h openstack-db-mariadb -u root -P 3306 -e \"DROP DATABASE IF EXISTS heatr\";"},
+					Image:   "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"DROP DATABASE IF EXISTS heat\";"},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "MYSQL_PWD",
@@ -51,8 +50,8 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 				},
 				{
 					Name:    "heat-db-create",
-					Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
-					Command: []string{"sh", "-c", "mysql -h openstack-db-mariadb -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO ''heat''@''localhost'' IDENTIFIED BY ''foobar123'';GRANT ALL PRIVILEGES ON heat.* TO ''heat''@''%'' IDENTIFIED BY ''foobar123''; \""},
+					Image:   "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY 'foobar123'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY 'foobar123'; \""},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "MYSQL_PWD",
@@ -79,12 +78,12 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 	return pod
 }
 
-// Service func
+// HeatAPIService func
 func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      "heat-" + instance.Name,
 			Namespace: instance.Namespace,
 			Labels:    HeatGetLabels(instance.Name),
 		},
@@ -95,12 +94,16 @@ func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme 
 			},
 		},
 	}
-	controllerutil.SetControllerReference(instance, svc, scheme)
 	return svc
 }
 
-// HeatEnginePod -
+// HeatEngineReplicaSet -
 func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, replicas int32) *appsv1.ReplicaSet {
+
+	selectorLabels := map[string]string{
+		"app":              "osp-director-operator-heat-engine",
+		"heat-engine-name": instance.Name,
+	}
 
 	replicaset := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,8 +112,16 @@ func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, r
 			Labels:    HeatGetLabels(instance.Name),
 		},
 		Spec: appsv1.ReplicaSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: selectorLabels,
+			},
 			Replicas: &replicas,
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      instance.Name,
+					Namespace: instance.Namespace,
+					Labels:    selectorLabels,
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -142,7 +153,7 @@ func getHeatVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -158,7 +169,7 @@ func getHeatVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -174,7 +185,7 @@ func getHeatVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -211,12 +222,7 @@ func getHeatVolumeMounts() []corev1.VolumeMount {
 		{
 			MountPath: "/var/lib/kolla/config_files",
 			ReadOnly:  true,
-			Name:      "kolla-config",
-		},
-		{
-			MountPath: "/var/lib/mysql",
-			ReadOnly:  false,
-			Name:      "lib-data",
+			Name:      "kolla-config-api",
 		},
 	}
 

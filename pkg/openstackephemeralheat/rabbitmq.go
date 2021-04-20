@@ -5,7 +5,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // RabbitmqGetLabels -
@@ -13,12 +12,12 @@ func RabbitmqGetLabels(name string) map[string]string {
 	return map[string]string{"owner": "osp-director-operator", "cr": name, "app": "rabbitmq"}
 }
 
-// Pod -
+// RabbitmqPod -
 func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      "rabbitmq-" + instance.Name,
 			Namespace: instance.Namespace,
 			Labels:    RabbitmqGetLabels(instance.Name),
 		},
@@ -63,12 +62,12 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 	return pod
 }
 
-// Service func
+// RabbitmqService func
 func RabbitmqService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      "rabbitmq-" + instance.Name,
 			Namespace: instance.Namespace,
 			Labels:    RabbitmqGetLabels(instance.Name),
 		},
@@ -79,7 +78,6 @@ func RabbitmqService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme
 			},
 		},
 	}
-	controllerutil.SetControllerReference(instance, svc, scheme)
 	return svc
 }
 
@@ -92,7 +90,7 @@ func getRabbitmqVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -108,7 +106,7 @@ func getRabbitmqVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{

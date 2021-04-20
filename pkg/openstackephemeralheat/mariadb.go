@@ -5,7 +5,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // MariadbGetLabels -
@@ -13,12 +12,12 @@ func MariadbGetLabels(name string) map[string]string {
 	return map[string]string{"owner": "osp-director-operator", "cr": name, "app": "mariadb"}
 }
 
-// Pod -
+// MariadbPod -
 func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      "mariadb-" + instance.Name,
 			Namespace: instance.Namespace,
 			Labels:    MariadbGetLabels(instance.Name),
 		},
@@ -26,8 +25,9 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			//ServiceAccountName: "mariadb",
 			Containers: []corev1.Container{
 				{
-					Name:  "mariadb",
-					Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Name: "mariadb",
+					//Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Image: "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -39,8 +39,9 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name:  "mariadb-init",
-					Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Name: "mariadb-init",
+					//Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
+					Image: "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -68,12 +69,12 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 	return pod
 }
 
-// Service func
+// MariadbService func
 func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
+			Name:      "mariadb-" + instance.Name,
 			Namespace: instance.Namespace,
 			Labels:    MariadbGetLabels(instance.Name),
 		},
@@ -84,7 +85,6 @@ func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme 
 			},
 		},
 	}
-	controllerutil.SetControllerReference(instance, svc, scheme)
 	return svc
 }
 
@@ -97,7 +97,7 @@ func getMariadbVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -113,7 +113,7 @@ func getMariadbVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -129,7 +129,7 @@ func getMariadbVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackephemeralheat",
+						Name: "openstackephemeralheat-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{

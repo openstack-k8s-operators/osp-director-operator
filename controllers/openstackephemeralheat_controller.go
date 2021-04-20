@@ -69,6 +69,9 @@ func (r *OpenStackEphemeralHeatReconciler) GetScheme() *runtime.Scheme {
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;update;get;list;watch;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=create;update;get;list;watch;patch
+// +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=create;update;get;list;watch;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -94,17 +97,20 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
 	envVars := make(map[string]common.EnvSetter)
+	templateParameters := make(map[string]interface{})
+	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name
+	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name
 
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{
-			Name:           "openstackephemeralheat",
+			Name:           "openstackephemeralheat-" + instance.Name,
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeScripts,
 			InstanceType:   instance.Kind,
 			AdditionalData: map[string]string{},
-			ConfigOptions:  make(map[string]interface{}),
+			ConfigOptions:  templateParameters,
 			Labels:         cmLabels,
 		},
 	}
@@ -137,6 +143,11 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 		r.Log.Info("Creating MariaDB Service", "Service.Namespace", mariadbService.Namespace, "Service.Name", mariadbService.Name)
 		err = r.Client.Create(context.TODO(), mariadbService)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = controllerutil.SetControllerReference(instance, mariadbService, r.Scheme)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -174,15 +185,20 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 
+		err = controllerutil.SetControllerReference(instance, rabbitMQService, r.Scheme)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
-	heatApiPod := openstackephemeralheat.HeatAPIPod(instance)
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatApiPod, func() error {
-		err := controllerutil.SetControllerReference(instance, heatApiPod, r.Scheme)
+	heatAPIPod := openstackephemeralheat.HeatAPIPod(instance)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatAPIPod, func() error {
+		err := controllerutil.SetControllerReference(instance, heatAPIPod, r.Scheme)
 		if err != nil {
 			return err
 		}
@@ -192,17 +208,21 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("RabbitMQ Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("Heat API Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// Heat Service
-	heatApiService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
+	heatAPIService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
 	foundService = &corev1.Service{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: heatApiService.Name, Namespace: heatApiService.Namespace}, foundService)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: heatAPIService.Name, Namespace: heatAPIService.Namespace}, foundService)
 	if err != nil && k8s_errors.IsNotFound(err) {
 
-		r.Log.Info("Creating Heat API Service", "Service.Namespace", heatApiService.Namespace, "Service.Name", heatApiService.Name)
-		err = r.Client.Create(context.TODO(), heatApiService)
+		r.Log.Info("Creating Heat API Service", "Service.Namespace", heatAPIService.Namespace, "Service.Name", heatAPIService.Name)
+		err = r.Client.Create(context.TODO(), heatAPIService)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		err = controllerutil.SetControllerReference(instance, heatAPIService, r.Scheme)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

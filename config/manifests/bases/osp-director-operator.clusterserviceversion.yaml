@@ -39,6 +39,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
+      displayName: Open Stack Ephemeral Heat
+      kind: OpenStackEphemeralHeat
+      name: openstackephemeralheats.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
       displayName: OpenStack IpSet
       kind: OpenStackIPSet
