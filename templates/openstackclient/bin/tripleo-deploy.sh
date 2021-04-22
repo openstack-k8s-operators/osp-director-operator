@@ -13,8 +13,8 @@ sudo openstack tripleo deploy \
     --templates /usr/share/openstack-tripleo-heat-templates \
     -r /usr/share/openstack-tripleo-heat-templates/roles_data.yaml \
     -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml \
-    -e /usr/share/openstack-tripleo-heat-templates/environments/network-isolation.yaml \
     -e /usr/share/openstack-tripleo-heat-templates/overcloud-resource-registry-puppet.yaml \
+    -e /usr/share/openstack-tripleo-heat-templates/environments/network-isolation.yaml \
     -e /usr/share/openstack-tripleo-heat-templates/environments/deployed-server-environment.yaml \
     -e /usr/share/openstack-tripleo-heat-templates/environments/docker-ha.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}
