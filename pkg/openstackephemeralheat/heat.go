@@ -32,6 +32,10 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 							Name:  "KOLLA_CONFIG_STRATEGY",
 							Value: "COPY_ALWAYS",
 						},
+						{
+							Name:  "ConfigHash",
+							Value: instance.Spec.ConfigHash,
+						},
 					},
 					VolumeMounts: getHeatVolumeMounts(),
 				},
@@ -131,6 +135,10 @@ func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, r
 								{
 									Name:  "KOLLA_CONFIG_STRATEGY",
 									Value: "COPY_ALWAYS",
+								},
+								{
+									Name:  "ConfigHash",
+									Value: instance.Spec.ConfigHash,
 								},
 							},
 							VolumeMounts: getHeatEngineVolumeMounts(),

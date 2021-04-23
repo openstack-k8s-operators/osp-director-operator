@@ -40,10 +40,11 @@ spec:
           spec:
             description: OpenStackEphemeralHeatSpec defines the desired state of OpenStackEphemeralHeat
             properties:
-              foo:
-                description: Foo is an example field of OpenStackEphemeralHeat. Edit
-                  openstackephemeralheat_types.go to remove/update
+              configHash:
+                description: ConfigHash hash
                 type: string
+            required:
+            - configHash
             type: object
           status:
             description: OpenStackEphemeralHeatStatus defines the observed state of

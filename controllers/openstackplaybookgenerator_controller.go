@@ -173,11 +173,20 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, nil
 	}
 
+	// config hash
+	configMapHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoNetCM, *tripleoCustomDeployCM, *tripleoDeployCM})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
+	}
+
 	// Create ephemeral heat
 	heat := &ospdirectorv1beta1.OpenStackEphemeralHeat{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
+		},
+		Spec: ospdirectorv1beta1.OpenStackEphemeralHeatSpec{
+			ConfigHash: configMapHash,
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
@@ -197,10 +206,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	// Define a new Job object
-	configMapHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoNetCM, *tripleoCustomDeployCM, *tripleoDeployCM})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
-	}
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
 	jobHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoNetCM, *tripleoCustomDeployCM, *tripleoDeployCM})
 	if err != nil {
@@ -208,7 +213,24 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	if instance.Status.PlaybookHash != jobHash {
-		requeue, err := common.EnsureJob(job, r.Client, r.Log)
+
+		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
+
+			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("Job successfully reconciled - operation: %s", string(op)))
+		}
+
+		requeue, err := common.WaitOnJob(job, r.Client, r.Log)
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
 			return ctrl.Result{}, err
@@ -220,13 +242,14 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 		}
 	}
+
 	if err := r.setPlaybookHash(instance, jobHash); err != nil {
 		return ctrl.Result{}, err
 	}
-	_, err = common.DeleteJob(job, r.Kclient, r.Log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	//_, err = common.DeleteJob(job, r.Kclient, r.Log)
+	//if err != nil {
+	//return ctrl.Result{}, err
+	//}
 
 	return ctrl.Result{}, nil
 }

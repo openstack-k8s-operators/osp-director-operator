@@ -31,6 +31,10 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 							Name:  "KOLLA_CONFIG_STRATEGY",
 							Value: "COPY_ALWAYS",
 						},
+						{
+							Name:  "ConfigHash",
+							Value: instance.Spec.ConfigHash,
+						},
 					},
 					VolumeMounts: getRabbitmqVolumeMounts(),
 				},

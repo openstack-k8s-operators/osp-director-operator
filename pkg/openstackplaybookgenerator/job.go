@@ -38,10 +38,12 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 	}
 
 	var terminationGracePeriodSeconds int64 = 0
+	var ttlAfterFinished int32 = 120
 
 	// Get volumes
 	volumeMounts := GetVolumeMounts(cr)
 	volumes := GetVolumes(cr)
+	job.Spec.TTLSecondsAfterFinished = &ttlAfterFinished
 
 	job.Spec.Template.Spec = corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyOnFailure,

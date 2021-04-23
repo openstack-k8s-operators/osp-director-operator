@@ -19,13 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,24 +134,18 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 	// MariaDB Service
 	mariadbService := openstackephemeralheat.MariadbService(instance, r.Scheme)
-	foundService := &corev1.Service{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: mariadbService.Name, Namespace: mariadbService.Namespace}, foundService)
-	if err != nil && k8s_errors.IsNotFound(err) {
-
-		r.Log.Info("Creating MariaDB Service", "Service.Namespace", mariadbService.Namespace, "Service.Name", mariadbService.Name)
-		err = r.Client.Create(context.TODO(), mariadbService)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbService, func() error {
+		err := controllerutil.SetControllerReference(instance, mariadbService, r.Scheme)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
-
-		err = controllerutil.SetControllerReference(instance, mariadbService, r.Scheme)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
-	} else if err != nil {
+		return nil
+	})
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("MariaDB Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// RabbitMQ Pod
@@ -175,24 +166,18 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 	// RabbitMQ Service
 	rabbitMQService := openstackephemeralheat.RabbitmqService(instance, r.Scheme)
-	foundService = &corev1.Service{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: rabbitMQService.Name, Namespace: rabbitMQService.Namespace}, foundService)
-	if err != nil && k8s_errors.IsNotFound(err) {
-
-		r.Log.Info("Creating RabbitMQ Service", "Service.Namespace", rabbitMQService.Namespace, "Service.Name", rabbitMQService.Name)
-		err = r.Client.Create(context.TODO(), rabbitMQService)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitMQService, func() error {
+		err := controllerutil.SetControllerReference(instance, rabbitMQService, r.Scheme)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
-
-		err = controllerutil.SetControllerReference(instance, rabbitMQService, r.Scheme)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
-	} else if err != nil {
+		return nil
+	})
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Rabbitmq Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
@@ -213,23 +198,18 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 	// Heat Service
 	heatAPIService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
-	foundService = &corev1.Service{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: heatAPIService.Name, Namespace: heatAPIService.Namespace}, foundService)
-	if err != nil && k8s_errors.IsNotFound(err) {
-
-		r.Log.Info("Creating Heat API Service", "Service.Namespace", heatAPIService.Namespace, "Service.Name", heatAPIService.Name)
-		err = r.Client.Create(context.TODO(), heatAPIService)
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatAPIService, func() error {
+		err := controllerutil.SetControllerReference(instance, heatAPIService, r.Scheme)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
-		err = controllerutil.SetControllerReference(instance, heatAPIService, r.Scheme)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
-	} else if err != nil {
+		return nil
+	})
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Heat API Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	// Heat Engine Replicaset

@@ -49,23 +49,16 @@ func DeleteJob(job *batchv1.Job, kclient kubernetes.Interface, log logr.Logger) 
 	return false, nil
 }
 
-// EnsureJob func
-func EnsureJob(job *batchv1.Job, client client.Client, log logr.Logger) (bool, error) {
+// WaitOnJob func
+func WaitOnJob(job *batchv1.Job, client client.Client, log logr.Logger) (bool, error) {
 	// Check if this Job already exists
 	foundJob := &batchv1.Job{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = client.Create(context.TODO(), job)
-		if err != nil {
-			return false, err
-		}
-		return true, err
-	} else if err != nil {
-		log.Info("EnsureJob err")
+	if err != nil {
+		log.Info("WaitOnJob err")
 		return true, err
 	} else if foundJob != nil {
-		log.Info("EnsureJob foundJob")
+		log.Info("WaitOnJob foundJob")
 		if foundJob.Status.Active > 0 {
 			log.Info("Job Status Active... requeuing")
 			return true, err

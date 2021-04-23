@@ -33,6 +33,10 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 							Name:  "KOLLA_CONFIG_STRATEGY",
 							Value: "COPY_ALWAYS",
 						},
+						{
+							Name:  "ConfigHash",
+							Value: instance.Spec.ConfigHash,
+						},
 					},
 					VolumeMounts: getMariadbVolumeMounts(),
 				},
