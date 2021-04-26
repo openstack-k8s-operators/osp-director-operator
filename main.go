@@ -207,6 +207,24 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackIPSet")
 		os.Exit(1)
 	}
+	if err = (&controllers.OpenStackPlaybookGeneratorReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackPlaybookGenerator"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackPlaybookGenerator")
+		os.Exit(1)
+	}
+	if err = (&controllers.OpenStackEphemeralHeatReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackEphemeralHeat"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackEphemeralHeat")
+		os.Exit(1)
+	}
 
 	if enableWebhooks {
 		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
@@ -227,22 +245,6 @@ func main() {
 		}
 	}
 
-	if err = (&controllers.OpenStackPlaybookGeneratorReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("OpenStackPlaybookGenerator"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OpenStackPlaybookGenerator")
-		os.Exit(1)
-	}
-	if err = (&controllers.OpenStackEphemeralHeatReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("OpenStackEphemeralHeat"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OpenStackEphemeralHeat")
-		os.Exit(1)
-	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

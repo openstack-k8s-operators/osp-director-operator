@@ -14,6 +14,20 @@ cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 pushd $TEMPLATES_DIR
 python3 tools/process-templates.py -r /usr/share/openstack-tripleo-heat-templates/roles_data.yaml -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml
 
+#FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths
+# copy to editable dir config-tmp
+rm -Rf ~/config-tmp
+mkdir -p ~/config-tmp
+cp ~/config/* ~/config-tmp
+cp ~/config-custom/* ~/config-tmp
+# make patch relative
+sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.yaml
+# copy to our temp t-h-t dir
+cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
+
+# disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
+sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
+
 # default to standard container image prepare but user environments can override this setting
 openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
 openstack tripleo container image prepare \
@@ -29,17 +43,6 @@ openstack tripleo container image prepare \
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
 
-#FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths
-# copy to editable dir config-tmp
-rm -Rf ~/config-tmp
-mkdir -p ~/config-tmp
-cp ~/config/* ~/config-tmp
-cp ~/config-custom/* ~/config-tmp
-# make patch relative
-sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.yaml
-# copy to our temp t-h-t dir
-cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
-
 #FIXME: need a way to generate the ~/tripleo-overcloud-passwords.yaml below
 time openstack stack create --wait \
     -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
@@ -53,7 +56,7 @@ time openstack stack create --wait \
 {{- range $key, $value := .TripleoCustomDeployFiles }}
     -e {{ $key }} \
 {{- end }}
-    -e ~/tripleo-overcloud-passwords.yaml \
+    -e ~/config-custom/tripleo-overcloud-passwords.yaml \
     -t overcloud.yaml overcloud
 
 mkdir -p /home/cloud-admin/ansible

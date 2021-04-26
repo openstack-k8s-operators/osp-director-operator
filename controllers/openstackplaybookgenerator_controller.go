@@ -246,10 +246,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	if err := r.setPlaybookHash(instance, jobHash); err != nil {
 		return ctrl.Result{}, err
 	}
-	//_, err = common.DeleteJob(job, r.Kclient, r.Log)
-	//if err != nil {
-	//return ctrl.Result{}, err
-	//}
+	_, err = common.DeleteJob(job, r.Kclient, r.Log)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
