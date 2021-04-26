@@ -143,7 +143,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			Role:                controlplane.Role,
 			HostCount:           controlplane.Count,
 			VIP:                 true,
-			AddToPredictableIPs: false,
+			AddToPredictableIPs: true,
 		}
 		ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 		if err != nil {
