@@ -6,13 +6,19 @@ unset OS_CLOUD
 export OS_AUTH_TYPE=none
 export OS_ENDPOINT=http://heat-test:8004/v1/admin
 
+# if ROLES_FILE is set we overwrite the default t-h-t version
+ROLES_FILE="{{ .RolesFile }}"
+if [ -n "$ROLES_FILE" ]; then
+  cp /home/cloud-admin/config-custom/$ROLES_FILE $TEMPLATES_DIR/roles_data.yaml
+fi
+
 TEMPLATES_DIR=$HOME/tripleo-deploy-test/tripleo-heat-installer-templates
 rm -Rf "$TEMPLATES_DIR"
 mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 pushd $TEMPLATES_DIR
-python3 tools/process-templates.py -r /usr/share/openstack-tripleo-heat-templates/roles_data.yaml -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml
+python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml
 
 #FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths
 # copy to editable dir config-tmp

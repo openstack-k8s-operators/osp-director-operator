@@ -156,6 +156,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoDeployFiles := tripleoDeployCM.Data
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+	templateParameters["RolesFile"] = instance.Spec.RolesFile
 
 	cms = []common.Template{
 		{

@@ -22,15 +22,14 @@ import (
 
 // OpenStackPlaybookGeneratorSpec defines the desired state of OpenStackPlaybookGenerator
 type OpenStackPlaybookGeneratorSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Name of the image
 	ImageURL string `json:"imageURL"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 	// name of the associated OpenStackClient resource
 	OpenStackClientName string `json:"openstackClientName"`
+	// name of any custom ROLESFILE in the configmap used to generate the roles map. If not specified the default t-h-t roles will be used.
+	RolesFile string `json:"rolesFile,omitempty"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator

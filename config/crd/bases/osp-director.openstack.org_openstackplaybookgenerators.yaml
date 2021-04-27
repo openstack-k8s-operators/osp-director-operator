@@ -50,6 +50,11 @@ spec:
               openstackClientName:
                 description: name of the associated OpenStackClient resource
                 type: string
+              rolesFile:
+                description: name of any custom ROLESFILE in the configmap used to
+                  generate the roles map. If not specified the default t-h-t roles
+                  will be used.
+                type: string
             required:
             - deploymentSSHSecret
             - imageURL
