@@ -22,14 +22,16 @@ import (
 
 // OpenStackPlaybookGeneratorSpec defines the desired state of OpenStackPlaybookGenerator
 type OpenStackPlaybookGeneratorSpec struct {
-	// Name of the image
+	// Name of the image used to generate playbooks
 	ImageURL string `json:"imageURL"`
-	// name of secret holding the stack-admin ssh keys
-	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
-	// name of the associated OpenStackClient resource
+	// Name of the associated OpenStackClient resource
 	OpenStackClientName string `json:"openstackClientName"`
-	// name of any custom ROLESFILE in the configmap used to generate the roles map. If not specified the default t-h-t roles will be used.
+	// Required. config map containing Heat env file customizations
+	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
+	// Optional. name of any custom ROLESFILE in the configmap used to generate the roles map. If not specified the default t-h-t roles will be used.
 	RolesFile string `json:"rolesFile,omitempty"`
+	// Optional. config map containing custom Heat template tarball which will be extracted prior to playbook generation
+	HeatTemplateTarball string `json:"heatTemplateTarball,omitempty"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator

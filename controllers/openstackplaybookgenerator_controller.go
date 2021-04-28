@@ -101,47 +101,45 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	envVars := make(map[string]common.EnvSetter)
-	//err = r.Client.Status().Update(context.TODO(), instance)
-	//if err != nil {
-	//r.Log.Error(err, "Failed to update CR status %v")
-	//return ctrl.Result{}, err
-	//}
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance.Name, openstackplaybookgenerator.AppLabel)
 	cms := []common.Template{
 		// Custom CM holding Tripleo deployment environment parameter files
 		{
-			Name:      "tripleo-deploy-config-custom",
-			Namespace: instance.Namespace,
-			Type:      common.TemplateTypeCustom,
-			Labels:    cmLabels,
-		},
-		// Custom CM holding Tripleo net-config files then used in parameter files
-		{
-			Name:      "tripleo-net-config",
+			Name:      instance.Spec.HeatEnvConfigMap,
 			Namespace: instance.Namespace,
 			Type:      common.TemplateTypeCustom,
 			Labels:    cmLabels,
 		},
 	}
+
+	if instance.Spec.HeatTemplateTarball != "" {
+		cms = append(cms,
+			common.Template{
+				Name:      instance.Spec.HeatTemplateTarball,
+				Namespace: instance.Namespace,
+				Type:      common.TemplateTypeCustom,
+				Labels:    cmLabels,
+			},
+		)
+	}
+
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
 	if err != nil {
 		return ctrl.Result{}, nil
 	}
 
-	// get tripleo-net-config, created/rendered by admin
-	tripleoNetCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-net-config", instance.Namespace)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// get tripleo-deploy-config-custom, created/rendered by openstackipset controller
-	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-custom", instance.Namespace)
+	// get tripleo-deploy-config-custom (customizations provided by administrator)
+	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
+	// we remove the RolesFile from custom templates to avoid having Heat process it directly (FIXME: should we have a separate ConfigMap for the custom Roles file?)
+	if len(instance.Spec.RolesFile) > 0 {
+		delete(tripleoCustomDeployFiles, instance.Spec.RolesFile)
+	}
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
 	// get tripleo-deploy-config, created/rendered by openstackipset controller
@@ -158,9 +156,30 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
 	templateParameters["RolesFile"] = instance.Spec.RolesFile
 
+	// config hash
+	configMapHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoCustomDeployCM, *tripleoDeployCM})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
+	}
+
+	// extra stuff if custom tarballs are provided
+	if instance.Spec.HeatTemplateTarball != "" {
+		tripleoTarballCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatTemplateTarball, instance.Namespace)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		// adjust the configMapHash
+		configMapHash, err = common.ObjectHash([]corev1.ConfigMap{*tripleoCustomDeployCM, *tripleoDeployCM, *tripleoTarballCM})
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
+		}
+		tripleoTarballFiles := tripleoTarballCM.BinaryData
+		templateParameters["TripleoTarballFiles"] = tripleoTarballFiles
+	}
+
 	cms = []common.Template{
 		{
-			Name:           "openstackplaybook-sh",
+			Name:           "openstackplaybook-script-" + instance.Name,
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeScripts,
 			InstanceType:   instance.Kind,
@@ -174,12 +193,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, nil
 	}
 
-	// config hash
-	configMapHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoNetCM, *tripleoCustomDeployCM, *tripleoDeployCM})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
-	}
-
 	// Create ephemeral heat
 	heat := &ospdirectorv1beta1.OpenStackEphemeralHeat{
 		ObjectMeta: metav1.ObjectMeta{
@@ -190,8 +203,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			ConfigHash: configMapHash,
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
 
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
 		err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
 		if err != nil {
 			return err
@@ -206,15 +219,23 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		r.Log.Info(fmt.Sprintf("OpenStackEphemeralHeat successfully reconciled - operation: %s", string(op)))
 	}
 
+	// delete ephemeral heat if the configMapHash doesn't match
+	r.Log.Info(fmt.Sprintf("ConfigHash: %s", configMapHash))
+	r.Log.Info(fmt.Sprintf("HeatConfigHash: %s", heat.Spec.ConfigHash))
+	if heat.Spec.ConfigHash != configMapHash {
+		err = r.Client.Delete(context.TODO(), heat)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Define a new Job object
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
-	jobHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoNetCM, *tripleoCustomDeployCM, *tripleoDeployCM})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
 	}
 
-	if instance.Status.PlaybookHash != jobHash {
-
+	if instance.Status.PlaybookHash != configMapHash {
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
 
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
@@ -231,6 +252,24 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			r.Log.Info(fmt.Sprintf("Job successfully reconciled - operation: %s", string(op)))
 		}
 
+		// configMap Hash changed while job was running (NOTE: configHash is only ENV in the job)
+		r.Log.Info(fmt.Sprintf("Job Hash : %s", job.Spec.Template.Spec.Containers[0].Env[0].Value))
+		r.Log.Info(fmt.Sprintf("ConfigMap Hash : %s", configMapHash))
+		if configMapHash != job.Spec.Template.Spec.Containers[0].Env[0].Value {
+			_, err = common.DeleteJob(job, r.Kclient, r.Log)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// in this case delete heat too
+			err = r.Client.Delete(context.TODO(), heat)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+
+		}
+
 		requeue, err := common.WaitOnJob(job, r.Client, r.Log)
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
@@ -244,10 +283,16 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		}
 	}
 
-	if err := r.setPlaybookHash(instance, jobHash); err != nil {
+	if err := r.setPlaybookHash(instance, configMapHash); err != nil {
 		return ctrl.Result{}, err
 	}
 	_, err = common.DeleteJob(job, r.Kclient, r.Log)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// cleanup the ephemeral Heat
+	err = r.Client.Delete(context.TODO(), heat)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

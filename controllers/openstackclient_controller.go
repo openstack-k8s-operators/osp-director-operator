@@ -168,8 +168,6 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
 
 	// create cm holding deployment script and render deployment script.
-	// All yaml files from tripleo-deploy-config-custom and tripleo-deploy-config
-	// are added as environment files.
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{

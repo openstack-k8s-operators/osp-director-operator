@@ -25,36 +25,11 @@ import (
 
 // GetVolumeMounts -
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.VolumeMount {
-	return []corev1.VolumeMount{
-		{
-			Name: fmt.Sprintf("%s-hosts", instance.Spec.OpenStackClientName),
-			//MountPath: "/mnt",
-			MountPath: "/etc/hosts",
-			SubPath:   "hosts",
-			ReadOnly:  false,
-		},
+	retVolMounts := []corev1.VolumeMount{
 		{
 			Name:      fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
-			MountPath: "/home/cloud-admin",
+			MountPath: "/var/cloud-admin", // this is the cloud-admin mounted on openstackclient pod
 			ReadOnly:  false,
-		},
-		{
-			Name:      "id-rsa",
-			MountPath: "/home/cloud-admin/.ssh/id_rsa",
-			SubPath:   "id_rsa",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/home/cloud-admin/.ssh/id_rsa.pub",
-			SubPath:   "id_rsa.pub",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/home/cloud-admin/.ssh/config",
-			SubPath:   "config",
-			ReadOnly:  true,
 		},
 		{
 			Name:      "tripleo-deploy-config",
@@ -67,11 +42,6 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 			ReadOnly:  true,
 		},
 		{
-			Name:      "tripleo-net-config",
-			MountPath: "/home/cloud-admin/net-config",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "openstackplaybook-scripts",
 			MountPath: "/home/cloud-admin/create-playbooks.sh",
 			SubPath:   "create-playbooks.sh",
@@ -79,49 +49,25 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 		},
 	}
 
+	if instance.Spec.HeatTemplateTarball != "" {
+		retVolMounts = append(retVolMounts,
+			corev1.VolumeMount{
+				Name:      "tripleo-deploy-tars",
+				MountPath: "/home/cloud-admin/tht-tars",
+				ReadOnly:  true,
+			},
+		)
+	}
+	return retVolMounts
 }
 
 // GetVolumes -
 func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.Volume {
-	var config0600AccessMode int32 = 0600
+	//var config0600AccessMode int32 = 0600
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755
 
-	return []corev1.Volume{
-		{
-			Name: "id-rsa",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0600AccessMode,
-					SecretName:  instance.Spec.DeploymentSSHSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "identity",
-							Path: "id_rsa",
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: "ssh-config",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					SecretName:  instance.Spec.DeploymentSSHSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "config",
-							Path: "config",
-						},
-						{
-							Key:  "authorized_keys",
-							Path: "id_rsa.pub",
-						},
-					},
-				},
-			},
-		},
+	retVolumes := []corev1.Volume{
 		{
 			Name: "tripleo-deploy-config",
 			VolumeSource: corev1.VolumeSource{
@@ -139,18 +85,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0644AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-deploy-config-custom",
-					},
-				},
-			},
-		},
-		{
-			Name: "tripleo-net-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-net-config",
+						Name: instance.Spec.HeatEnvConfigMap,
 					},
 				},
 			},
@@ -161,7 +96,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0755AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackplaybook-sh",
+						Name: "openstackplaybook-script-" + instance.Name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -169,14 +104,6 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 							Path: "create-playbooks.sh",
 						},
 					},
-				},
-			},
-		},
-		{
-			Name: fmt.Sprintf("%s-hosts", instance.Spec.OpenStackClientName),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: fmt.Sprintf("%s-hosts", instance.Spec.OpenStackClientName),
 				},
 			},
 		},
@@ -190,4 +117,20 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 		},
 	}
 
+	if instance.Spec.HeatTemplateTarball != "" {
+		retVolumes = append(retVolumes,
+			corev1.Volume{
+				Name: "tripleo-deploy-tars",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						DefaultMode: &config0644AccessMode,
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.HeatTemplateTarball,
+						},
+					},
+				},
+			},
+		)
+	}
+	return retVolumes
 }

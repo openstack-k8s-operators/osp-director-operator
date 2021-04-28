@@ -4,7 +4,14 @@ set -eux
 
 unset OS_CLOUD
 export OS_AUTH_TYPE=none
-export OS_ENDPOINT=http://heat-test:8004/v1/admin
+export OS_ENDPOINT="http://{{ .HeatServiceName }}:8004/v1/admin"
+
+HEAT_COUNT=0
+until openstack stack list &> /dev/null || [ "$HEAT_COUNT" -gt 180 ]; do
+  HEAT_COUNT=$(($HEAT_COUNT + 1))
+  echo "waiting for Heat to start..."
+  sleep 2
+done
 
 # if ROLES_FILE is set we overwrite the default t-h-t version
 ROLES_FILE="{{ .RolesFile }}"
@@ -18,18 +25,25 @@ mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 pushd $TEMPLATES_DIR
-python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n /usr/share/openstack-tripleo-heat-templates/network_data.yaml
 
-#FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths
+# extract any tar files
+{{- if .TripleoTarballFiles }}
+{{- range $key, $value := .TripleoTarballFiles }}
+tar -xvf /home/cloud-admin/tht-tars/{{ $key }}
+{{- end }}
+{{- end }}
+
 # copy to editable dir config-tmp
 rm -Rf ~/config-tmp
 mkdir -p ~/config-tmp
 cp ~/config/* ~/config-tmp
 cp ~/config-custom/* ~/config-tmp
-# make patch relative
+#FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths in dev-tools!
 sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.yaml
 # copy to our temp t-h-t dir
 cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
+
+python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
 # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
 sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
@@ -86,7 +100,7 @@ heat_client = utils.get_client_class(
     '1',
     API_VERSIONS)
 client = heat_client(
-    endpoint='http://heat-test:%s/v1/admin' % api_port,
+    endpoint='http://{{ .HeatServiceName }}:%s/v1/admin' % api_port,
     username='admin',
     password='fake',
     region_name='regionOne',
@@ -115,3 +129,6 @@ ansible.write_default_ansible_cfg(
     ssh_private_key=None)
 
 EOF_PYTHON
+
+# copy to our persistent volume mount so it shows up in the 'openstackclient' pod
+cp -a /home/cloud-admin/ansible/* /var/cloud-admin/ansible/
