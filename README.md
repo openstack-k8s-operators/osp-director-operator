@@ -10,16 +10,16 @@ The OSP Director Operator creates a set of Custom Resource Definitions on top of
 
 Hardware Provisioning CRDs
 --------------------------
--openstackbaremetalset: create sets of baremetal hosts for a specific TripleO role (Compute, Storage, etc.)
--openstackcontrolplane: A CRD used to create the OpenStack control plane and manage associated openstackvmsets
--openstackipset: Contains a set of IPs for a given network and role. Used internally to manage IP addresses.
--openstacknet: Create networks which are used to assign IPs to the vmset and baremetalset resources below
--openstackprovisionservers: used to serve custom images for baremetal provisioning with Metal3
--openstackvmset: create sets of VMs using OpenShift Virtualization for a specific TripleO role (Controller, Database, NetworkController, etc.)
+- openstackbaremetalset: create sets of baremetal hosts for a specific TripleO role (Compute, Storage, etc.)
+- openstackcontrolplane: A CRD used to create the OpenStack control plane and manage associated openstackvmsets
+- openstackipset: Contains a set of IPs for a given network and role. Used internally to manage IP addresses.
+- openstacknet: Create networks which are used to assign IPs to the vmset and baremetalset resources below
+- openstackprovisionservers: used to serve custom images for baremetal provisioning with Metal3
+- openstackvmset: create sets of VMs using OpenShift Virtualization for a specific TripleO role (Controller, Database, NetworkController, etc.)
 
 Software Configuration CRDs
 ---------------------------
--openstackclient: creates a pod used to run TripleO deployment commands
+- openstackclient: creates a pod used to run TripleO deployment commands
 
 Installation
 ------------
@@ -170,10 +170,10 @@ Once you customize the above template/examples for your environment you can crea
 
 ```bash
 # create the configmap for tripleo-deploy-config-custom
-oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run -o yaml | oc apply -f -
+oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run=client -o yaml | oc apply -f -
 
 # create the configmap for netconfig
-oc create configmap -n openstack tripleo-net-config --from-file=net-config/ --dry-run -o yaml | oc apply -f -
+oc create configmap -n openstack tripleo-net-config --from-file=net-config/ --dry-run=client -o yaml | oc apply -f -
 ```
 
 3) (Optional) Create a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) for your OpenStackControlPlane. This secret will provide the default password for your virtual machine and baremetal hosts. If no secret is provided you will only be able to login with ssh keys defined in the osp-controlplane-ssh-keys Secret.
