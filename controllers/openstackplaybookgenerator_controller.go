@@ -67,10 +67,9 @@ func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/finalizers,verbs=update
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;
 
@@ -86,7 +85,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
 func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackplaybookgenerator", req.NamespacedName)
 
-	// Fetch the controller VM instance
+	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackPlaybookGenerator{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
@@ -157,7 +156,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters["RolesFile"] = instance.Spec.RolesFile
 
 	// config hash
-	configMapHash, err := common.ObjectHash([]corev1.ConfigMap{*tripleoCustomDeployCM, *tripleoDeployCM})
+	configMapHash, err := common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
 	}
@@ -169,7 +168,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		}
 		// adjust the configMapHash
-		configMapHash, err = common.ObjectHash([]corev1.ConfigMap{*tripleoCustomDeployCM, *tripleoDeployCM, *tripleoTarballCM})
+		configMapHash, err = common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, tripleoTarballCM.BinaryData})
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
 		}
@@ -349,6 +348,5 @@ func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, namespacedFn).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, namespacedFn).
 		Complete(r)
 }
