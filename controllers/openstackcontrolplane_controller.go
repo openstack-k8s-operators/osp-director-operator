@@ -201,6 +201,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			}
 			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
+			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface
 			vmSet.Spec.Networks = vmRole.Networks
 			vmSet.Spec.RoleName = vmRole.RoleName
 			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole

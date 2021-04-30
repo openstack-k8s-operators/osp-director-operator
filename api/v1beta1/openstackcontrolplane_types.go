@@ -54,6 +54,10 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
 	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
 
+	// +kubebuilder:default=enp2s0
+	// Interface to use for ctlplane network
+	CtlplaneInterface string `json:"ctlplaneInterface"`
+
 	// +kubebuilder:default={ctlplane,external,internalapi,tenant,storage,storagemgmt}
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
 	Networks []string `json:"networks"`

@@ -1,6 +1,6 @@
 version: 2
 ethernets:
-  eth1:
+  {{ .CtlplaneInterface }}:
     addresses: [ {{ .ControllerIP }} ]
 {{- if .Gateway }}
     {{ .Gateway }}

@@ -196,6 +196,13 @@ oc create -n openstack -f ctlplane-secret.yaml
 
 4) Define your OpenStackControlPlane custom resource. The OpenStackControlPlane custom resource provides a cental place to create and scale VMs used for the OSP Controllers along with any additional vmsets for your deployment. At least 1 Controller VM is required for a basic demo installation and per OSP High Availability guidelines 3 Controller VMs are recommended.
 
+Note: If the rhel-guest-image is used as base to deploy the OpenStackControlPlane virtual machines, make sure to remove the net.ifnames=0 kernel parameter form the image to have the biosdev network interface naming. This can be done like:
+
+```bash
+dnf install -y libguestfs-tools-c
+virt-customize -a bms-image.qcow2 --run-command 'sed -i -e "s/^\(kernelopts=.*\)net.ifnames=0 \(.*\)/\1\2/" /boot/grub2/grubenv'
+```
+
 ```yaml
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackControlPlane
@@ -217,7 +224,7 @@ spec:
       cores: 6
       memory: 12
       diskSize: 40
-      baseImageURL: http://download.devel.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+      baseImageURL: http://host/images/rhel-guest-image-8.3-417.x86_64.qcow2
       storageClass: host-nfs-storageclass
 ```
 
@@ -229,6 +236,13 @@ oc create -f openstackcontrolplane.yaml
 
 5) Define an OpenStackBaremetalSet to scale out OSP Compute hosts. The OpenStackBaremetal resource can be used to define and scale Compute resources and optionally be used to define and scale out baremetal hosts for other types of TripleO roles. The example below defines a single Compute host to be created.
 
+Note: If the rhel-guest-image is used as base to deploy the OpenStackBaremetalSet compute nodes, make sure to remove the net.ifnames=0 kernel parameter form the image to have the biosdev network interface naming. This can be done like:
+
+```bash
+dnf install -y libguestfs-tools-c
+virt-customize -a bms-image.qcow2 --run-command 'sed -i -e "s/^\(kernelopts=.*\)net.ifnames=0 \(.*\)/\1\2/" /boot/grub2/grubenv'
+```
+
 ```yaml
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
@@ -239,7 +253,7 @@ spec:
   # How many nodes to provision
   replicas: {{ osp_compute_count }}
   # The image to install on the provisioned nodes. NOTE: needs to be accessible on the OpenShift Metal3 provisioning network.
-  baseImageUrl: http://172.22.0.1/images/{{ osp_controller_base_image_url | basename }}
+  baseImageUrl: http://host/images/rhel-image-8.3-417.x86_64.qcow2
   # NOTE: these are automatically created via the OpenStackControlplane CR above
   deploymentSSHSecret: osp-controlplane-ssh-keys
   # The interface on the nodes that will be assigned an IP from the mgmtCidr
@@ -294,6 +308,13 @@ as the `openStackClientImageURL` in the openstackcontrolplane CR.
 Have compute nodes with extra disks to be used as OSDs and create a baremetalset for the ComputeHCI role which has
 the storagemgmt network in addition to the default compute networks and the `IsHCI` parameter set to true.
 
+Note: If the rhel-guest-image is used as base to deploy the OpenStackBaremetalSet compute nodes, make sure to remove the net.ifnames=0 kernel parameter form the image to have the biosdev network interface naming. This can be done like:
+
+```bash
+dnf install -y libguestfs-tools-c
+virt-customize -a bms-image.qcow2 --run-command 'sed -i -e "s/^\(kernelopts=.*\)net.ifnames=0 \(.*\)/\1\2/" /boot/grub2/grubenv'
+```
+
 ```yaml
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
@@ -304,7 +325,7 @@ spec:
   # How many nodes to provision
   replicas: 2
   # The image to install on the provisioned nodes
-  baseImageUrl: http://172.22.0.1/images/rhel-guest-image-8.4-825.x86_64.qcow2
+  baseImageUrl: http://host/images/rhel-image-8.3-417.x86_64.qcow2
   provisionServerName: openstack
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-controlplane-ssh-keys

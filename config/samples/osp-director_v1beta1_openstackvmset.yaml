@@ -13,6 +13,7 @@ spec:
   #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys
   isTripleoRole: true
+  ctlplaneInterface: enp2s0 #defaults to enp2s0
   networks:
     - ctlplane
   roleName: Controller
