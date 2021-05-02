@@ -112,10 +112,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		},
 	}
 
-	if instance.Spec.HeatTemplateTarball != "" {
+	if instance.Spec.TarballConfigMap != "" {
 		cms = append(cms,
 			common.Template{
-				Name:      instance.Spec.HeatTemplateTarball,
+				Name:      instance.Spec.TarballConfigMap,
 				Namespace: instance.Namespace,
 				Type:      common.TemplateTypeCustom,
 				Labels:    cmLabels,
@@ -162,8 +162,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	// extra stuff if custom tarballs are provided
-	if instance.Spec.HeatTemplateTarball != "" {
-		tripleoTarballCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatTemplateTarball, instance.Namespace)
+	if instance.Spec.TarballConfigMap != "" {
+		tripleoTarballCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.TarballConfigMap, instance.Namespace)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

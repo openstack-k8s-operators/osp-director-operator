@@ -49,7 +49,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 		},
 	}
 
-	if instance.Spec.HeatTemplateTarball != "" {
+	if instance.Spec.TarballConfigMap != "" {
 		retVolMounts = append(retVolMounts,
 			corev1.VolumeMount{
 				Name:      "tripleo-deploy-tars",
@@ -117,7 +117,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 		},
 	}
 
-	if instance.Spec.HeatTemplateTarball != "" {
+	if instance.Spec.TarballConfigMap != "" {
 		retVolumes = append(retVolumes,
 			corev1.Volume{
 				Name: "tripleo-deploy-tars",
@@ -125,7 +125,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						DefaultMode: &config0644AccessMode,
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.HeatTemplateTarball,
+							Name: instance.Spec.TarballConfigMap,
 						},
 					},
 				},
