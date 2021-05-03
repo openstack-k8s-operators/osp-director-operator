@@ -63,7 +63,6 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 
 // GetVolumes -
 func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.Volume {
-	//var config0600AccessMode int32 = 0600
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755
 

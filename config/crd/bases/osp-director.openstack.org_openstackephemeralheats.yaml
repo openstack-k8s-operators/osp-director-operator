@@ -52,6 +52,11 @@ spec:
                 description: Container image URL for the Heat Engine container image
                   used as part of this ephemeral heat instance
                 type: string
+              heatEngineReplicas:
+                description: Number of replicas for the Heat Engine service, defaults
+                  to 3 if unset
+                format: int32
+                type: integer
               mariadbImageURL:
                 description: Container image URL for the MySQL container image used
                   as part of this ephemeral heat instance
@@ -64,6 +69,7 @@ spec:
             - configHash
             - heatAPIImageURL
             - heatEngineImageURL
+            - heatEngineReplicas
             - mariadbImageURL
             - rabbitImageURL
             type: object

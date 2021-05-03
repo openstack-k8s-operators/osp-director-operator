@@ -217,7 +217,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// Heat Engine Replicaset
-	heatEngineReplicaset := openstackephemeralheat.HeatEngineReplicaSet(instance, 3)
+	heatEngineReplicaset := openstackephemeralheat.HeatEngineReplicaSet(instance)
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatEngineReplicaset, func() error {
 		err := controllerutil.SetControllerReference(instance, heatEngineReplicaset, r.Scheme)
 		if err != nil {

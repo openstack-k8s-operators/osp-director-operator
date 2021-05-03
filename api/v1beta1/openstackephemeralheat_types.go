@@ -25,13 +25,15 @@ type OpenStackEphemeralHeatSpec struct {
 	// ConfigHash hash which acts as a unique identifier for this ephemeral heat instance
 	ConfigHash string `json:"configHash"`
 	// Container image URL for the MySQL container image used as part of this ephemeral heat instance
-	MariadbImageURL string `json:"mariadbImageURL"`
+	MariadbImageURL string `json:"mariadbImageURL,omitempty"`
 	// Container image URL for the RabbitMQ container image used as part of this ephemeral heat instance
-	RabbitImageURL string `json:"rabbitImageURL"`
+	RabbitImageURL string `json:"rabbitImageURL,omitempty"`
 	// Container image URL for the Heat API container image used as part of this ephemeral heat instance
-	HeatAPIImageURL string `json:"heatAPIImageURL"`
+	HeatAPIImageURL string `json:"heatAPIImageURL,omitempty"`
 	// Container image URL for the Heat Engine container image used as part of this ephemeral heat instance
-	HeatEngineImageURL string `json:"heatEngineImageURL"`
+	HeatEngineImageURL string `json:"heatEngineImageURL,omitempty"`
+	// Number of replicas for the Heat Engine service, defaults to 3 if unset
+	HeatEngineReplicas int32 `json:"heatEngineReplicas,omitempty"`
 }
 
 // OpenStackEphemeralHeatStatus defines the observed state of OpenStackEphemeralHeat

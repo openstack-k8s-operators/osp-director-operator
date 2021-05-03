@@ -25,15 +25,4 @@ const (
 
 	// ServiceAccount -
 	ServiceAccount = "osp-director-operator-openstackplaybook"
-
-	// CloudAdminUID -
-	CloudAdminUID = 42401
-	// CloudAdminGID -
-	CloudAdminGID = 42401
-	// HostsPersistentStorageSize - size in GB
-	HostsPersistentStorageSize = "1G"
-	// CloudAdminPersistentStorageSize - size in GB
-	CloudAdminPersistentStorageSize = "4G"
-	// PersistentStorageClass -
-	PersistentStorageClass = "host-nfs-storageclass"
 )

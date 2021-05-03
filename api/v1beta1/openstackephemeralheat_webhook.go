@@ -58,5 +58,8 @@ func (r *OpenStackEphemeralHeat) Default() {
 	if r.Spec.RabbitImageURL == "" {
 		r.Spec.RabbitImageURL = "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo"
 	}
+	if r.Spec.HeatEngineReplicas == 0 {
+		r.Spec.HeatEngineReplicas = 3
+	}
 
 }

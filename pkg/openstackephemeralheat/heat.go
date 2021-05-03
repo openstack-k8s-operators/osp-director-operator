@@ -102,7 +102,7 @@ func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme 
 }
 
 // HeatEngineReplicaSet -
-func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, replicas int32) *appsv1.ReplicaSet {
+func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *appsv1.ReplicaSet {
 
 	selectorLabels := map[string]string{
 		"app":              "osp-director-operator-heat-engine",
@@ -119,7 +119,7 @@ func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, r
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
-			Replicas: &replicas,
+			Replicas: &instance.Spec.HeatEngineReplicas,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      instance.Name,

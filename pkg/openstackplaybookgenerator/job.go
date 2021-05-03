@@ -38,13 +38,11 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 	}
 
 	var terminationGracePeriodSeconds int64 = 0
-	//var ttlAfterFinished int32 = 120
 	var backoffLimit int32 = 2
 
 	// Get volumes
 	volumeMounts := GetVolumeMounts(cr)
 	volumes := GetVolumes(cr)
-	//job.Spec.TTLSecondsAfterFinished = &ttlAfterFinished
 
 	job.Spec.BackoffLimit = &backoffLimit
 	job.Spec.Template.Spec = corev1.PodSpec{
