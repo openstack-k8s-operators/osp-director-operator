@@ -22,8 +22,16 @@ import (
 
 // OpenStackEphemeralHeatSpec defines the desired state of OpenStackEphemeralHeat
 type OpenStackEphemeralHeatSpec struct {
-	// ConfigHash hash
+	// ConfigHash hash which acts as a unique identifier for this ephemeral heat instance
 	ConfigHash string `json:"configHash"`
+	// Container image URL for the MySQL container image used as part of this ephemeral heat instance
+	MariadbImageURL string `json:"mariadbImageURL"`
+	// Container image URL for the RabbitMQ container image used as part of this ephemeral heat instance
+	RabbitImageURL string `json:"rabbitImageURL"`
+	// Container image URL for the Heat API container image used as part of this ephemeral heat instance
+	HeatAPIImageURL string `json:"heatAPIImageURL"`
+	// Container image URL for the Heat Engine container image used as part of this ephemeral heat instance
+	HeatEngineImageURL string `json:"heatEngineImageURL"`
 }
 
 // OpenStackEphemeralHeatStatus defines the observed state of OpenStackEphemeralHeat

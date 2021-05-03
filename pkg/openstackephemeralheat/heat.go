@@ -26,7 +26,7 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			Containers: []corev1.Container{
 				{
 					Name:  "heat",
-					Image: "quay.io/tripleomaster/openstack-heat-api:current-tripleo", //FIXME
+					Image: instance.Spec.HeatAPIImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -43,7 +43,7 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			InitContainers: []corev1.Container{
 				{
 					Name:    "drop-heat",
-					Image:   "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Image:   instance.Spec.MariadbImageURL,
 					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"DROP DATABASE IF EXISTS heat\";"},
 					Env: []corev1.EnvVar{
 						{
@@ -54,7 +54,7 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 				},
 				{
 					Name:    "heat-db-create",
-					Image:   "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Image:   instance.Spec.MariadbImageURL,
 					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY 'foobar123'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY 'foobar123'; \""},
 					Env: []corev1.EnvVar{
 						{
@@ -65,7 +65,7 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 				},
 				{
 					Name:    "heat-db-sync",
-					Image:   "quay.io/tripleomaster/openstack-heat-api:current-tripleo", //FIXME
+					Image:   instance.Spec.HeatAPIImageURL,
 					Command: []string{"/usr/bin/heat-manage", "--config-file", "/var/lib/config-data/heat.conf", "db_sync"},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -130,7 +130,7 @@ func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, r
 					Containers: []corev1.Container{
 						{
 							Name:  "heat-engine",
-							Image: "quay.io/tripleomaster/openstack-heat-engine:current-tripleo", //FIXME
+							Image: instance.Spec.HeatEngineImageURL,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "KOLLA_CONFIG_STRATEGY",

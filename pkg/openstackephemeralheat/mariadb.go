@@ -26,7 +26,7 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			Containers: []corev1.Container{
 				{
 					Name:  "mariadb",
-					Image: "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Image: instance.Spec.MariadbImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -42,9 +42,8 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name: "mariadb-init",
-					//Image: "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo", //FIXME
-					Image: "quay.io/tripleomaster/openstack-mariadb:current-tripleo", //FIXME
+					Name:  "mariadb-init",
+					Image: instance.Spec.MariadbImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",

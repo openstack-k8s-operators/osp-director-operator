@@ -41,10 +41,31 @@ spec:
             description: OpenStackEphemeralHeatSpec defines the desired state of OpenStackEphemeralHeat
             properties:
               configHash:
-                description: ConfigHash hash
+                description: ConfigHash hash which acts as a unique identifier for
+                  this ephemeral heat instance
+                type: string
+              heatAPIImageURL:
+                description: Container image URL for the Heat API container image
+                  used as part of this ephemeral heat instance
+                type: string
+              heatEngineImageURL:
+                description: Container image URL for the Heat Engine container image
+                  used as part of this ephemeral heat instance
+                type: string
+              mariadbImageURL:
+                description: Container image URL for the MySQL container image used
+                  as part of this ephemeral heat instance
+                type: string
+              rabbitImageURL:
+                description: Container image URL for the RabbitMQ container image
+                  used as part of this ephemeral heat instance
                 type: string
             required:
             - configHash
+            - heatAPIImageURL
+            - heatEngineImageURL
+            - mariadbImageURL
+            - rabbitImageURL
             type: object
           status:
             description: OpenStackEphemeralHeatStatus defines the observed state of

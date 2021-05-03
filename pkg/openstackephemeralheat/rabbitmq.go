@@ -25,7 +25,7 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 			Containers: []corev1.Container{
 				{
 					Name:  "rabbitmq",
-					Image: "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo", //FIXME
+					Image: instance.Spec.RabbitImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -42,7 +42,7 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 			InitContainers: []corev1.Container{
 				{
 					Name:  "rabbitmq-init",
-					Image: "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo", //FIXME
+					Image: instance.Spec.RabbitImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
