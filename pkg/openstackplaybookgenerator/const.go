@@ -19,10 +19,4 @@ package openstackplaybookgenerator
 const (
 	// AppLabel -
 	AppLabel = "osp-openstackplaybookgenerator"
-
-	// FinalizerName -
-	FinalizerName = "openstackplaybook.osp-director.openstack.org"
-
-	// ServiceAccount -
-	ServiceAccount = "osp-director-operator-openstackplaybook"
 )
