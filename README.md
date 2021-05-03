@@ -418,3 +418,5 @@ ansible -i tripleo-deploy/overcloud-ansible/inventory.yaml overcloud -a "sudo su
 ```bash
 ./tripleo-deploy-custom.sh -p
 ```
+
+DNMtest
