@@ -145,6 +145,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			r.Log.Info("The tripleo-deploy-config map doesn't yet exist. Requeing...")
 			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
 		return ctrl.Result{}, err
@@ -199,7 +200,12 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			Namespace: instance.Namespace,
 		},
 		Spec: ospdirectorv1beta1.OpenStackEphemeralHeatSpec{
-			ConfigHash: configMapHash,
+			ConfigHash:         configMapHash,
+			HeatAPIImageURL:    instance.Spec.EphemeralHeatSettings.HeatAPIImageURL,
+			HeatEngineImageURL: instance.Spec.EphemeralHeatSettings.HeatEngineImageURL,
+			MariadbImageURL:    instance.Spec.EphemeralHeatSettings.MariadbImageURL,
+			RabbitImageURL:     instance.Spec.EphemeralHeatSettings.RabbitImageURL,
+			HeatEngineReplicas: instance.Spec.EphemeralHeatSettings.HeatEngineReplicas,
 		},
 	}
 
@@ -216,6 +222,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("OpenStackEphemeralHeat successfully reconciled - operation: %s", string(op)))
+	}
+	if !heat.Status.Active {
+		r.Log.Info("Waiting on Ephemeral Heat instance to launch...")
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	// delete ephemeral heat if the configMapHash doesn't match
@@ -265,6 +275,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			if err != nil {
 				return ctrl.Result{}, err
 			}
+			r.Log.Info("ConfigMap has changed. Requeing to start again...")
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 
 		}

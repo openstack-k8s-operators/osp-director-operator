@@ -24,7 +24,7 @@ import (
 type OpenStackPlaybookGeneratorSpec struct {
 	// Name of the image used to generate playbooks
 	ImageURL string `json:"imageURL"`
-	// Name of the associated OpenStackClient resource
+	// Name of the associated OpenStackClient resource (FIXME: remove when we switch to git repos for syncing generated playbooks)
 	OpenStackClientName string `json:"openstackClientName"`
 	// Required. config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
@@ -32,6 +32,8 @@ type OpenStackPlaybookGeneratorSpec struct {
 	RolesFile string `json:"rolesFile,omitempty"`
 	// Optional. config map containing custom Heat template tarball which will be extracted prior to playbook generation
 	TarballConfigMap string `json:"tarballConfigMap,omitempty"`
+	// Heat Settings
+	EphemeralHeatSettings OpenStackEphemeralHeatSpec `json:"ephemeralHeatSettings,omitempty"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator

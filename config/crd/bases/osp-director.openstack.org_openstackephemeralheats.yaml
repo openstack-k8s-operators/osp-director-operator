@@ -19,7 +19,11 @@ spec:
     singular: openstackephemeralheat
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - jsonPath: .status.active
+      name: Active
+      type: boolean
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
@@ -65,17 +69,16 @@ spec:
                 description: Container image URL for the RabbitMQ container image
                   used as part of this ephemeral heat instance
                 type: string
-            required:
-            - configHash
-            - heatAPIImageURL
-            - heatEngineImageURL
-            - heatEngineReplicas
-            - mariadbImageURL
-            - rabbitImageURL
             type: object
           status:
             description: OpenStackEphemeralHeatStatus defines the observed state of
               OpenStackEphemeralHeat
+            properties:
+              active:
+                description: Active hash
+                type: boolean
+            required:
+            - active
             type: object
         type: object
     served: true

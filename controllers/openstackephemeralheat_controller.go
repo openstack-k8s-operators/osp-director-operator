@@ -230,10 +230,23 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Heat Engine Replicaset %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		if err := r.setActive(instance, true); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
 
+}
+
+func (r *OpenStackEphemeralHeatReconciler) setActive(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, active bool) error {
+	if instance.Status.Active != active {
+		instance.Status.Active = active
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

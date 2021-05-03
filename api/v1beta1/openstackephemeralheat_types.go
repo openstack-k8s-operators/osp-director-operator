@@ -23,7 +23,7 @@ import (
 // OpenStackEphemeralHeatSpec defines the desired state of OpenStackEphemeralHeat
 type OpenStackEphemeralHeatSpec struct {
 	// ConfigHash hash which acts as a unique identifier for this ephemeral heat instance
-	ConfigHash string `json:"configHash"`
+	ConfigHash string `json:"configHash,omitempty"`
 	// Container image URL for the MySQL container image used as part of this ephemeral heat instance
 	MariadbImageURL string `json:"mariadbImageURL,omitempty"`
 	// Container image URL for the RabbitMQ container image used as part of this ephemeral heat instance
@@ -38,14 +38,15 @@ type OpenStackEphemeralHeatSpec struct {
 
 // OpenStackEphemeralHeatStatus defines the observed state of OpenStackEphemeralHeat
 type OpenStackEphemeralHeatStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Active hash
+	Active bool `json:"active"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osephemeralheat;osephemeralheats
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Ephemeral Heat"
+// +kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.active`
 
 // OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
 type OpenStackEphemeralHeat struct {

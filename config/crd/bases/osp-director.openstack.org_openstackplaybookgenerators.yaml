@@ -41,6 +41,35 @@ spec:
             description: OpenStackPlaybookGeneratorSpec defines the desired state
               of OpenStackPlaybookGenerator
             properties:
+              ephemeralHeatSettings:
+                description: Heat Settings
+                properties:
+                  configHash:
+                    description: ConfigHash hash which acts as a unique identifier
+                      for this ephemeral heat instance
+                    type: string
+                  heatAPIImageURL:
+                    description: Container image URL for the Heat API container image
+                      used as part of this ephemeral heat instance
+                    type: string
+                  heatEngineImageURL:
+                    description: Container image URL for the Heat Engine container
+                      image used as part of this ephemeral heat instance
+                    type: string
+                  heatEngineReplicas:
+                    description: Number of replicas for the Heat Engine service, defaults
+                      to 3 if unset
+                    format: int32
+                    type: integer
+                  mariadbImageURL:
+                    description: Container image URL for the MySQL container image
+                      used as part of this ephemeral heat instance
+                    type: string
+                  rabbitImageURL:
+                    description: Container image URL for the RabbitMQ container image
+                      used as part of this ephemeral heat instance
+                    type: string
+                type: object
               heatEnvConfigMap:
                 description: Required. config map containing Heat env file customizations
                 type: string
@@ -48,7 +77,8 @@ spec:
                 description: Name of the image used to generate playbooks
                 type: string
               openstackClientName:
-                description: Name of the associated OpenStackClient resource
+                description: 'Name of the associated OpenStackClient resource (FIXME:
+                  remove when we switch to git repos for syncing generated playbooks)'
                 type: string
               rolesFile:
                 description: Optional. name of any custom ROLESFILE in the configmap

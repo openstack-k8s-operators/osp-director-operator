@@ -46,6 +46,9 @@ func (r *OpenStackEphemeralHeat) Default() {
 	openstackephemeralheatlog.Info("default", "name", r.Name)
 
 	//FIXME provide configurable defaults for the values below
+	if r.Spec.ConfigHash == "" {
+		r.Spec.ConfigHash = r.Name
+	}
 	if r.Spec.HeatAPIImageURL == "" {
 		r.Spec.HeatAPIImageURL = "quay.io/tripleomaster/openstack-heat-api:current-tripleo"
 	}
