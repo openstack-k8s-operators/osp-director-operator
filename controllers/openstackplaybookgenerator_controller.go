@@ -213,7 +213,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	// Define a new Job object
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
+		return ctrl.Result{}, fmt.Errorf("error creating playbook job: %v", err)
 	}
 
 	if instance.Status.PlaybookHash != configMapHash {
