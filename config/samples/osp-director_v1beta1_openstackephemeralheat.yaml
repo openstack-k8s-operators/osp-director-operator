@@ -3,5 +3,4 @@ kind: OpenStackEphemeralHeat
 metadata:
   name: openstackephemeralheat-sample
 spec:
-  # Add fields here
-  foo: bar
+  configHash: unique-string-here

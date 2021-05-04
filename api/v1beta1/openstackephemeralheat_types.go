@@ -33,6 +33,7 @@ type OpenStackEphemeralHeatSpec struct {
 	// Container image URL for the Heat Engine container image used as part of this ephemeral heat instance
 	HeatEngineImageURL string `json:"heatEngineImageURL,omitempty"`
 	// Number of replicas for the Heat Engine service, defaults to 3 if unset
+	// +kubebuilder:default=3
 	HeatEngineReplicas int32 `json:"heatEngineReplicas,omitempty"`
 }
 

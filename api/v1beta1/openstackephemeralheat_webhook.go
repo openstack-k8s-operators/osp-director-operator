@@ -45,7 +45,7 @@ var _ webhook.Defaulter = &OpenStackEphemeralHeat{}
 func (r *OpenStackEphemeralHeat) Default() {
 	openstackephemeralheatlog.Info("default", "name", r.Name)
 
-	//FIXME provide configurable defaults for the values below
+	//FIXME use a "Version" CR to provide defaults for the containers below
 	if r.Spec.ConfigHash == "" {
 		r.Spec.ConfigHash = r.Name
 	}
@@ -60,9 +60,6 @@ func (r *OpenStackEphemeralHeat) Default() {
 	}
 	if r.Spec.RabbitImageURL == "" {
 		r.Spec.RabbitImageURL = "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo"
-	}
-	if r.Spec.HeatEngineReplicas == 0 {
-		r.Spec.HeatEngineReplicas = 3
 	}
 
 }

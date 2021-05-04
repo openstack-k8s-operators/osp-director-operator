@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -209,35 +210,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
-		err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("OpenStackEphemeralHeat successfully reconciled - operation: %s", string(op)))
-	}
-	if !heat.Status.Active {
-		r.Log.Info("Waiting on Ephemeral Heat instance to launch...")
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
-	}
-
-	// delete ephemeral heat if the configMapHash doesn't match
-	r.Log.Info(fmt.Sprintf("ConfigHash: %s", configMapHash))
-	r.Log.Info(fmt.Sprintf("HeatConfigHash: %s", heat.Spec.ConfigHash))
-	if heat.Spec.ConfigHash != configMapHash {
-		err = r.Client.Delete(context.TODO(), heat)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	// Define a new Job object
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
 	if err != nil {
@@ -245,7 +217,39 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	if instance.Status.PlaybookHash != configMapHash {
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
+
+		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
+			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("OpenStackEphemeralHeat successfully created/updated - operation: %s", string(op)))
+			if err := r.setCurrentState(instance, "initializing"); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		if !heat.Status.Active {
+			r.Log.Info("Waiting on Ephemeral Heat instance to launch...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+
+		// configMap Hash changed after Ephemeral Heat was created
+		if heat.Spec.ConfigHash != configMapHash {
+			err = r.Client.Delete(context.TODO(), heat)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+
+		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
 
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
@@ -258,7 +262,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		}
 		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("Job successfully reconciled - operation: %s", string(op)))
+			r.Log.Info(fmt.Sprintf("Job successfully created/updated - operation: %s", string(op)))
 		}
 
 		// configMap Hash changed while job was running (NOTE: configHash is only ENV in the job)
@@ -270,7 +274,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 				return ctrl.Result{}, err
 			}
 
-			// in this case delete heat too
+			// in this case delete heat too as the database may have been used
 			err = r.Client.Delete(context.TODO(), heat)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -286,6 +290,9 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		} else if requeue {
 			r.Log.Info("Waiting on Playbook Generation...")
+			if err := r.setCurrentState(instance, "generating"); err != nil {
+				return ctrl.Result{}, err
+			}
 			if err := controllerutil.SetControllerReference(instance, job, r.Scheme); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -306,6 +313,9 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if err := r.setCurrentState(instance, "finished"); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -322,11 +332,22 @@ func (r *OpenStackPlaybookGeneratorReconciler) setPlaybookHash(instance *ospdire
 
 }
 
+func (r *OpenStackPlaybookGeneratorReconciler) setCurrentState(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator, currentState string) error {
+
+	if currentState != instance.Status.CurrentState {
+		instance.Status.CurrentState = currentState
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
-	//namespacedFn := handler.ToRequestsFunc(func(obj handler.MapObject) []reconcile.Request {
 	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -359,5 +380,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, namespacedFn).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
+		Owns(&batchv1.Job{}).
 		Complete(r)
 }

@@ -19,8 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,9 +30,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -133,7 +132,12 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("MariaDB Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("MariaDB Pod %s created or updated - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 1}, err
+	}
+	if len(mariadbPod.Status.ContainerStatuses) > 0 && !mariadbPod.Status.ContainerStatuses[0].Ready {
+		r.Log.Info(fmt.Sprintf("Waiting on MariaDB to start for: %s", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Second * 3}, err
 	}
 
 	// MariaDB Service
@@ -149,7 +153,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("MariaDB Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("MariaDB Service %s created or updated - operation: %s", instance.Name, string(op)))
 	}
 
 	// RabbitMQ Pod
@@ -165,7 +169,12 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("RabbitMQ Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("RabbitMQ Pod %s created or updated - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 1}, err
+	}
+	if len(rabbitmqPod.Status.ContainerStatuses) > 0 && !rabbitmqPod.Status.ContainerStatuses[0].Ready {
+		r.Log.Info(fmt.Sprintf("Waiting on Rabbitmq pod to start for: %s", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Second * 3}, err
 	}
 
 	// RabbitMQ Service
@@ -181,7 +190,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Rabbitmq Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("Rabbitmq Service %s created or updated - operation: %s", instance.Name, string(op)))
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
@@ -197,7 +206,12 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Heat API Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("Heat API Pod %s created or updated - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err // heat init containers take time to launch
+	}
+	if len(heatAPIPod.Status.ContainerStatuses) > 0 && !heatAPIPod.Status.ContainerStatuses[0].Ready {
+		r.Log.Info(fmt.Sprintf("Waiting on Heat API pod to start for: %s", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Second * 3}, err
 	}
 
 	// Heat Service
@@ -213,7 +227,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Heat API Service %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("Heat API Service %s created or updated - operation: %s", instance.Name, string(op)))
 	}
 
 	// Heat Engine Replicaset
@@ -229,10 +243,15 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Heat Engine Replicaset %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		if err := r.setActive(instance, true); err != nil {
-			return ctrl.Result{}, err
-		}
+		r.Log.Info(fmt.Sprintf("Heat Engine Replicaset %s created or updated - operation: %s", instance.Name, string(op)))
+		return ctrl.Result{RequeueAfter: time.Second * 1}, err
+	}
+	if heatEngineReplicaset.Status.AvailableReplicas < instance.Spec.HeatEngineReplicas {
+		r.Log.Info(fmt.Sprintf("Waiting on Heat Engine Replicas to start for: %s", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	}
+	if err := r.setActive(instance, true); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -251,39 +270,10 @@ func (r *OpenStackEphemeralHeatReconciler) setActive(instance *ospdirectorv1beta
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackEphemeralHeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
-	// watch for objects in the same namespace as the controller CR
-	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
-		result := []reconcile.Request{}
-
-		// get all CRs from the same namespace (there should only be one)
-		crs := &ospdirectorv1beta1.OpenStackEphemeralHeatList{}
-		listOpts := []client.ListOption{
-			client.InNamespace(o.GetNamespace()),
-		}
-		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to retrieve CRs %v")
-			return nil
-		}
-
-		for _, cr := range crs.Items {
-			if o.GetNamespace() == cr.Namespace {
-				// return namespace and Name of CR
-				name := client.ObjectKey{
-					Namespace: cr.Namespace,
-					Name:      cr.Name,
-				}
-				result = append(result, reconcile.Request{NamespacedName: name})
-			}
-		}
-		if len(result) > 0 {
-			return result
-		}
-		return nil
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, namespacedFn).
+		Owns(&corev1.Pod{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&appsv1.ReplicaSet{}).
 		Complete(r)
 }

@@ -19,7 +19,11 @@ spec:
     singular: openstackplaybookgenerator
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - jsonPath: .status.currentState
+      name: CurrentState
+      type: boolean
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators
@@ -57,6 +61,7 @@ spec:
                       image used as part of this ephemeral heat instance
                     type: string
                   heatEngineReplicas:
+                    default: 3
                     description: Number of replicas for the Heat Engine service, defaults
                       to 3 if unset
                     format: int32
@@ -98,10 +103,14 @@ spec:
             description: OpenStackPlaybookGeneratorStatus defines the observed state
               of OpenStackPlaybookGenerator
             properties:
+              currentState:
+                description: CurrentState
+                type: string
               playbookHash:
                 description: PlaybookHash hash
                 type: string
             required:
+            - currentState
             - playbookHash
             type: object
         type: object

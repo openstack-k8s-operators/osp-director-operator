@@ -57,6 +57,7 @@ spec:
                   used as part of this ephemeral heat instance
                 type: string
               heatEngineReplicas:
+                default: 3
                 description: Number of replicas for the Heat Engine service, defaults
                   to 3 if unset
                 format: int32

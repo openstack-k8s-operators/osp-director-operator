@@ -40,12 +40,16 @@ type OpenStackPlaybookGeneratorSpec struct {
 type OpenStackPlaybookGeneratorStatus struct {
 	// PlaybookHash hash
 	PlaybookHash string `json:"playbookHash"`
+
+	// CurrentState
+	CurrentState string `json:"currentState"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osplaybookgenerator;osplaybookgenerators
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
+// +kubebuilder:printcolumn:name="CurrentState",type=string,JSONPath=`.status.currentState`
 
 // OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators API
 type OpenStackPlaybookGenerator struct {
