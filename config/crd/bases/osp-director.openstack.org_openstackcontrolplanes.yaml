@@ -74,6 +74,10 @@ spec:
                       description: number of Cores assigned to the VM
                       format: int32
                       type: integer
+                    ctlplaneInterface:
+                      default: enp2s0
+                      description: Interface to use for ctlplane network
+                      type: string
                     diskSize:
                       description: root Disc size in GB
                       format: int32
@@ -114,6 +118,7 @@ spec:
                       type: string
                   required:
                   - cores
+                  - ctlplaneInterface
                   - diskSize
                   - memory
                   - networks

@@ -52,6 +52,10 @@ spec:
                 description: number of Cores assigned to the VMs
                 format: int32
                 type: integer
+              ctlplaneInterface:
+                default: enp2s0
+                description: Interface to use for ctlplane network
+                type: string
               deploymentSSHSecret:
                 description: name of secret holding the stack-admin ssh keys
                 type: string
@@ -97,6 +101,7 @@ spec:
                 type: integer
             required:
             - cores
+            - ctlplaneInterface
             - deploymentSSHSecret
             - diskSize
             - isTripleoRole
