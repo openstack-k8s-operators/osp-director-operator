@@ -22,7 +22,7 @@ spec:
   - additionalPrinterColumns:
     - jsonPath: .status.currentState
       name: CurrentState
-      type: boolean
+      type: string
     name: v1beta1
     schema:
       openAPIV3Schema:

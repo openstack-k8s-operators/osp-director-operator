@@ -274,6 +274,7 @@ func (r *OpenStackEphemeralHeatReconciler) SetupWithManager(mgr ctrl.Manager) er
 		For(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
 		Owns(&corev1.Pod{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).
 		Owns(&appsv1.ReplicaSet{}).
 		Complete(r)
 }

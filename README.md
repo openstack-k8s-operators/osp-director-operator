@@ -162,7 +162,7 @@ oc create -n openstack -f ctlplane-network.yaml
 
 A good example of ConfigMaps that can be used can be found in our [dev-tools](https://github.com/openstack-k8s-operators/osp-director-dev-tools) GitHub project.
 
-A "Tarball Config Map" can be used  to provide (binary) tarballs which are extracted in the tripleo-heat-templates when playbooks are generated. You will want to store things like the following examples in a config map containing custom tarballs:
+A "Tarball Config Map" can be used to provide (binary) tarballs which are extracted in the tripleo-heat-templates when playbooks are generated. Each tarball should contain a directory of files relative to the root of a t-h-t directory. You will want to store things like the following examples in a config map containing custom tarballs:
 -[Net-Config files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/files/osp/net_config).
 
 -[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/files/osp/tripleo_deploy/flat/network-environment.yaml)
@@ -291,7 +291,7 @@ spec:
   tarballConfigMap: tripleo-net-config
 ```
 
-If you write the above YAML into a file called compute.yaml you can create the OpenStackBaremetalSet via this command:
+If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:
 
 ```bash
 oc create -f generator.yaml

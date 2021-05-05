@@ -9,18 +9,19 @@ export OS_ENDPOINT="http://{{ .HeatServiceName }}:8004/v1/admin"
 HEAT_COUNT=0
 until openstack stack list &> /dev/null || [ "$HEAT_COUNT" -gt 180 ]; do
   HEAT_COUNT=$(($HEAT_COUNT + 1))
-  echo "waiting for Heat to start..."
+  echo "waiting for Heat API to startup..."
   sleep 2
 done
 
-TEMPLATES_DIR=$HOME/tripleo-deploy-test/tripleo-heat-installer-templates
+# create a temporary scratch directory to assemble the Heat templates
+TEMPLATES_DIR=$HOME/tripleo-deploy-scratch/tripleo-heat-installer-templates
 rm -Rf "$TEMPLATES_DIR"
 mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 pushd $TEMPLATES_DIR
 
-# extract any tar files
+# extract any tar files into the $TEMPLATES_DIR
 {{- if .TripleoTarballFiles }}
 {{- range $key, $value := .TripleoTarballFiles }}
 tar -xvf /home/cloud-admin/tht-tars/{{ $key }}
@@ -37,8 +38,7 @@ sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.
 # copy to our temp t-h-t dir
 cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
 
-
-# if ROLES_FILE is set we overwrite the default t-h-t version (FIXME: can this be removed now that we support tarballs)
+# if ROLES_FILE is set we overwrite the default t-h-t version (FIXME: can this be removed now that we support tarballs?)
 ROLES_FILE="{{ .RolesFile }}"
 if [ -n "$ROLES_FILE" ]; then
   cp /home/cloud-admin/config-custom/$ROLES_FILE $TEMPLATES_DIR/roles_data.yaml
