@@ -212,6 +212,14 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Only write config maps if the processed reservations are equal to the number of OSIPSets for each network
+	// NOTE: don't put any reconcile logic below this except ConfigMap things as this will short circuit the reconciliation
+	for _, osnet := range overcloudNetList.Items {
+		if len(osnet.Status.Reservations) != len(overcloudIPList.Items) {
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// write it all to a configmap
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance.Name, openstackipset.AppLabel)
