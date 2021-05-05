@@ -20,6 +20,8 @@ Hardware Provisioning CRDs
 Software Configuration CRDs
 ---------------------------
 - openstackclient: creates a pod used to run TripleO deployment commands
+- openstackplaybookgenerator: automatically generate Ansible playbooks for deployment when you scale up or make changes to custom ConfigMaps for deployment
+- openstackclient: creates a pod used to run TripleO deployment commands
 
 Installation
 ------------
@@ -158,22 +160,25 @@ oc create -n openstack -f ctlplane-network.yaml
 
 2) Create a [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments and Heat templates used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named 'tripleo-deploy-config-custom' and 'tripleo-net-config' to provide this information.
 
-A good example of ConfigMaps that can be used can be found in our [dev-tools](https://github.com/openstack-k8s-operators/osp-director-dev-tools) GitHub project. Direct links for each the sample files can be found below:
+A good example of ConfigMaps that can be used can be found in our [dev-tools](https://github.com/openstack-k8s-operators/osp-director-dev-tools) GitHub project.
 
--[Net-Config files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/files/osp/net_config)
+A "Tarball Config Map" can be used to provide (binary) tarballs which are extracted in the tripleo-heat-templates when playbooks are generated. Each tarball should contain a directory of files relative to the root of a t-h-t directory. You will want to store things like the following examples in a config map containing custom tarballs:
+-[Net-Config files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/files/osp/net_config).
 
 -[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/files/osp/tripleo_deploy/flat/network-environment.yaml)
 
 -[Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy) (NOTE: these are Ansible templates and need to have variables replaced to be used directly!)
 
-Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config' ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
+Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
 
 ```bash
 # create the configmap for tripleo-deploy-config-custom
 oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run=client -o yaml | oc apply -f -
 
-# create the configmap for netconfig
-oc create configmap -n openstack tripleo-net-config --from-file=net-config/ --dry-run=client -o yaml | oc apply -f -
+# create the configmap containing a tarball of t-h-t network config files. NOTE: these files may overwrite default t-h-t files so keep this in mind when naming them.
+cd <dir with net config files>
+tar -cvzf net-config.tar.gz *.yaml
+oc create configmap -n openstack tripleo-net-config --from-file=net-config.tar.gz
 ```
 
 3) (Optional) Create a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) for your OpenStackControlPlane. This secret will provide the default password for your virtual machine and baremetal hosts. If no secret is provided you will only be able to login with ssh keys defined in the osp-controlplane-ssh-keys Secret.
@@ -271,9 +276,32 @@ If you write the above YAML into a file called compute.yaml you can create the O
 oc create -f compute.yaml
 ```
 
-5) Wait for any resources virtual machine or baremetal host resources to finish provisioning. FIXME: need to add status info to our CR's so that we can add wait conditions on these resources.
+6) Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment.
 
-6) Login to the 'openstackclient' pod and deploy the OSP software via TripleO commands. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster. Additionally an automatically generated k8s ConfigMap called 'tripleo-deploy-config' contains all the necissary IP and hostname information required for TripleO's Heat to deploy the cluster. Run the following commands in your cluster to deploy a sample TripleO cluster
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackPlaybookGenerator
+metadata:
+  name: default
+  namespace: openstack
+spec:
+  imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
+  openstackClientName: openstackclient
+  heatEnvConfigMap: tripleo-deploy-config-custom
+  tarballConfigMap: tripleo-net-config
+```
+
+If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:
+
+```bash
+oc create -f generator.yaml
+```
+
+The osplaybookgenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osplaybookgenerator's status condition for it to finish.
+
+7) Wait for any resources virtual machine or baremetal host resources to finish provisioning. FIXME: need to add status info to our CR's so that we can add wait conditions on these resources.
+
+8) Login to the 'openstackclient' pod and deploy the OSP software via TripleO commands. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster. Additionally an automatically generated k8s ConfigMap called 'tripleo-deploy-config' contains all the necissary IP and hostname information required for TripleO's Heat to deploy the cluster. Run the following commands in your cluster to deploy a sample TripleO cluster
 
 ```bash
 oc rsh openstackclient

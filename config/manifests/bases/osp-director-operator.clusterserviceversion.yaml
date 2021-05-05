@@ -6,7 +6,7 @@ metadata:
     capabilities: Seamless Upgrades
     operatorframework.io/suggested-namespace: openstack
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org"]'
+    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org","openstackephemeralheats.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: osp-director-operator.v0.0.0
   namespace: placeholder
@@ -39,6 +39,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
+      displayName: OpenStack Ephemeral Heat
+      kind: OpenStackEphemeralHeat
+      name: openstackephemeralheats.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
       displayName: OpenStack IpSet
       kind: OpenStackIPSet
@@ -48,6 +53,11 @@ spec:
       displayName: OpenStack Net
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators API
+      displayName: OpenStack Playbook Generator
+      kind: OpenStackPlaybookGenerator
+      name: openstackplaybookgenerators.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers API
       displayName: OpenStack ProvisionServer

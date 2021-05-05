@@ -1,0 +1,29 @@
+{
+    "command": "/usr/bin/heat-api --config-file /etc/heat/heat.conf",
+    "config_files": [
+        {
+            "source": "/var/lib/config-data/heat.conf",
+            "dest": "/etc/heat/heat.conf",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/paste.ini",
+            "dest": "/etc/heat/paste.ini",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/token.json",
+            "dest": "/etc/heat/token.json",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/noauth.policy",
+            "dest": "/etc/heat/noauth.policy",
+            "owner": "heat",
+            "perm": "0600"
+        }
+    ]
+}

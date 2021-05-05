@@ -43,21 +43,6 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			ReadOnly:  true,
 		},
 		{
-			Name:      "tripleo-deploy-config",
-			MountPath: "/home/cloud-admin/config",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "tripleo-deploy-config-custom",
-			MountPath: "/home/cloud-admin/config-custom",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "tripleo-net-config",
-			MountPath: "/home/cloud-admin/net-config",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "openstackclient-scripts",
 			MountPath: "/home/cloud-admin/tripleo-deploy.sh",
 			SubPath:   "tripleo-deploy.sh",
@@ -147,39 +132,6 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 			Name: "root-ssh",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
-			},
-		},
-		{
-			Name: "tripleo-deploy-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-deploy-config",
-					},
-				},
-			},
-		},
-		{
-			Name: "tripleo-deploy-config-custom",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-deploy-config-custom",
-					},
-				},
-			},
-		},
-		{
-			Name: "tripleo-net-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-net-config",
-					},
-				},
 			},
 		},
 		{

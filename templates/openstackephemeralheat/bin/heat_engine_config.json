@@ -1,0 +1,17 @@
+{
+    "command": "/usr/bin/heat-engine --config-file /etc/heat/heat.conf",
+    "config_files": [
+        {
+            "source": "/var/lib/config-data/heat.conf",
+            "dest": "/etc/heat/heat.conf",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/noauth.policy",
+            "dest": "/etc/heat/noauth.policy",
+            "owner": "heat",
+            "perm": "0600"
+        }
+    ]
+}

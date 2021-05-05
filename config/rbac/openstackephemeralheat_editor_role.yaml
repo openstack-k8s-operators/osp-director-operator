@@ -1,0 +1,24 @@
+# permissions for end users to edit openstackephemeralheats.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackephemeralheat-editor-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackephemeralheats
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackephemeralheats/status
+  verbs:
+  - get
