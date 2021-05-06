@@ -45,6 +45,10 @@ spec:
             description: OpenStackPlaybookGeneratorSpec defines the desired state
               of OpenStackPlaybookGenerator
             properties:
+              debug:
+                default: false
+                description: Debug
+                type: boolean
               ephemeralHeatSettings:
                 description: Heat Settings
                 properties:
