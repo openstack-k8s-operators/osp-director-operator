@@ -262,7 +262,7 @@ spec:
   # NOTE: these are automatically created via the OpenStackControlplane CR above
   deploymentSSHSecret: osp-controlplane-ssh-keys
   # The interface on the nodes that will be assigned an IP from the mgmtCidr
-  ctlplaneInterface: eth2
+  ctlplaneInterface: enp2s0
   # Networks to associate with this host
   networks:
     - ctlplane
@@ -358,7 +358,7 @@ spec:
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-controlplane-ssh-keys
   # The interface on the nodes that will be assigned an IP from the mgmtCidr
-  ctlplaneInterface: eth2
+  ctlplaneInterface: enp8s0
   # Networks to associate with this host
   networks:
     - ctlplane
