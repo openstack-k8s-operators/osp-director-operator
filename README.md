@@ -27,15 +27,16 @@ Installation
 ------------
 
 ## Prerequisite:
-- OCP 4.6 installed
+- OCP 4.6+ installed
 - OpenShift Virtualization 2.6+
+- SRIOV Operator
 
 ## Install the OSP Director Operator
 The OSP Director Operator is installed and managed via the OLM [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager). OLM is installed automatically with your OpenShift installation. To obtain the latest OSP Director Operator snapshot you need to create the appropriate CatalogSource, OperatorGroup, and Subscription to drive the installation with OLM:
 
 ### Create the "openstack" Namespace
 ```bash
-oc create project openstack
+oc new-project openstack
 ```
 
 ### Create a CatalogSource (using 'openstack' namespace, and our upstream quay.io tag)
@@ -163,9 +164,10 @@ oc create -n openstack -f ctlplane-network.yaml
 A good example of ConfigMaps that can be used can be found in our [dev-tools](https://github.com/openstack-k8s-operators/osp-director-dev-tools) GitHub project.
 
 A "Tarball Config Map" can be used to provide (binary) tarballs which are extracted in the tripleo-heat-templates when playbooks are generated. Each tarball should contain a directory of files relative to the root of a t-h-t directory. You will want to store things like the following examples in a config map containing custom tarballs:
+
 -[Net-Config files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/files/osp/net_config).
 
--[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/files/osp/tripleo_deploy/flat/network-environment.yaml)
+-[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/templates/osp/tripleo_deploy/flat/network-environment.yaml.j2)
 
 -[Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy) (NOTE: these are Ansible templates and need to have variables replaced to be used directly!)
 
@@ -201,7 +203,7 @@ oc create -n openstack -f ctlplane-secret.yaml
 
 4) Define your OpenStackControlPlane custom resource. The OpenStackControlPlane custom resource provides a cental place to create and scale VMs used for the OSP Controllers along with any additional vmsets for your deployment. At least 1 Controller VM is required for a basic demo installation and per OSP High Availability guidelines 3 Controller VMs are recommended.
 
-Note: If the rhel-guest-image is used as base to deploy the OpenStackControlPlane virtual machines, make sure to remove the net.ifnames=0 kernel parameter form the image to have the biosdev network interface naming. This can be done like:
+Note: If the rhel-guest-image is used as base to deploy the OpenStackControlPlane virtual machines, make sure to remove the net.ifnames=0 kernel parameter from the image to have the biosdev network interface naming. This can be done like:
 
 ```bash
 dnf install -y libguestfs-tools-c
