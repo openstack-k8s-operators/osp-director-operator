@@ -276,7 +276,28 @@ If you write the above YAML into a file called compute.yaml you can create the O
 oc create -f compute.yaml
 ```
 
-6) Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment.
+6) Wait for any resources virtual machine or baremetal host resources to finish provisioning. FIXME: need to add status info to our CR's so that we can add wait conditions on these resources.
+
+
+7) (optional) Create roles file
+a) use the openstackclient pod to generate a custom roles file
+
+```bash
+oc rsh openstackclient
+cd /home/cloud-admin/
+openstack overcloud roles generate Controller ComputeHCI > roles_computehci.yaml
+exit
+```
+
+b) copy the customer roles file out of the openstackclient pod
+
+```bash
+oc cp openstackclient:/home/cloud-admin/roles_computehci.yaml roles_computehci.yaml
+```
+
+Update the tripleo-deploy-config-custom configmap to upload the roles file to the configmap.
+
+8) Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment.
 
 ```yaml
 apiVersion: osp-director.openstack.org/v1beta1
@@ -289,6 +310,8 @@ spec:
   openstackClientName: openstackclient
   heatEnvConfigMap: tripleo-deploy-config-custom
   tarballConfigMap: tripleo-net-config
+  # optional set the roles file name if generated in previous step.
+  # rolesFile: roles_computehci.yaml
 ```
 
 If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:
@@ -299,26 +322,16 @@ oc create -f generator.yaml
 
 The osplaybookgenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osplaybookgenerator's status condition for it to finish.
 
-7) Wait for any resources virtual machine or baremetal host resources to finish provisioning. FIXME: need to add status info to our CR's so that we can add wait conditions on these resources.
-
-8) Login to the 'openstackclient' pod and deploy the OSP software via TripleO commands. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster. Additionally an automatically generated k8s ConfigMap called 'tripleo-deploy-config' contains all the necissary IP and hostname information required for TripleO's Heat to deploy the cluster. Run the following commands in your cluster to deploy a sample TripleO cluster
+9) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
 
 ```bash
 oc rsh openstackclient
 bash
 cd /home/cloud-admin
-unset OS_CLOUD
-openstack overcloud roles generate -o /home/cloud-admin/roles_data.yaml Controller Compute
-cp tripleo-deploy.sh tripleo-deploy-custom.sh
-sed -i 's/ROLESFILE/~\/roles_data.yaml/' tripleo-deploy-custom.sh
-# render ansible playbooks
-./tripleo-deploy-custom.sh -r
+
 # run ansible driven OpenStack deployment
-./tripleo-deploy-custom.sh -p
+./tripleo-deploy.sh
 ```
-
-This will create an ephemeral heat stack which is used to export Ansible playbooks. These Ansible playbooks are then used to deploy OSP on the configured hosts.
-
 
 Deploy Ceph via tripleo using ComputeHCI
 ----------------------------------------
@@ -372,16 +385,24 @@ spec:
 
 ## Custom deployment parameters
 
+* create a roles file as described in section `Deploying OpenStack once you have the OSP Director Operator installed` which includes the computeHCI role
 * update the Net-Config to have the storagemgmt network for the ComputeHCI network config template
-* add Ceph related deployment parameters to the Tripleo Deploy custom configMap, e.g.
+* add Ceph related deployment parameters from `/usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml` and any other customization to the Tripleo Deploy custom configMap, e.g. `storage-backend.yaml`:
 
 ```yaml
+resource_registry:
+  OS::TripleO::Services::CephMgr: deployment/ceph-ansible/ceph-mgr.yaml
+  OS::TripleO::Services::CephMon: deployment/ceph-ansible/ceph-mon.yaml
+  OS::TripleO::Services::CephOSD: deployment/ceph-ansible/ceph-osd.yaml
+  OS::TripleO::Services::CephClient: deployment/ceph-ansible/ceph-client.yaml
+
 parameter_defaults:
   # needed for now because of the repo used to create tripleo-deploy image
   CephAnsibleRepo: "rhelosp-ceph-4-tools"
   CephAnsiblePlaybookVerbosity: 3
   CinderEnableIscsiBackend: false
   CinderEnableRbdBackend: true
+  CinderBackupBackend: ceph
   CinderEnableNfsBackend: false
   NovaEnableRbdBackend: true
   GlanceBackend: rbd
@@ -405,65 +426,28 @@ parameter_defaults:
     rgw_swift_versioning_enabled: true
 ```
 
-Once you customize the above template/examples for your environment you can create/update configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config' ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
-
-```bash
-# create the configmap for tripleo-deploy-config-custom
-oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run -o yaml | oc apply -f -
-
-# create the configmap for netconfig
-oc create configmap -n openstack tripleo-net-config --from-file=net-config/ --dry-run -o yaml | oc apply -f -
-```
+Once you customize the above template/examples for your environment, create/update configmaps like explained in `Deploying OpenStack once you have the OSP Director Operator installed`
 
 ## Render playbooks and apply them
 
-* In openstackclient create the roles file for the overcloud, like Controller + ComputeHCI
+* Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
 
-```bash
-unset OS_CLOUD
-openstack overcloud roles generate -o /home/cloud-admin/roles_data_hci.yaml Controller ComputeHCI
-```
+## Run the software deployment
 
-* create the tripleo-deploy-custom.sh deployment script and update to use the custom roles file
-
-
-```bash
-cd
-cp tripleo-deploy.sh tripleo-deploy-custom.sh
-sed -i 's/ROLESFILE/~\/roles_data_hci.yaml/' tripleo-deploy-custom.sh
-```
-
-* add the `ceph-ansible.yaml` environment file and to the `openstack tripleo deploy` command
-
-```bash
-     -e /usr/share/openstack-tripleo-heat-templates/environments/docker-ha.yaml \
-+    -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-     -e ~/config/deployed-server-map.yaml \
-```
-
-* for now add skipping opendev-validation-ceph when run ansible playbooks
-
-```bash
-   time ansible-playbook -i inventory.yaml \
-     --private-key /home/cloud-admin/.ssh/id_rsa \
-+    --skip-tags opendev-validation-ceph \
-     --become deploy_steps_playbook.yaml
-```
-
-* render the ansible playbooks
-
-```bash
-./tripleo-deploy-custom.sh -r
-```
+* In the openstackclient pod
 
 * Install the pre-requisites on overcloud systems for ceph-ansible
 
 ```bash
-ansible -i tripleo-deploy/overcloud-ansible/inventory.yaml overcloud -a "sudo sudo dnf -y install python3 lvm2"
+cd /home/cloud-admin/ansible
+ansible -i inventory.yaml overcloud -a "sudo sudo dnf -y install python3 lvm2"
 ```
+
+* Note: for now the validation for ceph get skipped by adding `--skip-tags opendev-validation-ceph` when run ansible playbooks
 
 * Run the playbooks
 
 ```bash
-./tripleo-deploy-custom.sh -p
+cd
+./tripleo-deploy.sh
 ```
