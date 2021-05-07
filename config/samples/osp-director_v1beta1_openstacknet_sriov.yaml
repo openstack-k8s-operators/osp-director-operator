@@ -13,7 +13,7 @@ spec:
         deviceType: vfio-pci
         mtu: 9000
         numVfs: 4
-        port: enp6s0
+        port: enp7s0
         spoofCheck: "off"
         trust: "on"
       nodeSelector:

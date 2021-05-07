@@ -11,7 +11,7 @@ metadata:
   namespace: openstack
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 192.168.25.100
@@ -60,8 +60,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -72,7 +72,7 @@ spec:
   vlan: 10
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 10.0.0.4
@@ -121,8 +121,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -132,7 +132,7 @@ spec:
   vlan: 20
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 172.16.2.4
@@ -175,8 +175,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -186,7 +186,7 @@ spec:
   vlan: 30
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 172.16.1.4
@@ -229,8 +229,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -240,7 +240,7 @@ spec:
   vlan: 40
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 172.16.3.4
@@ -283,8 +283,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -294,7 +294,7 @@ spec:
   vlan: 50
 status:
   reservations:
-  - addToPredictableIPs: false
+  - addToPredictableIPs: true
     hostname: controlplane-0
     idKey: controlplane-0
     ip: 172.16.0.4

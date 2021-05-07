@@ -1,7 +1,8 @@
 #
 # Check for:
 #
-# - 1 OpenStackNet
+# - 6 OpenStackNets
+# - 6 NodeNetworkConfigurationPolicies
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -22,8 +23,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -54,8 +55,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -81,8 +82,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -108,8 +109,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -135,8 +136,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -162,8 +163,212 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: ctlplane
+    osp-director.openstack.org/name: ctlplane
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: ctlplane
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: external
+    osp-director.openstack.org/name: external
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: external
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: internalapi
+    osp-director.openstack.org/name: internalapi
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: internalapi
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: storage
+    osp-director.openstack.org/name: storage
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: storage
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: storagemgmt
+    osp-director.openstack.org/name: storagemgmt
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: storagemgmt
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    app: osp-openstacknet
+    cr: tenant
+    osp-director.openstack.org/name: tenant
+    osp-director.openstack.org/namespace: openstack
+    owner: osp-director
+  name: tenant
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded

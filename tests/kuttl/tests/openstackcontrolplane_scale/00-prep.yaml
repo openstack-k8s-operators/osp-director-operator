@@ -3,9 +3,10 @@
 #
 # A: 
 #
-# - Create an OpenStackNet and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
-# - Verify that a predictable IP has been assigned to the OpenStackClient (in the OpenStackNet and the
-#   associated OpenStackIPSet)
+# - Create 6 OpenStackNets and an initially-empty OpenStackControlPlane that only spawns an OpenStackClient
+# - Verify that predictable IPs have been assigned to the OpenStackClient (in the OpenStackNet and the
+#   associated OpenStackIPSet), and that the OpenStackNets' underlying NodeNetworkConfigurationPolicies have
+#   configured successfully
 # - Scale the OpenStackControlPlane up to 3 controllers
 # - Check for IP reservations in the OpenStackNet, associated OpenStackIPSet and OpenStackVMSet for the 3 
 #    VirtualMachines that should be created
@@ -33,7 +34,7 @@ commands:
     namespaced: true
   - command: oc delete openstacknet --all -n openstack
     namespaced: true
-  - command: oc delete NodeNetworkConfigurationPolicy -n openstack br-osp --ignore-not-found
+  - command: oc delete NodeNetworkConfigurationPolicy -n openstack --all
     namespaced: true
   - command: oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found
     namespaced: true
