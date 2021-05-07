@@ -27,4 +27,14 @@ const (
 	OwnerNameSpaceLabelSelector = GroupLabel + "/namespace"
 	// OwnerNameLabelSelector -
 	OwnerNameLabelSelector = GroupLabel + "/name"
+	// OwnerControllerNameLabelSelector -
+	OwnerControllerNameLabelSelector = GroupLabel + "/controller"
+
+	// OSPHostnameLabelSelector - Tripleo Hostname
+	OSPHostnameLabelSelector = GroupLabel + "/osphostname"
+	// HostRemovalAnnotation - Annotation key placed on VM or BMH resources to target them for scale-down
+	HostRemovalAnnotation = GroupLabel + "/delete-host"
+
+	// FinalizerName -
+	FinalizerName = GroupLabel
 )

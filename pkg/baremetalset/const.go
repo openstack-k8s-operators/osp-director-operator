@@ -30,11 +30,4 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "baremetalsets.osp-director.openstack.org"
-
-	// OwnerUIDLabelSelector - Ownership label for UID
-	OwnerUIDLabelSelector = "baremetalset.osp-director.openstack.org/uid"
-	// OwnerNameSpaceLabelSelector - Ownership label for Namespace
-	OwnerNameSpaceLabelSelector = "baremetalset.osp-director.openstack.org/namespace"
-	// OwnerNameLabelSelector - Ownership label for Name
-	OwnerNameLabelSelector = "baremetalset.osp-director.openstack.org/name"
 )

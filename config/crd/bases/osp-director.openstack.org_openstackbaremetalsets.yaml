@@ -197,7 +197,11 @@ spec:
                   description: OpenStackBaremetalHostStatus represents the observed
                     state of a particular allocated BaremetalHost resource
                   properties:
+                    annotatedForDeletion:
+                      type: boolean
                     ctlplaneIP:
+                      type: string
+                    hostRef:
                       type: string
                     hostname:
                       type: string
@@ -208,7 +212,9 @@ spec:
                     userDataSecretName:
                       type: string
                   required:
+                  - annotatedForDeletion
                   - ctlplaneIP
+                  - hostRef
                   - hostname
                   - networkDataSecretName
                   - provisioningState

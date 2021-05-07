@@ -113,7 +113,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 	// config maps
 	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance.Name, provisionserver.AppLabel)
+	cmLabels := common.GetLabels(instance, provisionserver.AppLabel, map[string]string{})
 
 	templateParameters := make(map[string]interface{})
 	templateParameters["Port"] = strconv.Itoa(instance.Spec.Port)
@@ -218,8 +218,9 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 	volumeMounts := provisionserver.GetVolumeMounts(instance.Name)
 	volumes := provisionserver.GetVolumes(instance.Name)
 
-	labels := common.GetLabels(instance.Name, provisionserver.AppLabel)
-	labels["deployment"] = instance.Name + "-provisionserver-deployment"
+	labels := common.GetLabels(instance, provisionserver.AppLabel, map[string]string{
+		"deployment": instance.Name + "-provisionserver-deployment",
+	})
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

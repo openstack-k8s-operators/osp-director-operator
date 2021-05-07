@@ -40,7 +40,6 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 )
 
 // OpenStackNetReconciler reconciles a OpenStackNet object
@@ -133,6 +132,11 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
+	// If RoleReservations status map is nil, create it
+	if instance.Status.RoleReservations == nil {
+		instance.Status.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleStatus{}
+	}
+
 	// If we have an SRIOV definition on this network, use that.  Otherwise assume the
 	// non-SRIOV configuration must be present
 	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
@@ -143,7 +147,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// generate NodeNetworkConfigurationPolicy
 		ncp := common.NetworkConfigurationPolicy{
 			Name:                           instance.Name,
-			Labels:                         common.GetLabelSelector(instance, openstacknet.AppLabel),
+			Labels:                         common.GetLabels(instance, openstacknet.AppLabel, map[string]string{}),
 			NodeNetworkConfigurationPolicy: instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
 		}
 		err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
@@ -171,7 +175,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		nad := common.NetworkAttachmentDefinition{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
-			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+			Labels:    common.GetLabels(instance, openstacknet.AppLabel, map[string]string{}),
 			Data: map[string]string{
 				"Name":       instance.Name,
 				"BridgeName": bridgeName.String(),
@@ -206,12 +210,12 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		result := []reconcile.Request{}
 		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
-		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+		if uid, ok := label[common.OwnerUIDLabelSelector]; ok {
 			r.Log.Info(fmt.Sprintf("SriovNetwork object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
-				Namespace: label[OwnerNameSpaceLabelSelector],
-				Name:      label[OwnerNameLabelSelector],
+				Namespace: label[common.OwnerNameSpaceLabelSelector],
+				Name:      label[common.OwnerNameLabelSelector],
 			}
 			result = append(result, reconcile.Request{NamespacedName: name})
 		}
@@ -225,12 +229,12 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		result := []reconcile.Request{}
 		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
-		if uid, ok := label[OwnerUIDLabelSelector]; ok {
+		if uid, ok := label[common.OwnerUIDLabelSelector]; ok {
 			r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
-				Namespace: label[OwnerNameSpaceLabelSelector],
-				Name:      label[OwnerNameLabelSelector],
+				Namespace: label[common.OwnerNameSpaceLabelSelector],
+				Name:      label[common.OwnerNameLabelSelector],
 			}
 			result = append(result, reconcile.Request{NamespacedName: name})
 		}
@@ -250,15 +254,7 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenStackNet) error {
 	// Labels for all SRIOV objects
-	labelSelector := map[string]string{
-		OwnerUIDLabelSelector:       string(instance.UID),
-		OwnerNameSpaceLabelSelector: instance.Namespace,
-		OwnerNameLabelSelector:      instance.Name,
-	}
-
-	for k, v := range common.GetLabels(instance.Name, openstacknet.AppLabel) {
-		labelSelector[k] = v
-	}
+	labelSelector := common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})
 
 	sriovNet := &sriovnetworkv1.SriovNetwork{
 		ObjectMeta: metav1.ObjectMeta{
@@ -269,7 +265,7 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovNet, func() error {
-		sriovNet.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+		sriovNet.Labels = common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})
 		sriovNet.Spec = sriovnetworkv1.SriovNetworkSpec{
 			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
 			Trust:            instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Trust,
@@ -301,7 +297,7 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 	}
 
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovPolicy, func() error {
-		sriovPolicy.Labels = common.GetLabelSelector(instance, openstacknet.AppLabel)
+		sriovPolicy.Labels = common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})
 		sriovPolicy.Spec = sriovnetworkv1.SriovNetworkNodePolicySpec{
 			DeviceType: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.DeviceType,
 			Mtu:        int(instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Mtu),
@@ -334,9 +330,9 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 
 func (r *OpenStackNetReconciler) sriovResourceCleanup(instance *ospdirectorv1beta1.OpenStackNet) error {
 	labelSelectorMap := map[string]string{
-		OwnerUIDLabelSelector:       string(instance.UID),
-		OwnerNameSpaceLabelSelector: instance.Namespace,
-		OwnerNameLabelSelector:      instance.Name,
+		common.OwnerUIDLabelSelector:       string(instance.UID),
+		common.OwnerNameSpaceLabelSelector: instance.Namespace,
+		common.OwnerNameLabelSelector:      instance.Name,
 	}
 
 	// Delete sriovnetworks in openshift-sriov-network-operator namespace

@@ -32,6 +32,9 @@ type OpenStackIPSetSpec struct {
 	// HostCount Host count
 	HostCount int `json:"hostCount"`
 
+	// HostNameRefs Hostname references for the HostCount with [hostname]->hostRef
+	HostNameRefs map[string]string `json:"hostNameRefs"`
+
 	// VIP flag to indicate ipset is a request for a VIP
 	VIP bool `json:"vip"`
 
@@ -42,7 +45,7 @@ type OpenStackIPSetSpec struct {
 // OpenStackIPSetStatus set of hosts with IP information
 type OpenStackIPSetStatus struct {
 	HostIPs  map[string]OpenStackIPHostsStatus `json:"hosts"`
-	Networks map[string]OpenStackNetSpec       `json:"networks"`
+	Networks map[string]NetworkStatus          `json:"networks"`
 }
 
 // OpenStackIPHostsStatus per host IP set

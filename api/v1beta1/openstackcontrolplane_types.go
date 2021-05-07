@@ -106,8 +106,8 @@ func init() {
 // GetHostnames -
 func (vips OpenStackControlPlane) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for key, val := range vips.Status.VIPStatus {
-		ret[key] = val.Hostname
+	for _, val := range vips.Status.VIPStatus {
+		ret[val.Hostname] = val.HostRef
 	}
 	return ret
 }

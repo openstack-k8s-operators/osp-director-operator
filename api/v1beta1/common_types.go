@@ -41,11 +41,34 @@ type Network struct {
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
 }
 
-// HostStatus represents the hostname and IP info for a specific VM
+// HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {
 	Hostname          string                 `json:"hostname"`
-	IPAddresses       map[string]string      `json:"ipaddresses"`
 	ProvisioningState VMSetProvisioningState `json:"provisioningState"`
+
+	// +kubebuilder:default=unassigned
+	HostRef string `json:"hostRef"`
+
+	// +kubebuilder:validation:Optional
+	IPAddresses map[string]string `json:"ipaddresses"`
+
+	// +kubebuilder:default=false
+	// Host annotated for deletion
+	AnnotatedForDeletion bool `json:"annotatedForDeletion"`
+}
+
+// NetworkStatus represents the network details of a network
+type NetworkStatus struct {
+	Cidr string `json:"cidr"`
+
+	// +kubebuilder:validation:Optional
+	Vlan int `json:"vlan"`
+
+	AllocationStart string `json:"allocationStart"`
+	AllocationEnd   string `json:"allocationEnd"`
+
+	// +kubebuilder:validation:Optional
+	Gateway string `json:"gateway"`
 }
 
 // Conditions for status in web console

@@ -23,13 +23,10 @@ import (
 
 // IPReservation contains an IP, Hostname, and a VIP flag
 type IPReservation struct {
-	//IP       net.IP `json:"ip"`
-	IDKey               string `json:"idKey"`
-	IP                  string `json:"ip"`
-	Hostname            string `json:"hostname"`
-	VIP                 bool   `json:"vip"`
-	Role                string `json:"role"`
-	AddToPredictableIPs bool   `json:"addToPredictableIPs"`
+	IP       string `json:"ip"`
+	Hostname string `json:"hostname"`
+	VIP      bool   `json:"vip"`
+	Deleted  bool   `json:"deleted"`
 }
 
 // NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
@@ -94,10 +91,17 @@ type OpenStackNetSpec struct {
 	AttachConfiguration NetworkConfiguration `json:"attachConfiguration"`
 }
 
+// OpenStackNetRoleStatus defines the observed state of the Role Net status
+type OpenStackNetRoleStatus struct {
+	// Reservations IP address reservations
+	Reservations        []IPReservation `json:"reservations"`
+	AddToPredictableIPs bool            `json:"addToPredictableIPs"`
+}
+
 // OpenStackNetStatus defines the observed state of OpenStackNet
 type OpenStackNetStatus struct {
-	// Reservations IP address reservations
-	Reservations []IPReservation `json:"reservations"`
+	// Reservations IP address reservations per role
+	RoleReservations map[string]OpenStackNetRoleStatus `json:"roleReservations"`
 }
 
 // +kubebuilder:object:root=true

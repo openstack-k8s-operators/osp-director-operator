@@ -133,35 +133,42 @@ spec:
           status:
             description: OpenStackNetStatus defines the observed state of OpenStackNet
             properties:
-              reservations:
-                description: Reservations IP address reservations
-                items:
-                  description: IPReservation contains an IP, Hostname, and a VIP flag
+              roleReservations:
+                additionalProperties:
+                  description: OpenStackNetRoleStatus defines the observed state of
+                    the Role Net status
                   properties:
                     addToPredictableIPs:
                       type: boolean
-                    hostname:
-                      type: string
-                    idKey:
-                      description: IP       net.IP `json:"ip"`
-                      type: string
-                    ip:
-                      type: string
-                    role:
-                      type: string
-                    vip:
-                      type: boolean
+                    reservations:
+                      description: Reservations IP address reservations
+                      items:
+                        description: IPReservation contains an IP, Hostname, and a
+                          VIP flag
+                        properties:
+                          deleted:
+                            type: boolean
+                          hostname:
+                            type: string
+                          ip:
+                            type: string
+                          vip:
+                            type: boolean
+                        required:
+                        - deleted
+                        - hostname
+                        - ip
+                        - vip
+                        type: object
+                      type: array
                   required:
                   - addToPredictableIPs
-                  - hostname
-                  - idKey
-                  - ip
-                  - role
-                  - vip
+                  - reservations
                   type: object
-                type: array
+                description: Reservations IP address reservations per role
+                type: object
             required:
-            - reservations
+            - roleReservations
             type: object
         type: object
     served: true

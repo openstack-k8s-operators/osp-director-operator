@@ -95,7 +95,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
+	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name

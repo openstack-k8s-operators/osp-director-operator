@@ -18,24 +18,16 @@ package common
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// GetLabels - get labels to be set on objects created by controller
-func GetLabels(name string, appLabel string) map[string]string {
-	return map[string]string{
-		"owner": OwnerLabel,
-		"cr":    name,
-		"app":   appLabel,
-	}
-}
-
-// GetLabelSelector - get labelselector for CR
-func GetLabelSelector(obj metav1.Object, label string) map[string]string {
+// GetLabels - get labelselector for CR
+func GetLabels(obj metav1.Object, controller string, custom map[string]string) map[string]string {
 	// Labels for all objects
 	labelSelector := map[string]string{
-		OwnerUIDLabelSelector:       string(obj.GetUID()),
-		OwnerNameSpaceLabelSelector: obj.GetNamespace(),
-		OwnerNameLabelSelector:      obj.GetName(),
+		OwnerUIDLabelSelector:            string(obj.GetUID()),
+		OwnerNameSpaceLabelSelector:      obj.GetNamespace(),
+		OwnerNameLabelSelector:           obj.GetName(),
+		OwnerControllerNameLabelSelector: controller,
 	}
-	for k, v := range GetLabels(obj.GetName(), label) {
+	for k, v := range custom {
 		labelSelector[k] = v
 	}
 

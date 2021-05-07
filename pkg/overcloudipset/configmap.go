@@ -62,48 +62,61 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 			net.Name = StorageMgmtName
 		}
 
-		for _, reservation := range net.Status.Reservations {
+		for roleName, roleReservation := range net.Status.RoleReservations {
+			if !roleReservation.AddToPredictableIPs {
+				continue
+			}
+			for _, reservation := range roleReservation.Reservations {
 
-			// if ctlplane network add to DeployedServerPortMap
-			if net.Name == "ctlplane" && reservation.AddToPredictableIPs {
+				// if ctlplane network add to DeployedServerPortMap
+				if net.Name == "ctlplane" {
 
-				// in case of control plane vip the DeployedServerPortMap is
-				// named control_virtual_ip instead of ctlplane_virtual_ip
-				netName := net.Name
-				if reservation.VIP {
-					netName = GetNetNameLower("ctlplane")
-					networkVipMap["ControlPlaneIP"] = reservation.IP
-				}
+					// do _NOT_ add ctlplane DeployedServerPortMap _IF_ reservation is marked as deleted
+					if !reservation.Deleted {
+						// in case of control plane vip the DeployedServerPortMap is
+						// named control_virtual_ip instead of ctlplane_virtual_ip
+						netName := net.Name
+						if reservation.VIP {
+							netName = GetNetNameLower("ctlplane")
+							networkVipMap["ControlPlaneIP"] = reservation.IP
+						}
 
-				// create ctlPlaneIps for the host if it does not exist
-				if ctlPlaneIps[reservation.Hostname] == nil {
-					ctlPlaneIps[reservation.Hostname] = &deployedServerPortMapType{
-						Hostname: reservation.Hostname,
-						Network:  map[string]*network{},
-						VIP:      reservation.VIP,
+						// create ctlPlaneIps for the host if it does not exist
+						if ctlPlaneIps[reservation.Hostname] == nil {
+							ctlPlaneIps[reservation.Hostname] = &deployedServerPortMapType{
+								Hostname: reservation.Hostname,
+								Network:  map[string]*network{},
+								VIP:      reservation.VIP,
+							}
+						}
+
+						if ctlPlaneIps[reservation.Hostname].Network[netName] == nil {
+							ctlPlaneIps[reservation.Hostname].Network[netName] = &network{
+								IPaddr: reservation.IP,
+								Cidr:   net.Spec.Cidr,
+							}
+						} else {
+							ctlPlaneIps[reservation.Hostname].Network[netName].IPaddr = reservation.IP
+							ctlPlaneIps[reservation.Hostname].Network[netName].Cidr = net.Spec.Cidr
+						}
 					}
-				}
+				} else if reservation.VIP {
+					networkVipMap[fmt.Sprintf("%sNetworkVip", GetNetName(net.Name))] = reservation.IP
+				} else {
+					// Add host to hostnamemap
+					//hostnameMap[fmt.Sprintf("overcloud-%s", reservation.IDKey)] = reservation.Hostname
 
-				if ctlPlaneIps[reservation.Hostname].Network[netName] == nil {
-					ctlPlaneIps[reservation.Hostname].Network[netName] = &network{
-						IPaddr: reservation.IP,
-						Cidr:   net.Spec.Cidr,
+					reservationIP := reservation.IP
+					if reservation.Deleted {
+						reservationIP = "deleted"
 					}
-				} else {
-					ctlPlaneIps[reservation.Hostname].Network[netName].IPaddr = reservation.IP
-					ctlPlaneIps[reservation.Hostname].Network[netName].Cidr = net.Spec.Cidr
-				}
-			} else if reservation.VIP {
-				networkVipMap[fmt.Sprintf("%sNetworkVip", GetNetName(net.Name))] = reservation.IP
-			} else if reservation.AddToPredictableIPs {
-				// Add host to hostnamemap
-				//hostnameMap[fmt.Sprintf("overcloud-%s", reservation.IDKey)] = reservation.Hostname
 
-				// if not ctlplane network entry, add to Predictible IPs entry
-				if roleIPSet, exists := roleIPSets[reservation.Role]; exists {
-					roleIPSet[net.Name] = append(roleIPSet[net.Name], reservation.IP)
-				} else {
-					roleIPSets[reservation.Role] = map[string][]string{net.Name: {reservation.IP}}
+					// if not ctlplane network entry, add to Predictible IPs entry
+					if roleIPSet, exists := roleIPSets[roleName]; exists {
+						roleIPSet[net.Name] = append(roleIPSet[net.Name], reservationIP)
+					} else {
+						roleIPSets[roleName] = map[string][]string{net.Name: {reservationIP}}
+					}
 				}
 			}
 		}
