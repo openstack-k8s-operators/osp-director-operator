@@ -17,6 +17,8 @@ limitations under the License.
 package openstackplaybookgenerator
 
 import (
+	"fmt"
+
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -24,6 +26,11 @@ import (
 // GetVolumeMounts -
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.VolumeMount {
 	retVolMounts := []corev1.VolumeMount{
+		{
+			Name:      fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
+			MountPath: "/var/cloud-admin", // this is the cloud-admin mounted on openstackclient pod
+			ReadOnly:  false,
+		},
 		{
 			Name:      "tripleo-deploy-config",
 			MountPath: "/home/cloud-admin/config",
@@ -96,6 +103,14 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 							Path: "create-playbooks.sh",
 						},
 					},
+				},
+			},
+		},
+		{
+			Name: fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
 				},
 			},
 		},
