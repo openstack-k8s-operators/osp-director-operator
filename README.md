@@ -284,6 +284,7 @@ a) use the openstackclient pod to generate a custom roles file
 
 ```bash
 oc rsh openstackclient
+unset OS_CLOUD
 cd /home/cloud-admin/
 openstack overcloud roles generate Controller ComputeHCI > roles_computehci.yaml
 exit
