@@ -46,7 +46,7 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 
 	cmd := []string{"/bin/bash", "/home/cloud-admin/create-playbooks.sh"}
 	if cr.Spec.Debug {
-		cmd = []string{"/bin/sleep", "360d"}
+		cmd = []string{"/bin/sleep", "infinity"}
 	}
 
 	job.Spec.BackoffLimit = &backoffLimit
