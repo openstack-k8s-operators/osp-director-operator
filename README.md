@@ -440,7 +440,7 @@ Once you customize the above template/examples for your environment, create/upda
 
 ```bash
 cd /home/cloud-admin/ansible
-ansible -i inventory.yaml overcloud -a "sudo sudo dnf -y install python3 lvm2"
+ansible -i inventory.yaml overcloud -a "sudo dnf -y install python3 lvm2"
 ```
 
 * Note: for now the validation for ceph get skipped by adding `--skip-tags opendev-validation-ceph` when run ansible playbooks
