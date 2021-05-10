@@ -2,8 +2,12 @@
 
 set -eux
 
-play() {
+mkdir -p /home/cloud-admin/tripleo-deploy/validations
+if [ ! -L /var/log/validations ]; then
+  sudo ln -s /home/cloud-admin/tripleo-deploy/validations /var/log/validations
+fi
 
+play() {
   cd ~/ansible/
   # TODO: for now disable opendev-validation-ceph
   # The check fails because the lvm2 package is not installed in openstackclient container image image
