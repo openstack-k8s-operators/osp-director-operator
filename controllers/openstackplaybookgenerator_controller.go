@@ -310,9 +310,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	// cleanup the ephemeral Heat
 	err = r.Client.Delete(context.TODO(), heat)
-	if err != nil {
+	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
+
 	if err := r.setCurrentState(instance, "finished"); err != nil {
 		return ctrl.Result{}, err
 	}
