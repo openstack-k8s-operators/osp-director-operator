@@ -1,5 +1,5 @@
 apiVersion: osp-director.openstack.org/v1beta1
-kind: ProvisionServer
+kind: OpenStackProvisionServer
 metadata:
   name: openstackprovisionserver-sample
   namespace: openstack
