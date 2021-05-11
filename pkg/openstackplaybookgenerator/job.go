@@ -44,6 +44,11 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 	volumeMounts := GetVolumeMounts(cr)
 	volumes := GetVolumes(cr)
 
+	cmd := []string{"/bin/bash", "/home/cloud-admin/create-playbooks.sh"}
+	if cr.Spec.Debug {
+		cmd = []string{"/bin/sleep", "infinity"}
+	}
+
 	job.Spec.BackoffLimit = &backoffLimit
 	job.Spec.Template.Spec = corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyOnFailure,
@@ -60,10 +65,7 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 				Name:            "generateplaybooks",
 				Image:           cr.Spec.ImageURL,
 				ImagePullPolicy: corev1.PullAlways,
-				Command: []string{
-					"/bin/bash",
-					"/home/cloud-admin/create-playbooks.sh",
-				},
+				Command:         cmd,
 				Env: []corev1.EnvVar{
 					{
 						Name:  "ConfigHash",

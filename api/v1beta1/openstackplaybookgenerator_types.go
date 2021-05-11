@@ -34,6 +34,9 @@ type OpenStackPlaybookGeneratorSpec struct {
 	TarballConfigMap string `json:"tarballConfigMap,omitempty"`
 	// Heat Settings
 	EphemeralHeatSettings OpenStackEphemeralHeatSpec `json:"ephemeralHeatSettings,omitempty"`
+	// +kubebuilder:default=false
+	// Debug
+	Debug bool `json:"debug,omitempty"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator
