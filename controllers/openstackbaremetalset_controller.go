@@ -156,7 +156,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackBaremetalHostProvisioningStatus{}
 
 	var err error
-	passwordSecret := &corev1.Secret{}
+	var passwordSecret *corev1.Secret
 
 	if instance.Spec.PasswordSecret != "" {
 		// check if specified password secret exists before creating the computes
@@ -559,7 +559,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	templateParameters["Hostname"] = hostnameDetails.Hostname
 
 	// use same NodeRootPassword paremater as tripleo have
-	if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
+	if passwordSecret != nil && len(passwordSecret.Data["NodeRootPassword"]) > 0 {
 		templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
 	}
 
