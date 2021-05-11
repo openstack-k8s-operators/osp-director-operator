@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/tidwall/gjson v1.6.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3

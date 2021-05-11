@@ -27,7 +27,7 @@ type HardwareReqType string
 type OpenStackBaremetalSetSpec struct {
 	// Replicas The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
-	Replicas int `json:"replicas,omitempty"`
+	Count int `json:"count,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image
 	BaseImageURL string `json:"baseImageUrl,omitempty"`
 	// ProvisionServerName Optional. If supplied will be used as the base Image for the baremetalset instead of baseImageURL.
@@ -52,7 +52,8 @@ type OpenStackBaremetalSetSpec struct {
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
 type OpenStackBaremetalSetStatus struct {
-	BaremetalHosts map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts"`
+	ProvisioningStatus OpenStackBaremetalHostProvisioningStatus `json:"provisioningStatus,omitempty"`
+	BaremetalHosts     map[string]OpenStackBaremetalHostStatus  `json:"baremetalHosts,omitempty"`
 }
 
 // OpenStackBaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
@@ -61,8 +62,36 @@ type OpenStackBaremetalHostStatus struct {
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 	CtlplaneIP            string `json:"ctlplaneIP"`
-	Online                bool   `json:"online"`
+	ProvisioningState     string `json:"provisioningState"`
 }
+
+// OpenStackBaremetalHostProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
+// the OpenStackBaremetalSet (with an optional explanatory message)
+type OpenStackBaremetalHostProvisioningStatus struct {
+	State      BaremetalSetProvisioningState `json:"state,omitempty"`
+	Reason     string                        `json:"reason,omitempty"`
+	ReadyCount int                           `json:"readyCount,omitempty"`
+}
+
+// BaremetalSetProvisioningState - the overall state of all BaremetalHosts in this OpenStackBaremetalSet
+type BaremetalSetProvisioningState string
+
+const (
+	// BaremetalSetEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
+	BaremetalSetEmpty BaremetalSetProvisioningState = "empty"
+	// BaremetalSetWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
+	BaremetalSetWaiting BaremetalSetProvisioningState = "waiting"
+	// BaremetalSetProvisioning - one or more BaremetalHosts are provisioning
+	BaremetalSetProvisioning BaremetalSetProvisioningState = "provisioning"
+	// BaremetalSetProvisioned - the requested BaremetalHosts count has been satisfied
+	BaremetalSetProvisioned BaremetalSetProvisioningState = "provisioned"
+	// BaremetalSetDeprovisioning - one or more BaremetalHosts are deprovisioning
+	BaremetalSetDeprovisioning BaremetalSetProvisioningState = "deprovisioning"
+	// BaremetalSetInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
+	BaremetalSetInsufficient BaremetalSetProvisioningState = "insufficient availability"
+	// BaremetalSetError - general catch-all for actual errors
+	BaremetalSetError BaremetalSetProvisioningState = "error"
+)
 
 // GetHostnames -
 func (bmSet OpenStackBaremetalSet) GetHostnames() map[string]string {
@@ -143,10 +172,15 @@ type DiskSSDReq struct {
 	ExactMatch bool `json:"exactMatch,omitempty"`
 }
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osbmset;osbmsets;osbms
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack BaremetalSet"
+// +kubebuilder:printcolumn:name="Desired",type="integer",JSONPath=".spec.count",description="Desired"
+// +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.provisioningStatus.readyCount",description="Ready"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
 // OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
 type OpenStackBaremetalSet struct {

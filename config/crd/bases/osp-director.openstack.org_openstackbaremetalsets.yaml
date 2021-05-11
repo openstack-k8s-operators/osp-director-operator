@@ -20,7 +20,24 @@ spec:
     singular: openstackbaremetalset
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Desired
+      jsonPath: .spec.count
+      name: Desired
+      type: integer
+    - description: Ready
+      jsonPath: .status.provisioningStatus.readyCount
+      name: Ready
+      type: integer
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackBaremetalSet represent a set of baremetal hosts for
@@ -50,6 +67,10 @@ spec:
                 description: BmhLabelSelector allows for a sub-selection of BaremetalHosts
                   based on arbitrary labels
                 type: object
+              count:
+                description: Replicas The number of baremetalhosts to attempt to aquire
+                minimum: 0
+                type: integer
               ctlplaneInterface:
                 description: Interface to use for ctlplane network
                 type: string
@@ -157,10 +178,6 @@ spec:
                 description: ProvisionServerName Optional. If supplied will be used
                   as the base Image for the baremetalset instead of baseImageURL.
                 type: string
-              replicas:
-                description: Replicas The number of baremetalhosts to attempt to aquire
-                minimum: 0
-                type: integer
               roleName:
                 description: RoleName the name of the TripleO role this VM Spec is
                   associated with. If it is a TripleO role, the name must match.
@@ -186,20 +203,32 @@ spec:
                       type: string
                     networkDataSecretName:
                       type: string
-                    online:
-                      type: boolean
+                    provisioningState:
+                      type: string
                     userDataSecretName:
                       type: string
                   required:
                   - ctlplaneIP
                   - hostname
                   - networkDataSecretName
-                  - online
+                  - provisioningState
                   - userDataSecretName
                   type: object
                 type: object
-            required:
-            - baremetalHosts
+              provisioningStatus:
+                description: OpenStackBaremetalHostProvisioningStatus represents the
+                  overall provisioning state of all BaremetalHosts in the OpenStackBaremetalSet
+                  (with an optional explanatory message)
+                properties:
+                  readyCount:
+                    type: integer
+                  reason:
+                    type: string
+                  state:
+                    description: BaremetalSetProvisioningState - the overall state
+                      of all BaremetalHosts in this OpenStackBaremetalSet
+                    type: string
+                type: object
             type: object
         type: object
     served: true
