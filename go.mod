@@ -20,10 +20,13 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/tidwall/gjson v1.6.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
-	golang.org/x/tools v0.1.0 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/tools v0.1.1 // indirect
+	google.golang.org/grpc v1.31.0 // indirect
+	google.golang.org/grpc/examples v0.0.0-20210512000516-62adda2ece5e // indirect
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3
+	k8s.io/apiserver v0.19.2
 	k8s.io/client-go v12.0.0+incompatible
 	kubevirt.io/client-go v0.34.2
 	kubevirt.io/containerized-data-importer v1.23.5
@@ -34,6 +37,7 @@ replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200526144822-34f54f12813a
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
 	github.com/operator-framework/operator-lifecycle-manager => github.com/operator-framework/operator-lifecycle-manager v0.17.0
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 	k8s.io/client-go => k8s.io/client-go v0.19.3
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.3
 	kubevirt.io/client-go => kubevirt.io/client-go v0.34.2
