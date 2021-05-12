@@ -213,7 +213,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
 		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteMany,
+			corev1.ReadWriteOnce,
 		},
 	}
 
@@ -316,7 +316,19 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 					"-c",
 					"/bin/sleep infinity",
 				},
-				Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
+				Env: common.MergeEnvs([]corev1.EnvVar{
+					{
+						Name: "GIT_URL",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: instance.Spec.GitSecret,
+								},
+								Key: "git_url",
+							},
+						},
+					},
+				}, envVars),
 				VolumeMounts: volumeMounts,
 			},
 		},
@@ -330,7 +342,19 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 				"-c",
 				"/usr/local/bin/init.sh",
 			},
-			Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
+			Env: common.MergeEnvs([]corev1.EnvVar{
+				{
+					Name: "GIT_URL",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: instance.Spec.GitSecret,
+							},
+							Key: "git_url",
+						},
+					},
+				},
+			}, envVars),
 			Privileged:   false,
 			VolumeMounts: initVolumeMounts,
 		},

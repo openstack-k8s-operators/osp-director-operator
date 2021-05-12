@@ -27,6 +27,8 @@ type OpenStackClientSpec struct {
 	ImageURL string `json:"imageURL"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
+	// GitSecret used to pull playbooks into the openstackclient pod
+	GitSecret string `json:"gitSecret"`
 	// cloudname passed in via OS_CLOUDNAME
 	CloudName string `json:"cloudName"`
 	// additional Hostaliases added to the openstackclient hosts file

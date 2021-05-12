@@ -24,8 +24,6 @@ import (
 type OpenStackPlaybookGeneratorSpec struct {
 	// Name of the image used to generate playbooks
 	ImageURL string `json:"imageURL"`
-	// Name of the associated OpenStackClient resource (FIXME: remove when we switch to git repos for syncing generated playbooks)
-	OpenStackClientName string `json:"openstackClientName"`
 	// Required. config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
 	// Optional. name of any custom ROLESFILE in the configmap used to generate the roles map. If not specified the default t-h-t roles will be used.
@@ -37,6 +35,8 @@ type OpenStackPlaybookGeneratorSpec struct {
 	// +kubebuilder:default=false
 	// Debug
 	Debug bool `json:"debug,omitempty"`
+	// GitSecret used to pull playbooks into the openstackclient pod
+	GitSecret string `json:"gitSecret"`
 }
 
 // OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator

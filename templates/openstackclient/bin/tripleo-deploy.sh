@@ -8,7 +8,15 @@ if [ ! -L /var/log/validations ]; then
 fi
 
 play() {
-  cd ~/ansible/
+  if [ ! -d /home/cloud-admin/playbooks ]; then
+    git clone $GIT_URL /home/cloud-admin/playbooks
+  fi
+  pushd /home/cloud-admin/playbooks
+  git checkout latest || git checkout -b latest origin/latest
+  git pull origin latest
+
+  cd tripleo-ansible*
+
   # TODO: for now disable opendev-validation-ceph
   # The check fails because the lvm2 package is not installed in openstackclient container image image
   # and ansible_facts include packages from undercloud.

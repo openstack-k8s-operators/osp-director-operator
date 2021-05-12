@@ -40,6 +40,10 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              gitSecret:
+                description: GitSecret used to pull playbooks into the openstackclient
+                  pod
+                type: string
               openStackClientImageURL:
                 description: OpenstackClient image
                 type: string
@@ -128,6 +132,7 @@ spec:
                 description: List of VirtualMachine roles
                 type: object
             required:
+            - gitSecret
             - openStackClientImageURL
             - virtualMachineRoles
             type: object

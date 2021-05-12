@@ -249,6 +249,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
 		openstackclient.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
+		openstackclient.Spec.GitSecret = instance.Spec.GitSecret
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			openstackclient.Spec.Networks = instance.Spec.OpenStackClientNetworks

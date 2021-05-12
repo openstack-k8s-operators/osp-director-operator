@@ -224,6 +224,7 @@ spec:
   # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
   openStackClientStorageClass: host-nfs-storageclass
   passwordSecret: userpassword
+  gitSecret: git-secret
   virtualMachineRoles:
     controller:
       roleName: Controller
@@ -317,6 +318,7 @@ spec:
   tarballConfigMap: tripleo-net-config
   # optional set the roles file name if generated in previous step.
   # rolesFile: roles_computehci.yaml
+  gitSecret: git-secret
 ```
 
 If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:

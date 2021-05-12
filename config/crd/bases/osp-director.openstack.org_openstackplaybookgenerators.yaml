@@ -79,15 +79,15 @@ spec:
                       used as part of this ephemeral heat instance
                     type: string
                 type: object
+              gitSecret:
+                description: GitSecret used to pull playbooks into the openstackclient
+                  pod
+                type: string
               heatEnvConfigMap:
                 description: Required. config map containing Heat env file customizations
                 type: string
               imageURL:
                 description: Name of the image used to generate playbooks
-                type: string
-              openstackClientName:
-                description: 'Name of the associated OpenStackClient resource (FIXME:
-                  remove when we switch to git repos for syncing generated playbooks)'
                 type: string
               rolesFile:
                 description: Optional. name of any custom ROLESFILE in the configmap
@@ -99,9 +99,9 @@ spec:
                   tarball which will be extracted prior to playbook generation
                 type: string
             required:
+            - gitSecret
             - heatEnvConfigMap
             - imageURL
-            - openstackClientName
             type: object
           status:
             description: OpenStackPlaybookGeneratorStatus defines the observed state

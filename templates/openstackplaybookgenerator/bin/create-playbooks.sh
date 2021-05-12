@@ -1,6 +1,21 @@
 #!/bin/bash
-
 set -eux
+
+# add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
+mkdir -p /home/cloud-admin/.ssh
+cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
+chmod 600 /home/cloud-admin/.ssh/git_id_rsa
+chown -R cloud-admin: /home/cloud-admin/.ssh
+
+GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
+GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
+
+cat <<EOF > /home/cloud-admin/.ssh/config
+Host $GIT_HOST
+    User $GIT_USER
+    IdentityFile /home/cloud-admin/.ssh/git_id_rsa
+    StrictHostKeyChecking no
+EOF
 
 unset OS_CLOUD
 export OS_AUTH_TYPE=none
@@ -132,5 +147,19 @@ ansible.write_default_ansible_cfg(
 
 EOF_PYTHON
 
-# copy to our persistent volume mount so it shows up in the 'openstackclient' pod
-cp -a /home/cloud-admin/ansible/* /var/cloud-admin/ansible/
+TMP_DIR=$(mktemp -d)
+git clone $GIT_URL $TMP_DIR
+pushd $TMP_DIR
+git checkout -b latest
+cp -a /home/cloud-admin/ansible/* .
+
+# add directory for templates
+mkdir source-templates
+cp -a $TEMPLATES_DIR/* source-templates
+
+git config --global user.email "dev@null.io"
+git config --global user.name "OSP Director Operator"
+
+git add *
+git commit -a -m "Updates"
+git push origin latest
