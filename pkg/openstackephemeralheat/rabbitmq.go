@@ -27,6 +27,11 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 					Name:  "rabbitmq",
 					Image: instance.Spec.RabbitImageURL,
 					Env: []corev1.EnvVar{
+						// added to resolve "Failed to create thread" aborts
+						{
+							Name:  "RABBITMQ_IO_THREAD_POOL_SIZE",
+							Value: "128",
+						},
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
 							Value: "COPY_ALWAYS",
