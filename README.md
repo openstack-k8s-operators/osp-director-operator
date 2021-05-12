@@ -220,6 +220,8 @@ spec:
   openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
   openStackClientNetworks:
         - ctlplane
+  # openStackClientStorageClass must support RWX
+  # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
   openStackClientStorageClass: host-nfs-storageclass
   passwordSecret: userpassword
   virtualMachineRoles:
@@ -243,7 +245,7 @@ oc create -f openstackcontrolplane.yaml
 
 5) Define an OpenStackBaremetalSet to scale out OSP Compute hosts. The OpenStackBaremetal resource can be used to define and scale Compute resources and optionally be used to define and scale out baremetal hosts for other types of TripleO roles. The example below defines a single Compute host to be created.
 
-Note: If the rhel-guest-image is used as base to deploy the OpenStackBaremetalSet compute nodes, make sure to remove the net.ifnames=0 kernel parameter form the image to have the biosdev network interface naming. This can be done like:
+Note: If the rhel-guest-image is used as base to deploy the OpenStackBaremetalSet compute nodes, make sure to remove the net.ifnames=0 kernel parameter from the image to have the biosdev network interface naming. This can be done like:
 
 ```bash
 dnf install -y libguestfs-tools-c
@@ -292,7 +294,7 @@ openstack overcloud roles generate Controller ComputeHCI > roles_computehci.yaml
 exit
 ```
 
-b) copy the customer roles file out of the openstackclient pod
+b) copy the custom roles file out of the openstackclient pod
 
 ```bash
 oc cp openstackclient:/home/cloud-admin/roles_computehci.yaml roles_computehci.yaml
