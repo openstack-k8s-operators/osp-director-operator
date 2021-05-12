@@ -25,7 +25,7 @@ type HardwareReqType string
 
 // OpenStackBaremetalSetSpec defines the desired state of OpenStackBaremetalSet
 type OpenStackBaremetalSetSpec struct {
-	// Replicas The number of baremetalhosts to attempt to aquire
+	// Count The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
 	Count int `json:"count,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image

@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -267,16 +268,17 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		// As we know, this transient "object has been modified, please try again" error occurs from time
 		// to time in the reconcile loop.  Let's avoid counting that as an error for the purposes of
 		// status display
-		// FIXME?: Is there an "errors.IsWhatever()" func we can call for this type of error?
-		if !strings.Contains(err.Error(), "please apply your changes to the latest version and try again") {
-			msg := fmt.Sprintf("Error encountered: %v", err)
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetError
-			instance.Status.ProvisioningStatus.Reason = msg
-			r.Log.Info(msg)
-			// The next line could return an error, but we log it in the "setStatus" func anyhow,
-			// and we're more interested in returning the error from "ensureBaremetalHosts"
-			_ = r.setStatus(instance)
+		if strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
+			return ctrl.Result{RequeueAfter: time.Second * 1}, nil
 		}
+
+		msg := fmt.Sprintf("Error encountered: %v", err)
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetError
+		instance.Status.ProvisioningStatus.Reason = msg
+		r.Log.Info(msg)
+		// The next line could return an error, but we log it in the "setStatus" func anyhow,
+		// and we're more interested in returning the error from "ensureBaremetalHosts"
+		_ = r.setStatus(instance)
 
 		return ctrl.Result{}, err
 	}

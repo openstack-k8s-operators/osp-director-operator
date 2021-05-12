@@ -68,7 +68,7 @@ spec:
                   based on arbitrary labels
                 type: object
               count:
-                description: Replicas The number of baremetalhosts to attempt to aquire
+                description: Count The number of baremetalhosts to attempt to aquire
                 minimum: 0
                 type: integer
               ctlplaneInterface:
