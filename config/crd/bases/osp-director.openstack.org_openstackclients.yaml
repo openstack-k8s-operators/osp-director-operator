@@ -100,9 +100,14 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    provisioningState:
+                      description: VMSetProvisioningState - the overall state of all
+                        VMs in this OpenStackVmSet
+                      type: string
                   required:
                   - hostname
                   - ipaddresses
+                  - provisioningState
                   type: object
                 type: object
             type: object

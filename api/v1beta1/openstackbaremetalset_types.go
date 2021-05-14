@@ -52,8 +52,8 @@ type OpenStackBaremetalSetSpec struct {
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
 type OpenStackBaremetalSetStatus struct {
-	ProvisioningStatus OpenStackBaremetalHostProvisioningStatus `json:"provisioningStatus,omitempty"`
-	BaremetalHosts     map[string]OpenStackBaremetalHostStatus  `json:"baremetalHosts,omitempty"`
+	ProvisioningStatus OpenStackBaremetalSetProvisioningStatus `json:"provisioningStatus,omitempty"`
+	BaremetalHosts     map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts,omitempty"`
 }
 
 // OpenStackBaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
@@ -65,9 +65,9 @@ type OpenStackBaremetalHostStatus struct {
 	ProvisioningState     string `json:"provisioningState"`
 }
 
-// OpenStackBaremetalHostProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
+// OpenStackBaremetalSetProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
 // the OpenStackBaremetalSet (with an optional explanatory message)
-type OpenStackBaremetalHostProvisioningStatus struct {
+type OpenStackBaremetalSetProvisioningStatus struct {
 	State      BaremetalSetProvisioningState `json:"state,omitempty"`
 	Reason     string                        `json:"reason,omitempty"`
 	ReadyCount int                           `json:"readyCount,omitempty"`

@@ -216,7 +216,7 @@ spec:
                   type: object
                 type: object
               provisioningStatus:
-                description: OpenStackBaremetalHostProvisioningStatus represents the
+                description: OpenStackBaremetalSetProvisioningStatus represents the
                   overall provisioning state of all BaremetalHosts in the OpenStackBaremetalSet
                   (with an optional explanatory message)
                 properties:

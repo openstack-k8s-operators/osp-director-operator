@@ -20,7 +20,24 @@ spec:
     singular: openstackvmset
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Desired
+      jsonPath: .spec.vmCount
+      name: Desired
+      type: integer
+    - description: Ready
+      jsonPath: .status.provisioningStatus.readyCount
+      name: Ready
+      type: integer
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackVMSet represents a set of virtual machines hosts for
@@ -116,6 +133,20 @@ spec:
               baseImageDVReady:
                 description: BaseImageDVReady is the status of the BaseImage DataVolume
                 type: boolean
+              provisioningStatus:
+                description: OpenStackVMSetProvisioningStatus represents the overall
+                  provisioning state of all VMs in the VmBaremetalSet (with an optional
+                  explanatory message)
+                properties:
+                  readyCount:
+                    type: integer
+                  reason:
+                    type: string
+                  state:
+                    description: VMSetProvisioningState - the overall state of all
+                      VMs in this OpenStackVmSet
+                    type: string
+                type: object
               vmHosts:
                 additionalProperties:
                   description: HostStatus represents the hostname and IP info for
@@ -127,9 +158,14 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    provisioningState:
+                      description: VMSetProvisioningState - the overall state of all
+                        VMs in this OpenStackVmSet
+                      type: string
                   required:
                   - hostname
                   - ipaddresses
+                  - provisioningState
                   type: object
                 type: object
               vmpods:
@@ -137,10 +173,6 @@ spec:
                 items:
                   type: string
                 type: array
-              vmsReady:
-                description: VMsReady is the number of ready  kubevirt controller
-                  vm instances
-                type: integer
             type: object
         type: object
     served: true

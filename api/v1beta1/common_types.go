@@ -38,6 +38,7 @@ type Network struct {
 
 // HostStatus represents the hostname and IP info for a specific VM
 type HostStatus struct {
-	Hostname    string            `json:"hostname"`
-	IPAddresses map[string]string `json:"ipaddresses"`
+	Hostname          string                 `json:"hostname"`
+	IPAddresses       map[string]string      `json:"ipaddresses"`
+	ProvisioningState VMSetProvisioningState `json:"provisioningState"`
 }

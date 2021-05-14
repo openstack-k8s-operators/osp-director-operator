@@ -62,13 +62,38 @@ type OpenStackVMSetSpec struct {
 // OpenStackVMSetStatus defines the observed state of OpenStackVMSet
 type OpenStackVMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
-	BaseImageDVReady bool `json:"baseImageDVReady,omitempty"`
-	// VMsReady is the number of ready  kubevirt controller vm instances
-	VMsReady int `json:"vmsReady,omitempty"`
+	BaseImageDVReady   bool                             `json:"baseImageDVReady,omitempty"`
+	ProvisioningStatus OpenStackVMSetProvisioningStatus `json:"provisioningStatus,omitempty"`
 	// VMpods are the names of the kubevirt controller vm pods
 	VMpods  []string              `json:"vmpods,omitempty"`
 	VMHosts map[string]HostStatus `json:"vmHosts,omitempty"`
 }
+
+// OpenStackVMSetProvisioningStatus represents the overall provisioning state of all VMs in
+// the VmBaremetalSet (with an optional explanatory message)
+type OpenStackVMSetProvisioningStatus struct {
+	State      VMSetProvisioningState `json:"state,omitempty"`
+	Reason     string                 `json:"reason,omitempty"`
+	ReadyCount int                    `json:"readyCount,omitempty"`
+}
+
+// VMSetProvisioningState - the overall state of all VMs in this OpenStackVmSet
+type VMSetProvisioningState string
+
+const (
+	// VMSetEmpty - special state for 0 requested VMs and 0 already provisioned
+	VMSetEmpty VMSetProvisioningState = "empty"
+	// VMSetWaiting - something is causing the OpenStackBaremetalSet to wait
+	VMSetWaiting VMSetProvisioningState = "waiting"
+	// VMSetProvisioning - one or more VMs are provisioning
+	VMSetProvisioning VMSetProvisioningState = "provisioning"
+	// VMSetProvisioned - the requested VM count has been satisfied
+	VMSetProvisioned VMSetProvisioningState = "provisioned"
+	// VMSetDeprovisioning - one or more VMs are deprovisioning
+	VMSetDeprovisioning VMSetProvisioningState = "deprovisioning"
+	// VMSetError - general catch-all for actual errors
+	VMSetError VMSetProvisioningState = "error"
+)
 
 // Host -
 type Host struct {
@@ -87,6 +112,10 @@ type Host struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osvmset;osvmsets;osvms
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack VMSet"
+// +kubebuilder:printcolumn:name="Desired",type="integer",JSONPath=".spec.vmCount",description="Desired"
+// +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.provisioningStatus.readyCount",description="Ready"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
 // OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
 type OpenStackVMSet struct {
