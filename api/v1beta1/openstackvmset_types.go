@@ -70,7 +70,7 @@ type OpenStackVMSetStatus struct {
 }
 
 // OpenStackVMSetProvisioningStatus represents the overall provisioning state of all VMs in
-// the VmBaremetalSet (with an optional explanatory message)
+// the OpenStackVMSet (with an optional explanatory message)
 type OpenStackVMSetProvisioningStatus struct {
 	State      VMSetProvisioningState `json:"state,omitempty"`
 	Reason     string                 `json:"reason,omitempty"`
