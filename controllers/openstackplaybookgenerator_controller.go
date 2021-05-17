@@ -289,7 +289,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if err != nil {
 			// the job failed in error
 			deleteErr := r.Client.Delete(context.TODO(), heat)
-			if err != nil {
+			if deleteErr != nil {
 				return ctrl.Result{}, deleteErr
 			}
 			return ctrl.Result{}, err
