@@ -49,17 +49,18 @@ python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLAT
 # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
 sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
 
-# default to standard container image prepare but user environments can override this setting
-openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
-openstack tripleo container image prepare \
-    -e container-image-prepare.yaml \
-{{- range $key, $value := .TripleoDeployFiles }}
-    -e {{ $key }} \
-{{- end }}
-{{- range $key, $value := .TripleoCustomDeployFiles }}
-    -e {{ $key }} \
-{{- end }}
- -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
+# only use env files that have ContainerImagePrepare in them, if more than 1 the last wins
+PREPARE_ENV_ARGS=""
+for ENV_FILE in $(grep -rl "ContainerImagePrepare:" *.yaml | grep -v overcloud-resource-registry-puppet); do
+PREPARE_ENV_ARGS="-e $ENV_FILE"
+done
+
+# if no container image prepare env files are provided generate the defaults
+if [ -z "$PREPARE_ENV_ARGS" ]; then
+  openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
+  PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
+fi
+openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
