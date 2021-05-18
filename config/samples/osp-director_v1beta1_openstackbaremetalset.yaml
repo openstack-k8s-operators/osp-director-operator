@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 spec:
   # How many nodes to provision
-  replicas: 1
+  count: 1
   # The image to install on the provisioned nodes
   baseImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz
   # The secret containing the SSH pub key to place on the provisioned nodes
