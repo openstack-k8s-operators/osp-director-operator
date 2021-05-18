@@ -150,8 +150,8 @@ EOF_PYTHON
 TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
 pushd $TMP_DIR
-git checkout -b latest
-cp -a /home/cloud-admin/ansible/* .
+git checkout -b $ConfigHash
+cp -a /home/cloud-admin/ansible/* tripleo-ansible
 
 # add directory for templates
 mkdir source-templates
@@ -161,5 +161,5 @@ git config --global user.email "dev@null.io"
 git config --global user.name "OSP Director Operator"
 
 git add *
-git commit -a -m "Updates"
-git push origin latest
+git commit -a -m "Generated playbooks for $ConfigHash"
+git push origin $ConfigHash
