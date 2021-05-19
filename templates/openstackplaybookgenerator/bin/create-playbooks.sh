@@ -162,4 +162,4 @@ git config --global user.name "OSP Director Operator"
 
 git add *
 git commit -a -m "Generated playbooks for $ConfigHash"
-git push origin $ConfigHash
+git push -f origin $ConfigHash
