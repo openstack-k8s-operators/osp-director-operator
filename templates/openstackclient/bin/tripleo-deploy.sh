@@ -80,7 +80,7 @@ accept() {
   popd > /dev/null
 }
 
-usage() { echo "Usage: $0 [-d] [-p]" 1>&2; exit 1; }
+usage() { echo "Usage: $0 [-d] [-p] [-a]" 1>&2; exit 1; }
 
 [[ $# -eq 0 ]] && usage
 
