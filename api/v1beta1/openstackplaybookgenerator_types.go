@@ -54,7 +54,7 @@ type OpenStackPlaybookGeneratorStatus struct {
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
 // +kubebuilder:printcolumn:name="CurrentState",type=string,JSONPath=`.status.currentState`
 
-// OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators API
+// OpenStackPlaybookGenerator configure Heat environment and templates to generate Ansible playbooks
 type OpenStackPlaybookGenerator struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

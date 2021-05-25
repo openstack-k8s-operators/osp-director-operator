@@ -1,10 +1,9 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackPlaybookGenerator
 metadata:
-  name: openstackplaybookgenerator-sample
+  name: default
 spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
-  openstackClientName: openstackclient
+  gitSecret: git-secret
   heatEnvConfigMap: tripleo-deploy-config-custom
-  # optional can be used to provide t-h-t template tarballs to the playbook generator
-  #tarballConfigMap: tripleo-net-config
+  tarballConfigMap: tripleo-net-config

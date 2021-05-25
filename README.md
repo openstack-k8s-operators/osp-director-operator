@@ -171,6 +171,8 @@ A "Tarball Config Map" can be used to provide (binary) tarballs which are extrac
 
 -[Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy) (NOTE: these are Ansible templates and need to have variables replaced to be used directly!)
 
+-[Git repo config map] This ConfigMap contains the SSH key and URL for the Git repo used to store generated playbooks (below)
+
 Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
 
 ```bash
@@ -181,6 +183,10 @@ oc create configmap -n openstack tripleo-deploy-config-custom --from-file=triple
 cd <dir with net config files>
 tar -cvzf net-config.tar.gz *.yaml
 oc create configmap -n openstack tripleo-net-config --from-file=net-config.tar.gz
+
+# create the Git secret used for the repo where Ansible playbooks are stored
+oc create secret generic git-secret -n openstack --from-file=git_ssh_identity=<path to git id_rsa> --from-literal=git_url=<your git server URL (git@...)>
+
 ```
 
 3) (Optional) Create a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) for your OpenStackControlPlane. This secret will provide the default password for your virtual machine and baremetal hosts. If no secret is provided you will only be able to login with ssh keys defined in the osp-controlplane-ssh-keys Secret.
@@ -313,12 +319,11 @@ metadata:
   namespace: openstack
 spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
-  openstackClientName: openstackclient
+  gitSecret: git-secret
   heatEnvConfigMap: tripleo-deploy-config-custom
   tarballConfigMap: tripleo-net-config
   # optional set the roles file name if generated in previous step.
   # rolesFile: roles_computehci.yaml
-  gitSecret: git-secret
 ```
 
 If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:

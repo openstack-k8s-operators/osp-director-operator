@@ -26,8 +26,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackPlaybookGenerator is the Schema for the openstackplaybookgenerators
-          API
+        description: OpenStackPlaybookGenerator configure Heat environment and templates
+          to generate Ansible playbooks
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
