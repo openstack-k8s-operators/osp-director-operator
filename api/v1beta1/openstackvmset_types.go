@@ -63,6 +63,7 @@ type OpenStackVMSetSpec struct {
 type OpenStackVMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
 	BaseImageDVReady   bool                             `json:"baseImageDVReady,omitempty"`
+	Conditions         ConditionList                    `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackVMSetProvisioningStatus `json:"provisioningStatus,omitempty"`
 	// VMpods are the names of the kubevirt controller vm pods
 	VMpods  []string              `json:"vmpods,omitempty"`
@@ -82,17 +83,17 @@ type VMSetProvisioningState string
 
 const (
 	// VMSetEmpty - special state for 0 requested VMs and 0 already provisioned
-	VMSetEmpty VMSetProvisioningState = "empty"
+	VMSetEmpty VMSetProvisioningState = "Empty"
 	// VMSetWaiting - something is causing the OpenStackBaremetalSet to wait
-	VMSetWaiting VMSetProvisioningState = "waiting"
+	VMSetWaiting VMSetProvisioningState = "Waiting"
 	// VMSetProvisioning - one or more VMs are provisioning
-	VMSetProvisioning VMSetProvisioningState = "provisioning"
+	VMSetProvisioning VMSetProvisioningState = "Provisioning"
 	// VMSetProvisioned - the requested VM count has been satisfied
-	VMSetProvisioned VMSetProvisioningState = "provisioned"
+	VMSetProvisioned VMSetProvisioningState = "Provisioned"
 	// VMSetDeprovisioning - one or more VMs are deprovisioning
-	VMSetDeprovisioning VMSetProvisioningState = "deprovisioning"
+	VMSetDeprovisioning VMSetProvisioningState = "Deprovisioning"
 	// VMSetError - general catch-all for actual errors
-	VMSetError VMSetProvisioningState = "error"
+	VMSetError VMSetProvisioningState = "Error"
 )
 
 // Host -

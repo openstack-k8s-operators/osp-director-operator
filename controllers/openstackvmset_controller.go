@@ -165,6 +165,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// it will be done so later during this reconcile attempt
 	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackVMSetProvisioningStatus{}
 
+	// Initialize conditions list if not already set
+	if instance.Status.Conditions == nil {
+		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+	}
+
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets

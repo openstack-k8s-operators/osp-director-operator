@@ -133,9 +133,38 @@ spec:
               baseImageDVReady:
                 description: BaseImageDVReady is the status of the BaseImage DataVolume
                 type: boolean
+              conditions:
+                description: ConditionList - A list of conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               provisioningStatus:
                 description: OpenStackVMSetProvisioningStatus represents the overall
-                  provisioning state of all VMs in the VmBaremetalSet (with an optional
+                  provisioning state of all VMs in the OpenStackVMSet (with an optional
                   explanatory message)
                 properties:
                   readyCount:
