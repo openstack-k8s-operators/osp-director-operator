@@ -137,18 +137,24 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 
-	// Get the provisioning interface of the cluster worker nodes
+	// Get the provisioning interface of the cluster worker nodes from either Metal3
+	// or from the instance spec itself if it was provided there
 	if provInterfaceName == "" {
-		r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
+		if instance.Spec.Interface == "" {
+			r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
 
-		provInterfaceName, err = r.getProvisioningInterface(instance)
+			provInterfaceName, err = r.getProvisioningInterface(instance)
 
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 
-		if provInterfaceName == "" {
-			return ctrl.Result{}, fmt.Errorf("metal3 provisioning interface configuration not found")
+			if provInterfaceName == "" {
+				return ctrl.Result{}, fmt.Errorf("metal3 provisioning interface configuration not found")
+			}
+		} else {
+			r.Log.Info(fmt.Sprintf("Provisioning interface supplied by %s spec", instance.Name))
+			provInterfaceName = instance.Spec.Interface
 		}
 	}
 

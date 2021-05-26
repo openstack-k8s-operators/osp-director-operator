@@ -45,6 +45,10 @@ spec:
                 description: 'URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed
                   -- current implementation is Metal3 pattern)'
                 type: string
+              interface:
+                description: An optional interface to use instead of the cluster's
+                  default provisioning interface (if any)
+                type: string
               port:
                 description: The port on which the Apache server should listen
                 type: integer
