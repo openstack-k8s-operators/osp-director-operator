@@ -43,8 +43,27 @@ type OpenStackPlaybookGeneratorStatus struct {
 	PlaybookHash string `json:"playbookHash"`
 
 	// CurrentState
-	CurrentState string `json:"currentState"`
+	CurrentState PlaybookGeneratorState `json:"currentState"`
+
+	// Conditions
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
+
+// PlaybookGeneratorState - the state of the execution of this playbook generator
+type PlaybookGeneratorState string
+
+const (
+	// PlaybookGeneratorWaiting - the playbook generator is blocked by prerequisite objects
+	PlaybookGeneratorWaiting PlaybookGeneratorState = "Waiting"
+	// PlaybookGeneratorInitializing - the playbook generator is preparing to execute
+	PlaybookGeneratorInitializing PlaybookGeneratorState = "Initializing"
+	// PlaybookGeneratorGenerating - the playbook generator is executing
+	PlaybookGeneratorGenerating PlaybookGeneratorState = "Generating"
+	// PlaybookGeneratorFinished - the playbook generation has finished executing
+	PlaybookGeneratorFinished PlaybookGeneratorState = "Finished"
+	// PlaybookGeneratorError - the playbook generation hit a generic error
+	PlaybookGeneratorError PlaybookGeneratorState = "Error"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

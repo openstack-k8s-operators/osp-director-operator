@@ -102,6 +102,35 @@ spec:
             description: OpenStackPlaybookGeneratorStatus defines the observed state
               of OpenStackPlaybookGenerator
             properties:
+              conditions:
+                description: Conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               currentState:
                 description: CurrentState
                 type: string
