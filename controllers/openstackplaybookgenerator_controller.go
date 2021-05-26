@@ -229,10 +229,12 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			if err := r.setCurrentState(instance, "initializing"); err != nil {
 				return ctrl.Result{}, err
 			}
+			r.Log.Info("Requeuing...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 		if !heat.Status.Active {
 			r.Log.Info("Waiting on Ephemeral Heat instance to launch...")
-			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 
 		// configMap Hash changed after Ephemeral Heat was created
@@ -241,7 +243,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 
 		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
@@ -253,11 +255,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 			return nil
 		})
-		if err != nil {
+		if err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 		if op != controllerutil.OperationResultNone {
 			r.Log.Info(fmt.Sprintf("Job successfully created/updated - operation: %s", string(op)))
+			r.Log.Info("Requeuing...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 
 		// configMap Hash changed while job was running (NOTE: configHash is only ENV in the job)
@@ -270,12 +274,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			}
 
 			// in this case delete heat too as the database may have been used
+			r.Log.Info("Deleting Ephemeral Heat...")
 			err = r.Client.Delete(context.TODO(), heat)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 			r.Log.Info("ConfigMap has changed. Requeing to start again...")
-			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 
 		}
 
@@ -283,6 +288,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
 			// the job failed in error
+			r.Log.Info("Job failed... Deleting Ephemeral Heat...")
 			deleteErr := r.Client.Delete(context.TODO(), heat)
 			if deleteErr != nil {
 				return ctrl.Result{}, deleteErr
@@ -293,10 +299,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			if err := r.setCurrentState(instance, "generating"); err != nil {
 				return ctrl.Result{}, err
 			}
-			if err := controllerutil.SetControllerReference(instance, job, r.Scheme); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 	}
 
