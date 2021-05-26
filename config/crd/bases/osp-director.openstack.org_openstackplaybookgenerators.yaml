@@ -89,11 +89,6 @@ spec:
               imageURL:
                 description: Name of the image used to generate playbooks
                 type: string
-              rolesFile:
-                description: Optional. name of any custom ROLESFILE in the configmap
-                  used to generate the roles map. If not specified the default t-h-t
-                  roles will be used.
-                type: string
               tarballConfigMap:
                 description: Optional. config map containing custom Heat template
                   tarball which will be extracted prior to playbook generation
