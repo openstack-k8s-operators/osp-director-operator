@@ -17,8 +17,6 @@ limitations under the License.
 package openstackplaybookgenerator
 
 import (
-	"fmt"
-
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -26,11 +24,6 @@ import (
 // GetVolumeMounts -
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.VolumeMount {
 	retVolMounts := []corev1.VolumeMount{
-		{
-			Name:      fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
-			MountPath: "/var/cloud-admin", // this is the cloud-admin mounted on openstackclient pod
-			ReadOnly:  false,
-		},
 		{
 			Name:      "tripleo-deploy-config",
 			MountPath: "/home/cloud-admin/config",
@@ -45,6 +38,12 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 			Name:      "openstackplaybook-scripts",
 			MountPath: "/home/cloud-admin/create-playbooks.sh",
 			SubPath:   "create-playbooks.sh",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "git-ssh-config",
+			MountPath: "/mnt/ssh-config/git_id_rsa",
+			SubPath:   "git_id_rsa",
 			ReadOnly:  true,
 		},
 	}
@@ -63,6 +62,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 
 // GetVolumes -
 func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.Volume {
+	var config0600AccessMode int32 = 0600
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755
 
@@ -107,10 +107,18 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 			},
 		},
 		{
-			Name: fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
+			Name: "git-ssh-config", //ssh key for git repo access
 			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: fmt.Sprintf("%s-cloud-admin", instance.Spec.OpenStackClientName),
+				Secret: &corev1.SecretVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					SecretName:  instance.Spec.GitSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "git_ssh_identity",
+							Path: "git_id_rsa",
+							Mode: &config0600AccessMode,
+						},
+					},
 				},
 			},
 		},

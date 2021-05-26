@@ -71,6 +71,17 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 						Name:  "ConfigHash",
 						Value: configHash,
 					},
+					{
+						Name: "GIT_URL",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: cr.Spec.GitSecret,
+								},
+								Key: "git_url",
+							},
+						},
+					},
 				},
 				VolumeMounts: volumeMounts,
 			},

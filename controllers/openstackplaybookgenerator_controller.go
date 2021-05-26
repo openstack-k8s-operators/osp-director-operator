@@ -287,6 +287,11 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		requeue, err := common.WaitOnJob(job, r.Client, r.Log)
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
+			// the job failed in error
+			deleteErr := r.Client.Delete(context.TODO(), heat)
+			if deleteErr != nil {
+				return ctrl.Result{}, deleteErr
+			}
 			return ctrl.Result{}, err
 		} else if requeue {
 			r.Log.Info("Waiting on Playbook Generation...")
