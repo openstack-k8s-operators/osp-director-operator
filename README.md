@@ -159,7 +159,7 @@ If you write the above YAML into a file called ctlplane-network.yaml you can cre
 oc create -n openstack -f ctlplane-network.yaml
 ```
 
-2) Create a [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments and Heat templates used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named 'tripleo-deploy-config-custom' and 'tripleo-net-config' to provide this information.
+2) Create a [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments, Heat templates and custom roles file (name must be `roles_data.yaml`) used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named 'tripleo-deploy-config-custom' and 'tripleo-tarball-config' to provide this information.
 
 A good example of ConfigMaps that can be used can be found in our [dev-tools](https://github.com/openstack-k8s-operators/osp-director-dev-tools) GitHub project.
 
@@ -173,7 +173,7 @@ A "Tarball Config Map" can be used to provide (binary) tarballs which are extrac
 
 -[Git repo config map] This ConfigMap contains the SSH key and URL for the Git repo used to store generated playbooks (below)
 
-Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-net-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
+Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-tarball-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
 
 ```bash
 # create the configmap for tripleo-deploy-config-custom
@@ -182,7 +182,7 @@ oc create configmap -n openstack tripleo-deploy-config-custom --from-file=triple
 # create the configmap containing a tarball of t-h-t network config files. NOTE: these files may overwrite default t-h-t files so keep this in mind when naming them.
 cd <dir with net config files>
 tar -cvzf net-config.tar.gz *.yaml
-oc create configmap -n openstack tripleo-net-config --from-file=net-config.tar.gz
+oc create configmap -n openstack tripleo-tarball-config --from-file=tarball-config.tar.gz
 
 # create the Git secret used for the repo where Ansible playbooks are stored
 oc create secret generic git-secret -n openstack --from-file=git_ssh_identity=<path to git id_rsa> --from-literal=git_url=<your git server URL (git@...)>
@@ -297,17 +297,17 @@ a) use the openstackclient pod to generate a custom roles file
 oc rsh openstackclient
 unset OS_CLOUD
 cd /home/cloud-admin/
-openstack overcloud roles generate Controller ComputeHCI > roles_computehci.yaml
+openstack overcloud roles generate Controller ComputeHCI > roles_data.yaml
 exit
 ```
 
 b) copy the custom roles file out of the openstackclient pod
 
 ```bash
-oc cp openstackclient:/home/cloud-admin/roles_computehci.yaml roles_computehci.yaml
+oc cp openstackclient:/home/cloud-admin/roles_data.yaml roles_data.yaml
 ```
 
-Update the tripleo-deploy-config-custom configmap to upload the roles file to the configmap.
+Update the `tarballConfigMap` configmap to add the `roles_data.yaml` file to the tarball and update the configmap.
 
 8) Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment.
 
@@ -321,9 +321,7 @@ spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
   gitSecret: git-secret
   heatEnvConfigMap: tripleo-deploy-config-custom
-  tarballConfigMap: tripleo-net-config
-  # optional set the roles file name if generated in previous step.
-  # rolesFile: roles_computehci.yaml
+  tarballConfigMap: tripleo-tarball-config
 ```
 
 If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:

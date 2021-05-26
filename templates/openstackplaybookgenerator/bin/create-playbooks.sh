@@ -53,12 +53,6 @@ sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.
 # copy to our temp t-h-t dir
 cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
 
-# if ROLES_FILE is set we overwrite the default t-h-t version (FIXME: can this be removed now that we support tarballs?)
-ROLES_FILE="{{ .RolesFile }}"
-if [ -n "$ROLES_FILE" ]; then
-  cp /home/cloud-admin/config-custom/$ROLES_FILE $TEMPLATES_DIR/roles_data.yaml
-fi
-
 python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
 # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work

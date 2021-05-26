@@ -26,8 +26,6 @@ type OpenStackPlaybookGeneratorSpec struct {
 	ImageURL string `json:"imageURL"`
 	// Required. config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
-	// Optional. name of any custom ROLESFILE in the configmap used to generate the roles map. If not specified the default t-h-t roles will be used.
-	RolesFile string `json:"rolesFile,omitempty"`
 	// Optional. config map containing custom Heat template tarball which will be extracted prior to playbook generation
 	TarballConfigMap string `json:"tarballConfigMap,omitempty"`
 	// Heat Settings

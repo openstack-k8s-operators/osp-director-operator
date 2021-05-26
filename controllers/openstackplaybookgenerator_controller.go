@@ -136,10 +136,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
-	// we remove the RolesFile from custom templates to avoid having Heat process it directly (FIXME: should we have a separate ConfigMap for the custom Roles file?)
-	if len(instance.Spec.RolesFile) > 0 {
-		delete(tripleoCustomDeployFiles, instance.Spec.RolesFile)
-	}
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
 	// get tripleo-deploy-config, created/rendered by openstackipset controller
@@ -155,7 +151,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoDeployFiles := tripleoDeployCM.Data
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
-	templateParameters["RolesFile"] = instance.Spec.RolesFile
 
 	// config hash
 	configMapHash, err := common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data})
