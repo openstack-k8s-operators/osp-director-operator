@@ -154,7 +154,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Always set provisioning status to zero-values.  If there is a reason to set otherwise,
 	// it will be done so later during this reconcile attempt
-	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackBaremetalHostProvisioningStatus{}
+	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus{}
 
 	var err error
 	var passwordSecret *corev1.Secret
