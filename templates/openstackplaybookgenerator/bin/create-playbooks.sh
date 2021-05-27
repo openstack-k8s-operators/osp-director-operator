@@ -69,7 +69,7 @@ if [ -z "$PREPARE_ENV_ARGS" ]; then
   openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
   PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
-openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
+openstack tripleo container image prepare $PREPARE_ENV_ARGS -e hostnamemap.yaml -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
