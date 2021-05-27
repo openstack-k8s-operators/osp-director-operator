@@ -270,7 +270,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		// configMap Hash changed after Ephemeral Heat was created
 		if heat.Spec.ConfigHash != configMapHash {
 			err = r.Client.Delete(context.TODO(), heat)
-			if err != nil {
+			if err != nil && !k8s_errors.IsNotFound(err) {
 				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
@@ -312,7 +312,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			// in this case delete heat too as the database may have been used
 			r.Log.Info("Deleting Ephemeral Heat...")
 			err = r.Client.Delete(context.TODO(), heat)
-			if err != nil {
+			if err != nil && !k8s_errors.IsNotFound(err) {
 				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
@@ -331,7 +331,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 
 			deleteErr := r.Client.Delete(context.TODO(), heat)
-			if deleteErr != nil {
+			if deleteErr != nil && !k8s_errors.IsNotFound(deleteErr) {
 				return ctrl.Result{}, deleteErr
 			}
 			return ctrl.Result{}, err
