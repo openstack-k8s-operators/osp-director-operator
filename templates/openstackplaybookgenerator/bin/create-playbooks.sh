@@ -16,6 +16,7 @@ Host $GIT_HOST
     IdentityFile /home/cloud-admin/.ssh/git_id_rsa
     StrictHostKeyChecking no
 EOF
+chmod 644 /home/cloud-admin/.ssh/config
 
 unset OS_CLOUD
 export OS_AUTH_TYPE=none
