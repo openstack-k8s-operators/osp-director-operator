@@ -458,6 +458,6 @@ ansible -i inventory.yaml overcloud -a "sudo dnf -y install python3 lvm2"
 * Run the playbooks
 
 ```bash
-cd
+cd /home/cloud-admin
 ./tripleo-deploy.sh
 ```
