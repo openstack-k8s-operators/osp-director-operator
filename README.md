@@ -167,7 +167,16 @@ A "Tarball Config Map" can be used to provide (binary) tarballs which are extrac
 
 -[Net-Config files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/files/osp/net_config).
 
--[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/templates/osp/tripleo_deploy/flat/network-environment.yaml.j2)
+-[Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/templates/osp/tripleo_deploy/vlan/network-environment.yaml.j2)
+
+Note: FIP traffic does not pass to a VLAN tenant network with ML2/OVN and DVR. DVR is enabled by default. If you need VLAN tenant networks with OVN, you can disable DVR. To disable DVR, inlcude the following lines in an environment file:
+
+```yaml
+parameter_defaults:
+  NeutronEnableDVR: false
+```
+
+Support for "distributed vlan traffic in ovn" is being tracked in [manage MAC addresses for "Add support in tripleo for distributed vlan traffic in ovn" ( https://bugs.launchpad.net/tripleo/+bug/1881593 )](https://github.com/openstack-k8s-operators/osp-director-operator/issues/254)
 
 -[Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy) (NOTE: these are Ansible templates and need to have variables replaced to be used directly!)
 
