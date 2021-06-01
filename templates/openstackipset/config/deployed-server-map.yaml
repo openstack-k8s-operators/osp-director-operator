@@ -8,6 +8,9 @@ resource_registry:
   OS::TripleO::Network::Ports::InternalApiVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
   OS::TripleO::Network::Ports::StorageVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
   OS::TripleO::Network::Ports::StorageMgmtVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  # for now set OVNMacAddressNetwork and OVNMacAddressPort to None, see https://github.com/openstack-k8s-operators/osp-director-operator/issues/254
+  OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
+  OS::TripleO::OVNMacAddressPort: OS::Heat::None
 
 parameter_defaults:
   DeployedServerPortMap:
