@@ -59,10 +59,12 @@ type OpenStackBaremetalSetStatus struct {
 // OpenStackBaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
 type OpenStackBaremetalHostStatus struct {
 	Hostname              string `json:"hostname"`
+	HostRef               string `json:"hostRef"`
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 	CtlplaneIP            string `json:"ctlplaneIP"`
 	ProvisioningState     string `json:"provisioningState"`
+	AnnotatedForDeletion  bool   `json:"annotatedForDeletion"`
 }
 
 // OpenStackBaremetalSetProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
@@ -96,8 +98,8 @@ const (
 // GetHostnames -
 func (bmSet OpenStackBaremetalSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for key, val := range bmSet.Status.BaremetalHosts {
-		ret[key] = val.Hostname
+	for _, val := range bmSet.Status.BaremetalHosts {
+		ret[val.Hostname] = val.HostRef
 	}
 	return ret
 }

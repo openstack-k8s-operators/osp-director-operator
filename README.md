@@ -19,7 +19,6 @@ Hardware Provisioning CRDs
 
 Software Configuration CRDs
 ---------------------------
-- openstackclient: creates a pod used to run TripleO deployment commands
 - openstackplaybookgenerator: automatically generate Ansible playbooks for deployment when you scale up or make changes to custom ConfigMaps for deployment
 - openstackclient: creates a pod used to run TripleO deployment commands
 
@@ -276,7 +275,7 @@ metadata:
   namespace: openstack
 spec:
   # How many nodes to provision
-  replicas: {{ osp_compute_count }}
+  count: {{ osp_compute_count }}
   # The image to install on the provisioned nodes. NOTE: needs to be accessible on the OpenShift Metal3 provisioning network.
   baseImageUrl: http://host/images/rhel-image-8.3-417.x86_64.qcow2
   # NOTE: these are automatically created via the OpenStackControlplane CR above
@@ -470,3 +469,120 @@ ansible -i inventory.yaml overcloud -a "sudo dnf -y install python3 lvm2"
 cd /home/cloud-admin
 ./tripleo-deploy.sh
 ```
+Remove an overcloud VM or baremetal host
+----------------------------------------
+
+Removing an overcloud VM or baremetal host requires the following steps:
+
+## Disable the compute service
+
+In case a compute node gets removed, disable the Compute service on the outgoing node on the overcloud to prevent the node from scheduling new instances
+
+```bash
+openstack compute service list
+openstack compute service set <hostname> nova-compute --disable
+```
+
+## Annotate the VM/BMH resource for deletion
+
+Annotation of a VM resource
+
+```bash
+oc annotate -n openstack vm/controller-1 osp-director.openstack.org/delete-host=true --overwrite
+```
+
+Annotation of a BMH resource
+
+```bash
+oc annotate -n openshift-machine-api bmh/openshift-worker-3 osp-director.openstack.org/delete-host=true --overwrite
+```
+
+The annotation status is being reflected in the OSBaremetalset/OSVMset using the `annotatedForDeletion` parameter:
+
+```bash
+oc get osbms computehci -o json | jq .status
+{
+  "baremetalHosts": {
+    "computehci-0": {
+      "annotatedForDeletion": true,
+      "ctlplaneIP": "192.168.25.105/24",
+      "hostRef": "openshift-worker-3",
+      "hostname": "computehci-0",
+      "networkDataSecretName": "computehci-cloudinit-networkdata-openshift-worker-3",
+      "provisioningState": "provisioned",
+      "userDataSecretName": "computehci-cloudinit-userdata-openshift-worker-3"
+    },
+    "computehci-1": {
+      "annotatedForDeletion": false,
+      "ctlplaneIP": "192.168.25.106/24",
+      "hostRef": "openshift-worker-4",
+      "hostname": "computehci-1",
+      "networkDataSecretName": "computehci-cloudinit-networkdata-openshift-worker-4",
+      "provisioningState": "provisioned",
+      "userDataSecretName": "computehci-cloudinit-userdata-openshift-worker-4"
+    }
+  },
+  "provisioningStatus": {
+    "readyCount": 2,
+    "reason": "All requested BaremetalHosts have been provisioned",
+    "state": "provisioned"
+  }
+}
+```
+
+## Reduce the resource count
+
+Reducing the resource count of the OSBaremetalset will trigger the corrensponding controller to handle the resource deletion
+
+```bash
+oc patch osbms computehci --type=merge --patch '{"spec":{"count":1}}'
+```
+
+As a result:
+* the corresponding OSIPSet for the node got deleted
+* the IPreservation entry in the OSNet resources got flagged as deleted
+
+```bash
+oc get osnet ctlplane -o json | jq .status.roleReservations.ComputeHCI
+{
+  "addToPredictableIPs": true,
+  "reservations": [
+    {
+      "deleted": true,
+      "hostname": "computehci-0",
+      "ip": "192.168.25.105",
+      "vip": false
+    },
+    {
+      "deleted": false,
+      "hostname": "computehci-1",
+      "ip": "192.168.25.106",
+      "vip": false
+    }
+  ]
+}
+```
+
+This results in the following behavior
+* the IP is not free for use for another role
+* if a new node gets scaled into the same role it will reuse the hostnames starting with lowest id suffix (if there are multiple) _and_ corresponding IP reservation
+* if the OSBaremetalset or OSVMset resource gets deleted, all IP reservations for the role get deleted and are free to be used by other nodes
+
+## Cleanup OpenStack resources
+
+Right now if a compute node got removed, there are several leftover entries registerd on the OpenStack control plane and not being cleaned up automatically. To clean them up, perform the following steps.
+
+### Remove the Compute service from the node
+
+```bash
+openstack compute service list
+openstack compute service delete <service-id>
+```
+
+### Check the network agents and remove if needed
+
+```bash
+openstack network agent list
+for AGENT in $(openstack network agent list --host <scaled-down-node> -c ID -f value) ; do openstack network agent delete $AGENT ; done
+```
+

@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -34,6 +33,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -94,17 +94,63 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// check for required secrets
 	_, _, err = common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	if instance.Status.OpenStackClientNetStatus == nil {
+		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	//
+	// create hostname for the openstackclient
+	//
+	hostnameRef := instance.GetHostnames()
+	hostnameDetails := common.Hostname{}
+	if len(hostnameRef) == 0 {
+		hostnameDetails = common.Hostname{
+			Basename: openstackclient.Role,
+			Hostname: "",
+			VIP:      false,
+		}
+
+		err = common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		for hostname := range hostnameRef {
+
+			hostnameDetails = common.Hostname{
+				Basename: openstackclient.Role,
+				Hostname: hostname,
+				VIP:      false,
+			}
+		}
+	}
+
+	if _, ok := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]; !ok {
+		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostnameDetails.Hostname,
+			HostRef:  strings.ToLower(instance.Name),
+		}
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return ctrl.Result{}, err
+		}
+	}
+
+	hostnameRefs := instance.GetHostnames()
 
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
 		Role:                openstackclient.Role,
 		HostCount:           openstackclient.Count,
 		AddToPredictableIPs: false,
+		HostNameRefs:        hostnameRefs,
 	}
 	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
@@ -120,20 +166,22 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
-	// for now there is only support for a single openstackclient container per cr
-	hostnameDetails := common.Hostname{
-		IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(openstackclient.Role), 0),
-		Basename: openstackclient.Role,
-		VIP:      false,
+	// update network status
+	for _, netName := range instance.Spec.Networks {
+		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
 	}
-	err = common.CreateOrGetHostname(instance, &hostnameDetails)
+	r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].Hostname, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses))
+
+	err = r.Client.Status().Update(context.TODO(), instance)
 	if err != nil {
+		r.Log.Error(err, "Failed to update CR status %v")
 		return ctrl.Result{}, err
 	}
-	r.Log.Info(fmt.Sprintf("OpenStackClient %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
 
 	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
-	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{"owner": "osp-director"})
+	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{
+		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -153,19 +201,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	// update network status
-	for _, netName := range instance.Spec.Networks {
-		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
-	}
-	r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].Hostname, instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses))
-
-	err = r.Client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		r.Log.Error(err, "Failed to update CR status %v")
-		return ctrl.Result{}, err
-	}
-
-	cmLabels := common.GetLabels(instance.Name, openstackclient.AppLabel)
+	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
 
 	// create cm holding deployment script and render deployment script.
 	cms := []common.Template{
@@ -191,7 +227,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Name:         fmt.Sprintf("%s-hosts", instance.Name),
 		Namespace:    instance.Namespace,
 		Size:         openstackclient.HostsPersistentStorageSize,
-		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
+		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
 		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
@@ -210,7 +246,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Name:         fmt.Sprintf("%s-cloud-admin", instance.Name),
 		Namespace:    instance.Namespace,
 		Size:         openstackclient.CloudAdminPersistentStorageSize,
-		Labels:       common.GetLabels(instance.Name, openstackclient.AppLabel),
+		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
 		StorageClass: instance.Spec.StorageClass,
 		AccessMode: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
@@ -233,7 +269,6 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -254,15 +289,19 @@ func (r *OpenStackClientReconciler) setNetStatus(instance *ospdirectorv1beta1.Op
 	}
 
 	// Set network information status
-	if instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses == nil {
-		instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
+	if instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses == nil {
+		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
 			Hostname: hostnameDetails.Hostname,
+			HostRef:  strings.ToLower(instance.Name),
 			IPAddresses: map[string]string{
 				netName: ipaddress,
 			},
 		}
 	} else {
-		instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
+		status := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]
+		status.HostRef = strings.ToLower(instance.Name)
+		status.IPAddresses[netName] = ipaddress
+		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = status
 	}
 }
 
@@ -281,7 +320,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotation := "["
 	for id, net := range instance.Spec.Networks {
-		annotation += fmt.Sprintf("{\"name\": \"%s-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", net, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.IDKey].IPAddresses[net])
+		annotation += fmt.Sprintf("{\"name\": \"%s-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", net, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses[net])
 		if id < len(instance.Spec.Networks)-1 {
 			annotation += ", "
 		}
@@ -369,7 +408,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 
 		// labels
 		common.InitMap(&pod.Labels)
-		for k, v := range common.GetLabels(instance.Name, openstackclient.AppLabel) {
+		for k, v := range common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}) {
 			pod.Labels[k] = v
 		}
 
@@ -380,7 +419,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 
 		return nil
 	})
-	if err != nil && errors.IsInvalid(err) {
+	if err != nil && k8s_errors.IsInvalid(err) {
 		// Delete pod when an unsupported change was requested, like
 		// e.g. additional controller VM got up. We just re-create the
 		// openstackclient pod

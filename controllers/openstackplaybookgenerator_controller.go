@@ -110,7 +110,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
-	cmLabels := common.GetLabels(instance.Name, openstackplaybookgenerator.AppLabel)
+	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 	cms := []common.Template{
 		// Custom CM holding Tripleo deployment environment parameter files
 		{

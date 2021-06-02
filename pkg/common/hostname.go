@@ -29,15 +29,15 @@ type HostnameStore interface {
 
 // Hostname - details
 type Hostname struct {
-	IDKey    string
 	Basename string
 	Hostname string
+	HostRef  string
 	VIP      bool
 }
 
 // CreateOrGetHostname -
 func CreateOrGetHostname(hostStore HostnameStore, host *Hostname) error {
-	if found, ok := hostStore.GetHostnames()[host.IDKey]; ok {
+	if found, ok := hostStore.GetHostnames()[host.Hostname]; ok {
 		host.Hostname = found
 		return nil
 	}
@@ -46,13 +46,13 @@ func CreateOrGetHostname(hostStore HostnameStore, host *Hostname) error {
 		// Get all numbers currently in use
 		foundNumbers := []int{}
 
-		for _, hostname := range hostStore.GetHostnames() {
+		for hostname := range hostStore.GetHostnames() {
 			pieces := strings.Split(hostname, "-")
 			num, err := strconv.Atoi(pieces[len(pieces)-1])
 
 			if err != nil {
 				// This should never happen, as we control the generated hostnames
-				// and always use the "<instance.Name>-<number>" format
+				// and always use the "<RoleName>-<number>" format
 				return err
 			}
 
@@ -87,17 +87,45 @@ func CreateOrGetHostname(hostStore HostnameStore, host *Hostname) error {
 			chosenNumber = len(foundNumbers)
 		}
 		host.Hostname = fmt.Sprintf("%s-%d", strings.ToLower(host.Basename), chosenNumber)
+		host.HostRef = "unassigned"
 	} else {
 		// in case of vip there is only one hostname, set to basename
 		host.Hostname = strings.ToLower(host.Basename)
-	}
-
-	// if there was no host idkey passed, set to hostname
-	// TODO: create idkey with always growing id and no deletion to track deleted entries also for predictableip list,
-	//       also to bea able to reuse hostnames where then hostname is != idkey
-	if host.IDKey == "" {
-		host.IDKey = host.Hostname
+		host.HostRef = "unassigned"
 	}
 
 	return nil
+}
+
+//
+// use HostnameList/HostnamePair to generate sorted HostnameList
+//
+
+// HostnamePair -
+type HostnamePair struct {
+	Hostname string
+	HostRef  string
+}
+
+// HostnameList -
+type HostnameList []HostnamePair
+
+func (p HostnameList) Len() int           { return len(p) }
+func (p HostnameList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p HostnameList) Less(i, j int) bool { return p[i].Hostname < p[j].Hostname }
+
+// SortMapByValue -
+func SortMapByValue(inMap map[string]string) HostnameList {
+
+	sortedHostnames := make(HostnameList, len(inMap))
+
+	i := 0
+	for k, v := range inMap {
+		sortedHostnames[i] = HostnamePair{k, v}
+		i++
+	}
+
+	sort.Sort(sortedHostnames)
+
+	return sortedHostnames
 }

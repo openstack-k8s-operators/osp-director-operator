@@ -78,8 +78,8 @@ func init() {
 func (openstackclient OpenStackClient) GetHostnames() map[string]string {
 
 	ret := make(map[string]string)
-	for key, val := range openstackclient.Status.OpenStackClientNetStatus {
-		ret[key] = val.Hostname
+	for _, val := range openstackclient.Status.OpenStackClientNetStatus {
+		ret[val.Hostname] = val.HostRef
 	}
 	return ret
 

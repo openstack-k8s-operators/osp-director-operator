@@ -48,6 +48,12 @@ spec:
               hostCount:
                 description: HostCount Host count
                 type: integer
+              hostNameRefs:
+                additionalProperties:
+                  type: string
+                description: HostNameRefs Hostname references for the HostCount with
+                  [hostname]->hostRef
+                type: object
               networks:
                 description: Networks the name(s) of the OpenStackNetworks used to
                   generate IPs
@@ -64,6 +70,7 @@ spec:
             required:
             - addToPredictableIPs
             - hostCount
+            - hostNameRefs
             - networks
             - roleName
             - vip
@@ -85,96 +92,21 @@ spec:
                 type: object
               networks:
                 additionalProperties:
-                  description: OpenStackNetSpec defines the desired state of OpenStackNet
+                  description: NetworkStatus represents the network details of a network
                   properties:
                     allocationEnd:
-                      description: AllocationEnd a set of IPs that are reserved and
-                        will not be assigned
                       type: string
                     allocationStart:
-                      description: AllocationStart a set of IPs that are reserved
-                        and will not be assigned
                       type: string
-                    attachConfiguration:
-                      description: AttachConfiguration used for NodeNetworkConfigurationPolicy
-                        and NetworkAttachmentDefinition
-                      properties:
-                        bridgeName:
-                          type: string
-                        nodeNetworkConfigurationPolicy:
-                          description: NodeNetworkConfigurationPolicySpec defines
-                            the desired state of NodeNetworkConfigurationPolicy
-                          properties:
-                            desiredState:
-                              description: The desired configuration of the policy
-                              type: object
-                              x-kubernetes-preserve-unknown-fields: true
-                            nodeSelector:
-                              additionalProperties:
-                                type: string
-                              description: 'NodeSelector is a selector which must
-                                be true for the policy to be applied to the node.
-                                Selector which must match a node''s labels for the
-                                policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
-                              type: object
-                          type: object
-                        nodeSriovConfigurationPolicy:
-                          description: NodeSriovConfigurationPolicy - Node selector
-                            and desired state for SRIOV network
-                          properties:
-                            desiredState:
-                              description: SriovState - SRIOV-specific configuration
-                                details for an OSP network
-                              properties:
-                                deviceType:
-                                  default: vfio-pci
-                                  type: string
-                                mtu:
-                                  default: 9000
-                                  format: int32
-                                  type: integer
-                                numVfs:
-                                  format: int32
-                                  type: integer
-                                port:
-                                  type: string
-                                rootDevice:
-                                  type: string
-                                spoofCheck:
-                                  default: "on"
-                                  enum:
-                                  - "on"
-                                  - "off"
-                                  type: string
-                                trust:
-                                  default: "off"
-                                  enum:
-                                  - "on"
-                                  - "off"
-                                  type: string
-                              required:
-                              - numVfs
-                              - port
-                              type: object
-                            nodeSelector:
-                              additionalProperties:
-                                type: string
-                              type: object
-                          type: object
-                      type: object
                     cidr:
-                      description: Cidr the cidr to use for this network
                       type: string
                     gateway:
-                      description: Gateway optional gateway for the network
                       type: string
                     vlan:
-                      description: Vlan ID of the network
                       type: integer
                   required:
                   - allocationEnd
                   - allocationStart
-                  - attachConfiguration
                   - cidr
                   type: object
                 type: object

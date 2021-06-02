@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -104,7 +103,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	deploymentSecretName := strings.ToLower(controlplane.AppLabel) + "-ssh-keys"
 
 	deploymentSecret, secretHash, err := common.GetSecret(r, deploymentSecretName, instance.Namespace)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		var op controllerutil.OperationResult
 
 		r.Log.Info(fmt.Sprintf("Creating deployment ssh secret: %s", deploymentSecretName))
@@ -137,13 +136,46 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
+	if instance.Status.VIPStatus == nil {
+		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	//
+	// create hostnames for the overcloud VIP
+	//
+	hostnameDetails := common.Hostname{
+		Basename: controlplane.Role,
+		VIP:      true,
+	}
+	err = common.CreateOrGetHostname(instance, &hostnameDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if _, ok := instance.Status.VIPStatus[hostnameDetails.Hostname]; !ok {
+		instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostnameDetails.Hostname,
+			HostRef:  strings.ToLower(instance.Name),
+		}
+
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return ctrl.Result{}, err
+		}
+	}
+
+	hostnameRefs := instance.GetHostnames()
+
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
+		// create VIP for all networks for any of the VM roles
 		ipsetDetails := common.IPSet{
 			Networks:            vmRole.Networks,
 			Role:                controlplane.Role,
 			HostCount:           controlplane.Count,
 			VIP:                 true,
 			AddToPredictableIPs: true,
+			HostNameRefs:        hostnameRefs,
 		}
 		ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 		if err != nil {
@@ -159,27 +191,17 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 
-		hostnameDetails := common.Hostname{
-			IDKey:    fmt.Sprintf("%s-%d", strings.ToLower(controlplane.Role), 0),
-			Basename: controlplane.Role,
-			VIP:      true,
-		}
-		err = common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
 		// update VIP network status
 		for _, netName := range vmRole.Networks {
 			// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
-			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
+			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
 		}
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			r.Log.Error(err, "Failed to update CR status %v")
 			return ctrl.Result{}, err
 		}
-		r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.IDKey].Hostname, instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses))
+		r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.Hostname].Hostname, instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses))
 
 		// Create or update the vmSet CR object
 		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
@@ -324,14 +346,19 @@ func (r *OpenStackControlPlaneReconciler) setNetStatus(instance *ospdirectorv1be
 	}
 
 	// Set network information status
-	if instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses == nil {
-		instance.Status.VIPStatus[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
+	if instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses == nil {
+		instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
 			Hostname: hostnameDetails.Hostname,
+			HostRef:  strings.ToLower(instance.Name),
 			IPAddresses: map[string]string{
 				netName: ipaddress,
 			},
 		}
 	} else {
-		instance.Status.VIPStatus[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
+		status := instance.Status.VIPStatus[hostnameDetails.Hostname]
+		status.HostRef = strings.ToLower(instance.Name)
+		status.IPAddresses[netName] = ipaddress
+		instance.Status.VIPStatus[hostnameDetails.Hostname] = status
 	}
+
 }

@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -116,10 +116,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// What VMs do we currently have for this OpenStackVMSet?
-	virtualMachineList, err := common.GetAllVirtualMachinesWithLabel(r, map[string]string{
-		OwnerNameLabelSelector: instance.Name,
-	}, instance.Namespace)
-
+	virtualMachineList, err := common.GetVirtualMachines(r, instance.Namespace, map[string]string{
+		common.OwnerNameLabelSelector: instance.Name,
+	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -146,7 +145,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// 2. Clean up resources used by the operator
 		// VirtualMachine resources
 		err := r.virtualMachineListFinalizerCleanup(instance, virtualMachineList)
-		if err != nil && !errors.IsNotFound(err) {
+		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
 		}
@@ -174,7 +173,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// check for required secrets
 	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		err2 := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err), ospdirectorv1beta1.VMSetWaiting)
 		return ctrl.Result{RequeueAfter: time.Second * 20}, err2
 	} else if err != nil {
@@ -182,7 +181,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Create/update secrets from templates
-	secretLabels := common.GetLabels(instance.Name, vmset.AppLabel)
+	secretLabels := common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
@@ -238,7 +237,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
-	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{"owner": "osp-director"})
+	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{
+		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -249,8 +250,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// ...verify that SriovNetwork and SriovNetworkNodePolicy exists for each SRIOV-configured network
 	sriovLabelSelectorMap := map[string]string{
-		"app":                       openstacknet.AppLabel,
-		OwnerNameSpaceLabelSelector: instance.Namespace,
+		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+		common.OwnerNameSpaceLabelSelector:      instance.Namespace,
 	}
 	snMap, err := openstacknet.GetSriovNetworksWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
 	if err != nil {
@@ -283,11 +284,107 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	//
+	// create hostnames for the requested number of systems
+	//
+	//   create new host allocations count
+	//
+	newCount := instance.Spec.VMCount - len(instance.Status.VMHosts)
+	newVMs := []string{}
+
+	//
+	//   create hostnames for the newHostnameCount
+	//
+
+	// If VmSet status map is nil, create it
+	if instance.Status.VMHosts == nil {
+		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	currentVMHostsStatus := instance.Status.VMHosts
+	for i := 0; i < newCount; i++ {
+		hostnameDetails := common.Hostname{
+			Basename: instance.Spec.RoleName,
+			VIP:      false,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if hostnameDetails.Hostname != "" {
+			if _, ok := instance.Status.VMHosts[hostnameDetails.Hostname]; !ok {
+				instance.Status.VMHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+					Hostname:             hostnameDetails.Hostname,
+					HostRef:              hostnameDetails.HostRef,
+					AnnotatedForDeletion: false,
+					IPAddresses:          map[string]string{},
+				}
+				newVMs = append(newVMs, hostnameDetails.Hostname)
+			}
+			r.Log.Info(fmt.Sprintf("VMSet hostname created: %s", hostnameDetails.Hostname))
+		}
+	}
+	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
+		r.Log.Info(fmt.Sprintf("Updating CR status with new hostname information, %d new VMs", len(newVMs)))
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return ctrl.Result{}, err
+		}
+	}
+
+	hostnameRefs := instance.GetHostnames()
+
+	//
+	//   check/update instance status for annotated for deletion marged VMs
+	//
+
+	// check for deletion marked VMs
+	currentVMHostsStatus = instance.Status.VMHosts
+	deletionAnnotatedVMs, err := r.getDeletedVMOSPHostnames(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for hostname, vmStatus := range instance.Status.VMHosts {
+
+		if len(deletionAnnotatedVMs) > 0 && common.StringInSlice(hostname, deletionAnnotatedVMs) {
+			// set annotatedForDeletion status of the VM to true, if not already
+			if !vmStatus.AnnotatedForDeletion {
+				vmStatus.AnnotatedForDeletion = true
+				r.Log.Info(fmt.Sprintf("Host deletion annotation set on VM %s", hostname))
+			}
+		} else {
+			// check if the vm was previously flagged as annotated and revert it
+			if vmStatus.AnnotatedForDeletion {
+				vmStatus.AnnotatedForDeletion = false
+				r.Log.Info(fmt.Sprintf("Host deletion annotation removed on VM %s", hostname))
+			}
+		}
+		if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
+			instance.Status.VMHosts[hostname] = vmStatus
+		}
+	}
+	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
+		r.Log.Info("Updating CR status with deletion annotation information")
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	//
+	//   Create/Update IPSet for the VMSet CR
+	//
+
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
 		Role:                instance.Spec.RoleName,
 		HostCount:           instance.Spec.VMCount,
 		AddToPredictableIPs: instance.Spec.IsTripleoRole,
+		HostNameRefs:        hostnameRefs,
 	}
 	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
@@ -295,13 +392,17 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
 		err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.VMCount), ospdirectorv1beta1.VMSetWaiting)
 		return ctrl.Result{RequeueAfter: time.Second * 10}, err
 	}
+
+	//
+	//   Create BaseImage for the VMSet
+	//
 
 	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
 	if instance.Spec.BaseImageVolumeName != "" {
@@ -325,7 +426,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	pvc := &corev1.PersistentVolumeClaim{}
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName), ospdirectorv1beta1.VMSetWaiting)
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	} else if err != nil {
@@ -341,6 +442,10 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Status.BaseImageDVReady = true
 	}
 
+	//
+	//   Handle VM removal from VMSet
+	//
+
 	existingVirtualMachines := map[string]string{}
 	removalAnnotatedVirtualMachines := []virtv1.VirtualMachine{}
 
@@ -348,7 +453,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	for _, virtualMachine := range virtualMachineList.Items {
 		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
 
-		if val, ok := virtualMachine.Annotations[vmset.VirtualMachineRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+		if val, ok := virtualMachine.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)
 		}
 	}
@@ -360,7 +465,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if len(removalAnnotatedVirtualMachines) > 0 && len(removalAnnotatedVirtualMachines) == oldVmsToRemoveCount {
 			for i := 0; i < oldVmsToRemoveCount; i++ {
 				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
-				// that have the "osp-director.openstack.org/vmset-delete-virtualmachine=yes" annotation
+				// that have the common.HostRemovalAnnotation annotation
 				err := r.virtualMachineDeprovision(instance, &removalAnnotatedVirtualMachines[0])
 
 				if err != nil {
@@ -384,71 +489,89 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	// We will fill this map will newly-added hosts as well as existing ones
-	controllerDetails := map[string]ospdirectorv1beta1.Host{}
+	//
+	//   Create/Update NetworkData
+	//
 
-	// How many new VirtualMachine allocations do we need (if any)?
-	newVmsNeededCount := instance.Spec.VMCount - len(existingVirtualMachines)
+	// We will fill this map with newly-added hosts as well as existing ones
+	vmDetails := map[string]ospdirectorv1beta1.Host{}
 
 	// Func to help increase DRY below in NetworkData loops
-	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, hostKey string) error {
+	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, vm *ospdirectorv1beta1.HostStatus) error {
 		// TODO: multi nic support with bindata template
 		netName := "ctlplane"
 
-		hostnameDetails := common.Hostname{
-			IDKey:    hostKey, //fmt.Sprintf("%s-%d", strings.ToLower(instance.Spec.Role), i),
-			Basename: instance.Spec.RoleName,
-			VIP:      false,
-		}
-
-		err := common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			return err
-		}
-		r.Log.Info(fmt.Sprintf("VMSet %s hostname set to %s", hostnameDetails.IDKey, hostnameDetails.Hostname))
-
-		controllerDetails[hostnameDetails.Hostname] = ospdirectorv1beta1.Host{
-			Hostname:          hostnameDetails.Hostname,
-			DomainName:        hostnameDetails.Hostname,
-			DomainNameUniq:    fmt.Sprintf("%s-%s", hostnameDetails.Hostname, instance.UID[0:4]),
-			IPAddress:         ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName],
-			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, hostnameDetails.Hostname),
+		vmDetails[vm.Hostname] = ospdirectorv1beta1.Host{
+			Hostname:          vm.Hostname,
+			HostRef:           vm.Hostname,
+			DomainName:        vm.Hostname,
+			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
+			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
+			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
 			Labels:            secretLabels,
 			NNCP:              nncMap,
 			NAD:               nadMap,
 		}
 
-		err = r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, controllerDetails[hostnameDetails.Hostname])
+		err = r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, vmDetails[vm.Hostname])
 		if err != nil {
 			return err
 		}
 
 		// update VMSet network status
 		for _, netName := range instance.Spec.Networks {
-			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.IDKey].IPAddresses[netName])
+			vm.HostRef = vm.Hostname
+			vm.IPAddresses[netName] = ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName]
 		}
-		r.Log.Info(fmt.Sprintf("VMSet network status for Hostname: %s - %s", instance.Status.VMHosts[hostnameDetails.IDKey].Hostname, instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses))
 
 		return nil
 	}
 
+	// store current VMHosts status to verify updated NetworkData change
+	currentVMHostsStatus = instance.Status.VMHosts
+
 	// Generate new host NetworkData first, if necessary
-	for i := 0; i < newVmsNeededCount; i++ {
-		if err := generateNetworkData(instance, ""); err != nil {
-			return ctrl.Result{}, err
+	for _, hostname := range newVMs {
+		vmStatus := instance.Status.VMHosts[hostname]
+
+		if hostname != "" {
+			if err := generateNetworkData(instance, &vmStatus); err != nil {
+				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
+				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, instance.Status.VMHosts[hostname], vmStatus))
+				instance.Status.VMHosts[hostname] = vmStatus
+			}
 		}
+
 	}
 
 	// Generate existing host NetworkData next
-	for _, virtualMachine := range existingVirtualMachines {
-		if err := generateNetworkData(instance, virtualMachine); err != nil {
+	for hostname, vmStatus := range instance.Status.VMHosts {
+
+		r.Log.Info(fmt.Sprintf("Create networkData for VM %s", hostname))
+		if !common.StringInSlice(hostname, newVMs) && hostname != "" {
+			if err := generateNetworkData(instance, &vmStatus); err != nil {
+				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
+				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, instance.Status.VMHosts[hostname], vmStatus))
+				instance.Status.VMHosts[hostname] = vmStatus
+			}
+		}
+	}
+	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Create controller VM objects and finally set VMSet status in etcd
+	//
+	//   Create the VM objects
+	//
 	if instance.Status.BaseImageDVReady {
-		for _, ctl := range controllerDetails {
+		for _, ctl := range vmDetails {
 			// Add chosen baseImageName to controller details, then create the VM instance
 			ctl.BaseImageName = baseImageName
 			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings)
@@ -543,7 +666,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(instance *ospdirect
 	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
 
 	// First check if the finalizer is still there and remove it if so
-	if controllerutil.ContainsFinalizer(virtualMachine, vmset.VirtualMachineFinalizerName) {
+	if controllerutil.ContainsFinalizer(virtualMachine, vmset.FinalizerName) {
 		err := r.virtualMachineFinalizerCleanup(virtualMachine)
 
 		if err != nil {
@@ -593,7 +716,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(instance *
 }
 
 func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.VirtualMachine) error {
-	controllerutil.RemoveFinalizer(virtualMachine, vmset.VirtualMachineFinalizerName)
+	controllerutil.RemoveFinalizer(virtualMachine, vmset.FinalizerName)
 	err := r.Client.Update(context.TODO(), virtualMachine)
 
 	if err != nil {
@@ -603,26 +726,6 @@ func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine
 	r.Log.Info(fmt.Sprintf("VirtualMachine finalizer removed: name %s", virtualMachine.Name))
 
 	return nil
-}
-
-func (r *OpenStackVMSetReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackVMSet, hostnameDetails *common.Hostname, netName string, ipaddress string) {
-
-	// If VMSet status map is nil, create it
-	if instance.Status.VMHosts == nil {
-		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
-	}
-
-	// Set network information status
-	if instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses == nil {
-		instance.Status.VMHosts[hostnameDetails.IDKey] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			IPAddresses: map[string]string{
-				netName: ipaddress,
-			},
-		}
-	} else {
-		instance.Status.VMHosts[hostnameDetails.IDKey].IPAddresses[netName] = ipaddress
-	}
 }
 
 // SetupWithManager -
@@ -646,7 +749,7 @@ func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      baseImageVolumeName,
 			Namespace: instance.Namespace,
-			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+			Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
 		},
 		Spec: cdiv1.DataVolumeSpec{
 			PVC: &corev1.PersistentVolumeClaimSpec{
@@ -758,12 +861,14 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		},
 	}
 
+	labels := common.GetLabels(instance, vmset.AppLabel, map[string]string{
+		common.OSPHostnameLabelSelector: ctl.Hostname,
+		"kubevirt.io/vm":                ctl.DomainName,
+	})
+
 	vmTemplate := virtv1.VirtualMachineInstanceTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"kubevirt.io/vm": ctl.DomainName,
-				"openstackvmsets.osp-director.openstack.org/ospcontroller": "True",
-			},
+			Labels: labels,
 		},
 		Spec: virtv1.VirtualMachineInstanceSpec{
 			Hostname:                      ctl.DomainName,
@@ -838,7 +943,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ctl.DomainName,
 			Namespace: instance.Namespace,
-			Labels:    common.GetLabelSelector(instance, vmset.AppLabel),
+			Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
 		},
 		Spec: virtv1.VirtualMachineSpec{
 			Template: &vmTemplate,
@@ -847,7 +952,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vm, func() error {
 
-		vm.Labels = common.GetLabelSelector(instance, vmset.AppLabel)
+		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 
 		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
 		vm.Spec.Running = &trueValue
@@ -907,4 +1012,32 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 	instance.Status.VMHosts[ctl.Hostname] = hostStatus
 
 	return nil
+}
+
+func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(instance *ospdirectorv1beta1.OpenStackVMSet) ([]string, error) {
+
+	var annotatedVMs []string
+
+	labelSelector := map[string]string{
+		common.OwnerUIDLabelSelector:       string(instance.UID),
+		common.OwnerNameSpaceLabelSelector: instance.Namespace,
+		common.OwnerNameLabelSelector:      instance.Name,
+	}
+
+	vmHostList, err := common.GetVirtualMachines(r, instance.Namespace, labelSelector)
+	if err != nil {
+		return annotatedVMs, err
+	}
+
+	// Get list of OSP hostnames from HostRemovalAnnotation annotated VMs
+	for _, vm := range vmHostList.Items {
+
+		if val, ok := vm.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+			ospHostname := vm.Spec.Template.Spec.Hostname
+			r.Log.Info(fmt.Sprintf("VM %s/%s annotated for deletion", vm.Name, ospHostname))
+			annotatedVMs = append(annotatedVMs, ospHostname)
+		}
+	}
+
+	return annotatedVMs, nil
 }

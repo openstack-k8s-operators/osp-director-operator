@@ -13,7 +13,6 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -26,16 +25,28 @@ type AssignmentError struct {
 
 // AssignIPDetails -
 type AssignIPDetails struct {
-	IPnet               net.IPNet
-	RangeStart          net.IP
-	RangeEnd            net.IP
-	Reservelist         []ospdirectorv1beta1.IPReservation
-	ExcludeRanges       []string
-	IDKey               string
-	Hostname            string
+	IPnet      net.IPNet
+	RangeStart net.IP
+	RangeEnd   net.IP
+	// RoleReservelist - Reservelist of all reservations of the role
+	RoleReservelist []ospdirectorv1beta1.IPReservation
+	// Reservelist - Reservelist of all reservations
+	Reservelist   []ospdirectorv1beta1.IPReservation
+	ExcludeRanges []string
+	HostRef       string
+	Hostname      string
+	VIP           bool
+	Deleted       bool
+}
+
+// IPSet - ipset details
+type IPSet struct {
+	Networks            []string
 	Role                string
-	VIP                 bool
+	HostCount           int
 	AddToPredictableIPs bool
+	VIP                 bool
+	HostNameRefs        map[string]string
 }
 
 func (a AssignmentError) Error() string {
@@ -132,23 +143,20 @@ MAINITERATION:
 		// Ok, this one looks like we can assign it!
 		performedassignment = true
 
-		//logging.Debugf("Reserving IP: |%v|", stringip+" "+containerID)
-		assignIPDetails.Reservelist = append(assignIPDetails.Reservelist, ospdirectorv1beta1.IPReservation{
-			IDKey:               assignIPDetails.IDKey,
-			Hostname:            assignIPDetails.Hostname,
-			IP:                  assignedip.String(),
-			Role:                assignIPDetails.Role,
-			VIP:                 assignIPDetails.VIP,
-			AddToPredictableIPs: assignIPDetails.AddToPredictableIPs,
+		assignIPDetails.RoleReservelist = append(assignIPDetails.RoleReservelist, ospdirectorv1beta1.IPReservation{
+			Hostname: assignIPDetails.Hostname,
+			IP:       assignedip.String(),
+			VIP:      assignIPDetails.VIP,
+			Deleted:  assignIPDetails.Deleted,
 		})
 		break
 	}
 
 	if !performedassignment {
-		return net.IP{}, assignIPDetails.Reservelist, AssignmentError{firstip, lastip, assignIPDetails.IPnet}
+		return net.IP{}, assignIPDetails.RoleReservelist, AssignmentError{firstip, lastip, assignIPDetails.IPnet}
 	}
 
-	return assignedip, assignIPDetails.Reservelist, nil
+	return assignedip, assignIPDetails.RoleReservelist, nil
 }
 
 // GetIPRange returns the first and last IP in a range
@@ -246,19 +254,10 @@ func IPToBigInt(IPv6Addr net.IP) *big.Int {
 	return IPv6Int
 }
 
-// IPSet - ipset details
-type IPSet struct {
-	Networks            []string
-	Role                string
-	HostCount           int
-	AddToPredictableIPs bool
-	VIP                 bool
-}
-
 // OvercloudipsetCreateOrUpdate -
 func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset IPSet) (*ospdirectorv1beta1.OpenStackIPSet, controllerutil.OperationResult, error) {
 	overcloudIPSet := &ospdirectorv1beta1.OpenStackIPSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      obj.GetName(),
 			Namespace: obj.GetNamespace(),
 			Labels: map[string]string{
@@ -273,6 +272,7 @@ func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset I
 		overcloudIPSet.Spec.HostCount = ipset.HostCount
 		overcloudIPSet.Spec.VIP = ipset.VIP
 		overcloudIPSet.Spec.AddToPredictableIPs = ipset.AddToPredictableIPs
+		overcloudIPSet.Spec.HostNameRefs = ipset.HostNameRefs
 
 		err := controllerutil.SetControllerReference(obj, overcloudIPSet, r.GetScheme())
 

@@ -143,8 +143,15 @@ spec:
               vipStatus:
                 additionalProperties:
                   description: HostStatus represents the hostname and IP info for
-                    a specific VM
+                    a specific host
                   properties:
+                    annotatedForDeletion:
+                      default: false
+                      description: Host annotated for deletion
+                      type: boolean
+                    hostRef:
+                      default: unassigned
+                      type: string
                     hostname:
                       type: string
                     ipaddresses:
@@ -156,8 +163,9 @@ spec:
                         VMs in this OpenStackVmSet
                       type: string
                   required:
+                  - annotatedForDeletion
+                  - hostRef
                   - hostname
-                  - ipaddresses
                   - provisioningState
                   type: object
                 type: object

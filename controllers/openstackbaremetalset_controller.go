@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -96,7 +96,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackBaremetalSet{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
-		if errors.IsNotFound(err) {
+		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
 			// request.  Owned objects are automatically garbage collected.  For
 			// additional cleanup logic use finalizers. Return and don't requeue.
@@ -128,7 +128,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		// 2. Clean up resources used by the operator
 		// BareMetalHost resources in the openshift-machine-api namespace (don't delete, just deprovision)
 		err := r.baremetalHostCleanup(instance)
-		if err != nil && !errors.IsNotFound(err) {
+		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
 		}
@@ -137,7 +137,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		// a. Delete objects in non openstack namespace which have the owner reference label
 		//    - secret objects in openshift-machine-api namespace
 		err = r.deleteOwnerRefLabeledObjects(instance)
-		if err != nil && !errors.IsNotFound(err) {
+		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
 		}
@@ -196,7 +196,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	} else {
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
-		if err != nil && errors.IsNotFound(err) {
+		if err != nil && k8s_errors.IsNotFound(err) {
 			msg := fmt.Sprintf("OpenStackProvisionServer %s not found reconcile again in 10 seconds", instance.Spec.ProvisionServerName)
 			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
 			instance.Status.ProvisioningStatus.Reason = msg
@@ -221,7 +221,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	// First we need the public SSH key, which should be stored in a secret
 	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		msg := fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err)
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
 		instance.Status.ProvisioningStatus.Reason = msg
@@ -238,11 +238,102 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.OpenStackBaremetalHostStatus{}
 	}
 
+	//
+	// create hostnames for the requested number of systems
+	//
+	//   create new host allocations count
+	//
+	newCount := instance.Spec.Count - len(instance.Status.BaremetalHosts)
+
+	//
+	//   create hostnames for the newCount
+	//
+
+	currentBMHStatus := instance.Status.BaremetalHosts
+	for i := 0; i < newCount; i++ {
+		hostnameDetails := common.Hostname{
+			Basename: instance.Spec.RoleName,
+			VIP:      false,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if _, ok := instance.Status.BaremetalHosts[hostnameDetails.Hostname]; !ok {
+			instance.Status.BaremetalHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.OpenStackBaremetalHostStatus{
+				Hostname: hostnameDetails.Hostname,
+				HostRef:  hostnameDetails.HostRef,
+			}
+		}
+		r.Log.Info(fmt.Sprintf("BaremetalSet hostname created %s", hostnameDetails.Hostname))
+	}
+
+	//
+	// update status if new hostnames got created
+	//
+	if !reflect.DeepEqual(instance.Status.BaremetalHosts, currentBMHStatus) {
+		err := r.setStatus(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	hostnameRefs := instance.GetHostnames()
+
+	//
+	//   check/update instance status for annotated for deletion marged BMH
+	//
+
+	// check for deletion marked BMH
+	currentBMHStatus = instance.Status.BaremetalHosts
+	deletionAnnotatedBMHs, err := common.GetDeletionAnnotatedBmhHosts(r, "openshift-machine-api", map[string]string{
+		common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
+		common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, bmhStatus := range instance.Status.BaremetalHosts {
+		bmhName := bmhStatus.HostRef
+		if len(deletionAnnotatedBMHs) > 0 && common.StringInSlice(bmhName, deletionAnnotatedBMHs) {
+			// set annotatedForDeletion status of the BMH to true, if not already
+			if !instance.Status.BaremetalHosts[bmhStatus.Hostname].AnnotatedForDeletion {
+				bmhStatus.AnnotatedForDeletion = true
+				//updateStatus = true
+				r.Log.Info(fmt.Sprintf("Host deletion annotation set on BMH %s", bmhName))
+			}
+		} else {
+			// check if the BMH was previously flagged as annotated and revert it
+			if bmhStatus.AnnotatedForDeletion {
+				bmhStatus.AnnotatedForDeletion = false
+				//updateStatus = true
+				r.Log.Info(fmt.Sprintf("Host deletion annotation removed on BMH %s", bmhName))
+			}
+		}
+		if !reflect.DeepEqual(instance.Status.BaremetalHosts[bmhStatus.Hostname], bmhStatus) {
+			instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
+		}
+	}
+	if !reflect.DeepEqual(instance.Status.BaremetalHosts, currentBMHStatus) {
+		err = r.setStatus(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	//
+	//   Create/Update IPSet for the BMSet CR
+	//
+
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
 		Role:                instance.Spec.RoleName,
 		HostCount:           instance.Spec.Count,
 		AddToPredictableIPs: true,
+		HostNameRefs:        hostnameRefs,
 	}
 	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
@@ -250,7 +341,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.Count {
@@ -263,7 +354,9 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{RequeueAfter: time.Second * 10}, err2
 	}
 
-	// Provision / deprovision requested replicas
+	//
+	//   Provision / deprovision requested replicas
+	//
 	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, passwordSecret, ipset); err != nil {
 		// As we know, this transient "object has been modified, please try again" error occurs from time
 		// to time in the reconcile loop.  Let's avoid counting that as an error for the purposes of
@@ -339,12 +432,12 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 		result := []reconcile.Request{}
 		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
-		if uid, ok := label[baremetalset.OwnerUIDLabelSelector]; ok {
+		if uid, ok := label[common.OwnerUIDLabelSelector]; ok {
 			r.Log.Info(fmt.Sprintf("BareMetalHost object %s marked with OSP owner ref: %s", o.GetName(), uid))
 			// return namespace and Name of CR
 			name := client.ObjectKey{
-				Namespace: label[baremetalset.OwnerNameSpaceLabelSelector],
-				Name:      label[baremetalset.OwnerNameLabelSelector],
+				Namespace: label[common.OwnerNameSpaceLabelSelector],
+				Name:      label[common.OwnerNameLabelSelector],
 			}
 			result = append(result, reconcile.Request{NamespacedName: name})
 		}
@@ -415,14 +508,14 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 			existingBaremetalHosts[baremetalHost.ObjectMeta.Name] = baremetalHost.ObjectMeta.Name
 
 			// Prep for possible replica scale-down below
-			if val, ok := baremetalHost.Annotations[baremetalset.BaremetalHostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+			if val, ok := baremetalHost.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 				removalAnnotatedBaremetalHosts = append(removalAnnotatedBaremetalHosts, baremetalHost.ObjectMeta.Name)
 			}
 		}
 	}
 
 	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.  First we
-	// choose BaremetalHosts with the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes"
+	// choose BaremetalHosts with the "osp-director.openstack.org/delete-host=true"
 	// annotation.  Then, if there are still BaremetalHosts left to deprovision based on the requested
 	// replica count, we will log a warning indicating that we cannot (fully or partially) honor the
 	// scale-down.
@@ -435,11 +528,17 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 
 		for i := 0; i < oldBmhsToRemoveCount; i++ {
 			// First choose BaremetalHosts to remove from the prepared list of BaremetalHosts
-			// that have the "osp-director.openstack.org/baremetalset-delete-baremetalhost=yes" annotation
+			// that have the "osp-director.openstack.org/delete-host=true" annotation
+			var op controllerutil.OperationResult
 
 			if len(removalAnnotatedBaremetalHosts) > 0 {
-				err := r.baremetalHostDeprovision(instance, removalAnnotatedBaremetalHosts[0])
+				// get OSBms status corresponding to bmh
+				bmhStatus, err := r.getBmhHostRefStatus(instance, removalAnnotatedBaremetalHosts[0])
+				if err != nil && k8s_errors.IsNotFound(err) {
+					return err
+				}
 
+				err = r.baremetalHostDeprovision(instance, bmhStatus)
 				if err != nil {
 					return err
 				}
@@ -452,6 +551,22 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 					removalAnnotatedBaremetalHosts = removalAnnotatedBaremetalHosts[1:]
 				} else {
 					removalAnnotatedBaremetalHosts = []string{}
+				}
+
+				ipsetDetails := common.IPSet{
+					Networks:            instance.Spec.Networks,
+					Role:                instance.Spec.RoleName,
+					HostCount:           instance.Spec.Count,
+					AddToPredictableIPs: true,
+					HostNameRefs:        instance.GetHostnames(),
+				}
+				ipset, op, err = common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+				if err != nil {
+					return err
+				}
+
+				if op != controllerutil.OperationResultNone {
+					r.Log.Info(fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
 				}
 
 				// We removed a removal-annotated BaremetalHost, so increment the removed count
@@ -539,26 +654,54 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 	return nil
 }
 
+func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string) (ospdirectorv1beta1.OpenStackBaremetalHostStatus, error) {
+
+	for _, bmhStatus := range instance.Status.BaremetalHosts {
+		if bmhStatus.HostRef == bmh {
+			return bmhStatus, nil
+		}
+	}
+
+	return ospdirectorv1beta1.OpenStackBaremetalHostStatus{}, k8s_errors.NewNotFound(corev1.Resource("OpenStackBaremetalHostStatus"), "not found")
+}
+
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
 func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet) error {
 	// Prepare cloudinit (create secret)
 	sts := []common.Template{}
-	secretLabels := common.GetLabels(instance.Name, baremetalset.AppLabel)
+	secretLabels := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{})
 
-	hostnameDetails := common.Hostname{
-		IDKey:    bmh,
-		Basename: instance.Spec.RoleName,
-		VIP:      false,
-	}
-	err := common.CreateOrGetHostname(instance, &hostnameDetails)
-	if err != nil {
-		return err
+	//
+	//  get already registerd OSBms bmh status for bmh name
+	//
+	bmhStatus, err := r.getBmhHostRefStatus(instance, bmh)
+	//
+	//  if bmhStatus is not found, get free hostname from instance.Status.baremetalHosts (HostRef == "unassigned") for the new bmh
+	//
+	if err != nil && k8s_errors.IsNotFound(err) {
+		for _, bmhStatus = range instance.Status.BaremetalHosts {
+
+			if bmhStatus.HostRef == "unassigned" {
+
+				bmhStatus.HostRef = bmh
+				instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
+
+				// update status with host assignment
+				err := r.setStatus(instance)
+				if err != nil {
+					return err
+				}
+				r.Log.Info(fmt.Sprintf("Assigned %s to baremetalhost %s", bmhStatus.Hostname, bmh))
+
+				break
+			}
+		}
 	}
 
 	// User data cloud-init secret
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
-	templateParameters["Hostname"] = hostnameDetails.Hostname
+	templateParameters["Hostname"] = bmhStatus.Hostname
 
 	// use same NodeRootPassword paremater as tripleo have
 	if passwordSecret != nil && len(passwordSecret.Data["NodeRootPassword"]) > 0 {
@@ -578,7 +721,8 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	}
 
 	sts = append(sts, userDataSt)
-	ipCidr := ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses["ctlplane"]
+	ipCidr := ipset.Status.HostIPs[bmhStatus.Hostname].IPAddresses["ctlplane"]
+
 	ip, network, _ := net.ParseCIDR(ipCidr)
 	netMask := network.Mask
 
@@ -605,7 +749,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	sts = append(sts, networkDataSt)
 
 	err = common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
-
 	if err != nil {
 		return err
 	}
@@ -613,7 +756,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	// Provision the BaremetalHost
 	foundBaremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, foundBaremetalHost)
-
 	if err != nil {
 		return err
 	}
@@ -622,11 +764,9 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 
 	// Set our ownership labels so we can watch this resource
 	// Set ownership labels that can be found by the respective controller kind
-	labelSelector := map[string]string{
-		baremetalset.OwnerUIDLabelSelector:       string(instance.UID),
-		baremetalset.OwnerNameSpaceLabelSelector: instance.Namespace,
-		baremetalset.OwnerNameLabelSelector:      instance.Name,
-	}
+	labelSelector := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
+		common.OSPHostnameLabelSelector: bmhStatus.Hostname,
+	})
 
 	foundBaremetalHost.GetObjectMeta().SetLabels(labels.Merge(foundBaremetalHost.GetObjectMeta().GetLabels(), labelSelector))
 
@@ -649,39 +789,50 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 		return err
 	}
 
-	// Set status (add this BaremetalHost entry)
-	instance.Status.BaremetalHosts[foundBaremetalHost.GetName()] = ospdirectorv1beta1.OpenStackBaremetalHostStatus{
-		Hostname:              hostnameDetails.Hostname,
-		UserDataSecretName:    userDataSecretName,
-		NetworkDataSecretName: networkDataSecretName,
-		CtlplaneIP:            ipCidr,
-		ProvisioningState:     string(foundBaremetalHost.Status.Provisioning.State),
+	// Update status with BMH provisioning details
+	bmhStatus.UserDataSecretName = userDataSecretName
+	bmhStatus.NetworkDataSecretName = networkDataSecretName
+	bmhStatus.CtlplaneIP = ipCidr
+	bmhStatus.ProvisioningState = string(foundBaremetalHost.Status.Provisioning.State)
+
+	if !reflect.DeepEqual(instance.Status.BaremetalHosts[bmhStatus.Hostname], bmhStatus) {
+		instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
+
+		err := r.setStatus(instance)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+
 }
 
 // Deprovision a BaremetalHost via Metal3 (and delete its bootstrapping secret)
-func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string) error {
+func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh ospdirectorv1beta1.OpenStackBaremetalHostStatus) error {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, baremetalHost)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
 
 	if err != nil {
 		return err
 	}
 
-	r.Log.Info(fmt.Sprintf("Deallocating BaremetalHost: %s", bmh))
+	r.Log.Info(fmt.Sprintf("Deallocating BaremetalHost: %s", bmh.HostRef))
 
 	// Remove our ownership labels
 	labels := baremetalHost.GetObjectMeta().GetLabels()
-	delete(labels, baremetalset.OwnerUIDLabelSelector)
-	delete(labels, baremetalset.OwnerNameSpaceLabelSelector)
-	delete(labels, baremetalset.OwnerNameLabelSelector)
+	labelSelector := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
+		common.OSPHostnameLabelSelector: baremetalHost.GetObjectMeta().GetLabels()[common.OSPHostnameLabelSelector],
+	})
+	for key := range labelSelector {
+		delete(labels, key)
+	}
+	delete(labels, common.OSPHostnameLabelSelector)
 	baremetalHost.GetObjectMeta().SetLabels(labels)
 
 	// Remove deletion annotation (if any)
 	annotations := baremetalHost.GetObjectMeta().GetAnnotations()
-	delete(annotations, baremetalset.BaremetalHostRemovalAnnotation)
+	delete(annotations, common.HostRemovalAnnotation)
 	baremetalHost.GetObjectMeta().SetAnnotations(annotations)
 
 	baremetalHost.Spec.Online = false
@@ -697,7 +848,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *osp
 	// Also remove userdata and networkdata secrets
 	secret := &corev1.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh),
+			Name:      fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh.HostRef),
 			Namespace: "openshift-machine-api",
 		},
 	}
@@ -709,7 +860,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *osp
 
 	secret = &corev1.Secret{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh),
+			Name:      fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh.HostRef),
 			Namespace: "openshift-machine-api",
 		},
 	}
@@ -720,7 +871,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *osp
 	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
 
 	// Set status (remove this BaremetalHost entry)
-	delete(instance.Status.BaremetalHosts, bmh)
+	delete(instance.Status.BaremetalHosts, bmh.Hostname)
 
 	return nil
 }
@@ -728,8 +879,8 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(instance *osp
 // Deprovision all associated BaremetalHosts for this OpenStackBaremetalSet via Metal3
 func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(instance *ospdirectorv1beta1.OpenStackBaremetalSet) error {
 	if instance.Status.BaremetalHosts != nil {
-		for bmhName := range instance.Status.BaremetalHosts {
-			err := r.baremetalHostDeprovision(instance, bmhName)
+		for _, bmh := range instance.Status.BaremetalHosts {
+			err := r.baremetalHostDeprovision(instance, bmh)
 
 			if err != nil {
 				return err
@@ -746,11 +897,8 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(instance *ospdire
    - user-data secret, openshift-machine-api namespace
 */
 func (r *OpenStackBaremetalSetReconciler) deleteOwnerRefLabeledObjects(instance *ospdirectorv1beta1.OpenStackBaremetalSet) error {
-	labelSelectorMap := map[string]string{
-		baremetalset.OwnerUIDLabelSelector:       string(instance.UID),
-		baremetalset.OwnerNameSpaceLabelSelector: instance.Namespace,
-		baremetalset.OwnerNameLabelSelector:      instance.Name,
-	}
+
+	labelSelectorMap := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{})
 
 	// delete secrets in openshift-machine-api namespace
 	secrets, err := common.GetSecrets(r, "openshift-machine-api", labelSelectorMap)

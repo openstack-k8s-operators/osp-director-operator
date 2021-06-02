@@ -99,6 +99,7 @@ const (
 // Host -
 type Host struct {
 	Hostname          string                                            `json:"hostname"`
+	HostRef           string                                            `json:"hostRef"`
 	DomainName        string                                            `json:"domainName"`
 	DomainNameUniq    string                                            `json:"domainNameUniq"`
 	IPAddress         string                                            `json:"ipAddress"`
@@ -130,8 +131,8 @@ type OpenStackVMSet struct {
 // GetHostnames -
 func (vms OpenStackVMSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for key, val := range vms.Status.VMHosts {
-		ret[key] = val.Hostname
+	for _, val := range vms.Status.VMHosts {
+		ret[val.Hostname] = val.HostRef
 	}
 	return ret
 }

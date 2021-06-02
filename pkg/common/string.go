@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package common
 
-const (
-	// ManifestPath - bindata path
-	ManifestPath = "./bindata"
-	// OwnerUIDLabelSelector -
-	OwnerUIDLabelSelector = "osp-director.openstack.org/uid"
-	// OwnerNameSpaceLabelSelector -
-	OwnerNameSpaceLabelSelector = "osp-director.openstack.org/namespace"
-	// OwnerNameLabelSelector -
-	OwnerNameLabelSelector = "osp-director.openstack.org/name"
-)
+// StringInSlice - is string in slice
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
