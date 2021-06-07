@@ -7,3 +7,4 @@ spec:
   gitSecret: git-secret
   heatEnvConfigMap: tripleo-deploy-config-custom
   tarballConfigMap: tripleo-tarball-config
+  #debug: false

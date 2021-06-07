@@ -29,6 +29,9 @@ until openstack stack list &> /dev/null || [ "$HEAT_COUNT" -gt 180 ]; do
   sleep 2
 done
 
+# delete the stack if it exists (should only happen on retries)
+openstack stack delete overcloud -y --wait &>/dev/null || true
+
 # create a temporary scratch directory to assemble the Heat templates
 TEMPLATES_DIR=$HOME/tripleo-deploy-scratch/tripleo-heat-installer-templates
 rm -Rf "$TEMPLATES_DIR"
