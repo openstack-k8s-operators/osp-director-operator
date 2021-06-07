@@ -102,12 +102,44 @@ type OpenStackNetRoleStatus struct {
 type OpenStackNetStatus struct {
 	// Reservations IP address reservations per role
 	RoleReservations map[string]OpenStackNetRoleStatus `json:"roleReservations"`
+
+	// ReservedIPCount - the count of all IPs ever reserved on this network
+	ReservedIPCount int `json:"reservedIpCount"`
+
+	// CurrentState - the overall state of this network
+	CurrentState NetState `json:"currentState"`
+
+	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
+	// but we are using the same approach in other CRDs for now anyhow
+	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
+
+// NetState - the state of this openstack network
+type NetState string
+
+const (
+	// NetWaiting - the network configuration is blocked by prerequisite objects
+	NetWaiting NetState = "Waiting"
+	// NetInitializing - we are waiting for underlying OCP network resource(s) to appear
+	NetInitializing NetState = "Initializing"
+	// NetConfiguring - the underlying network resources are configuring the nodes
+	NetConfiguring NetState = "Configuring"
+	// NetConfigured - the nodes have been configured by the underlying network resources
+	NetConfigured NetState = "Configured"
+	// NetError - the network configuration hit a generic error
+	NetError NetState = "Error"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osnet;osnets
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Net"
+// +kubebuilder:printcolumn:name="CIDR",type=string,JSONPath=`.spec.cidr`
+// +kubebuilder:printcolumn:name="VLAN",type=string,JSONPath=`.spec.vlan`
+// +kubebuilder:printcolumn:name="Gateway",type=string,JSONPath=`.spec.gateway`
+// +kubebuilder:printcolumn:name="Reserved IPs",type="integer",JSONPath=".status.reservedIpCount"
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
 // OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
 type OpenStackNet struct {

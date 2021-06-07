@@ -20,12 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
+	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,6 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -132,15 +138,25 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
+	// Variables for setting state, which are needed in some cases to properly
+	// set status within the conditional flow below
+	var netState ospdirectorv1beta1.NetState
+	var netStateMsg string
+
 	// If RoleReservations status map is nil, create it
 	if instance.Status.RoleReservations == nil {
 		instance.Status.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleStatus{}
 	}
 
+	// Used in comparisons below to determine whether a status update is actually needed
+	oldStatus := instance.Status.DeepCopy()
+
 	// If we have an SRIOV definition on this network, use that.  Otherwise assume the
 	// non-SRIOV configuration must be present
 	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
 		if err := r.ensureSriov(instance); err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 	} else {
@@ -152,6 +168,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
 		if err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -160,6 +178,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		desiredStateByte, err := json.Marshal(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy)
 		if err != nil {
 			r.Log.Error(err, fmt.Sprintf("Error marshal NodeNetworkConfigurationPolicy desired state: %v", instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy))
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -167,6 +187,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		err = json.Unmarshal(desiredStateByte, &desiredState)
 		if err != nil {
 			r.Log.Error(err, fmt.Sprintf("Error unmarshal NodeNetworkConfigurationPolicy desired state: %v", string(desiredStateByte)))
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -186,6 +208,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// create nad
 		err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
 		if err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -197,11 +221,86 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		err = common.CreateOrUpdateNetworkAttachmentDefinition(r, instance, instance.Kind, metav1.NewControllerRef(instance, instance.GroupVersionKind()), &nad)
 		if err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
+		}
+
+		// If we get this far, we assume the NAD been successfully created (NAD does not
+		// have a status block we can examine), so now examine the status of the NNCP
+		nncpList := &nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
+
+		// Can't use "r.Client.Get" here, as the NNCP is cluster-scoped and does not have a namespace.  We require the
+		// NNCP resource struct object in order to examine its status, but the NNCP was created earlier via a server-side
+		// apply.  Thus we don't already have the struct object in memory, and must acquire it by asking for a list of
+		// NNCPs filtered by our label selector (which should return just the one resource we seek)
+		err = r.Client.List(context.TODO(), nncpList, &client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})),
+		})
+
+		if err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
+			return ctrl.Result{}, err
+		}
+
+		if len(nncpList.Items) < 1 {
+			msg := fmt.Sprintf("OpenStackNet %s associated NodeNetworkConfigurationPolicy is still initializing, requeuing...", instance.Name)
+			instance.Status.CurrentState = ospdirectorv1beta1.NetInitializing
+			err = r.setStatus(instance, oldStatus, msg)
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+
+		nncp := nncpList.Items[0]
+
+		netState = ospdirectorv1beta1.NetConfiguring
+		netStateMsg = fmt.Sprintf("OpenStackNet %s is configuring targeted node(s)", instance.Name)
+
+		for _, condition := range nncp.Status.Conditions {
+			if condition.Status == corev1.ConditionTrue {
+				if condition.Type == nmstateapi.NodeNetworkConfigurationPolicyConditionAvailable {
+					netState = ospdirectorv1beta1.NetConfigured
+					netStateMsg = fmt.Sprintf("OpenStackNet %s has been successfully configured on targeted node(s)", instance.Name)
+					break
+				} else if condition.Type == nmstateapi.NodeNetworkConfigurationPolicyConditionDegraded {
+					instance.Status.CurrentState = ospdirectorv1beta1.NetError
+					_ = r.setStatus(instance, oldStatus, err.Error())
+					return ctrl.Result{}, err
+				}
+			}
 		}
 	}
 
-	return ctrl.Result{}, nil
+	// Count IP assignments and update status
+	totalIps := 0
+
+	for _, roleIps := range instance.Status.RoleReservations {
+		totalIps += len(roleIps.Reservations)
+	}
+
+	instance.Status.ReservedIPCount = totalIps
+	instance.Status.CurrentState = netState
+
+	err = r.setStatus(instance, oldStatus, netStateMsg)
+	return ctrl.Result{}, err
+}
+
+func (r *OpenStackNetReconciler) setStatus(instance *ospdirectorv1beta1.OpenStackNet, oldStatus *ospdirectorv1beta1.OpenStackNetStatus, msg string) error {
+
+	if msg != "" {
+		r.Log.Info(msg)
+	}
+
+	if !reflect.DeepEqual(instance.Status, oldStatus) {
+		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+		// TODO: Using msg as reason and message for now
+		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(instance.Status.CurrentState), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			r.Log.Error(err, "OpenStackNet update status error: %v")
+			return err
+		}
+	}
+	return nil
 }
 
 // SetupWithManager -
@@ -247,6 +346,7 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&networkv1.NetworkAttachmentDefinition{}).
+		Owns(&nmstatev1alpha1.NodeNetworkConfigurationPolicy{}).
 		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}}, sriovNetworkFn).
 		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}}, sriovNetworkNodePolicyFn).
 		Complete(r)

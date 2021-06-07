@@ -21,7 +21,7 @@ require (
 	github.com/tidwall/gjson v1.6.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/tools v0.1.2 // indirect
+	golang.org/x/tools v0.1.3 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/grpc/examples v0.0.0-20210512000516-62adda2ece5e // indirect
 	k8s.io/api v0.19.3
