@@ -73,7 +73,7 @@ spec:
   config:
     env:
     - name: WATCH_NAMESPACE
-      value: openstack
+      value: openstack,openshift-machine-api,openshift-sriov-network-operator
   source: osp-director-operator-index
   sourceNamespace: openstack
   name: osp-director-operator
