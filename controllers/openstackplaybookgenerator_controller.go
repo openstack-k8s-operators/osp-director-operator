@@ -327,13 +327,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
 			// the job failed in error
-			r.Log.Info("Job failed... Deleting Ephemeral Heat...")
 			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-
-			deleteErr := r.Client.Delete(context.TODO(), heat)
-			if deleteErr != nil && !k8s_errors.IsNotFound(deleteErr) {
-				return ctrl.Result{}, deleteErr
-			}
+			r.Log.Info("Job failed... Please check job/pod logs.")
 			return ctrl.Result{}, err
 		} else if requeue {
 			msg := "Waiting on Playbook Generation..."

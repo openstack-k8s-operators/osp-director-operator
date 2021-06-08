@@ -48,10 +48,11 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 	if cr.Spec.Debug {
 		cmd = []string{"/bin/sleep", "infinity"}
 	}
+	restartPolicy := corev1.RestartPolicyNever
 
 	job.Spec.BackoffLimit = &backoffLimit
 	job.Spec.Template.Spec = corev1.PodSpec{
-		RestartPolicy:      corev1.RestartPolicyOnFailure,
+		RestartPolicy:      restartPolicy,
 		ServiceAccountName: openstackclient.ServiceAccount,
 		SecurityContext: &corev1.PodSecurityContext{
 			RunAsUser:  &runAsUser,
