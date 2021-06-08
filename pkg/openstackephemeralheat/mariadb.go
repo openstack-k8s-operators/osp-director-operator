@@ -14,6 +14,7 @@ func MariadbGetLabels(name string) map[string]string {
 
 // MariadbPod -
 func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
+	var runAsUser = int64(MySQLUID)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -22,7 +23,10 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			Labels:    MariadbGetLabels(instance.Name),
 		},
 		Spec: corev1.PodSpec{
-			//ServiceAccountName: "mariadb",
+			ServiceAccountName: ServiceAccount,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser: &runAsUser,
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "mariadb",
