@@ -36,6 +36,8 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
+	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
+	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -298,33 +300,41 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
-	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+	podWatcher := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
-		// get all CRs from the same namespace
-		crs := &ospdirectorv1beta1.OpenStackControlPlaneList{}
-		listOpts := []client.ListOption{
-			client.InNamespace(obj.GetNamespace()),
+		// verify if pods label match any of:
+		// osp-director.openstack.org/controller: osp-vmset
+		// osp-director.openstack.org/controller: osp-openstackclient
+		controllers := map[string]bool{
+			vmset.AppLabel:           true,
+			openstackclient.AppLabel: true,
 		}
-		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to retrieve CRs %v")
-			return nil
-		}
+		labels := obj.GetLabels()
+		controller, ok := labels[common.OwnerControllerNameLabelSelector]
+		if ok || controllers[controller] {
+			// get all CRs from the same namespace
+			crs := &ospdirectorv1beta1.OpenStackControlPlaneList{}
+			listOpts := []client.ListOption{
+				client.InNamespace(obj.GetNamespace()),
+			}
+			if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
+				r.Log.Error(err, "Unable to retrieve CRs %v")
+				return nil
+			}
 
-		for _, cr := range crs.Items {
-			if obj.GetNamespace() == cr.Namespace {
-				// return namespace and Name of CR
-				name := client.ObjectKey{
-					Namespace: cr.Namespace,
-					Name:      cr.Name,
+			for _, cr := range crs.Items {
+				if obj.GetNamespace() == cr.Namespace {
+					// return namespace and Name of CR
+					name := client.ObjectKey{
+						Namespace: cr.Namespace,
+						Name:      cr.Name,
+					}
+					result = append(result, reconcile.Request{NamespacedName: name})
 				}
-				result = append(result, reconcile.Request{NamespacedName: name})
 			}
 		}
-		if len(result) > 0 {
-			return result
-		}
-		return nil
+		return result
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -332,9 +342,9 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Owns(&corev1.Secret{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
-		// watch pods in the same namespace as we want to reconcile if
-		// e.g. a controller vm gets destroyed
-		Watches(&source.Kind{Type: &corev1.Pod{}}, namespacedFn).
+		// watch vmset and openstackclient pods in the same namespace
+		// as we want to reconcile if VMs or openstack client pods change
+		Watches(&source.Kind{Type: &corev1.Pod{}}, podWatcher).
 		Complete(r)
 }
 
