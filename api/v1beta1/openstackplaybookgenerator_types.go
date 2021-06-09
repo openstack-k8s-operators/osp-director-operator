@@ -31,8 +31,8 @@ type OpenStackPlaybookGeneratorSpec struct {
 	// Heat Settings
 	EphemeralHeatSettings OpenStackEphemeralHeatSpec `json:"ephemeralHeatSettings,omitempty"`
 	// +kubebuilder:default=false
-	// Debug
-	Debug bool `json:"debug,omitempty"`
+	// Interactive enables the user to rsh into the playbook generator pod for interactive debugging with the ephemeral heat instance. If enabled manual execution of the script to generate playbooks will be required.
+	Interactive bool `json:"interactive,omitempty"`
 	// GitSecret used to pull playbooks into the openstackclient pod
 	GitSecret string `json:"gitSecret"`
 }

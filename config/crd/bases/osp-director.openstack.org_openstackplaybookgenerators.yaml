@@ -45,10 +45,6 @@ spec:
             description: OpenStackPlaybookGeneratorSpec defines the desired state
               of OpenStackPlaybookGenerator
             properties:
-              debug:
-                default: false
-                description: Debug
-                type: boolean
               ephemeralHeatSettings:
                 description: Heat Settings
                 properties:
@@ -89,6 +85,12 @@ spec:
               imageURL:
                 description: Name of the image used to generate playbooks
                 type: string
+              interactive:
+                default: false
+                description: Interactive enables the user to rsh into the playbook
+                  generator pod for interactive debugging with the ephemeral heat
+                  instance
+                type: boolean
               tarballConfigMap:
                 description: Optional. config map containing custom Heat template
                   tarball which will be extracted prior to playbook generation

@@ -45,7 +45,7 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 	volumes := GetVolumes(cr)
 
 	cmd := []string{"/bin/bash", "/home/cloud-admin/create-playbooks.sh"}
-	if cr.Spec.Debug {
+	if cr.Spec.Interactive {
 		cmd = []string{"/bin/sleep", "infinity"}
 	}
 	restartPolicy := corev1.RestartPolicyNever
