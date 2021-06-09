@@ -12,7 +12,8 @@ init() {
   fi
   pushd /home/cloud-admin/playbooks > /dev/null
   git fetch -af
-  export LATEST_BRANCH=$(git branch --sort=-committerdate -lr | head -n1 |  sed -e 's|^ *||g')
+  # exclude any '-> HEAD'... lines if they exist in the supplied git repo
+  export LATEST_BRANCH=$(git branch --sort=-committerdate -lr | grep -v ' -> ' | head -n1 |  sed -e 's|^ *||g')
   if [ -z "$LATEST_BRANCH" ]; then
     echo "The Git repo is empty, try again once the OpenStackPlaybookGenerator finishes and pushes a commit."
     exit 1
