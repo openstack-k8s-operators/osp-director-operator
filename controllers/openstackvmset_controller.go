@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -160,10 +161,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	// Always set provisioning status to zero-values.  If there is a reason to set otherwise,
-	// it will be done so later during this reconcile attempt
-	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackVMSetProvisioningStatus{}
-
 	// Initialize conditions list if not already set
 	if instance.Status.Conditions == nil {
 		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
@@ -171,11 +168,20 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	envVars := make(map[string]common.EnvSetter)
 
+	// get a copy if the CR ProvisioningStatus
+	actualProvisioningState := instance.Status.DeepCopy().ProvisioningStatus
+
 	// check for required secrets
 	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		err2 := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err), ospdirectorv1beta1.VMSetWaiting)
-		return ctrl.Result{RequeueAfter: time.Second * 20}, err2
+		timeout := 20
+		msg := fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err)
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -191,8 +197,15 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				err2 := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret), ospdirectorv1beta1.VMSetWaiting)
-				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
+				timeout := 30
+				msg := fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
+
+				actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+				actualProvisioningState.Reason = msg
+
+				err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+				return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 			}
 			// Error reading the object - requeue the request.
 			return ctrl.Result{}, err
@@ -231,7 +244,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Get mapping of OSNets to binding type for this namespace
 	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(r, instance.Namespace)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -263,24 +275,32 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	for _, net := range instance.Spec.Networks {
+		timeout := 10
+		var msg string
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+
 		if osNetBindings[net] == "" {
 			// Non-SRIOV networks should have a NetworkConfigurationPolicy and a NetworkAttachmentDefinition
 			if _, ok := nncMap[net]; !ok {
-				err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net), ospdirectorv1beta1.VMSetWaiting)
-				return ctrl.Result{RequeueAfter: time.Second * 10}, err
+				msg = fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
 			} else if _, ok := nadMap[net]; !ok {
-				err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net), ospdirectorv1beta1.VMSetWaiting)
-				return ctrl.Result{RequeueAfter: time.Second * 10}, err
+				msg = fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
 			}
 		} else if osNetBindings[net] == "sriov" {
 			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
 			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", net)]; !ok {
-				err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in 10 seconds", net), ospdirectorv1beta1.VMSetWaiting)
-				return ctrl.Result{RequeueAfter: time.Second * 10}, err
+				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
 			} else if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", net)]; !ok {
-				err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net), ospdirectorv1beta1.VMSetWaiting)
-				return ctrl.Result{RequeueAfter: time.Second * 10}, err
+				msg = fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
 			}
+		}
+
+		if msg != "" {
+			actualProvisioningState.Reason = msg
+
+			err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		}
 	}
 
@@ -301,7 +321,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
 	}
 
-	currentVMHostsStatus := instance.Status.VMHosts
+	currentVMHostsStatus := instance.Status.DeepCopy().VMHosts
 	for i := 0; i < newCount; i++ {
 		hostnameDetails := common.Hostname{
 			Basename: instance.Spec.RoleName,
@@ -326,8 +346,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			r.Log.Info(fmt.Sprintf("VMSet hostname created: %s", hostnameDetails.Hostname))
 		}
 	}
-	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
-		r.Log.Info(fmt.Sprintf("Updating CR status with new hostname information, %d new VMs", len(newVMs)))
+	actualStatus := instance.Status.VMHosts
+	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
+		r.Log.Info(fmt.Sprintf("Updating CR status with new hostname information, %d new VMs - %s", len(newVMs), diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			r.Log.Error(err, "Failed to update CR status %v")
@@ -363,12 +384,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				r.Log.Info(fmt.Sprintf("Host deletion annotation removed on VM %s", hostname))
 			}
 		}
-		if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
+		actualStatus := instance.Status.VMHosts[hostname]
+		if !reflect.DeepEqual(&actualStatus, vmStatus) {
 			instance.Status.VMHosts[hostname] = vmStatus
 		}
 	}
-	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
-		r.Log.Info("Updating CR status with deletion annotation information")
+	actualStatus = instance.Status.VMHosts
+	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
+		r.Log.Info(fmt.Sprintf("Updating CR status with deletion annotation information - %s", diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -396,8 +419,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
-		err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("IPSet has not yet reached the required replicas %d", instance.Spec.VMCount), ospdirectorv1beta1.VMSetWaiting)
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		timeout := 10
+		msg := fmt.Sprintf("OpenStackIPSet has not yet reached the required count %d", instance.Spec.VMCount)
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	}
 
 	//
@@ -427,8 +456,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName), ospdirectorv1beta1.VMSetWaiting)
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		timeout := 10
+		msg := fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName)
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -436,8 +471,13 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	switch pvc.Annotations["cdi.kubevirt.io/storage.pod.phase"] {
 	case "Running":
 		instance.Status.BaseImageDVReady = false
-		err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("VM base image %s creation still in running state, reconcile in 2min", baseImageName), ospdirectorv1beta1.VMSetWaiting)
-		return ctrl.Result{RequeueAfter: 2 * time.Minute}, err
+		timeout := 2
+		msg := fmt.Sprintf("VM base image %s creation still in running state, reconcile in 2min", baseImageName)
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+		actualProvisioningState.Reason = msg
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Minute}, err
 	case "Succeeded":
 		instance.Status.BaseImageDVReady = true
 	}
@@ -483,7 +523,13 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				}
 			}
 		} else {
-			if err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)", len(removalAnnotatedVirtualMachines), oldVmsToRemoveCount), ospdirectorv1beta1.VMSetWaiting); err != nil {
+			msg := fmt.Sprintf("Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)", len(removalAnnotatedVirtualMachines), oldVmsToRemoveCount)
+
+			actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+			actualProvisioningState.Reason = msg
+
+			err := r.setProvisioningStatus(instance, actualProvisioningState)
+			if err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -528,39 +574,43 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// store current VMHosts status to verify updated NetworkData change
-	currentVMHostsStatus = instance.Status.VMHosts
+	currentVMHostsStatus = instance.Status.DeepCopy().VMHosts
 
 	// Generate new host NetworkData first, if necessary
 	for _, hostname := range newVMs {
-		vmStatus := instance.Status.VMHosts[hostname]
+		actualStatus := instance.Status.DeepCopy().VMHosts[hostname]
 
 		if hostname != "" {
-			if err := generateNetworkData(instance, &vmStatus); err != nil {
+			if err := generateNetworkData(instance, &actualStatus); err != nil {
 				return ctrl.Result{}, err
 			}
-			if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
-				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, instance.Status.VMHosts[hostname], vmStatus))
-				instance.Status.VMHosts[hostname] = vmStatus
+			currentStatus := instance.Status.VMHosts[hostname]
+			if !reflect.DeepEqual(currentStatus, actualStatus) {
+				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, actualStatus, diff.ObjectReflectDiff(currentStatus, actualStatus)))
+				instance.Status.VMHosts[hostname] = actualStatus
 			}
 		}
 
 	}
 
 	// Generate existing host NetworkData next
-	for hostname, vmStatus := range instance.Status.VMHosts {
+	for hostname, actualStatus := range instance.Status.DeepCopy().VMHosts {
 
-		r.Log.Info(fmt.Sprintf("Create networkData for VM %s", hostname))
 		if !common.StringInSlice(hostname, newVMs) && hostname != "" {
-			if err := generateNetworkData(instance, &vmStatus); err != nil {
+			if err := generateNetworkData(instance, &actualStatus); err != nil {
 				return ctrl.Result{}, err
 			}
-			if !reflect.DeepEqual(instance.Status.VMHosts[hostname], vmStatus) {
-				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, instance.Status.VMHosts[hostname], vmStatus))
-				instance.Status.VMHosts[hostname] = vmStatus
+			currentStatus := instance.Status.VMHosts[hostname]
+			if !reflect.DeepEqual(currentStatus, actualStatus) {
+				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, actualStatus, diff.ObjectReflectDiff(currentStatus, actualStatus)))
+				instance.Status.VMHosts[hostname] = actualStatus
 			}
 		}
 	}
-	if !reflect.DeepEqual(instance.Status.VMHosts, currentVMHostsStatus) {
+	actualStatus = instance.Status.VMHosts
+	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
+		r.Log.Info(fmt.Sprintf("Updating CR status information - %s", diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
+
 		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -580,47 +630,54 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					return ctrl.Result{RequeueAfter: time.Second * 1}, nil
 				}
 
-				vmset.ProcessErrorForProvisioningStatus(r, instance, err)
+				msg := err.Error()
+				actualProvisioningState.State = ospdirectorv1beta1.VMSetError
+				actualProvisioningState.Reason = msg
 
+				_ = r.setProvisioningStatus(instance, actualProvisioningState)
 				return ctrl.Result{}, err
 			}
-			r.Log.Info(fmt.Sprintf("VMSet VM hostname set to %s", ctl.Hostname))
 		}
 
-		// Calculate overall provisioning status if one isn't already set
-		if instance.Status.ProvisioningStatus.State == "" {
-			var provState ospdirectorv1beta1.VMSetProvisioningState
-			var msg string
-			var readyCount int
+		// Calculate provisioning status
+		var msg string
+		var readyCount int
 
-			for _, host := range instance.Status.VMHosts {
-				if host.ProvisioningState == ospdirectorv1beta1.VMSetProvisioned {
-					readyCount++
-				}
+		for _, host := range instance.Status.VMHosts {
+			if host.ProvisioningState == ospdirectorv1beta1.VMSetProvisioned {
+				readyCount++
 			}
+		}
 
-			instance.Status.ProvisioningStatus.ReadyCount = readyCount
+		instance.Status.ProvisioningStatus.ReadyCount = readyCount
 
-			if readyCount == instance.Spec.VMCount {
-				if readyCount == 0 {
-					provState = ospdirectorv1beta1.VMSetEmpty
-					msg = "No VirtualMachines have been requested"
-				} else {
-					provState = ospdirectorv1beta1.VMSetProvisioned
-					msg = "All requested VirtualMachines have been provisioned"
-				}
-			} else if readyCount < instance.Spec.VMCount {
-				provState = ospdirectorv1beta1.VMSetProvisioning
+		if readyCount == instance.Spec.VMCount {
+			if readyCount == 0 {
+				actualProvisioningState.State = ospdirectorv1beta1.VMSetEmpty
+				msg = "No VirtualMachines have been requested"
 			} else {
-				provState = ospdirectorv1beta1.VMSetDeprovisioning
+				actualProvisioningState.State = ospdirectorv1beta1.VMSetProvisioned
+				msg = "All requested VirtualMachines have been provisioned"
 			}
+		} else if readyCount < instance.Spec.VMCount {
+			actualProvisioningState.State = ospdirectorv1beta1.VMSetProvisioning
+		} else {
+			actualProvisioningState.State = ospdirectorv1beta1.VMSetDeprovisioning
+		}
 
-			if err := vmset.ProcessInfoForProvisioningStatus(r, instance, msg, provState); err != nil {
-				return ctrl.Result{}, err
-			}
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
-		if err := vmset.ProcessInfoForProvisioningStatus(r, instance, fmt.Sprintf("BaseImageDV is not ready for OpenStackVMSet %s", instance.Name), ospdirectorv1beta1.VMSetWaiting); err != nil {
+		msg := fmt.Sprintf("BaseImageDV is not ready for OpenStackVMSet %s", instance.Name)
+		actualProvisioningState.Reason = msg
+		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -738,6 +795,7 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Complete(r)
 }
 
@@ -1040,4 +1098,28 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(instance *ospdirecto
 	}
 
 	return annotatedVMs, nil
+}
+
+func (r *OpenStackVMSetReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackVMSet, actualState ospdirectorv1beta1.OpenStackVMSetProvisioningStatus) error {
+	// get current ProvisioningStatus
+	currentState := instance.Status.ProvisioningStatus
+
+	// if the current ProvisioningStatus is different from the actual, store the update
+	// otherwise, just log the status again
+	if !reflect.DeepEqual(currentState, actualState) {
+		r.Log.Info(fmt.Sprintf("%s - diff %s", actualState.Reason, diff.ObjectReflectDiff(currentState, actualState)))
+		instance.Status.ProvisioningStatus = actualState
+
+		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(actualState.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(actualState.Reason), actualState.Reason)
+
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return err
+		}
+	} else {
+		r.Log.Info(actualState.Reason)
+	}
+
+	return nil
 }

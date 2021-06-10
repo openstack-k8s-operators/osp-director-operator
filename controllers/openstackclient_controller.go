@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -166,18 +168,25 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
+	// get a copy of the current CR status
+	currentStatus := instance.Status.DeepCopy()
+
 	// update network status
 	for _, netName := range instance.Spec.Networks {
 		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
 	}
-	r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].Hostname, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses))
 
-	err = r.Client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		r.Log.Error(err, "Failed to update CR status %v")
-		return ctrl.Result{}, err
+	// update the IPs for IPSet if status got updated
+	actualStatus := instance.Status
+	if !reflect.DeepEqual(currentStatus, &actualStatus) {
+		r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].Hostname, diff.ObjectReflectDiff(currentStatus, &actualStatus)))
+
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return ctrl.Result{}, err
+		}
 	}
-
 	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
 	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{
 		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
