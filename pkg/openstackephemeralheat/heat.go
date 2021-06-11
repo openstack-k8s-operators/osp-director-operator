@@ -15,6 +15,7 @@ func HeatGetLabels(name string) map[string]string {
 
 // HeatAPIPod -
 func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
+	var runAsUser = int64(HeatUID)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -23,6 +24,10 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			Labels:    HeatGetLabels(instance.Name),
 		},
 		Spec: corev1.PodSpec{
+			ServiceAccountName: ServiceAccount,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser: &runAsUser,
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "heat",
@@ -103,6 +108,7 @@ func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme 
 
 // HeatEngineReplicaSet -
 func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *appsv1.ReplicaSet {
+	var runAsUser = int64(HeatUID)
 
 	selectorLabels := map[string]string{
 		"app":              "osp-director-operator-heat-engine",
@@ -127,6 +133,10 @@ func HeatEngineReplicaSet(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *
 					Labels:    selectorLabels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: ServiceAccount,
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: &runAsUser,
+					},
 					Containers: []corev1.Container{
 						{
 							Name:  "heat-engine",

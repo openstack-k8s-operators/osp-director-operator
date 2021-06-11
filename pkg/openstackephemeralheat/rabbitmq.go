@@ -14,6 +14,7 @@ func RabbitmqGetLabels(name string) map[string]string {
 
 // RabbitmqPod -
 func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
+	var runAsUser = int64(RabbitMQUID)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -22,6 +23,10 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 			Labels:    RabbitmqGetLabels(instance.Name),
 		},
 		Spec: corev1.PodSpec{
+			ServiceAccountName: ServiceAccount,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser: &runAsUser,
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "rabbitmq",
