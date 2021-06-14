@@ -661,8 +661,10 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		} else if readyCount < instance.Spec.VMCount {
 			actualProvisioningState.State = ospdirectorv1beta1.VMSetProvisioning
+			msg = "Provisioning of VirtualMachines in progress"
 		} else {
 			actualProvisioningState.State = ospdirectorv1beta1.VMSetDeprovisioning
+			msg = "Deprovisioning of VirtualMachines in progress"
 		}
 
 		actualProvisioningState.Reason = msg
@@ -1117,7 +1119,7 @@ func (r *OpenStackVMSetReconciler) setProvisioningStatus(instance *ospdirectorv1
 			r.Log.Error(err, "Failed to update CR status %v")
 			return err
 		}
-	} else {
+	} else if actualState.Reason != "" {
 		r.Log.Info(actualState.Reason)
 	}
 

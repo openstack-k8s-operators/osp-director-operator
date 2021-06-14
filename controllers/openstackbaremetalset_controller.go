@@ -420,8 +420,10 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		}
 	} else if readyCount < instance.Spec.Count {
 		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioning
+		actualProvisioningState.Reason = "Provisioning of BaremetalHosts in progress"
 	} else {
 		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetDeprovisioning
+		actualProvisioningState.Reason = "Deprovisioning of BaremetalHosts in progress"
 	}
 
 	if err := r.setProvisioningStatus(instance, actualProvisioningState); err != nil {
@@ -445,7 +447,7 @@ func (r *OpenStackBaremetalSetReconciler) setProvisioningStatus(instance *ospdir
 			r.Log.Error(err, "Failed to update CR status %v")
 			return err
 		}
-	} else {
+	} else if actualState.Reason != "" {
 		r.Log.Info(actualState.Reason)
 	}
 
