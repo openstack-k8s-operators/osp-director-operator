@@ -12,6 +12,3 @@ chpasswd:
     root:{{ .NodeRootPassword }}
   expire: False
 {{- end }}
-runcmd:
-  - dnf install -y http://download.devel.redhat.com/rcm-guest/puddles/OpenStack/rhos-release/rhos-release-latest.noarch.rpm
-  - rhos-release 16.2

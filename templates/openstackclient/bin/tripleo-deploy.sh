@@ -39,6 +39,15 @@ diff() {
 play() {
   init
   pushd /home/cloud-admin/playbooks > /dev/null
+
+  if [ ! -d /home/cloud-admin/playbooks/tripleo-ansible ]; then
+    echo "Playbooks directory don't exist! Run the following command to accept and tag the new playbooks first:"
+    echo "  $0 -a"
+    echo ""
+    echo "Then re-run '$0 -p' to run the new playbooks."
+    exit
+  fi
+
   if ! git diff --exit-code --no-patch refs/tags/latest remotes/$LATEST_BRANCH; then
     echo "New playbooks detected. Run the following command to view a diff of the changes:"
     echo "  $0 -d"
@@ -49,14 +58,8 @@ play() {
     echo "Then re-run '$0 -p' to run the new playbooks."
     exit
   fi
-  if git branch | grep " tripleo_deploy_working$" > /dev/null; then
-    git checkout tripleo_deploy_working >/dev/null
-    git reset --hard refs/tags/latest
-  else
-    git checkout -b tripleo_deploy_working latest
-  fi
 
-  cd tripleo-ansible*
+  cd tripleo-ansible
 
   # TODO: for now disable opendev-validation-ceph
   # The check fails because the lvm2 package is not installed in openstackclient container image image
@@ -78,6 +81,15 @@ accept() {
   git push -f --delete origin refs/tags/latest
   git tag latest refs/remotes/$LATEST_BRANCH
   git push origin --tags
+
+  # checkout accepted code
+  if git branch | grep " tripleo_deploy_working$" > /dev/null; then
+    git checkout tripleo_deploy_working >/dev/null
+    git reset --hard refs/tags/latest
+  else
+    git checkout -b tripleo_deploy_working latest
+  fi
+
   popd > /dev/null
 }
 

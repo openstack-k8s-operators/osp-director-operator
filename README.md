@@ -342,13 +342,51 @@ The osplaybookgenerator created above will automatically generate playbooks any 
 
 9) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
 
+The `tripleo-deploy.sh` script supports three actions:
+* `-d` - show the `git diff` of the playbooks to the previous accepted
+* `-a` - accept the new available rendered playbooks and tag them as `latest`
+* `-p` - run the ansible driven OpenStack deployment
+
+a) check for new version of renered playbooks and accept them
+
+```bash
+oc rsh openstackclient
+bash
+cd /home/cloud-admin
+
+# (optional) show the `git diff` of the playbooks to the previous accepted
+./tripleo-deploy.sh -d
+
+# accept the new available rendered playbooks (if available) and tag them as `latest`
+./tripleo-deploy.sh -a
+```
+
+b) register the overcloud systems to required channels
+
+The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.1/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
+
+TODO: update link to 16.2 release when available
+
+```bash
+oc rsh openstackclient
+bash
+cd /home/cloud-admin
+
+<create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
+
+# register the overcloud nodes to required repositories
+ansible-playpook -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml ./rhsm.yaml
+```
+
+c) run ansible driven OpenStack deployment
+
 ```bash
 oc rsh openstackclient
 bash
 cd /home/cloud-admin
 
 # run ansible driven OpenStack deployment
-./tripleo-deploy.sh
+./tripleo-deploy.sh -p
 ```
 
 Deploy Ceph via tripleo using ComputeHCI
