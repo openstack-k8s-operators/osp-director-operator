@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -168,6 +169,8 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	hostnameRefs := instance.GetHostnames()
+	// get a copy of the current CR status
+	currentStatus := instance.Status.DeepCopy()
 
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
 		// create VIP for all networks for any of the VM roles
@@ -198,12 +201,16 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
 			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
 		}
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return ctrl.Result{}, err
+
+		actualStatus := instance.Status
+		if !reflect.DeepEqual(currentStatus, &actualStatus) {
+			err = r.Client.Status().Update(context.TODO(), instance)
+			if err != nil {
+				r.Log.Error(err, "Failed to update CR status %v")
+				return ctrl.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.Hostname].Hostname, instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses))
 		}
-		r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.Hostname].Hostname, instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses))
 
 		// Create or update the vmSet CR object
 		vmSet := &ospdirectorv1beta1.OpenStackVMSet{

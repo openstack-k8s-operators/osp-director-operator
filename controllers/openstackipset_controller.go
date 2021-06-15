@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -135,6 +137,9 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	// get a copy of the current CR status
+	currentStatus := instance.Status.DeepCopy()
+
 	//
 	// Remove existing IPSet entry
 	//
@@ -178,14 +183,17 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	// update the IPs for each IPSet
-	err = r.Client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		r.Log.Error(err, "Failed to update OpenStackIPSet status %v")
-		return ctrl.Result{}, err
+	// update the IPs for IPSet if status got updated
+	actualStatus := instance.Status
+	if !reflect.DeepEqual(currentStatus, &actualStatus) {
+		r.Log.Info(fmt.Sprintf("Updating IPSet status CR: %s - %s", instance.Name, diff.ObjectReflectDiff(currentStatus, &actualStatus)))
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "Failed to update OpenStackIPSet status %v")
+			return ctrl.Result{}, err
+		}
 	}
 
-	//
 	// sync deleted IPSet with OSNet
 	err = r.syncDeletedIPs(instance)
 	if err != nil {
@@ -289,9 +297,10 @@ func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.O
 			reservationDeleted := !common.StringInSlice(reservation.Hostname, allActiveIPSetHosts)
 
 			// mark OSNet host entry as deleted
-			network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted = reservationDeleted
-
-			r.Log.Info(fmt.Sprintf("Update network status of host %s - net %s - %v", reservation.Hostname, network.Name, network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted))
+			if network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted != reservationDeleted {
+				network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted = reservationDeleted
+				r.Log.Info(fmt.Sprintf("Update network status of host %s - net %s - %v", reservation.Hostname, network.Name, network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted))
+			}
 		}
 
 		// update status of OSNet
@@ -300,6 +309,7 @@ func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.O
 			r.Log.Error(err, "Failed to update OpenStackNet status %v")
 			return err
 		}
+
 	}
 
 	return nil
@@ -340,8 +350,6 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 				return fmt.Errorf(fmt.Sprintf("Failed to parse CIDR %s: %v", network.Spec.Cidr, err))
 			}
 
-			r.Log.Info(fmt.Sprintf("Network %s, cidr %v", network.Name, cidr))
-
 			start := net.ParseIP(network.Spec.AllocationStart)
 			end := net.ParseIP(network.Spec.AllocationEnd)
 
@@ -363,6 +371,7 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 					// so we acquire it from the OpenStackIPSet spec
 					cidrPieces := strings.Split(network.Spec.Cidr, "/")
 					reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
+					r.Log.Info(fmt.Sprintf("Re-use existing reservation for host %s in network %s with IP %s", hostname, netName, reservationIP))
 					break
 				}
 			}
@@ -374,8 +383,6 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 			}
 
 			if reservationIP == "" {
-				r.Log.Info(fmt.Sprintf("Create new reservation for host %s in network %s", hostname, netName))
-
 				// No reservation found, so create a new one
 				ip, reservation, err := common.AssignIP(common.AssignIPDetails{
 					IPnet:           *cidr,
@@ -399,6 +406,8 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 					AddToPredictableIPs: instance.Spec.AddToPredictableIPs,
 					Reservations:        reservation,
 				}
+
+				r.Log.Info(fmt.Sprintf("Created new reservation for host %s in network %s with IP %s", hostname, netName, reservationIP))
 
 			}
 
@@ -436,7 +445,7 @@ func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1bet
 			return err
 		}
 
-		// delete all reservation entrie from RoleName
+		// delete all reservation entries from RoleName
 		delete(network.Status.RoleReservations, instance.Spec.RoleName)
 
 		// update status of OSNet

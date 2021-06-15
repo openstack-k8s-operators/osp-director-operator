@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -152,9 +153,8 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	// Always set provisioning status to zero-values.  If there is a reason to set otherwise,
-	// it will be done so later during this reconcile attempt
-	instance.Status.ProvisioningStatus = ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus{}
+	// get a copy if the CR ProvisioningStatus
+	actualProvisioningState := instance.Status.DeepCopy().ProvisioningStatus
 
 	var err error
 	var passwordSecret *corev1.Secret
@@ -164,13 +164,15 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		passwordSecret, _, err = common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				msg := fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
-				instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
-				instance.Status.ProvisioningStatus.Reason = msg
-				r.Log.Info(msg)
+				timeout := 30
+				msg := fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
 
-				err2 := r.setStatus(instance)
-				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
+				actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetWaiting
+				actualProvisioningState.Reason = msg
+
+				err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+				return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 			}
 			// Error reading the object - requeue the request.
 			return ctrl.Result{}, err
@@ -197,38 +199,44 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	} else {
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
 		if err != nil && k8s_errors.IsNotFound(err) {
-			msg := fmt.Sprintf("OpenStackProvisionServer %s not found reconcile again in 10 seconds", instance.Spec.ProvisionServerName)
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
-			instance.Status.ProvisioningStatus.Reason = msg
-			r.Log.Info(msg)
+			timeout := 10
+			msg := fmt.Sprintf("OpenStackProvisionServer %s not found reconcile again in %d seconds", instance.Spec.ProvisionServerName, timeout)
 
-			err2 := r.setStatus(instance)
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err2
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetWaiting
+			actualProvisioningState.Reason = msg
+
+			err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		} else if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	if provisionServer.Status.LocalImageURL == "" {
-		msg := fmt.Sprintf("OpenStackBaremetalSet %s OpenStackProvisionServer local image URL not yet available, requeuing and waiting", instance.Name)
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
-		instance.Status.ProvisioningStatus.Reason = msg
-		r.Log.Info(msg)
+		timeout := 30
+		msg := fmt.Sprintf("OpenStackBaremetalSet %s OpenStackProvisionServer local image URL not yet available, requeuing and waiting %d seconds", instance.Name, timeout)
 
-		err2 := r.setStatus(instance)
-		return ctrl.Result{RequeueAfter: time.Second * 30}, err2
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err = r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	}
 
 	// First we need the public SSH key, which should be stored in a secret
 	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
 	if err != nil && k8s_errors.IsNotFound(err) {
+		timeout := 20
 		msg := fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err)
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
-		instance.Status.ProvisioningStatus.Reason = msg
-		r.Log.Info(msg)
 
-		err2 := r.setStatus(instance)
-		return ctrl.Result{RequeueAfter: time.Second * 20}, err2
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	} else if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -249,7 +257,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//   create hostnames for the newCount
 	//
 
-	currentBMHStatus := instance.Status.BaremetalHosts
+	currentStatus := instance.Status.DeepCopy()
 	for i := 0; i < newCount; i++ {
 		hostnameDetails := common.Hostname{
 			Basename: instance.Spec.RoleName,
@@ -273,7 +281,10 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// update status if new hostnames got created
 	//
-	if !reflect.DeepEqual(instance.Status.BaremetalHosts, currentBMHStatus) {
+	actualStatus := instance.Status
+	if !reflect.DeepEqual(currentStatus.BaremetalHosts, actualStatus.BaremetalHosts) {
+		r.Log.Info(fmt.Sprintf("Updating CR status new hostnames got created - diff %s", diff.ObjectReflectDiff(currentStatus.BaremetalHosts, actualStatus.BaremetalHosts)))
+
 		err := r.setStatus(instance)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -287,7 +298,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 
 	// check for deletion marked BMH
-	currentBMHStatus = instance.Status.BaremetalHosts
+	currentStatus = instance.Status.DeepCopy()
 	deletionAnnotatedBMHs, err := common.GetDeletionAnnotatedBmhHosts(r, "openshift-machine-api", map[string]string{
 		common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
 		common.OwnerUIDLabelSelector:            string(instance.GetUID()),
@@ -296,7 +307,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	for _, bmhStatus := range instance.Status.BaremetalHosts {
+	for _, bmhStatus := range instance.Status.DeepCopy().BaremetalHosts {
 		bmhName := bmhStatus.HostRef
 		if len(deletionAnnotatedBMHs) > 0 && common.StringInSlice(bmhName, deletionAnnotatedBMHs) {
 			// set annotatedForDeletion status of the BMH to true, if not already
@@ -313,11 +324,15 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 				r.Log.Info(fmt.Sprintf("Host deletion annotation removed on BMH %s", bmhName))
 			}
 		}
-		if !reflect.DeepEqual(instance.Status.BaremetalHosts[bmhStatus.Hostname], bmhStatus) {
+		actualBMHStatus := instance.Status.BaremetalHosts[bmhStatus.Hostname]
+		if !reflect.DeepEqual(&actualBMHStatus, bmhStatus) {
 			instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
 		}
 	}
-	if !reflect.DeepEqual(instance.Status.BaremetalHosts, currentBMHStatus) {
+	actualStatus = instance.Status
+	if !reflect.DeepEqual(currentStatus.BaremetalHosts, actualStatus.BaremetalHosts) {
+		r.Log.Info(fmt.Sprintf("Updating CR status annotated for deletion - diff %s", diff.ObjectReflectDiff(currentStatus.BaremetalHosts, actualStatus.BaremetalHosts)))
+
 		err = r.setStatus(instance)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -345,13 +360,15 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	if len(ipset.Status.HostIPs) < instance.Spec.Count {
+		timeout := 10
 		msg := fmt.Sprintf("OpenStackIPSet has not yet reached the required count %d", instance.Spec.Count)
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
-		instance.Status.ProvisioningStatus.Reason = msg
-		r.Log.Info(msg)
 
-		err2 := r.setStatus(instance)
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err2
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetWaiting
+		actualProvisioningState.Reason = msg
+
+		err := r.setProvisioningStatus(instance, actualProvisioningState)
+
+		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 	}
 
 	//
@@ -366,18 +383,17 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		msg := fmt.Sprintf("Error encountered: %v", err)
+
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetError
-		instance.Status.ProvisioningStatus.Reason = msg
-		r.Log.Info(msg)
+		actualProvisioningState.Reason = msg
+
 		// The next line could return an error, but we log it in the "setStatus" func anyhow,
 		// and we're more interested in returning the error from "ensureBaremetalHosts"
-		_ = r.setStatus(instance)
-
+		_ = r.setProvisioningStatus(instance, actualProvisioningState)
 		return ctrl.Result{}, err
 	}
 
 	// Calculate overall provisioning status
-
 	readyCount := 0
 	bmhErrors := 0
 
@@ -389,32 +405,53 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		}
 	}
 
-	instance.Status.ProvisioningStatus.ReadyCount = readyCount
+	actualProvisioningState.ReadyCount = readyCount
 
 	if bmhErrors > 0 {
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetError
-		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%d BaremetalHost(s) encountered an error", bmhErrors)
-	} else if instance.Status.ProvisioningStatus.State == "" {
-		if readyCount == instance.Spec.Count {
-			if instance.Spec.Count == 0 {
-				instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetEmpty
-				instance.Status.ProvisioningStatus.Reason = "No BaremetalHosts have been requested"
-			} else {
-				instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetProvisioned
-				instance.Status.ProvisioningStatus.Reason = "All requested BaremetalHosts have been provisioned"
-			}
-		} else if readyCount < instance.Spec.Count {
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetProvisioning
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetError
+		actualProvisioningState.Reason = fmt.Sprintf("%d BaremetalHost(s) encountered an error", bmhErrors)
+	} else if readyCount == instance.Spec.Count {
+		if instance.Spec.Count == 0 {
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetEmpty
+			actualProvisioningState.Reason = "No BaremetalHosts have been requested"
 		} else {
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetDeprovisioning
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioned
+			actualProvisioningState.Reason = "All requested BaremetalHosts have been provisioned"
 		}
+	} else if readyCount < instance.Spec.Count {
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioning
+		actualProvisioningState.Reason = "Provisioning of BaremetalHosts in progress"
+	} else {
+		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetDeprovisioning
+		actualProvisioningState.Reason = "Deprovisioning of BaremetalHosts in progress"
 	}
 
-	if err := r.setStatus(instance); err != nil {
+	if err := r.setProvisioningStatus(instance, actualProvisioningState); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *OpenStackBaremetalSetReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackBaremetalSet, actualState ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus) error {
+	// get current ProvisioningStatus
+	currentState := instance.Status.ProvisioningStatus
+
+	// if the current ProvisioningStatus is different from the actual, store the update
+	// otherwise, just log the status again
+	if !reflect.DeepEqual(currentState, actualState) {
+		r.Log.Info(fmt.Sprintf("%s - diff %s", actualState.Reason, diff.ObjectReflectDiff(currentState, actualState)))
+		instance.Status.ProvisioningStatus = actualState
+
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return err
+		}
+	} else if actualState.Reason != "" {
+		r.Log.Info(actualState.Reason)
+	}
+
+	return nil
 }
 
 func (r *OpenStackBaremetalSetReconciler) setStatus(instance *ospdirectorv1beta1.OpenStackBaremetalSet) error {
@@ -450,6 +487,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
@@ -656,7 +694,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 
 func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string) (ospdirectorv1beta1.OpenStackBaremetalHostStatus, error) {
 
-	for _, bmhStatus := range instance.Status.BaremetalHosts {
+	for _, bmhStatus := range instance.Status.DeepCopy().BaremetalHosts {
 		if bmhStatus.HostRef == bmh {
 			return bmhStatus, nil
 		}
@@ -795,7 +833,10 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	bmhStatus.CtlplaneIP = ipCidr
 	bmhStatus.ProvisioningState = string(foundBaremetalHost.Status.Provisioning.State)
 
-	if !reflect.DeepEqual(instance.Status.BaremetalHosts[bmhStatus.Hostname], bmhStatus) {
+	actualBMHStatus := instance.Status.BaremetalHosts[bmhStatus.Hostname]
+	if !reflect.DeepEqual(actualBMHStatus, bmhStatus) {
+		r.Log.Info(fmt.Sprintf("Updating CR status BMH provisioning details - diff %s", diff.ObjectReflectDiff(actualBMHStatus, bmhStatus)))
+
 		instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
 
 		err := r.setStatus(instance)
