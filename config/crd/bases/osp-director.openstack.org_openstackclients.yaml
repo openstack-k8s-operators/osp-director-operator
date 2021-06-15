@@ -50,23 +50,6 @@ spec:
                 description: GitSecret used to pull playbooks into the openstackclient
                   pod
                 type: string
-              hostAliases:
-                description: additional Hostaliases added to the openstackclient hosts
-                  file
-                items:
-                  description: HostAlias holds the mapping between IP and hostnames
-                    that will be injected as an entry in the pod's hosts file.
-                  properties:
-                    hostnames:
-                      description: Hostnames for the above IP address.
-                      items:
-                        type: string
-                      type: array
-                    ip:
-                      description: IP address of the host file entry.
-                      type: string
-                  type: object
-                type: array
               imageURL:
                 description: Name of the image
                 type: string
@@ -87,7 +70,6 @@ spec:
             - cloudName
             - deploymentSSHSecret
             - gitSecret
-            - hostAliases
             - imageURL
             - networks
             type: object

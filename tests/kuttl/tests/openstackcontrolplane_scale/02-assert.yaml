@@ -72,7 +72,6 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  hostAliases: []
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
   networks:
   - ctlplane
