@@ -411,8 +411,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	pod.Spec.InitContainers = openstackclient.GetInitContainers(initContainerDetails)
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
-		// HostAliases
-		pod.Spec.HostAliases = instance.Spec.HostAliases
 		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, envVars)
 
 		// labels

@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,8 +30,6 @@ type OpenStackClientSpec struct {
 	GitSecret string `json:"gitSecret"`
 	// cloudname passed in via OS_CLOUDNAME
 	CloudName string `json:"cloudName"`
-	// additional Hostaliases added to the openstackclient hosts file
-	HostAliases []corev1.HostAlias `json:"hostAliases"`
 
 	// +kubebuilder:default={ctlplane,external}
 	// Networks the name(s) of the OpenStackNetworks used to generate IPs
