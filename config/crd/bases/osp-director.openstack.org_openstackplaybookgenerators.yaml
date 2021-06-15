@@ -89,7 +89,8 @@ spec:
                 default: false
                 description: Interactive enables the user to rsh into the playbook
                   generator pod for interactive debugging with the ephemeral heat
-                  instance
+                  instance. If enabled manual execution of the script to generate
+                  playbooks will be required.
                 type: boolean
               tarballConfigMap:
                 description: Optional. config map containing custom Heat template
