@@ -249,14 +249,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		}
 	}
 
-	// get PodIP's from the OSP controller VMs and update openstackclient
-	controllerPodList, err := common.GetAllPodsWithLabel(r, map[string]string{
-		"openstackvmsets.osp-director.openstack.org/ospcontroller": "True",
-	}, instance.Namespace)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// TODO:
 	// - check vm container status and update CR.Status.VMsReady
 	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
@@ -278,7 +270,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			openstackclient.Spec.Networks = instance.Spec.OpenStackClientNetworks
 		}
-		openstackclient.Spec.HostAliases = common.HostAliasesFromPodlist(controllerPodList)
 
 		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)
 		if err != nil {
