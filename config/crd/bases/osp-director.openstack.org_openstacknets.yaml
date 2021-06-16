@@ -19,7 +19,24 @@ spec:
     singular: openstacknet
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.cidr
+      name: CIDR
+      type: string
+    - jsonPath: .spec.vlan
+      name: VLAN
+      type: string
+    - jsonPath: .spec.gateway
+      name: Gateway
+      type: string
+    - jsonPath: .status.reservedIpCount
+      name: Reserved IPs
+      type: integer
+    - description: Status
+      jsonPath: .status.currentState
+      name: Status
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackNet represents the IPAM configuration for baremetal
@@ -133,6 +150,45 @@ spec:
           status:
             description: OpenStackNetStatus defines the observed state of OpenStackNet
             properties:
+              conditions:
+                description: 'TODO: It would be simpler, perhaps, to just have Conditions
+                  and get rid of CurrentState, but we are using the same approach
+                  in other CRDs for now anyhow Conditions - conditions to display
+                  in the OpenShift GUI, which reflect CurrentState'
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentState:
+                description: CurrentState - the overall state of this network
+                type: string
+              reservedIpCount:
+                description: ReservedIPCount - the count of all IPs ever reserved
+                  on this network
+                type: integer
               roleReservations:
                 additionalProperties:
                   description: OpenStackNetRoleStatus defines the observed state of
@@ -168,6 +224,8 @@ spec:
                 description: Reservations IP address reservations per role
                 type: object
             required:
+            - currentState
+            - reservedIpCount
             - roleReservations
             type: object
         type: object

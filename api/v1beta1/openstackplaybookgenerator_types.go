@@ -69,7 +69,7 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osplaybookgenerator;osplaybookgenerators
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
-// +kubebuilder:printcolumn:name="CurrentState",type=string,JSONPath=`.status.currentState`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
 // OpenStackPlaybookGenerator configure Heat environment and templates to generate Ansible playbooks
 type OpenStackPlaybookGenerator struct {

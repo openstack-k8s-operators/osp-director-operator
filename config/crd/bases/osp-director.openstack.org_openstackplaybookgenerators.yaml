@@ -20,8 +20,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.currentState
-      name: CurrentState
+    - description: Status
+      jsonPath: .status.currentState
+      name: Status
       type: string
     name: v1beta1
     schema:
