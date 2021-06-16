@@ -76,6 +76,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;watch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets,verbs=get;list
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=get;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -231,10 +233,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	// Define a new Job object
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
-	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, fmt.Errorf("error creating playbook job: %v", err)
-	}
 
 	if instance.Status.PlaybookHash != configMapHash {
 
@@ -279,6 +277,18 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			r.Log.Info(msg)
 			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorInitializing, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+
+		// check if osvmset and osbms is in status provisioned
+		msg, deployed, err := r.verifyNodeResourceStatus(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !deployed {
+			timeout := 20
+			r.Log.Info(msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		}
 
 		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
@@ -434,4 +444,43 @@ func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager
 		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
 		Owns(&batchv1.Job{}).
 		Complete(r)
+}
+
+func (r *OpenStackPlaybookGeneratorReconciler) verifyNodeResourceStatus(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) (string, bool, error) {
+
+	msg := ""
+
+	// check if all osvmset are in status provisioned
+	vmsetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+
+	listOpts := []client.ListOption{}
+	err := r.Client.List(context.TODO(), vmsetList, listOpts...)
+	if err != nil {
+		return msg, false, err
+	}
+
+	for _, vmset := range vmsetList.Items {
+		if vmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetProvisioned {
+			msg := fmt.Sprintf("Waiting on OpenStackVMset %s to be provisioned...", vmset.Name)
+			return msg, false, nil
+		}
+	}
+
+	// check if all osbms are in status provisioned
+	bmsetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
+
+	listOpts = []client.ListOption{}
+	err = r.Client.List(context.TODO(), bmsetList, listOpts...)
+	if err != nil {
+		return msg, false, err
+	}
+
+	for _, bmset := range bmsetList.Items {
+		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioningState(ospdirectorv1beta1.BaremetalSetProvisioned) {
+			msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
+			return msg, false, nil
+		}
+	}
+
+	return msg, true, nil
 }
