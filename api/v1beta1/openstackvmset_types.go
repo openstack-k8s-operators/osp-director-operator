@@ -84,7 +84,7 @@ type VMSetProvisioningState string
 const (
 	// VMSetEmpty - special state for 0 requested VMs and 0 already provisioned
 	VMSetEmpty VMSetProvisioningState = "Empty"
-	// VMSetWaiting - something is causing the OpenStackBaremetalSet to wait
+	// VMSetWaiting - something is causing the OpenStackVmSet to wait
 	VMSetWaiting VMSetProvisioningState = "Waiting"
 	// VMSetProvisioning - one or more VMs are provisioning
 	VMSetProvisioning VMSetProvisioningState = "Provisioning"
