@@ -21,6 +21,9 @@
 #    - The ONE exception is the DataVolume for the base image.  This MUST be pre-existing, otherwise
 #      the tests will take way too long and fail the timeout
 #
+# NOTE: It is recommended to run "oc delete events --all -n openstack" before executing each test.
+#       Failure to do so will cause events that occurred outside of (before) the test to appear in the logs.
+#
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite

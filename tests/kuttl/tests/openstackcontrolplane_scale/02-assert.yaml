@@ -63,6 +63,14 @@ spec:
   vmCount: 0
 status:
   baseImageDVReady: true
+  conditions:
+  - message: No VirtualMachines have been requested
+    reason: No VirtualMachines have been requested
+    status: "True"
+    type: Empty
+  provisioningStatus:
+    reason: No VirtualMachines have been requested
+    state: Empty
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackClient
@@ -113,19 +121,28 @@ spec:
   cidr: 192.168.25.0/24
   gateway: 192.168.25.1
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 192.168.25.100
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: false
-    hostname: openstackclient-0
-    idKey: openstackclient-0
-    ip: 192.168.25.101
-    role: OpenstackClient
-    vip: false
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 192.168.25.100
+        vip: true
+    OpenstackClient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.101
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -156,19 +173,28 @@ spec:
   gateway: 10.0.0.1
   vlan: 10
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 10.0.0.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: false
-    hostname: openstackclient-0
-    idKey: openstackclient-0
-    ip: 10.0.0.5
-    role: OpenstackClient
-    vip: false
+  conditions:
+  - message: OpenStackNet external has been successfully configured on targeted node(s)
+    reason: OpenStackNet external has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 10.0.0.4
+        vip: true
+    OpenstackClient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 10.0.0.5
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -198,13 +224,21 @@ spec:
   cidr: 172.16.2.0/24
   vlan: 20
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.2.4
-    role: ControlPlane
-    vip: true
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.2.4
+        vip: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -234,13 +268,21 @@ spec:
   cidr: 172.16.0.0/24
   vlan: 50
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.0.4
-    role: ControlPlane
-    vip: true
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.0.4
+        vip: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -270,13 +312,21 @@ spec:
   cidr: 172.16.1.0/24
   vlan: 30
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.1.4
-    role: ControlPlane
-    vip: true
+  conditions:
+  - message: OpenStackNet storage has been successfully configured on targeted node(s)
+    reason: OpenStackNet storage has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.1.4
+        vip: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -306,17 +356,27 @@ spec:
   cidr: 172.16.3.0/24
   vlan: 40
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.3.4
-    role: ControlPlane
-    vip: true
+  conditions:
+  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.3.4
+        vip: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
+  finalizers:
+  - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "true"
   name: overcloud
@@ -335,145 +395,48 @@ spec:
   vip: true
 status:
   hosts:
-    controlplane-0:
+    controlplane:
       ipaddresses:
         ctlplane: 192.168.25.100/24
+        external: 10.0.0.4/24
+        internalapi: 172.16.2.4/24
+        storage: 172.16.1.4/24
+        storagemgmt: 172.16.3.4/24
+        tenant: 172.16.0.4/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
       allocationStart: 192.168.25.100
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
       allocationStart: 10.0.0.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 10
     internalapi:
       allocationEnd: 172.16.2.250
       allocationStart: 172.16.2.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.2.0/24
       gateway: ""
       vlan: 20
     storage:
       allocationEnd: 172.16.1.250
       allocationStart: 172.16.1.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.1.0/24
       gateway: ""
       vlan: 30
     storagemgmt:
       allocationEnd: 172.16.3.250
       allocationStart: 172.16.3.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.3.0/24
       gateway: ""
       vlan: 40
     tenant:
       allocationEnd: 172.16.0.250
       allocationStart: 172.16.0.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.0.0/24
       gateway: ""
       vlan: 50
@@ -481,6 +444,8 @@ status:
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
+  finalizers:
+  - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "true"
   name: controller
@@ -497,13 +462,12 @@ spec:
   - storagemgmt
   roleName: Controller
   vip: false
-status:
-  hosts: {}
-  networks: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
+  finalizers:
+  - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "false"
   name: openstackclient
@@ -511,6 +475,8 @@ metadata:
 spec:
   addToPredictableIPs: false
   hostCount: 1
+  hostNameRefs:
+    openstackclient-0: openstackclient
   networks:
   - ctlplane
   - external
@@ -526,46 +492,12 @@ status:
     ctlplane:
       allocationEnd: 192.168.25.250
       allocationStart: 192.168.25.100
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
       allocationStart: 10.0.0.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 10

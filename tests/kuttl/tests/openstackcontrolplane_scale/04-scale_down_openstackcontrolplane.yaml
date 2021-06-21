@@ -6,11 +6,13 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - command: |
-      oc annotate vm controller-0 osp-director.openstack.org/openstackvmset-delete-virtualmachine=true
+      oc annotate vm controller-0 osp-director.openstack.org/delete-host=true
     namespaced: true
   - command: |
-      oc annotate vm controller-1 osp-director.openstack.org/openstackvmset-delete-virtualmachine=true
+      oc annotate vm controller-1 osp-director.openstack.org/delete-host=true
     namespaced: true
   - command: |
       oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/controller/roleCount", "value":1}]'
     namespaced: true
+  - command: |
+      sleep 5
