@@ -173,11 +173,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: ctlplane
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: ctlplane
 spec:
   desiredState:
@@ -207,11 +205,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: external
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: external
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: external
 spec:
   desiredState:
@@ -241,11 +237,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: internalapi
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: internalapi
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: internalapi
 spec:
   desiredState:
@@ -275,11 +269,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: storage
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: storage
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: storage
 spec:
   desiredState:
@@ -309,11 +301,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: storagemgmt
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: storagemgmt
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: storagemgmt
 spec:
   desiredState:
@@ -343,11 +333,9 @@ apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   labels:
-    app: osp-openstacknet
-    cr: tenant
+    osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/name: tenant
     osp-director.openstack.org/namespace: openstack
-    owner: osp-director
   name: tenant
 spec:
   desiredState:

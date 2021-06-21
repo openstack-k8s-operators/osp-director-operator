@@ -4,6 +4,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
+  gitSecret: git-secret
   openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
   openStackClientNetworks:
     - ctlplane

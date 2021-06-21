@@ -482,6 +482,9 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Status.BaseImageDVReady = true
 	}
 
+	// store current VMHosts status to verify updated NetworkData change
+	currentVMHostsStatus = instance.Status.DeepCopy().VMHosts
+
 	//
 	//   Handle VM removal from VMSet
 	//
@@ -573,9 +576,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return nil
 	}
 
-	// store current VMHosts status to verify updated NetworkData change
-	currentVMHostsStatus = instance.Status.DeepCopy().VMHosts
-
 	// Generate new host NetworkData first, if necessary
 	for _, hostname := range newVMs {
 		actualStatus := instance.Status.DeepCopy().VMHosts[hostname]
@@ -649,7 +649,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
-		instance.Status.ProvisioningStatus.ReadyCount = readyCount
+		actualProvisioningState.ReadyCount = readyCount
 
 		if readyCount == instance.Spec.VMCount {
 			if readyCount == 0 {

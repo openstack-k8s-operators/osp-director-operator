@@ -22,13 +22,14 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
 metadata:
   finalizers:
-  - openstackvmsets.osp-director.openstack.org
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
   name: controller
   namespace: openstack
 spec:
   baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
   baseImageVolumeName: openstack-base-img
   cores: 2
+  ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
   isTripleoRole: true
@@ -45,8 +46,19 @@ spec:
   vmCount: 3
 status:
   baseImageDVReady: true
+  conditions:
+  - message: All requested VirtualMachines have been provisioned
+    reason: All requested VirtualMachines have been provisioned
+    status: "True"
+    type: Provisioned
+  provisioningStatus:
+    readyCount: 3
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
   vmHosts:
     controller-0:
+      annotatedForDeletion: false
+      hostRef: controller-0
       hostname: controller-0
       ipaddresses:
         ctlplane: 192.168.25.102/24
@@ -55,7 +67,10 @@ status:
         storage: 172.16.1.5/24
         storagemgmt: 172.16.3.5/24
         tenant: 172.16.0.5/24
+      provisioningState: Provisioned
     controller-1:
+      annotatedForDeletion: false
+      hostRef: controller-1
       hostname: controller-1
       ipaddresses:
         ctlplane: 192.168.25.103/24
@@ -64,7 +79,10 @@ status:
         storage: 172.16.1.6/24
         storagemgmt: 172.16.3.6/24
         tenant: 172.16.0.6/24
+      provisioningState: Provisioned
     controller-2:
+      annotatedForDeletion: false
+      hostRef: controller-2
       hostname: controller-2
       ipaddresses:
         ctlplane: 192.168.25.104/24
@@ -73,6 +91,7 @@ status:
         storage: 172.16.1.7/24
         storagemgmt: 172.16.3.7/24
         tenant: 172.16.0.7/24
+      provisioningState: Provisioned
 ---
 apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
@@ -116,37 +135,43 @@ metadata:
   name: ctlplane
   namespace: openstack
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 192.168.25.100
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: false
-    hostname: openstackclient-0
-    idKey: openstackclient-0
-    ip: 192.168.25.101
-    role: OpenstackClient
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 192.168.25.102
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 192.168.25.103
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 192.168.25.104
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 5
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 192.168.25.100
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 192.168.25.102
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 192.168.25.103
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 192.168.25.104
+        vip: false
+    OpenstackClient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.101
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -177,37 +202,43 @@ spec:
   gateway: 10.0.0.1
   vlan: 10
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 10.0.0.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: false
-    hostname: openstackclient-0
-    idKey: openstackclient-0
-    ip: 10.0.0.5
-    role: OpenstackClient
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 10.0.0.6
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 10.0.0.7
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 10.0.0.8
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet external has been successfully configured on targeted node(s)
+    reason: OpenStackNet external has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 5
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 10.0.0.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 10.0.0.6
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 10.0.0.7
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 10.0.0.8
+        vip: false
+    OpenstackClient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 10.0.0.5
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -237,31 +268,36 @@ spec:
   cidr: 172.16.2.0/24
   vlan: 20
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.2.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 172.16.2.5
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 172.16.2.6
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 172.16.2.7
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.2.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.2.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.2.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.2.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -291,31 +327,36 @@ spec:
   cidr: 172.16.1.0/24
   vlan: 30
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.1.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 172.16.1.5
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 172.16.1.6
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 172.16.1.7
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet storage has been successfully configured on targeted node(s)
+    reason: OpenStackNet storage has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.1.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.1.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.1.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.1.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -345,31 +386,36 @@ spec:
   cidr: 172.16.3.0/24
   vlan: 40
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.3.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 172.16.3.5
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 172.16.3.6
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 172.16.3.7
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.3.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.3.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.3.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.3.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -399,35 +445,42 @@ spec:
   cidr: 172.16.0.0/24
   vlan: 50
 status:
-  reservations:
-  - addToPredictableIPs: true
-    hostname: controlplane-0
-    idKey: controlplane-0
-    ip: 172.16.0.4
-    role: ControlPlane
-    vip: true
-  - addToPredictableIPs: true
-    hostname: controller-0
-    idKey: controller-0
-    ip: 172.16.0.5
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-1
-    idKey: controller-1
-    ip: 172.16.0.6
-    role: Controller
-    vip: false
-  - addToPredictableIPs: true
-    hostname: controller-2
-    idKey: controller-2
-    ip: 172.16.0.7
-    role: Controller
-    vip: false
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.0.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.0.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.0.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.0.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
+  finalizers:
+  - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "true"
   name: controller
@@ -435,6 +488,10 @@ metadata:
 spec:
   addToPredictableIPs: true
   hostCount: 3
+  hostNameRefs:
+    controller-0: controller-0
+    controller-1: controller-1
+    controller-2: controller-2
   networks:
   - ctlplane
   - external
@@ -474,138 +531,36 @@ status:
     ctlplane:
       allocationEnd: 192.168.25.250
       allocationStart: 192.168.25.100
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 192.168.25.0/24
       gateway: 192.168.25.1
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
       allocationStart: 10.0.0.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 10
     internalapi:
       allocationEnd: 172.16.2.250
       allocationStart: 172.16.2.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.2.0/24
       gateway: ""
       vlan: 20
     storage:
       allocationEnd: 172.16.1.250
       allocationStart: 172.16.1.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.1.0/24
       gateway: ""
       vlan: 30
     storagemgmt:
       allocationEnd: 172.16.3.250
       allocationStart: 172.16.3.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.3.0/24
       gateway: ""
       vlan: 40
     tenant:
       allocationEnd: 172.16.0.250
       allocationStart: 172.16.0.4
-      attachConfiguration:
-        bridgeName: br-osp
-        nodeNetworkConfigurationPolicy:
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
       cidr: 172.16.0.0/24
       gateway: ""
       vlan: 50
