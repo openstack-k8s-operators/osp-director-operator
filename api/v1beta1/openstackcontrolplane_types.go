@@ -73,13 +73,48 @@ type OpenStackVirtualMachineRoleSpec struct {
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
 type OpenStackControlPlaneStatus struct {
-	VIPStatus map[string]HostStatus `json:"vipStatus,omitempty"`
+	VIPStatus          map[string]HostStatus                   `json:"vipStatus,omitempty"`
+	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
+	ProvisioningStatus OpenStackControlPlaneProvisioningStatus `json:"provisioningStatus,omitempty"`
 }
+
+// OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
+// the OpenStackControlPlane (with an optional explanatory message)
+type OpenStackControlPlaneProvisioningStatus struct {
+	State        ControlPlaneProvisioningState `json:"state,omitempty"`
+	Reason       string                        `json:"reason,omitempty"`
+	DesiredCount int                           `json:"desiredCount,omitempty"`
+	ReadyCount   int                           `json:"readyCount,omitempty"`
+	ClientReady  bool                          `json:"clientReady,omitempty"`
+}
+
+// ControlPlaneProvisioningState - the overall state of this OpenStackControlPlane
+type ControlPlaneProvisioningState string
+
+const (
+	// ControlPlaneEmpty - special state for 0 requested VMs and 0 already provisioned
+	ControlPlaneEmpty ControlPlaneProvisioningState = "Empty"
+	// ControlPlaneWaiting - something is causing the OpenStackBaremetalSet to wait
+	ControlPlaneWaiting ControlPlaneProvisioningState = "Waiting"
+	// ControlPlaneProvisioning - one or more VMs are provisioning
+	ControlPlaneProvisioning ControlPlaneProvisioningState = "Provisioning"
+	// ControlPlaneProvisioned - the requested VM count for all roles has been satisfied
+	ControlPlaneProvisioned ControlPlaneProvisioningState = "Provisioned"
+	// ControlPlaneDeprovisioning - one or more VMs are deprovisioning
+	ControlPlaneDeprovisioning ControlPlaneProvisioningState = "Deprovisioning"
+	// ControlPlaneError - general catch-all for actual errors
+	ControlPlaneError ControlPlaneProvisioningState = "Error"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osctlplane;osctlplanes
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack ControlPlane"
+// +kubebuilder:printcolumn:name="VMSets Desired",type="integer",JSONPath=".status.provisioningStatus.desiredCount",description="VMSets Desired"
+// +kubebuilder:printcolumn:name="VMSets Ready",type="integer",JSONPath=".status.provisioningStatus.readyCount",description="VMSets Ready"
+// +kubebuilder:printcolumn:name="Client Ready",type="boolean",JSONPath=".status.provisioningStatus.clientReady",description="Client Ready"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
 // OpenStackControlPlane represents a virtualized OpenStack control plane configuration
 type OpenStackControlPlane struct {

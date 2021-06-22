@@ -19,7 +19,28 @@ spec:
     singular: openstackcontrolplane
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: VMSets Desired
+      jsonPath: .status.provisioningStatus.desiredCount
+      name: VMSets Desired
+      type: integer
+    - description: VMSets Ready
+      jsonPath: .status.provisioningStatus.readyCount
+      name: VMSets Ready
+      type: integer
+    - description: Client Ready
+      jsonPath: .status.provisioningStatus.clientReady
+      name: Client Ready
+      type: boolean
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackControlPlane represents a virtualized OpenStack control
@@ -140,6 +161,53 @@ spec:
             description: OpenStackControlPlaneStatus defines the observed state of
               OpenStackControlPlane
             properties:
+              conditions:
+                description: ConditionList - A list of conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              provisioningStatus:
+                description: OpenStackControlPlaneProvisioningStatus represents the
+                  overall provisioning state of the OpenStackControlPlane (with an
+                  optional explanatory message)
+                properties:
+                  clientReady:
+                    type: boolean
+                  desiredCount:
+                    type: integer
+                  readyCount:
+                    type: integer
+                  reason:
+                    type: string
+                  state:
+                    description: ControlPlaneProvisioningState - the overall state
+                      of this OpenStackControlPlane
+                    type: string
+                type: object
               vipStatus:
                 additionalProperties:
                   description: HostStatus represents the hostname and IP info for
