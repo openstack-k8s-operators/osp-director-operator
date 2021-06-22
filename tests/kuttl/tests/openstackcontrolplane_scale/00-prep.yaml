@@ -27,14 +27,4 @@
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
-commands:
-  - command: oc delete openstackcontrolplane overcloud -n openstack --ignore-not-found
-    namespaced: true
-  - command: oc delete openstackvmset controller -n openstack --ignore-not-found
-    namespaced: true
-  - command: oc delete openstacknet --all -n openstack
-    namespaced: true
-  - command: oc delete NodeNetworkConfigurationPolicy -n openstack --all
-    namespaced: true
-  - command: oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found
-    namespaced: true
+script: ../../common/prep.sh
