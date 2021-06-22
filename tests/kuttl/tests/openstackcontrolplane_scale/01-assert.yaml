@@ -14,7 +14,6 @@ spec:
   allocationEnd: 192.168.25.250
   allocationStart: 192.168.25.100
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:
@@ -44,7 +43,6 @@ spec:
   allocationStart: 10.0.0.4
   allocationEnd: 10.0.0.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
@@ -71,7 +69,6 @@ spec:
   allocationStart: 172.16.2.4
   allocationEnd: 172.16.2.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
@@ -98,7 +95,6 @@ spec:
   allocationStart: 172.16.1.4
   allocationEnd: 172.16.1.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
@@ -125,7 +121,6 @@ spec:
   allocationStart: 172.16.3.4
   allocationEnd: 172.16.3.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
@@ -152,7 +147,6 @@ spec:
   allocationStart: 172.16.0.4
   allocationEnd: 172.16.0.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""

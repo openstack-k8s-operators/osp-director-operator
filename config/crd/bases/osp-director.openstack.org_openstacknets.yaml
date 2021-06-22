@@ -69,8 +69,6 @@ spec:
                 description: AttachConfiguration used for NodeNetworkConfigurationPolicy
                   and NetworkAttachmentDefinition
                 properties:
-                  bridgeName:
-                    type: string
                   nodeNetworkConfigurationPolicy:
                     description: NodeNetworkConfigurationPolicySpec defines the desired
                       state of NodeNetworkConfigurationPolicy

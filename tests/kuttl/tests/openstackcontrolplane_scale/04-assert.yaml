@@ -137,7 +137,6 @@ spec:
   allocationEnd: 10.0.0.250
   allocationStart: 10.0.0.4
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:
@@ -204,7 +203,6 @@ spec:
   allocationEnd: 172.16.2.250
   allocationStart: 172.16.2.4
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:
@@ -263,7 +261,6 @@ spec:
   allocationEnd: 172.16.1.250
   allocationStart: 172.16.1.4
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:
@@ -322,7 +319,6 @@ spec:
   allocationEnd: 172.16.3.250
   allocationStart: 172.16.3.4
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:
@@ -381,7 +377,6 @@ spec:
   allocationEnd: 172.16.0.250
   allocationStart: 172.16.0.4
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       desiredState:
         interfaces:

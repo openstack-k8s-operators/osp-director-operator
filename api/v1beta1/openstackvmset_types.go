@@ -18,7 +18,6 @@ package v1beta1
 
 import (
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -98,16 +97,15 @@ const (
 
 // Host -
 type Host struct {
-	Hostname          string                                            `json:"hostname"`
-	HostRef           string                                            `json:"hostRef"`
-	DomainName        string                                            `json:"domainName"`
-	DomainNameUniq    string                                            `json:"domainNameUniq"`
-	IPAddress         string                                            `json:"ipAddress"`
-	NetworkDataSecret string                                            `json:"networkDataSecret"`
-	BaseImageName     string                                            `json:"baseImageName"`
-	Labels            map[string]string                                 `json:"labels"`
-	NNCP              map[string]nmstate.NodeNetworkConfigurationPolicy `json:"nncp"`
-	NAD               map[string]networkv1.NetworkAttachmentDefinition  `json:"nad"`
+	Hostname          string                                           `json:"hostname"`
+	HostRef           string                                           `json:"hostRef"`
+	DomainName        string                                           `json:"domainName"`
+	DomainNameUniq    string                                           `json:"domainNameUniq"`
+	IPAddress         string                                           `json:"ipAddress"`
+	NetworkDataSecret string                                           `json:"networkDataSecret"`
+	BaseImageName     string                                           `json:"baseImageName"`
+	Labels            map[string]string                                `json:"labels"`
+	NAD               map[string]networkv1.NetworkAttachmentDefinition `json:"nad"`
 }
 
 // +kubebuilder:object:root=true
