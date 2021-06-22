@@ -22,7 +22,6 @@ package v1beta1
 
 import (
 	"github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	"github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -199,13 +198,6 @@ func (in *Host) DeepCopyInto(out *Host) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
-		}
-	}
-	if in.NNCP != nil {
-		in, out := &in.NNCP, &out.NNCP
-		*out = make(map[string]v1alpha1.NodeNetworkConfigurationPolicy, len(*in))
-		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
 		}
 	}
 	if in.NAD != nil {

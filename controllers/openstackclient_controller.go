@@ -35,7 +35,6 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
-	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -187,23 +186,13 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 	}
-	// verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each configured network exists
-	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{
-		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
-	})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// verify that NetworkAttachmentDefinition for each configured network exist
 	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	for _, net := range instance.Spec.Networks {
-		if _, ok := nncMap[net]; !ok {
-			r.Log.Info(fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in 10 seconds", net))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		if _, ok := nadMap[net]; !ok {
 			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil

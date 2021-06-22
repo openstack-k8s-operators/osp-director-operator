@@ -9,7 +9,6 @@ spec:
   allocationStart: 10.0.0.4
   allocationEnd: 10.0.0.250
   attachConfiguration:
-    bridgeName: br-osp
     nodeNetworkConfigurationPolicy:
       nodeSelector:
         node-role.kubernetes.io/worker: ""

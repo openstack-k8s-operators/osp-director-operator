@@ -248,13 +248,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	// Verify that NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
-	nncMap, err := common.GetAllNetworkConfigurationPolicies(r, map[string]string{
-		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
-	})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// Verify that NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
 	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -280,10 +274,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
 
 		if osNetBindings[net] == "" {
-			// Non-SRIOV networks should have a NetworkConfigurationPolicy and a NetworkAttachmentDefinition
-			if _, ok := nncMap[net]; !ok {
-				msg = fmt.Sprintf("NetworkConfigurationPolicy for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
-			} else if _, ok := nadMap[net]; !ok {
+			// Non-SRIOV networks should have a NetworkAttachmentDefinition
+			if _, ok := nadMap[net]; !ok {
 				msg = fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
 			}
 		} else if osNetBindings[net] == "sriov" {
@@ -558,7 +550,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
 			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
 			Labels:            secretLabels,
-			NNCP:              nncMap,
 			NAD:               nadMap,
 		}
 

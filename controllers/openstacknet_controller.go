@@ -160,20 +160,10 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 	} else {
-		// generate NodeNetworkConfigurationPolicy
-		ncp := common.NetworkConfigurationPolicy{
-			Name:                           instance.Name,
-			Labels:                         common.GetLabels(instance, openstacknet.AppLabel, map[string]string{}),
-			NodeNetworkConfigurationPolicy: instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
-		}
-		err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
-		if err != nil {
-			instance.Status.CurrentState = ospdirectorv1beta1.NetError
-			_ = r.setStatus(instance, oldStatus, err.Error())
-			return ctrl.Result{}, err
-		}
 
-		// create NetworkAttachmentDefinition
+		//
+		// get the desired state
+		//
 		// the desired state is raw json, marshal -> unmarshal to parse it
 		desiredStateByte, err := json.Marshal(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy)
 		if err != nil {
@@ -192,7 +182,39 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 
+		// get bridgeName from desiredState
 		bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0]
+
+		// Don't add a uniq  label here because the NCP might be related to multiple networks/NetworkAttachmentDefinitions
+		labelSelector := map[string]string{
+			common.OwnerNameSpaceLabelSelector:      instance.Namespace,
+			common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+		}
+
+		// generate NodeNetworkConfigurationPolicy for the bridge
+		ncp := common.NetworkConfigurationPolicy{
+			Name:                           bridgeName.String(),
+			Labels:                         labelSelector,
+			NodeNetworkConfigurationPolicy: instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
+		}
+		err = common.CreateOrUpdateNetworkConfigurationPolicy(r, instance, instance.Kind, &ncp)
+		if err != nil {
+			instance.Status.CurrentState = ospdirectorv1beta1.NetError
+			_ = r.setStatus(instance, oldStatus, err.Error())
+			return ctrl.Result{}, err
+		}
+
+		// TODO: add finalizer to the NCP to prevent the bridge from being deleted if a network gets deleted
+
+		if !controllerutil.ContainsFinalizer(instance, openstacknet.FinalizerName) {
+			controllerutil.AddFinalizer(instance, openstacknet.FinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", openstacknet.FinalizerName, instance.Name))
+		}
+
+		// create NetworkAttachmentDefinition
 		vlan := strconv.Itoa(instance.Spec.Vlan)
 		nad := common.NetworkAttachmentDefinition{
 			Name:      instance.Name,
@@ -235,7 +257,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// apply.  Thus we don't already have the struct object in memory, and must acquire it by asking for a list of
 		// NNCPs filtered by our label selector (which should return just the one resource we seek)
 		err = r.Client.List(context.TODO(), nncpList, &client.ListOptions{
-			LabelSelector: labels.SelectorFromSet(common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})),
+			LabelSelector: labels.SelectorFromSet(labelSelector),
 		})
 
 		if err != nil {

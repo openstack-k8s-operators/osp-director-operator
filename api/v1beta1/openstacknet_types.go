@@ -31,7 +31,6 @@ type IPReservation struct {
 
 // NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 type NetworkConfiguration struct {
-	BridgeName string `json:"bridgeName,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
