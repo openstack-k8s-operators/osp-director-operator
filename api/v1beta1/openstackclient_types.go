@@ -24,10 +24,16 @@ import (
 type OpenStackClientSpec struct {
 	// Name of the image
 	ImageURL string `json:"imageURL"`
+
+	// +kubebuilder:validation:Optional
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
+
+	// +kubebuilder:validation:Optional
 	// GitSecret used to pull playbooks into the openstackclient pod
 	GitSecret string `json:"gitSecret"`
+
+	// +kubebuilder:validation:Optional
 	// cloudname passed in via OS_CLOUDNAME
 	CloudName string `json:"cloudName"`
 
@@ -37,6 +43,14 @@ type OpenStackClientSpec struct {
 
 	// StorageClass to be used for the openstackclient persistent storage
 	StorageClass string `json:"storageClass,omitempty"`
+
+	// +kubebuilder:default=42401
+	// RunUID user ID to run the pod with
+	RunUID int `json:"runUID"`
+
+	// +kubebuilder:default=42401
+	// RunGID user ID to run the pod with
+	RunGID int `json:"runGID"`
 }
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

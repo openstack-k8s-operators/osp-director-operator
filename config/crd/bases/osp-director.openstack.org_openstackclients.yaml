@@ -62,16 +62,23 @@ spec:
                 items:
                   type: string
                 type: array
+              runGID:
+                default: 42401
+                description: RunGID user ID to run the pod with
+                type: integer
+              runUID:
+                default: 42401
+                description: RunUID user ID to run the pod with
+                type: integer
               storageClass:
                 description: StorageClass to be used for the openstackclient persistent
                   storage
                 type: string
             required:
-            - cloudName
-            - deploymentSSHSecret
-            - gitSecret
             - imageURL
             - networks
+            - runGID
+            - runUID
             type: object
           status:
             description: OpenStackClientStatus defines the observed state of OpenStackClient

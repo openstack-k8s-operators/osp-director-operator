@@ -94,13 +94,14 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets
-	_, _, err = common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
-	} else if err != nil {
-		return ctrl.Result{}, err
+	if instance.Spec.DeploymentSSHSecret != "" {
+		_, _, err = common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
+		if err != nil && k8s_errors.IsNotFound(err) {
+			return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
+		} else if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
-
 	if instance.Status.OpenStackClientNetStatus == nil {
 		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
@@ -112,7 +113,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	hostnameDetails := common.Hostname{}
 	if len(hostnameRef) == 0 {
 		hostnameDetails = common.Hostname{
-			Basename: openstackclient.Role,
+			Basename: instance.Name,
 			Hostname: "",
 			VIP:      false,
 		}
@@ -125,7 +126,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		for hostname := range hostnameRef {
 
 			hostnameDetails = common.Hostname{
-				Basename: openstackclient.Role,
+				Basename: instance.Name,
 				Hostname: hostname,
 				VIP:      false,
 			}
@@ -215,8 +216,8 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
-	if err != nil {
-		return ctrl.Result{}, nil
+	if err != nil && k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
 	}
 
 	// PVCs
@@ -305,15 +306,18 @@ func (r *OpenStackClientReconciler) setNetStatus(instance *ospdirectorv1beta1.Op
 
 func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, hostnameDetails *common.Hostname, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
 	var terminationGracePeriodSeconds int64 = 0
-	runAsUser := int64(openstackclient.CloudAdminUID)
-	runAsGroup := int64(openstackclient.CloudAdminGID)
+
+	runAsUser := int64(instance.Spec.RunUID)
+	runAsGroup := int64(instance.Spec.RunGID)
 
 	// Get volumes
 	initVolumeMounts := openstackclient.GetInitVolumeMounts(instance)
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
 	volumes := openstackclient.GetVolumes(instance)
 
-	envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
+	if instance.Spec.CloudName != "" {
+		envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
+	}
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotation := "["
@@ -324,6 +328,24 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		}
 	}
 	annotation += "]"
+
+	env := common.MergeEnvs([]corev1.EnvVar{}, envVars)
+
+	if instance.Spec.GitSecret != "" {
+		env = common.MergeEnvs([]corev1.EnvVar{
+			{
+				Name: "GIT_URL",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.GitSecret,
+						},
+						Key: "git_url",
+					},
+				},
+			},
+		}, envVars)
+	}
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -353,19 +375,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 					"-c",
 					"/bin/sleep infinity",
 				},
-				Env: common.MergeEnvs([]corev1.EnvVar{
-					{
-						Name: "GIT_URL",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: instance.Spec.GitSecret,
-								},
-								Key: "git_url",
-							},
-						},
-					},
-				}, envVars),
+				Env:          env,
 				VolumeMounts: volumeMounts,
 			},
 		},
@@ -379,19 +389,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 				"-c",
 				"/usr/local/bin/init.sh",
 			},
-			Env: common.MergeEnvs([]corev1.EnvVar{
-				{
-					Name: "GIT_URL",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: instance.Spec.GitSecret,
-							},
-							Key: "git_url",
-						},
-					},
-				},
-			}, envVars),
+			Env:          env,
 			Privileged:   false,
 			VolumeMounts: initVolumeMounts,
 		},
