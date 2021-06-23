@@ -196,41 +196,42 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	currentStatus := instance.Status.DeepCopy()
 	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
 
+	// create VIP for all networks
+	uniqNetworksList := r.createUniqNetworkList(instance)
+	ipsetDetails := common.IPSet{
+		Networks:            uniqNetworksList,
+		Role:                controlplane.Role,
+		HostCount:           controlplane.Count,
+		VIP:                 true,
+		AddToPredictableIPs: true,
+		HostNameRefs:        hostnameRefs,
+	}
+	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	if err != nil {
+		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
+		newProvStatus.Reason = err.Error()
+		_ = r.setProvisioningStatus(instance, newProvStatus)
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
+	if len(ipset.Status.HostIPs) < controlplane.Count {
+		newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
+		newProvStatus.Reason = fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count)
+		_ = r.setProvisioningStatus(instance, newProvStatus)
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	// update VIP network status
+	for _, netName := range uniqNetworksList {
+		// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
+		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
+	}
+
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
-		// create VIP for all networks for any of the VM roles
-		ipsetDetails := common.IPSet{
-			Networks:            vmRole.Networks,
-			Role:                controlplane.Role,
-			HostCount:           controlplane.Count,
-			VIP:                 true,
-			AddToPredictableIPs: true,
-			HostNameRefs:        hostnameRefs,
-		}
-		ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
-		if err != nil {
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			return ctrl.Result{}, err
-		}
-
-		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		}
-
-		if len(ipset.Status.HostIPs) < controlplane.Count {
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
-			newProvStatus.Reason = fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count)
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
-
-		// update VIP network status
-		for _, netName := range vmRole.Networks {
-			// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
-			r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
-		}
-
 		actualStatus := instance.Status
 		if !reflect.DeepEqual(currentStatus, &actualStatus) {
 			err = r.Client.Status().Update(context.TODO(), instance)
@@ -300,7 +301,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			Namespace: instance.Namespace,
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
 		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
 		openstackclient.Spec.CloudName = instance.Name
@@ -479,4 +480,22 @@ func (r *OpenStackControlPlaneReconciler) setProvisioningStatus(instance *ospdir
 	}
 
 	return nil
+}
+
+func (r *OpenStackControlPlaneReconciler) createUniqNetworkList(instance *ospdirectorv1beta1.OpenStackControlPlane) []string {
+
+	// create uniq list networls of all VirtualMachineRoles
+	networkList := make(map[string]int)
+	for _, vmRole := range instance.Spec.VirtualMachineRoles {
+		for _, network := range vmRole.Networks {
+			networkList[network] = 1
+		}
+	}
+
+	uniqNetworksList := make([]string, 0)
+	for network := range networkList {
+		uniqNetworksList = append(uniqNetworksList, network)
+	}
+
+	return uniqNetworksList
 }
