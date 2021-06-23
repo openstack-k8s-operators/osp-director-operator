@@ -771,6 +771,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneGateway"] = ipset.Status.Networks["ctlplane"].Gateway
 	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
+	templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 

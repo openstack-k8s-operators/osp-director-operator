@@ -286,7 +286,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					break
 				} else if condition.Type == nmstateapi.NodeNetworkConfigurationPolicyConditionDegraded {
 					instance.Status.CurrentState = ospdirectorv1beta1.NetError
-					_ = r.setStatus(instance, oldStatus, err.Error())
+					_ = r.setStatus(instance, oldStatus, fmt.Sprintf("Underlying NNCP error: %s", condition.Message))
 					return ctrl.Result{}, err
 				}
 			}

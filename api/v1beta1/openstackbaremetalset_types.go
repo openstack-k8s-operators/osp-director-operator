@@ -48,6 +48,9 @@ type OpenStackBaremetalSetSpec struct {
 	// NodeRootPassword: <base64 enc pwd>
 	// to the secret data
 	PasswordSecret string `json:"passwordSecret,omitempty"`
+	// BootstrapDNS - initial DNS nameserver values to set on the BaremetalHosts when they are provisioned.
+	// Note that subsequent TripleO deployment will overwrite these values
+	BootstrapDNS []string `json:"bootstrapDns,omitempty"`
 }
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
