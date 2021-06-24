@@ -8,6 +8,7 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
 	github.com/metal3-io/baremetal-operator v0.0.0-20201116105209-c72e2e0d8803
 	github.com/nmstate/kubernetes-nmstate v0.33.0
@@ -24,6 +25,7 @@ require (
 	golang.org/x/tools v0.1.4 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/grpc/examples v0.0.0-20210512000516-62adda2ece5e // indirect
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3
 	k8s.io/apiserver v0.19.2

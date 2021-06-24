@@ -30,6 +30,11 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 			ReadOnly:  true,
 		},
 		{
+			Name:      "tripleo-passwords",
+			MountPath: "/home/cloud-admin/config-passwords",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "tripleo-deploy-config-custom",
 			MountPath: "/home/cloud-admin/config-custom",
 			ReadOnly:  true,
@@ -85,6 +90,17 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 					DefaultMode: &config0644AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: instance.Spec.HeatEnvConfigMap,
+					},
+				},
+			},
+		},
+		{
+			Name: "tripleo-passwords",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "tripleo-passwords",
 					},
 				},
 			},

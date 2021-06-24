@@ -86,7 +86,7 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("controlplane", req.NamespacedName)
 
-	// Fetch the controller VM instance
+	// Fetch the controlplane instance
 	instance := &ospdirectorv1beta1.OpenStackControlPlane{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
@@ -103,7 +103,32 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Used in comparisons below to determine whether a status update is actually needed
 	newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
 
+	// ConfigMap - containing Tripleo Passwords
 	envVars := make(map[string]common.EnvSetter)
+	cmLabels := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
+
+	templateParameters := make(map[string]interface{})
+	templateParameters["TripleoPasswords"] = common.GeneratePasswords()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	cm := []common.Template{
+		{
+			Name:           "tripleo-passwords",
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			Labels:         cmLabels,
+			ConfigOptions:  templateParameters,
+		},
+	}
+
+	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Secret - used for deployment to ssh into the overcloud nodes,
 	//          gets added to the controller VMs cloud-admin user using cloud-init
@@ -121,7 +146,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			_ = r.setProvisioningStatus(instance, newProvStatus)
 			return ctrl.Result{}, err
 		}
-		secretHash, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
+		_, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
 		if err != nil {
 			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
 			newProvStatus.Reason = err.Error()
@@ -429,6 +454,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		// watch vmset and openstackclient pods in the same namespace
