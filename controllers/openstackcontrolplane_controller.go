@@ -125,7 +125,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		},
 	}
 
-	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	err = common.EnsureSecrets(r, instance, cm, &envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -454,7 +454,6 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		// watch vmset and openstackclient pods in the same namespace

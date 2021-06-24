@@ -97,11 +97,9 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 		{
 			Name: "tripleo-passwords",
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
+				Secret: &corev1.SecretVolumeSource{
 					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-passwords",
-					},
+					SecretName:  "tripleo-passwords",
 				},
 			},
 		},
