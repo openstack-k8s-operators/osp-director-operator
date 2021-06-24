@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8s_rand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,11 +96,13 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
+	password := k8s_rand.String(10)
 	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name
 	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name
+	templateParameters["MariaDBPassword"] = password
 
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
 	cms := []common.Template{
@@ -120,7 +123,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// MariaDB Pod
-	mariadbPod := openstackephemeralheat.MariadbPod(instance)
+	mariadbPod := openstackephemeralheat.MariadbPod(instance, password)
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbPod, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbPod, r.Scheme)
 		if err != nil {
@@ -157,7 +160,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// RabbitMQ Pod
-	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
+	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance, password)
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitmqPod, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqPod, r.Scheme)
 		if err != nil {
@@ -194,7 +197,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
-	heatAPIPod := openstackephemeralheat.HeatAPIPod(instance)
+	heatAPIPod := openstackephemeralheat.HeatAPIPod(instance, password)
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatAPIPod, func() error {
 		err := controllerutil.SetControllerReference(instance, heatAPIPod, r.Scheme)
 		if err != nil {
