@@ -25,7 +25,6 @@ require (
 	golang.org/x/tools v0.1.4 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/grpc/examples v0.0.0-20210512000516-62adda2ece5e // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3
 	k8s.io/apiserver v0.19.2

@@ -146,7 +146,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			_ = r.setProvisioningStatus(instance, newProvStatus)
 			return ctrl.Result{}, err
 		}
-		_, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
+		secretHash, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
 		if err != nil {
 			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
 			newProvStatus.Reason = err.Error()
