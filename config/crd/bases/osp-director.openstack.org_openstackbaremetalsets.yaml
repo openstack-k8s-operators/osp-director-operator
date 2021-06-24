@@ -67,6 +67,13 @@ spec:
                 description: BmhLabelSelector allows for a sub-selection of BaremetalHosts
                   based on arbitrary labels
                 type: object
+              bootstrapDns:
+                description: BootstrapDNS - initial DNS nameserver values to set on
+                  the BaremetalHosts when they are provisioned. Note that subsequent
+                  TripleO deployment will overwrite these values
+                items:
+                  type: string
+                type: array
               count:
                 description: Count The number of baremetalhosts to attempt to aquire
                 minimum: 0
