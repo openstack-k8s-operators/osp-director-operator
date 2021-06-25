@@ -27,4 +27,5 @@
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
-script: ../../common/prep.sh
+commands:
+  - script: ../../common/scripts/prep.sh
