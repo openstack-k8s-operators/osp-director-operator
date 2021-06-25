@@ -96,13 +96,25 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	password := k8s_rand.String(10)
 	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
+	// only generate the password secret once
+	passwordSecret, _, err := common.GetSecret(r, "ephemeral-heat-"+instance.Name, instance.Namespace)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		passwordSecret = openstackephemeralheat.PasswordSecret("ephemeral-heat-"+instance.Name, instance.Namespace, cmLabels, k8s_rand.String(10))
+		_, op, err := common.CreateOrUpdateSecret(r, instance, passwordSecret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("Secret %s successfully reconciled - operation: ephemeral-heat-%s", instance.Name, string(op)))
+		}
+	}
+
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name
 	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name
-	templateParameters["MariaDBPassword"] = password
+	templateParameters["MariaDBPassword"] = passwordSecret.Data["password"]
 
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
 	cms := []common.Template{
@@ -123,7 +135,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// MariaDB Pod
-	mariadbPod := openstackephemeralheat.MariadbPod(instance, password)
+	mariadbPod := openstackephemeralheat.MariadbPod(instance)
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbPod, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbPod, r.Scheme)
 		if err != nil {
@@ -160,7 +172,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// RabbitMQ Pod
-	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance, password)
+	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitmqPod, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqPod, r.Scheme)
 		if err != nil {
@@ -197,7 +209,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
-	heatAPIPod := openstackephemeralheat.HeatAPIPod(instance, password)
+	heatAPIPod := openstackephemeralheat.HeatAPIPod(instance)
 	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatAPIPod, func() error {
 		err := controllerutil.SetControllerReference(instance, heatAPIPod, r.Scheme)
 		if err != nil {
