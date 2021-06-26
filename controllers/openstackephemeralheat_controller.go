@@ -114,7 +114,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	templateParameters := make(map[string]interface{})
 	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name
 	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name
-	templateParameters["MariaDBPassword"] = passwordSecret.Data["password"]
+	templateParameters["MariaDBPassword"] = string(passwordSecret.Data["password"])
 
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
 	cms := []common.Template{
