@@ -7,7 +7,7 @@ spec:
   # How many nodes to provision
   count: 1
   # The image to install on the provisioned nodes
-  baseImageUrl: http://172.22.0.1/images/rhel-guest-image-8.3-417.x86_64.qcow2.gz
+  baseImageUrl: http://192.168.111.1:8081/images/rhel-guest-image-8.4-825.x86_64.qcow2
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-baremetalset-ssh-keys
   # Networks to associate with this host
@@ -20,7 +20,7 @@ spec:
   # to the secret data
   passwordSecret: userpassword
   # The interface on the nodes that will be assigned an IP from the ctlCidr
-  ctlplaneInterface: eth2
+  ctlplaneInterface: enp7s0
   # Arbitrary label selector for BaremetalHosts (optional)
   bmhLabelSelector:
     arbitraryKey: arbitraryValue

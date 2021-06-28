@@ -1,0 +1,10 @@
+#
+# Scale OpenStackBaremetalSet to 2 BaremetalHosts
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch openstackbaremetalset baremetalset-sample --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":2}]'
+    namespaced: true

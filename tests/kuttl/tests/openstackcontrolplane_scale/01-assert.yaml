@@ -2,7 +2,7 @@
 # Check for:
 #
 # - 6 OpenStackNets
-# - 6 NodeNetworkConfigurationPolicies
+# - 1 NodeNetworkConfigurationPolicy
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
