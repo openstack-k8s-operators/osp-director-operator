@@ -25,7 +25,8 @@ import (
 
 // GetVolumeMounts -
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+
+	volumes := []corev1.VolumeMount{
 		{
 			Name:      fmt.Sprintf("%s-hosts", instance.Name),
 			MountPath: "/etc/hosts",
@@ -38,11 +39,6 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			ReadOnly:  false,
 		},
 		{
-			Name:      "root-ssh",
-			MountPath: "/root/.ssh",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "openstackclient-scripts",
 			MountPath: "/home/cloud-admin/tripleo-deploy.sh",
 			SubPath:   "tripleo-deploy.sh",
@@ -50,11 +46,20 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 		},
 	}
 
+	if instance.Spec.DeploymentSSHSecret != "" {
+		volumes = append(volumes, corev1.VolumeMount{
+			Name:      "root-ssh",
+			MountPath: "/root/.ssh",
+			ReadOnly:  true})
+	}
+
+	return volumes
 }
 
 // GetInitVolumeMounts -
 func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+
+	volumes := []corev1.VolumeMount{
 		{
 			Name:      "openstackclient-scripts",
 			MountPath: "/usr/local/bin/init.sh",
@@ -76,31 +81,41 @@ func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.
 			MountPath: "/root/.ssh",
 			ReadOnly:  false,
 		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/mnt/ssh-config/id_rsa",
-			SubPath:   "id_rsa",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/mnt/ssh-config/id_rsa.pub",
-			SubPath:   "id_rsa.pub",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "ssh-config",
-			MountPath: "/mnt/ssh-config/config",
-			SubPath:   "config",
-			ReadOnly:  true,
-		},
-		{
+	}
+
+	if instance.Spec.DeploymentSSHSecret != "" {
+		volumes = append(volumes, []corev1.VolumeMount{
+			{
+				Name:      "ssh-config",
+				MountPath: "/mnt/ssh-config/id_rsa",
+				SubPath:   "id_rsa",
+				ReadOnly:  true,
+			},
+			{
+				Name:      "ssh-config",
+				MountPath: "/mnt/ssh-config/id_rsa.pub",
+				SubPath:   "id_rsa.pub",
+				ReadOnly:  true,
+			},
+			{
+				Name:      "ssh-config",
+				MountPath: "/mnt/ssh-config/config",
+				SubPath:   "config",
+				ReadOnly:  true,
+			},
+		}...)
+	}
+
+	if instance.Spec.GitSecret != "" {
+		volumes = append(volumes, corev1.VolumeMount{
 			Name:      "git-ssh-config",
 			MountPath: "/mnt/ssh-config/git_id_rsa",
 			SubPath:   "git_id_rsa",
-			ReadOnly:  true,
-		},
+			ReadOnly:  true})
+
 	}
+
+	return volumes
 }
 
 // GetVolumes -
@@ -109,47 +124,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755
 
-	return []corev1.Volume{
-		{
-			Name: "ssh-config",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					SecretName:  instance.Spec.DeploymentSSHSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "identity",
-							Path: "id_rsa",
-							Mode: &config0600AccessMode,
-						},
-						{
-							Key:  "authorized_keys",
-							Path: "id_rsa.pub",
-						},
-						{
-							Key:  "config",
-							Path: "config",
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: "git-ssh-config", //ssh key for git repo access
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					SecretName:  instance.Spec.GitSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "git_ssh_identity",
-							Path: "git_id_rsa",
-							Mode: &config0600AccessMode,
-						},
-					},
-				},
-			},
-		},
+	volumes := []corev1.Volume{
 		{
 			Name: "root-ssh",
 			VolumeSource: corev1.VolumeSource{
@@ -195,4 +170,51 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 		},
 	}
 
+	if instance.Spec.DeploymentSSHSecret != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "ssh-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					SecretName:  instance.Spec.DeploymentSSHSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "identity",
+							Path: "id_rsa",
+							Mode: &config0600AccessMode,
+						},
+						{
+							Key:  "authorized_keys",
+							Path: "id_rsa.pub",
+						},
+						{
+							Key:  "config",
+							Path: "config",
+						},
+					},
+				},
+			},
+		})
+	}
+
+	if instance.Spec.GitSecret != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "git-ssh-config", //ssh key for git repo access
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					SecretName:  instance.Spec.GitSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "git_ssh_identity",
+							Path: "git_id_rsa",
+							Mode: &config0600AccessMode,
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return volumes
 }

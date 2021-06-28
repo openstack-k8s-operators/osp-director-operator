@@ -23,23 +23,26 @@ fi
 mkdir -p /home/cloud-admin/tripleo-deploy/validations
 rm -rf /home/cloud-admin/tripleo-deploy/overcloud-ansible*
 
-# add cloud-admin ssh keys to EmptyDir Vol mount to /root/.ssh in openstackclient
-sudo mkdir -p /root/.ssh
-sudo cp /mnt/ssh-config/* /root/.ssh/
-sudo chmod 600 /root/.ssh/id_rsa
-sudo chown -R root: /root/.ssh
+if [ -d /mnt/ssh-config ]; then
+  # add cloud-admin ssh keys to EmptyDir Vol mount to /root/.ssh in openstackclient
+  sudo mkdir -p /root/.ssh
+  sudo cp /mnt/ssh-config/* /root/.ssh/
+  sudo chmod 600 /root/.ssh/id_rsa
+  sudo chown -R root: /root/.ssh
 
-# add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
-mkdir -p /home/cloud-admin/.ssh
-cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
-chmod 600 /home/cloud-admin/.ssh/id_rsa
-chmod 600 /home/cloud-admin/.ssh/git_id_rsa
-chown -R cloud-admin: /home/cloud-admin/.ssh
+  # add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
+  mkdir -p /home/cloud-admin/.ssh
+  cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
+  chmod 600 /home/cloud-admin/.ssh/id_rsa
+  chmod 600 /home/cloud-admin/.ssh/git_id_rsa
+  chown -R cloud-admin: /home/cloud-admin/.ssh
+fi
 
-GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
-GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
+if [ -v GIT_URL ]; then
+  GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
+  GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
 
-cat <<EOF >> /home/cloud-admin/.ssh/config
+  cat <<EOF >> /home/cloud-admin/.ssh/config
 
 
 Host $GIT_HOST
@@ -48,5 +51,6 @@ Host $GIT_HOST
     StrictHostKeyChecking no
 EOF
 
-git config --global user.email "dev@null.io"
-git config --global user.name "OSP Director Operator"
+  git config --global user.email "dev@null.io"
+  git config --global user.name "OSP Director Operator"
+fi

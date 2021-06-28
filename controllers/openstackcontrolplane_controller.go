@@ -295,24 +295,26 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
 
 	// Create openstack client pod
-	openstackclient := &ospdirectorv1beta1.OpenStackClient{
+	osc := &ospdirectorv1beta1.OpenStackClient{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "openstackclient",
 			Namespace: instance.Namespace,
 		},
 	}
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, openstackclient, func() error {
-		openstackclient.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
-		openstackclient.Spec.DeploymentSSHSecret = deploymentSecretName
-		openstackclient.Spec.CloudName = instance.Name
-		openstackclient.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
-		openstackclient.Spec.GitSecret = instance.Spec.GitSecret
+	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, osc, func() error {
+		osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
+		osc.Spec.DeploymentSSHSecret = deploymentSecretName
+		osc.Spec.CloudName = instance.Name
+		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
+		osc.Spec.GitSecret = instance.Spec.GitSecret
+		osc.Spec.RunUID = openstackclient.CloudAdminUID
+		osc.Spec.RunGID = openstackclient.CloudAdminGID
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
-			openstackclient.Spec.Networks = instance.Spec.OpenStackClientNetworks
+			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks
 		}
 
-		err := controllerutil.SetControllerReference(instance, openstackclient, r.Scheme)
+		err := controllerutil.SetControllerReference(instance, osc, r.Scheme)
 		if err != nil {
 			return err
 		}

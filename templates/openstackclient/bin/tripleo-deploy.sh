@@ -1,10 +1,45 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 
 mkdir -p /home/cloud-admin/tripleo-deploy/validations
 if [ ! -L /var/log/validations ]; then
   sudo ln -s /home/cloud-admin/tripleo-deploy/validations /var/log/validations
 fi
+
+set_env() {
+  echo -e "Exporting environment variables"
+  export ANSIBLE_SSH_ARGS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ControlMaster=auto -o ControlPersist=30m -o ServerAliveInterval=64 -o ServerAliveCountMax=1024 -o Compression=no -o TCPKeepAlive=yes -o VerifyHostKeyDNS=no -o ForwardX11=no -o ForwardAgent=yes -o PreferredAuthentications=publickey -T"
+  export ANSIBLE_DISPLAY_FAILED_STDERR="True"
+  export ANSIBLE_FORKS="24"
+  export ANSIBLE_TIMEOUT="600"
+  export ANSIBLE_GATHER_TIMEOUT="45"
+  export ANSIBLE_SSH_RETRIES="3"
+  export ANSIBLE_PIPELINING="True"
+  export ANSIBLE_SCP_IF_SSH="True"
+  export ANSIBLE_REMOTE_USER="cloud-admin"
+  export ANSIBLE_STDOUT_CALLBACK="tripleo_dense"
+  export ANSIBLE_CALLBACK_WHITELIST="tripleo_dense,tripleo_profile_tasks,tripleo_states"
+  export ANSIBLE_RETRY_FILES_ENABLED="False"
+  export ANSIBLE_HOST_KEY_CHECKING="False"
+  export ANSIBLE_TRANSPORT="smart"
+  export ANSIBLE_CACHE_PLUGIN_TIMEOUT="7200"
+  export ANSIBLE_INJECT_FACT_VARS="False"
+  export ANSIBLE_VARS_PLUGIN_STAGE="inventory"
+  export ANSIBLE_GATHER_SUBSET="!all,min"
+  export ANSIBLE_GATHERING="smart"
+  export ANSIBLE_LOG_PATH="/home/cloud-admin/ansible.log"
+  export ANSIBLE_PRIVATE_KEY_FILE="/home/cloud-admin/.ssh/id_rsa"
+  export ANSIBLE_BECOME="True"
+  export ANSIBLE_LIBRARY="/usr/share/ansible/tripleo-plugins/modules:/usr/share/ansible/plugins/modules:/usr/share/ceph-ansible/library:/usr/share/ansible-modules:/usr/share/ansible/library"
+  export ANSIBLE_LOOKUP_PLUGINS="/usr/share/ansible/tripleo-plugins/lookup:/usr/share/ansible/plugins/lookup:/usr/share/ceph-ansible/plugins/lookup:/usr/share/ansible/lookup_plugins"
+  export ANSIBLE_CALLBACK_PLUGINS="/usr/share/ansible/tripleo-plugins/callback:/usr/share/ansible/plugins/callback:/usr/share/ceph-ansible/plugins/callback:/usr/share/ansible/callback_plugins"
+  export ANSIBLE_ACTION_PLUGINS="/usr/share/ansible/tripleo-plugins/action:/usr/share/ansible/plugins/action:/usr/share/ceph-ansible/plugins/actions:/usr/share/ansible/action_plugins"
+  export ANSIBLE_FILTER_PLUGINS="/home/cloud-admin/filter:/usr/share/ansible/tripleo-plugins/filter:/usr/share/ansible/plugins/filter:/usr/share/ceph-ansible/plugins/filter:/usr/share/ansible/filter_plugins"
+  export ANSIBLE_ROLES_PATH="/usr/share/ansible/tripleo-roles:/usr/share/ansible/roles:/usr/share/ceph-ansible/roles:/etc/ansible/roles:/usr/share/ansible/roles"
+  export LANG="en_US.UTF-8"
+  export HISTCONTROL="ignoredups"
+  export HISTSIZE="1000"
+}
 
 init() {
   if [ ! -d /home/cloud-admin/playbooks ]; then
@@ -38,6 +73,7 @@ diff() {
 
 play() {
   init
+  set_env
   pushd /home/cloud-admin/playbooks > /dev/null
 
   if [ ! -d /home/cloud-admin/playbooks/tripleo-ansible ]; then
@@ -61,15 +97,16 @@ play() {
 
   cd tripleo-ansible
 
-  # TODO: for now disable opendev-validation-ceph
-  # The check fails because the lvm2 package is not installed in openstackclient container image image
+  # TODO: for now disable opendev-validation
+  # e.g. The check fails because the lvm2 package is not installed in openstackclient container image image
   # and ansible_facts include packages from undercloud.
-  time ansible-playbook -i inventory.yaml \
-    --private-key /home/cloud-admin/.ssh/id_rsa \
-    --skip-tags opendev-validation-ceph \
-    --become deploy_steps_playbook.yaml
+  ansible-playbook \
+    -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml \
+    --skip-tags opendev-validation \
+    /home/cloud-admin/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
 
-  cp /etc/openstack/clouds.yaml ~/tripleo-deploy/
+  mkdir -p ~/.config/openstack
+  cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
   popd > /dev/null
 
 }
