@@ -13,7 +13,7 @@ func RabbitmqGetLabels(name string) map[string]string {
 }
 
 // RabbitmqPod -
-func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password string) *corev1.Pod {
+func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 	var runAsUser = int64(RabbitMQUID)
 
 	pod := &corev1.Pod{
@@ -63,8 +63,15 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password s
 							Value: "true",
 						},
 						{
-							Name:  "RABBITMQ_CLUSTER_COOKIE",
-							Value: password,
+							Name: "RABBITMQ_CLUSTER_COOKIE",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "ephemeral-heat-" + instance.Name,
+									},
+									Key: "password",
+								},
+							},
 						},
 					},
 					VolumeMounts: getRabbitmqVolumeMounts(),

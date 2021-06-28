@@ -14,7 +14,7 @@ func HeatGetLabels(name string) map[string]string {
 }
 
 // HeatAPIPod -
-func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password string) *corev1.Pod {
+func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 	var runAsUser = int64(HeatUID)
 
 	pod := &corev1.Pod{
@@ -52,19 +52,33 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password st
 					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"DROP DATABASE IF EXISTS heat\";"},
 					Env: []corev1.EnvVar{
 						{
-							Name:  "MYSQL_PWD",
-							Value: password,
+							Name: "MYSQL_PWD",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "ephemeral-heat-" + instance.Name,
+									},
+									Key: "password",
+								},
+							},
 						},
 					},
 				},
 				{
 					Name:    "heat-db-create",
 					Image:   instance.Spec.MariadbImageURL,
-					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY '" + password + "'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY '" + password + "'; \""},
+					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY '$MYSQL_PWD'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY '$MYSQL_PWD'; \""},
 					Env: []corev1.EnvVar{
 						{
-							Name:  "MYSQL_PWD",
-							Value: password,
+							Name: "MYSQL_PWD",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "ephemeral-heat-" + instance.Name,
+									},
+									Key: "password",
+								},
+							},
 						},
 					},
 				},

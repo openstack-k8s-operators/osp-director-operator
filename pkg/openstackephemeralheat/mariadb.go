@@ -13,7 +13,7 @@ func MariadbGetLabels(name string) map[string]string {
 }
 
 // MariadbPod -
-func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password string) *corev1.Pod {
+func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod {
 	var runAsUser = int64(MySQLUID)
 
 	pod := &corev1.Pod{
@@ -62,8 +62,15 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, password st
 							Value: "60",
 						},
 						{
-							Name:  "DB_ROOT_PASSWORD",
-							Value: password,
+							Name: "DB_ROOT_PASSWORD",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "ephemeral-heat-" + instance.Name,
+									},
+									Key: "password",
+								},
+							},
 						},
 					},
 					VolumeMounts: getMariadbInitVolumeMounts(),
