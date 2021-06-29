@@ -221,7 +221,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 			actualProvisioningState.Reason = err.Error()
 			_ = r.setProvisioningStatus(instance, actualProvisioningState)
 			return ctrl.Result{}, err
-		} else if !k8s_errors.IsNotFound(err) {
+		} else if err == nil {
 			// There should only be one pod.  If there is more than one, we have other problems...
 			for _, pod := range podList.Items {
 				if pod.Status.Phase == corev1.PodRunning {
