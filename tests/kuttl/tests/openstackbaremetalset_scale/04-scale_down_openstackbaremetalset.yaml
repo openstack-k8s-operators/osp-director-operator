@@ -1,0 +1,12 @@
+#
+# Scale OpenStackBaremetalSet to 1 BaremetalHost
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc annotate bmh -l osp-director.openstack.org/osphostname=compute-0 osp-director.openstack.org/delete-host=true -n openshift-machine-api
+    namespaced: true
+  - command: |
+      oc patch openstackbaremetalset baremetalset-sample --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":1}]'
+    namespaced: true

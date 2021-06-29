@@ -5,4 +5,4 @@ metadata:
   namespace: openstack
 spec:
   port: 8080
-  baseImageUrl: http://172.22.0.1:8080/rhel-guest-image-8.3-417.x86_64.qcow2.gz
+  baseImageUrl: http://192.168.111.1:8080/rhel-guest-image-8.4-825.x86_64.qcow2
