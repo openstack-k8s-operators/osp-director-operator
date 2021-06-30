@@ -40,10 +40,15 @@ status:
       ctlplaneIP: 192.168.25.101/24
       hostname: compute-1
       provisioningState: provisioned
+  conditions:
+  - message: All requested BaremetalHosts have been provisioned
+    reason: All requested BaremetalHosts have been provisioned
+    status: "True"
+    type: Provisioned
   provisioningStatus:
     readyCount: 2
     reason: All requested BaremetalHosts have been provisioned
-    state: provisioned
+    state: Provisioned
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
