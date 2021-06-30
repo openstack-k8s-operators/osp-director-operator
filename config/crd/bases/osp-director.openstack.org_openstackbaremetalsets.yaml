@@ -228,6 +228,35 @@ spec:
                   - userDataSecretName
                   type: object
                 type: object
+              conditions:
+                description: ConditionList - A list of conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               provisioningStatus:
                 description: OpenStackBaremetalSetProvisioningStatus represents the
                   overall provisioning state of all BaremetalHosts in the OpenStackBaremetalSet

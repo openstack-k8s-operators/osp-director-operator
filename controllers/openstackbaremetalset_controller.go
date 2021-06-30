@@ -374,7 +374,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	//   Provision / deprovision requested replicas
 	//
-	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, passwordSecret, ipset); err != nil {
+	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, passwordSecret, ipset, &actualProvisioningState); err != nil {
 		// As we know, this transient "object has been modified, please try again" error occurs from time
 		// to time in the reconcile loop.  Let's avoid counting that as an error for the purposes of
 		// status display
@@ -387,7 +387,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetError
 		actualProvisioningState.Reason = msg
 
-		// The next line could return an error, but we log it in the "setStatus" func anyhow,
+		// The next line could return an error, but we log it in the "setProvisioningStatus" func anyhow,
 		// and we're more interested in returning the error from "ensureBaremetalHosts"
 		_ = r.setProvisioningStatus(instance, actualProvisioningState)
 		return ctrl.Result{}, err
@@ -398,9 +398,9 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	bmhErrors := 0
 
 	for _, bmh := range instance.Status.BaremetalHosts {
-		if bmh.ProvisioningState == string(ospdirectorv1beta1.BaremetalSetProvisioned) {
+		if strings.EqualFold(bmh.ProvisioningState, string(ospdirectorv1beta1.BaremetalSetProvisioned)) {
 			readyCount++
-		} else if bmh.ProvisioningState == string(ospdirectorv1beta1.BaremetalSetError) {
+		} else if strings.EqualFold(bmh.ProvisioningState, string(ospdirectorv1beta1.BaremetalSetError)) {
 			bmhErrors++
 		}
 	}
@@ -418,12 +418,18 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioned
 			actualProvisioningState.Reason = "All requested BaremetalHosts have been provisioned"
 		}
-	} else if readyCount < instance.Spec.Count {
-		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioning
-		actualProvisioningState.Reason = "Provisioning of BaremetalHosts in progress"
-	} else {
-		actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetDeprovisioning
-		actualProvisioningState.Reason = "Deprovisioning of BaremetalHosts in progress"
+	} else if actualProvisioningState.State != ospdirectorv1beta1.BaremetalSetInsufficient {
+		if readyCount < instance.Spec.Count {
+			// Only set this if readyCount is less than spec Count, and this reconciliation did not previously
+			// encounter the "ospdirectorv1beta1.BaremetalSetInsufficient" state, then provisioning is in progress
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetProvisioning
+			actualProvisioningState.Reason = "Provisioning of BaremetalHosts in progress"
+		} else {
+			// Only set this if readyCount is less than spec Count, and this reconciliation did not previously
+			// encounter the "ospdirectorv1beta1.BaremetalSetInsufficient" state, then deprovisioning is in progress
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetDeprovisioning
+			actualProvisioningState.Reason = "Deprovisioning of BaremetalHosts in progress"
+		}
 	}
 
 	if err := r.setProvisioningStatus(instance, actualProvisioningState); err != nil {
@@ -442,6 +448,9 @@ func (r *OpenStackBaremetalSetReconciler) setProvisioningStatus(instance *ospdir
 	if !reflect.DeepEqual(currentState, actualState) {
 		r.Log.Info(fmt.Sprintf("%s - diff %s", actualState.Reason, diff.ObjectReflectDiff(currentState, actualState)))
 		instance.Status.ProvisioningStatus = actualState
+
+		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(actualState.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(actualState.Reason), actualState.Reason)
 
 		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
 			r.Log.Error(err, "Failed to update CR status %v")
@@ -518,7 +527,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
-func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.OpenStackProvisionServer, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet) error {
+func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.OpenStackProvisionServer, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet, actualProvisioningState *ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
@@ -619,11 +628,14 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 		// If we can't satisfy the requested scale-down, explicitly state so
 		if oldBmhsRemovedCount < oldBmhsToRemoveCount {
 			msg := fmt.Sprintf("Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found and removed, %d requested)", oldBmhsRemovedCount, oldBmhsToRemoveCount)
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetInsufficient
-			instance.Status.ProvisioningStatus.Reason = msg
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetInsufficient
+			actualProvisioningState.Reason = msg
 			r.Log.Info(msg)
-			// ProvisioningStatus will be saved to etcd in main reconcile func if not overwritten
-			// by higher priority status (i.e. an actual error)
+		} else {
+			// Set actual provisioning state to empty string (it will be recalculated at the
+			// end of the main reconcile loop, if needed)
+			actualProvisioningState.State = ""
+			actualProvisioningState.Reason = ""
 		}
 	}
 
@@ -657,11 +669,14 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 		// If we can't satisfy the new requested replica count, explicitly state so
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
 			msg := fmt.Sprintf("Unable to find %d requested BaremetalHost count (%d in use, %d available)", instance.Spec.Count, len(existingBaremetalHosts), len(availableBaremetalHosts))
-			instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetInsufficient
-			instance.Status.ProvisioningStatus.Reason = msg
+			actualProvisioningState.State = ospdirectorv1beta1.BaremetalSetInsufficient
+			actualProvisioningState.Reason = msg
 			r.Log.Info(msg)
-			// ProvisioningStatus will be saved to etcd in main reconcile func if not overwritten
-			// by higher priority status (i.e. an actual error)
+		} else {
+			// Set actual provisioning state to empty string (it will be recalculated at the
+			// end of the main reconcile loop, if needed)
+			actualProvisioningState.State = ""
+			actualProvisioningState.Reason = ""
 		}
 
 		// Sort the list of available BaremetalHosts

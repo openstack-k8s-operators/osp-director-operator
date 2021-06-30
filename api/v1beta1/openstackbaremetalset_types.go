@@ -55,6 +55,7 @@ type OpenStackBaremetalSetSpec struct {
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
 type OpenStackBaremetalSetStatus struct {
+	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackBaremetalSetProvisioningStatus `json:"provisioningStatus,omitempty"`
 	BaremetalHosts     map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts,omitempty"`
 }
@@ -83,19 +84,19 @@ type BaremetalSetProvisioningState string
 
 const (
 	// BaremetalSetEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
-	BaremetalSetEmpty BaremetalSetProvisioningState = "empty"
+	BaremetalSetEmpty BaremetalSetProvisioningState = "Empty"
 	// BaremetalSetWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
-	BaremetalSetWaiting BaremetalSetProvisioningState = "waiting"
+	BaremetalSetWaiting BaremetalSetProvisioningState = "Waiting"
 	// BaremetalSetProvisioning - one or more BaremetalHosts are provisioning
-	BaremetalSetProvisioning BaremetalSetProvisioningState = "provisioning"
+	BaremetalSetProvisioning BaremetalSetProvisioningState = "Provisioning"
 	// BaremetalSetProvisioned - the requested BaremetalHosts count has been satisfied
-	BaremetalSetProvisioned BaremetalSetProvisioningState = "provisioned"
+	BaremetalSetProvisioned BaremetalSetProvisioningState = "Provisioned"
 	// BaremetalSetDeprovisioning - one or more BaremetalHosts are deprovisioning
-	BaremetalSetDeprovisioning BaremetalSetProvisioningState = "deprovisioning"
+	BaremetalSetDeprovisioning BaremetalSetProvisioningState = "Deprovisioning"
 	// BaremetalSetInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
-	BaremetalSetInsufficient BaremetalSetProvisioningState = "insufficient availability"
+	BaremetalSetInsufficient BaremetalSetProvisioningState = "Insufficient availability"
 	// BaremetalSetError - general catch-all for actual errors
-	BaremetalSetError BaremetalSetProvisioningState = "error"
+	BaremetalSetError BaremetalSetProvisioningState = "Error"
 )
 
 // GetHostnames -
