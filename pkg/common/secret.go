@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -237,6 +238,22 @@ func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVar
 		if envVars != nil {
 			(*envVars)[s.Name] = EnvValue(hash)
 		}
+	}
+
+	return nil
+}
+
+// DeleteSecretsWithLabel - Delete all secrets in namespace of the obj matching label selector
+func DeleteSecretsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+	err := r.GetClient().DeleteAllOf(
+		context.TODO(),
+		&corev1.Secret{},
+		client.InNamespace(obj.GetNamespace()),
+		client.MatchingLabels(labelSelectorMap),
+	)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		err = fmt.Errorf("Error DeleteAllOf Secret: %v", err)
+		return err
 	}
 
 	return nil

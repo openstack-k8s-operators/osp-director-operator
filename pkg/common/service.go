@@ -23,37 +23,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetAllPodsWithLabel - get all pods from namespace with a specific label
-func GetAllPodsWithLabel(r ReconcilerCommon, labelSelectorMap map[string]string, namespace string) (*corev1.PodList, error) {
-	labelSelectorString := labels.Set(labelSelectorMap).String()
-
-	podList, err := r.GetKClient().CoreV1().Pods(namespace).List(
-		context.TODO(),
-		metav1.ListOptions{
-			LabelSelector: labelSelectorString,
-		},
-	)
-	if err != nil {
-		return podList, err
-	}
-
-	return podList, nil
-}
-
-// DeletePodsWithLabel - Delete all pods in namespace of the obj matching label selector
-func DeletePodsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+// DeleteSericesWithLabel - Delete all services in namespace of the obj matching label selector
+func DeleteSericesWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
 	err := r.GetClient().DeleteAllOf(
 		context.TODO(),
-		&corev1.Pod{},
+		&corev1.Service{},
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(labelSelectorMap),
 	)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		err = fmt.Errorf("Error DeleteAllOf Pod %v", err)
+		err = fmt.Errorf("Error DeleteAllOf Service: %v", err)
 		return err
 	}
 
