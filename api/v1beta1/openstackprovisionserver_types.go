@@ -26,22 +26,49 @@ type OpenStackProvisionServerSpec struct {
 	Port int `json:"port"`
 	// An optional interface to use instead of the cluster's default provisioning interface (if any)
 	Interface string `json:"interface,omitempty"`
-	// URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed -- current implementation is Metal3 pattern)
+	// URL RHEL qcow2 image (compressed as gz, or uncompressed)
 	BaseImageURL string `json:"baseImageUrl"`
 }
 
 // OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer
 type OpenStackProvisionServerStatus struct {
+	// Surfaces status in GUI
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	// Holds provisioning status for this provision server
+	ProvisioningStatus OpenStackProvisionServerProvisioningStatus `json:"provisioningStatus,omitempty"`
 	// IP of the provisioning interface on the node running the ProvisionServer pod
 	ProvisionIP string `json:"provisionIp,omitempty"`
 	// URL of provisioning image on underlying Apache web server
 	LocalImageURL string `json:"localImageUrl,omitempty"`
 }
 
+// OpenStackProvisionServerProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
+// the OpenStackProvisionServer (with an optional explanatory message)
+type OpenStackProvisionServerProvisioningStatus struct {
+	State  ProvisionServerProvisioningState `json:"state,omitempty"`
+	Reason string                           `json:"reason,omitempty"`
+}
+
+// ProvisionServerProvisioningState - the overall state of this OpenStackProvisionServer
+type ProvisionServerProvisioningState string
+
+const (
+	// ProvisionServerWaiting - something else is causing the OpenStackProvisionServer to wait
+	ProvisionServerWaiting ProvisionServerProvisioningState = "Waiting"
+	// ProvisionServerProvisioning - the provision server pod is provisioning
+	ProvisionServerProvisioning ProvisionServerProvisioningState = "Provisioning"
+	// ProvisionServerProvisioned - the provision server pod is ready
+	ProvisionServerProvisioned ProvisionServerProvisioningState = "Provisioned"
+	// ProvisionServerError - general catch-all for actual errors
+	ProvisionServerError ProvisionServerProvisioningState = "Error"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osprovserver;osprovservers
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack ProvisionServer"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
 // OpenStackProvisionServer is the Schema for the openstackprovisionservers API
 type OpenStackProvisionServer struct {

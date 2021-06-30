@@ -19,7 +19,16 @@ spec:
     singular: openstackprovisionserver
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
@@ -42,8 +51,7 @@ spec:
               OpenStackProvisionServer
             properties:
               baseImageUrl:
-                description: 'URL to *gzipped* RHEL qcow2 image (TODO: support uncompressed
-                  -- current implementation is Metal3 pattern)'
+                description: URL RHEL qcow2 image (compressed as gz, or uncompressed)
                 type: string
               interface:
                 description: An optional interface to use instead of the cluster's
@@ -60,6 +68,35 @@ spec:
             description: OpenStackProvisionServerStatus defines the observed state
               of OpenStackProvisionServer
             properties:
+              conditions:
+                description: Surfaces status in GUI
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               localImageUrl:
                 description: URL of provisioning image on underlying Apache web server
                 type: string
@@ -67,6 +104,16 @@ spec:
                 description: IP of the provisioning interface on the node running
                   the ProvisionServer pod
                 type: string
+              provisioningStatus:
+                description: Holds provisioning status for this provision server
+                properties:
+                  reason:
+                    type: string
+                  state:
+                    description: ProvisionServerProvisioningState - the overall state
+                      of this OpenStackProvisionServer
+                    type: string
+                type: object
             type: object
         type: object
     served: true

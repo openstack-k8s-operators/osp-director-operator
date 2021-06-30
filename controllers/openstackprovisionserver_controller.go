@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -111,6 +113,9 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 
+	// get a copy of the CR ProvisioningStatus
+	actualProvisioningState := instance.Status.DeepCopy().ProvisioningStatus
+
 	// config maps
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance, provisionserver.AppLabel, map[string]string{})
@@ -146,11 +151,19 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 			provInterfaceName, err = r.getProvisioningInterface(instance)
 
 			if err != nil {
+				msg := fmt.Sprintf("Unable to acquire provisioning interface: %v", err)
+				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+				actualProvisioningState.Reason = msg
+				_ = r.setProvisioningStatus(instance, actualProvisioningState)
 				return ctrl.Result{}, err
 			}
 
 			if provInterfaceName == "" {
-				return ctrl.Result{}, fmt.Errorf("metal3 provisioning interface configuration not found")
+				err := fmt.Errorf("Metal3 provisioning interface configuration not found")
+				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+				actualProvisioningState.Reason = err.Error()
+				_ = r.setProvisioningStatus(instance, actualProvisioningState)
+				return ctrl.Result{}, err
 			}
 		} else {
 			r.Log.Info(fmt.Sprintf("Provisioning interface supplied by %s spec", instance.Name))
@@ -158,7 +171,6 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		}
 	}
 
-	// provisionserver
 	// Create or update the Deployment object
 	op, err := r.deploymentCreateOrUpdate(instance, provInterfaceName)
 
@@ -169,6 +181,10 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
+
+	// Calculate overall provisioning status
+	actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerProvisioning
+	actualProvisioningState.Reason = fmt.Sprintf("ProvisionServer %s is currently provisioning", instance.Name)
 
 	// Provision IP Discovery Agent sets status' ProvisionIP
 	if instance.Status.ProvisionIP != "" {
@@ -194,9 +210,32 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 			r.Log.Info(fmt.Sprintf("OpenStackProvisionServer %s status' LocalImageURL updated: %s", instance.Name, instance.Status.LocalImageURL))
 		}
+
+		// Now check the associated pod's status
+		podList, err := r.Kclient.CoreV1().Pods(instance.Namespace).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("deployment=%s-provisionserver-deployment", instance.Name),
+		})
+
+		if err != nil && !k8s_errors.IsNotFound(err) {
+			actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+			actualProvisioningState.Reason = err.Error()
+			_ = r.setProvisioningStatus(instance, actualProvisioningState)
+			return ctrl.Result{}, err
+		} else if err == nil {
+			// There should only be one pod.  If there is more than one, we have other problems...
+			for _, pod := range podList.Items {
+				if pod.Status.Phase == corev1.PodRunning {
+					actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerProvisioned
+					actualProvisioningState.Reason = fmt.Sprintf("ProvisionServer %s has been provisioned", instance.Name)
+					break
+				}
+			}
+		}
 	}
 
-	return ctrl.Result{}, nil
+	err = r.setProvisioningStatus(instance, actualProvisioningState)
+
+	return ctrl.Result{}, err
 }
 
 // SetupWithManager - prepare controller for use with operator manager
@@ -381,4 +420,28 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterface(instance *
 	}
 
 	return "", nil
+}
+
+func (r *OpenStackProvisionServerReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackProvisionServer, actualState ospdirectorv1beta1.OpenStackProvisionServerProvisioningStatus) error {
+	// get current ProvisioningStatus
+	currentState := instance.Status.ProvisioningStatus
+
+	// if the current ProvisioningStatus is different from the actual, store the update
+	// otherwise, just log the status again
+	if !reflect.DeepEqual(currentState, actualState) {
+		r.Log.Info(fmt.Sprintf("%s - diff %s", actualState.Reason, diff.ObjectReflectDiff(currentState, actualState)))
+		instance.Status.ProvisioningStatus = actualState
+
+		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(actualState.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(actualState.Reason), actualState.Reason)
+
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			r.Log.Error(err, "Failed to update CR status %v")
+			return err
+		}
+	} else if actualState.Reason != "" {
+		r.Log.Info(actualState.Reason)
+	}
+
+	return nil
 }
