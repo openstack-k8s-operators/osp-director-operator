@@ -1,6 +1,8 @@
 package openstackephemeralheat
 
 const (
+	// AppLabel -
+	AppLabel = "openstackephemeralheat"
 	// ServiceAccount -
 	ServiceAccount = "osp-director-operator-openstackplaybookgenerator"
 	// HeatUID -
@@ -9,4 +11,6 @@ const (
 	MySQLUID = 42434
 	// RabbitMQUID -
 	RabbitMQUID = 42439
+	// FinalizerName -
+	FinalizerName = "openstackephemeralheat.osp-director.openstack.org"
 )

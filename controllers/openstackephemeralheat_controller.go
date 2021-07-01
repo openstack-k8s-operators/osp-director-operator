@@ -34,7 +34,6 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	openstackephemeralheat "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackephemeralheat"
 )
 
@@ -70,9 +69,11 @@ func (r *OpenStackEphemeralHeatReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats/finalizers,verbs=update
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;update;get;list;watch;patch
-// +kubebuilder:rbac:groups=core,resources=services,verbs=create;update;get;list;watch;patch
-// +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=create;update;get;list;watch;patch
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=create;update;get;list;watch;patch;delete;deletecollection
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;update;get;list;watch;patch;deletecollection
+// +kubebuilder:rbac:groups=core,resources=services,verbs=create;update;get;list;watch;patch;deletecollection
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;update;get;list;watch;patch;deletecollection
+// +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=create;update;get;list;watch;patch;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -96,7 +97,42 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
+	// examine DeletionTimestamp to determine if object is under deletion
+	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(instance, openstackephemeralheat.FinalizerName) {
+			controllerutil.AddFinalizer(instance, openstackephemeralheat.FinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", openstackephemeralheat.FinalizerName, instance.Name))
+		}
+	} else {
+		// 1. check if finalizer is there
+		// Reconcile if finalizer got already removed
+		if !controllerutil.ContainsFinalizer(instance, openstackephemeralheat.FinalizerName) {
+			return ctrl.Result{}, nil
+		}
+
+		// 2. Clean up resources used by the operator
+		err = r.resourceCleanup(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// 3. as last step remove the finalizer on the operator CR to finish delete
+		controllerutil.RemoveFinalizer(instance, openstackephemeralheat.FinalizerName)
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
+		return ctrl.Result{}, nil
+	}
+
+	cmLabels := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 	// only generate the password secret once
 	passwordSecret, _, err := common.GetSecret(r, "ephemeral-heat-"+instance.Name, instance.Namespace)
 	if err != nil && k8s_errors.IsNotFound(err) {
@@ -105,9 +141,12 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
 		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("Secret %s successfully reconciled - operation: ephemeral-heat-%s", instance.Name, string(op)))
+			r.Log.Info(fmt.Sprintf("Secret %s successfully reconciled - operation: %s", instance.Name, string(op)))
 		}
+	} else if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	envVars := make(map[string]common.EnvSetter)
@@ -292,4 +331,28 @@ func (r *OpenStackEphemeralHeatReconciler) SetupWithManager(mgr ctrl.Manager) er
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.ReplicaSet{}).
 		Complete(r)
+}
+
+func (r *OpenStackEphemeralHeatReconciler) resourceCleanup(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) error {
+
+	labelSelector := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
+
+	// delete pods
+	if err := common.DeletePodsWithLabel(r, instance, labelSelector); err != nil {
+		return err
+	}
+	// delete secret
+	if err := common.DeleteSecretsWithLabel(r, instance, labelSelector); err != nil {
+		return err
+	}
+	// delete service
+	if err := common.DeleteSericesWithLabel(r, instance, labelSelector); err != nil {
+		return err
+	}
+	// delete replicaset
+	if err := common.DeleteReplicasetsWithLabel(r, instance, labelSelector); err != nil {
+		return err
+	}
+
+	return nil
 }
