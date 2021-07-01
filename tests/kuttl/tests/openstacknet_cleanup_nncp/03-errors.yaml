@@ -1,0 +1,20 @@
+#
+# Check for:
+#
+# - OpenStackNet "ctlplane" has been deleted
+# - NNCP has been deleted
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: ctlplane
+  namespace: openstack
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-openstacknet
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp

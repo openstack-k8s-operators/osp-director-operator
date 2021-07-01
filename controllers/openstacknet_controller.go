@@ -122,6 +122,11 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		// 2. Clean up resources used by the operator
+		// NNCP resources
+		err = r.nncpResourceCleanup(instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		// SRIOV resources
 		err = r.sriovResourceCleanup(instance)
 		if err != nil {
@@ -445,6 +450,58 @@ func (r *OpenStackNetReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenSt
 
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("SriovNetworkNodePolicy %s successfully reconciled - operation: %s", sriovPolicy.Name, string(op)))
+	}
+
+	return nil
+}
+
+func (r *OpenStackNetReconciler) nncpResourceCleanup(instance *ospdirectorv1beta1.OpenStackNet) error {
+	// First check if any other OpenStackNets are left using the bridge name in the attachConfiguration
+	osNetBridgeNames, err := openstacknet.GetOpenStackNetsAttachConfigBridgeNames(r, instance.Namespace)
+
+	if err != nil {
+		return err
+	}
+
+	if len(osNetBridgeNames) > 0 {
+		found := false
+
+		// Get this OpenStackNet's bridge name first
+		myBridgeName := osNetBridgeNames[instance.Name]
+		delete(osNetBridgeNames, instance.Name)
+
+		if myBridgeName == "" {
+			// If this instance does not have an associated bridge name, there's really nothing we can do
+			return nil
+		}
+
+		for _, bridgeName := range osNetBridgeNames {
+			if bridgeName == myBridgeName {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// If no other OpenStackNet contains this instance's bridge name, delete the underlying NNCP
+			labelSelector := map[string]string{
+				common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+				common.OwnerNameSpaceLabelSelector:      instance.Namespace,
+			}
+
+			networkConfigurationPolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   myBridgeName,
+					Labels: labelSelector,
+				},
+			}
+
+			if err := r.Client.Delete(context.TODO(), &networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
+				return err
+			}
+
+			r.Log.Info(fmt.Sprintf("NodeNetworkConfigurationPolicy is no longer required and has been deleted: %s", myBridgeName))
+		}
 	}
 
 	return nil
