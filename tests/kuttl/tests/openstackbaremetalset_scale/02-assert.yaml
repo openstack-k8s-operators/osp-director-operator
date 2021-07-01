@@ -24,9 +24,14 @@ spec:
   passwordSecret: userpassword
   roleName: Compute
 status:
+  conditions:
+  - message: No BaremetalHosts have been requested
+    reason: No BaremetalHosts have been requested
+    status: "True"
+    type: Empty
   provisioningStatus:
     reason: No BaremetalHosts have been requested
-    state: empty
+    state: Empty
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackProvisionServer
