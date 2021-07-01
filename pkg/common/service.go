@@ -28,15 +28,28 @@ import (
 
 // DeleteSericesWithLabel - Delete all services in namespace of the obj matching label selector
 func DeleteSericesWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
-	err := r.GetClient().DeleteAllOf(
-		context.TODO(),
-		&corev1.Service{},
+	// Service have not implemented DeleteAllOf
+	// https://github.com/operator-framework/operator-sdk/issues/3101
+	// https://github.com/kubernetes/kubernetes/issues/68468#issuecomment-419981870
+	// delete services
+	serviceList := &corev1.ServiceList{}
+	listOpts := []client.ListOption{
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(labelSelectorMap),
-	)
-	if err != nil && !k8s_errors.IsNotFound(err) {
-		err = fmt.Errorf("Error DeleteAllOf Service: %v", err)
+	}
+
+	if err := r.GetClient().List(context.Background(), serviceList, listOpts...); err != nil {
+		err = fmt.Errorf("Error listing services for %s: %v", obj.GetName(), err)
 		return err
+	}
+
+	// delete all pods
+	for _, pod := range serviceList.Items {
+		err := r.GetClient().Delete(context.TODO(), &pod)
+		if err != nil && !k8s_errors.IsNotFound(err) {
+			err = fmt.Errorf("Error deleting service %s: %v", pod.Name, err)
+			return err
+		}
 	}
 
 	return nil

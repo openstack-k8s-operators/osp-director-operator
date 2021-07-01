@@ -145,7 +145,6 @@ rules:
   - services
   verbs:
   - create
-  - deletecollection
   - get
   - list
   - patch
