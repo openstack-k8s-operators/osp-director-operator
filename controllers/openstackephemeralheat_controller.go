@@ -71,7 +71,7 @@ func (r *OpenStackEphemeralHeatReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackephemeralheats/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=create;update;get;list;watch;patch;delete;deletecollection
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;update;get;list;watch;patch;deletecollection
-// +kubebuilder:rbac:groups=core,resources=services,verbs=create;update;get;list;watch;patch;deletecollection
+// +kubebuilder:rbac:groups=core,resources=services,verbs=create;update;get;list;watch;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;update;get;list;watch;patch;deletecollection
 // +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=create;update;get;list;watch;patch;deletecollection
 
