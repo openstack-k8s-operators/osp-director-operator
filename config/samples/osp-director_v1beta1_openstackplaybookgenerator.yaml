@@ -5,6 +5,6 @@ metadata:
 spec:
   imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
   gitSecret: git-secret
-  heatEnvConfigMap: tripleo-deploy-config-custom
+  heatEnvConfigMap: heat-env-config
   tarballConfigMap: tripleo-tarball-config
   #interactive: false
