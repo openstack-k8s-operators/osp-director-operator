@@ -78,7 +78,6 @@ openstack tripleo container image prepare $PREPARE_ENV_ARGS -e hostnamemap.yaml 
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
 
-#FIXME: need a way to generate the ~/tripleo-overcloud-passwords.yaml below
 time openstack stack create --wait \
     -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
     -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
@@ -91,7 +90,7 @@ time openstack stack create --wait \
 {{- range $key, $value := .TripleoCustomDeployFiles }}
     -e {{ $key }} \
 {{- end }}
-    -e ~/config-custom/tripleo-overcloud-passwords.yaml \
+    -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
     -t overcloud.yaml overcloud
 
 mkdir -p /home/cloud-admin/ansible
