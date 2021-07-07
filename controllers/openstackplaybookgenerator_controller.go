@@ -113,38 +113,17 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
-	cms := []common.Template{
-		// Custom CM holding Tripleo deployment environment parameter files
-		{
-			Name:      instance.Spec.HeatEnvConfigMap,
-			Namespace: instance.Namespace,
-			Type:      common.TemplateTypeCustom,
-			Labels:    cmLabels,
-		},
-	}
 
-	if instance.Spec.TarballConfigMap != "" {
-		cms = append(cms,
-			common.Template{
-				Name:      instance.Spec.TarballConfigMap,
-				Namespace: instance.Namespace,
-				Type:      common.TemplateTypeCustom,
-				Labels:    cmLabels,
-			},
-		)
-	}
-
-	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
-	if err != nil {
-		// We ignore the potential error from "setCurrentState" because we log it in that func anyhow
-		// and we're more interested in returning the original err
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, err
-	}
-
-	// get tripleo-deploy-config-custom (customizations provided by administrator)
+	// check if tripleo-deploy-config-custom (customizations provided by administrator) exist
+	// if it does not exist, requeue
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
 	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			msg := fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
+			r.Log.Info(msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
 		// Ignore any potential error from "setCurrentState"; focus on previous error
 		// NOTE: This pattern will be repeated a lot below, but the comment will not be copied
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
@@ -154,7 +133,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
-	// get tripleo-deploy-config, created/rendered by openstackipset controller
+	// check if tripleo-deploy-config (created/rendered by openstackipset controller) exist
+	// if it does not exist, requeue
 	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -163,6 +143,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -198,7 +179,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		templateParameters["TripleoTarballFiles"] = tripleoTarballFiles
 	}
 
-	cms = []common.Template{
+	cms := []common.Template{
 		{
 			Name:           "openstackplaybook-script-" + instance.Name,
 			Namespace:      instance.Namespace,
