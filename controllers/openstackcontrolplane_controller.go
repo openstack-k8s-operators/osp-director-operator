@@ -105,7 +105,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Secret - containing Tripleo Passwords
 	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
+	pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
 
 	templateParameters := make(map[string]interface{})
 	templateParameters["TripleoPasswords"] = common.GeneratePasswords()
@@ -113,19 +113,19 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	cm := []common.Template{
+	pwSecret := []common.Template{
 		{
 			Name:           "tripleo-passwords",
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeConfig,
 			InstanceType:   instance.Kind,
 			AdditionalData: map[string]string{},
-			Labels:         cmLabels,
+			Labels:         pwSecretLabel,
 			ConfigOptions:  templateParameters,
 		},
 	}
 
-	err = common.EnsureSecrets(r, instance, cm, &envVars)
+	err = common.EnsureSecrets(r, instance, pwSecret, &envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
