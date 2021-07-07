@@ -18,14 +18,10 @@ package common
 
 import (
 	"crypto/hmac"
-	cryptorand "crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"encoding/pem"
 
 	"github.com/google/uuid"
 
@@ -209,26 +205,19 @@ type privateKey struct {
 
 func generateSSHKeypair() (string, error) {
 
-	sshKey, err := rsa.GenerateKey(cryptorand.Reader, 2048)
+	privKey, err := GeneratePrivateKey(4096)
 	if err != nil {
 		return "", err
 	}
 
-	privBytes := x509.MarshalPKCS1PrivateKey(sshKey)
-	privateKeyPemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: privBytes,
+	pubKey, err := GeneratePublicKey(&privKey.PublicKey)
+	if err != nil {
+		return "", err
 	}
-	privPem := pem.EncodeToMemory(privateKeyPemBlock)
 
-	publicBytes := x509.MarshalPKCS1PublicKey(&sshKey.PublicKey)
-	publicKeyPemBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: publicBytes,
-	}
-	pubPem := pem.EncodeToMemory(publicKeyPemBlock)
+	privateKeyPem := EncodePrivateKeyToPEM(privKey)
 
-	p := privateKey{string(privPem), string(pubPem)}
+	p := privateKey{privateKeyPem, pubKey}
 	b, err := json.Marshal(p)
 	if err != nil {
 		return "", err

@@ -103,7 +103,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Used in comparisons below to determine whether a status update is actually needed
 	newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
 
-	// ConfigMap - containing Tripleo Passwords
+	// Secret - containing Tripleo Passwords
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
 
