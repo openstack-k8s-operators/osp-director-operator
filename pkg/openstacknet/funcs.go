@@ -3,10 +3,9 @@ package openstacknet
 import (
 	"context"
 
-	"github.com/ghodss/yaml"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	"github.com/tidwall/gjson"
+	"github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,17 +46,13 @@ func GetOpenStackNetsAttachConfigBridgeNames(r common.ReconcilerCommon, namespac
 		desiredStateBytes := osNet.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw
 
 		if len(desiredStateBytes) > 0 {
-			jsonBytes, err := yaml.YAMLToJSON(desiredStateBytes)
+			bridgeName, err := nmstate.GetDesiredStatedBridgeName(desiredStateBytes)
 
 			if err != nil {
 				return nil, err
 			}
 
-			jsonStr := string(jsonBytes)
-
-			if gjson.Get(jsonStr, "interfaces.#.name").Exists() {
-				osNetBridgeNames[osNet.Name] = gjson.Get(jsonStr, "interfaces.#.name").Array()[0].String()
-			}
+			osNetBridgeNames[osNet.Name] = bridgeName
 		}
 	}
 

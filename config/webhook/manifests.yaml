@@ -43,6 +43,7 @@ webhooks:
     - UPDATE
     resources:
     - openstacknets
+  sideEffects: None
 
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -87,6 +88,25 @@ webhooks:
     - UPDATE
     resources:
     - openstackcontrolplanes
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-openstacknet
+  failurePolicy: Fail
+  name: vopenstacknet.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstacknets
+  sideEffects: None
 - clientConfig:
     caBundle: Cg==
     service:
