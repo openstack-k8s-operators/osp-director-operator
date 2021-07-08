@@ -35,7 +35,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 			ReadOnly:  true,
 		},
 		{
-			Name:      "tripleo-deploy-config-custom",
+			Name:      "heat-env-config",
 			MountPath: "/home/cloud-admin/config-custom",
 			ReadOnly:  true,
 		},
@@ -84,7 +84,7 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 			},
 		},
 		{
-			Name: "tripleo-deploy-config-custom",
+			Name: "heat-env-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0644AccessMode,

@@ -114,7 +114,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 
-	// check if tripleo-deploy-config-custom (customizations provided by administrator) exist
+	// check if heat-env-config (customizations provided by administrator) exist
 	// if it does not exist, requeue
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
 	if err != nil {

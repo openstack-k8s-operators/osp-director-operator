@@ -197,7 +197,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
     - for each network a Network Attach Definition gets created which defines the Multus CNI plugin configuration. Specifying the vlan ID on the Network Attach Definition enables the bridge vlan-filtering.
     - for each network a dedicated interface gets attached to the virtual machine. Therefore the network template for the OSVMSet is a multi-nic network template
 
-2) Create [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments, Heat templates and custom roles file (name must be `roles_data.yaml`) used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named `tripleo-deploy-config-custom` and `tripleo-tarball-config` to provide this information. The `tripleo-deploy-config-custom` configmap holds all deployment environment files where each file gets added as `-e file.yaml` to the `openstack stack create` command. A good example is:
+2) Create [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments, Heat templates and custom roles file (name must be `roles_data.yaml`) used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named `heat-env-config` and `tripleo-tarball-config` to provide this information. The `heat-env-config` configmap holds all deployment environment files where each file gets added as `-e file.yaml` to the `openstack stack create` command. A good example is:
 
     - [Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy)
         **NOTE**: these are Ansible templates and need to have variables replaced to be used directly!
@@ -249,11 +249,11 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
 
     - [Git repo config map] This ConfigMap contains the SSH key and URL for the Git repo used to store generated playbooks (below)
 
-    Once you customize the above template/examples for your environment you can create configmaps for both the 'tripleo-deploy-config-custom' and 'tripleo-tarball-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
+    Once you customize the above template/examples for your environment you can create configmaps for both the 'heat-env-config' and 'tripleo-tarball-config'(tarballs) ConfigMaps by using these example commands on the files containing each respective configmap type (one directory for each type of configmap):
 
     ```bash
-    # create the configmap for tripleo-deploy-config-custom
-    oc create configmap -n openstack tripleo-deploy-config-custom --from-file=tripleo-deploy-config-custom/ --dry-run=client -o yaml | oc apply -f -
+    # create the configmap for heat-env-config
+    oc create configmap -n openstack heat-env-config --from-file=heat-env-config/ --dry-run=client -o yaml | oc apply -f -
 
     # create the configmap containing a tarball of t-h-t network config files. NOTE: these files may overwrite default t-h-t files so keep this in mind when naming them.
     cd <dir with net config files>
@@ -402,7 +402,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
     spec:
       imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210521.1
       gitSecret: git-secret
-      heatEnvConfigMap: tripleo-deploy-config-custom
+      heatEnvConfigMap: heat-env-config
       tarballConfigMap: tripleo-tarball-config
       # (optional) for debugging it is possible to set the interactive mode.
       # In this mode the playbooks won't get rendered automatically. Just the environment to start the rendering gets created
