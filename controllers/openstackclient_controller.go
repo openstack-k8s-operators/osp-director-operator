@@ -149,7 +149,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	ipsetDetails := common.IPSet{
 		Networks:            instance.Spec.Networks,
-		Role:                openstackclient.Role,
+		Role:                fmt.Sprintf("%s%s", openstackclient.Role, instance.Name),
 		HostCount:           openstackclient.Count,
 		AddToPredictableIPs: false,
 		HostNameRefs:        hostnameRefs,
