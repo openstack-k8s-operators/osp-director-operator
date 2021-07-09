@@ -167,7 +167,7 @@ status:
         hostname: controller-2
         ip: 192.168.25.104
         vip: false
-    OpenstackClient:
+    OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
@@ -235,7 +235,7 @@ status:
         hostname: controller-2
         ip: 10.0.0.8
         vip: false
-    OpenstackClient:
+    OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false

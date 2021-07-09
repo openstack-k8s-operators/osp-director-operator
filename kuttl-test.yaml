@@ -34,4 +34,4 @@ manifestDirs: []               # YAMLs to apply before each test
 reportFormat: JSON
 reportName: kuttl-test
 namespace: openstack
-timeout: 120
+timeout: 180
