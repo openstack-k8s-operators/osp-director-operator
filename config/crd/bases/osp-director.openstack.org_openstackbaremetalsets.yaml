@@ -186,8 +186,8 @@ spec:
                   as the base Image for the baremetalset instead of baseImageURL.
                 type: string
               roleName:
-                description: RoleName the name of the TripleO role this VM Spec is
-                  associated with. If it is a TripleO role, the name must match.
+                description: RoleName the name of the TripleO role this OpenStackBaremetalSet
+                  is associated with. If it is a TripleO role, the name must match.
                 type: string
             required:
             - ctlplaneInterface

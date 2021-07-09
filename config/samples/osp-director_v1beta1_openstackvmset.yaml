@@ -1,10 +1,10 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
 metadata:
-  name: osp-controller
+  name: customvmset
   namespace: openstack
 spec:
-  baseImageURL: http://download.eng.brq.redhat.com/brewroot/packages/rhel-guest-image/8.3/417/images/rhel-guest-image-8.3-417.x86_64.qcow2
+  baseImageURL: http://download.devel.redhat.com/brewroot/packages/rhel-guest-image/8.4/1168/images/rhel-guest-image-8.4-1168.x86_64.qcow2
   vmCount: 1
   cores: 2
   memory: 5
@@ -16,4 +16,4 @@ spec:
   ctlplaneInterface: enp2s0 #defaults to enp2s0
   networks:
     - ctlplane
-  roleName: Controller
+  roleName: SomeCustomRole
