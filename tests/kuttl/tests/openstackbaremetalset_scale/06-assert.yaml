@@ -76,8 +76,8 @@ spec:
   userData:
     namespace: openshift-machine-api
 status:
-  errorCount: 0
-  errorMessage: ""
+  # errorCount: 0
+  # errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   poweredOn: true
@@ -113,8 +113,8 @@ spec:
   userData:
     namespace: openshift-machine-api
 status:
-  errorCount: 0
-  errorMessage: ""
+  # errorCount: 0
+  # errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   poweredOn: true

@@ -6,6 +6,7 @@
 # - 1 OpenStackClient
 # - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 1 Secret (TripleO passwords)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -137,7 +138,7 @@ status:
         hostname: controlplane
         ip: 192.168.25.100
         vip: true
-    OpenstackClient:
+    OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
@@ -190,7 +191,7 @@ status:
         hostname: controlplane
         ip: 10.0.0.4
         vip: true
-    OpenstackClient:
+    OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
@@ -486,7 +487,7 @@ spec:
   networks:
   - ctlplane
   - external
-  roleName: OpenstackClient
+  roleName: OpenstackClientopenstackclient
   vip: false
 status:
   hosts:
@@ -507,4 +508,14 @@ status:
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 10
-
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-controlplane
+    osp-director.openstack.org/name: overcloud
+    osp-director.openstack.org/namespace: openstack
+  name: tripleo-passwords
+  namespace: openstack
+type: Opaque
