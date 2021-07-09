@@ -1,6 +1,6 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackEphemeralHeat
 metadata:
-  name: openstackephemeralheat-sample
+  name: ephemeralheat
 spec:
   configHash: unique-string-here

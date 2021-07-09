@@ -27,8 +27,9 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackPlaybookGenerator configure Heat environment and templates
-          to generate Ansible playbooks
+        description: OpenStackPlaybookGenerator Used to configure Heat environments
+          and template customizations to generate Ansible playbooks for OpenStack
+          Overcloud deployment
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -47,7 +48,9 @@ spec:
               of OpenStackPlaybookGenerator
             properties:
               ephemeralHeatSettings:
-                description: Heat Settings
+                description: Advanced Heat Settings can be used to increase the Heat
+                  Engine replicas or customize container images used during playbook
+                  generation.
                 properties:
                   configHash:
                     description: ConfigHash hash which acts as a unique identifier

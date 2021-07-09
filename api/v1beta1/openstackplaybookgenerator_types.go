@@ -28,7 +28,7 @@ type OpenStackPlaybookGeneratorSpec struct {
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
 	// Optional. config map containing custom Heat template tarball which will be extracted prior to playbook generation
 	TarballConfigMap string `json:"tarballConfigMap,omitempty"`
-	// Heat Settings
+	// Advanced Heat Settings can be used to increase the Heat Engine replicas or customize container images used during playbook generation.
 	EphemeralHeatSettings OpenStackEphemeralHeatSpec `json:"ephemeralHeatSettings,omitempty"`
 	// +kubebuilder:default=false
 	// Interactive enables the user to rsh into the playbook generator pod for interactive debugging with the ephemeral heat instance. If enabled manual execution of the script to generate playbooks will be required.
@@ -71,7 +71,7 @@ const (
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
-// OpenStackPlaybookGenerator configure Heat environment and templates to generate Ansible playbooks
+// OpenStackPlaybookGenerator Used to configure Heat environments and template customizations to generate Ansible playbooks for OpenStack Overcloud deployment
 type OpenStackPlaybookGenerator struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
