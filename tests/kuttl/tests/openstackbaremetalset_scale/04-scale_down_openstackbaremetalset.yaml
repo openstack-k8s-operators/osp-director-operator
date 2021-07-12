@@ -8,5 +8,5 @@ commands:
   - command: oc annotate bmh -l osp-director.openstack.org/osphostname=compute-0 osp-director.openstack.org/delete-host=true -n openshift-machine-api
     namespaced: true
   - command: |
-      oc patch openstackbaremetalset baremetalset-sample --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":1}]'
+      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":1}]'
     namespaced: true

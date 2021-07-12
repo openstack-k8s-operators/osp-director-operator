@@ -11,7 +11,7 @@ metadata:
   - baremetalhost.metal3.io
   labels:
     osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: baremetalset-sample
+    osp-director.openstack.org/name: compute
     osp-director.openstack.org/namespace: openstack
     osp-director.openstack.org/osphostname: compute-1
   namespace: openshift-machine-api
@@ -19,7 +19,7 @@ spec:
   bootMode: legacy
   consumerRef:
     kind: OpenStackBaremetalSet
-    name: baremetalset-sample
+    name: compute
     namespace: openstack
   hardwareProfile: unknown
   networkData:
@@ -30,8 +30,8 @@ spec:
   userData:
     namespace: openshift-machine-api
 status:
-  # errorCount: 0
-  # errorMessage: ""
+  errorCount: 0
+  errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   poweredOn: true
@@ -55,8 +55,8 @@ spec:
   rootDeviceHints:
     deviceName: /dev/sda
 status:
-  # errorCount: 0
-  # errorMessage: ""
+  errorCount: 0
+  errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   provisioning:

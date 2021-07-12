@@ -10,13 +10,13 @@
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
-  name: baremetalset-sample
+  name: compute
   namespace: openstack
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackProvisionServer
 metadata:
-  name: baremetalset-sample-provisionserver
+  name: compute-provisionserver
   namespace: openstack
 ---
 apiVersion: metal3.io/v1alpha1
@@ -26,14 +26,14 @@ metadata:
   - baremetalhost.metal3.io
   labels:
     osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: baremetalset-sample
+    osp-director.openstack.org/name: compute
     osp-director.openstack.org/namespace: openstack
     osp-director.openstack.org/osphostname: compute-0
   namespace: openshift-machine-api
 spec:
   consumerRef:
     kind: OpenStackBaremetalSet
-    name: baremetalset-sample
+    name: compute
     namespace: openstack
 status:
   provisioning:
@@ -49,14 +49,14 @@ metadata:
   - baremetalhost.metal3.io
   labels:
     osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: baremetalset-sample
+    osp-director.openstack.org/name: compute
     osp-director.openstack.org/namespace: openstack
     osp-director.openstack.org/osphostname: compute-1
   namespace: openshift-machine-api
 spec:
   consumerRef:
     kind: OpenStackBaremetalSet
-    name: baremetalset-sample
+    name: compute
     namespace: openstack
 status:
   provisioning:
@@ -68,5 +68,5 @@ status:
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
 metadata:
-  name: baremetalset-sample
+  name: compute
   namespace: openstack
