@@ -11,11 +11,11 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - baremetalset.osp-director.openstack.org-baremetalset-sample
-  name: baremetalset-sample
+  - baremetalset.osp-director.openstack.org-compute
+  name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1:8081/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1:8081/rhel-guest-image-8.4-1168.x86_64.qcow2
   count: 1
   ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-baremetalset-ssh-keys
@@ -55,8 +55,8 @@ spec:
   rootDeviceHints:
     deviceName: /dev/sda
 status:
-  # errorCount: 0
-  # errorMessage: ""
+  errorCount: 0
+  errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   provisioning:
@@ -72,7 +72,7 @@ metadata:
   - baremetalhost.metal3.io
   labels:
     osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: baremetalset-sample
+    osp-director.openstack.org/name: compute
     osp-director.openstack.org/namespace: openstack
     osp-director.openstack.org/osphostname: compute-1
   namespace: openshift-machine-api
@@ -80,7 +80,7 @@ spec:
   bootMode: legacy
   consumerRef:
     kind: OpenStackBaremetalSet
-    name: baremetalset-sample
+    name: compute
     namespace: openstack
   hardwareProfile: unknown
   networkData:
@@ -91,8 +91,8 @@ spec:
   userData:
     namespace: openshift-machine-api
 status:
-  # errorCount: 0
-  # errorMessage: ""
+  errorCount: 0
+  errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
   poweredOn: true
@@ -209,7 +209,7 @@ metadata:
   - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "true"
-  name: baremetalset-sample
+  name: compute
   namespace: openstack
 spec:
   addToPredictableIPs: true

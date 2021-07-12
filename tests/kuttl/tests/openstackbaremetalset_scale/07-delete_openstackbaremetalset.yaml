@@ -3,5 +3,5 @@ kind: TestStep
 delete:
 - apiVersion: osp-director.openstack.org/v1beta1
   kind: OpenStackBaremetalSet
-  name: baremetalset-sample
+  name: compute
   namespace: openstack
