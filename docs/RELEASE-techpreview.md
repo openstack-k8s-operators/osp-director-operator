@@ -26,4 +26,4 @@ The following table highlights features supported today in OSP 16.2 compared wit
 | TLS-Everywhere                     | No                      | Yes         |
 | Scale Testing                      | No                      | Yes         |
 | NFV features                       | No                      | Yes         |
-| ---------------------------------- | ----------------------- | ----------- |
+| Overcloud HA (fencing agent)       | No                      | Yes         |
