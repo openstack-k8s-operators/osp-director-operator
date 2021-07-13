@@ -24,16 +24,16 @@ import (
 type OpenStackPlaybookGeneratorSpec struct {
 	// Name of the image used to generate playbooks
 	ImageURL string `json:"imageURL"`
-	// Required. config map containing Heat env file customizations
+	// Required. the name of the config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
-	// Optional. config map containing custom Heat template tarball which will be extracted prior to playbook generation
+	// Optional. the name of the config map containing custom Heat template tarball which will be extracted prior to playbook generation
 	TarballConfigMap string `json:"tarballConfigMap,omitempty"`
 	// Advanced Heat Settings can be used to increase the Heat Engine replicas or customize container images used during playbook generation.
 	EphemeralHeatSettings OpenStackEphemeralHeatSpec `json:"ephemeralHeatSettings,omitempty"`
 	// +kubebuilder:default=false
 	// Interactive enables the user to rsh into the playbook generator pod for interactive debugging with the ephemeral heat instance. If enabled manual execution of the script to generate playbooks will be required.
 	Interactive bool `json:"interactive,omitempty"`
-	// GitSecret used to pull playbooks into the openstackclient pod
+	// GitSecret the name of the secret used to configure the Git repository url and ssh private key credentials used to store generated Ansible playbooks. This secret should contain an entry for both 'git_url' and 'git_ssh_identity'.
 	GitSecret string `json:"gitSecret"`
 }
 
