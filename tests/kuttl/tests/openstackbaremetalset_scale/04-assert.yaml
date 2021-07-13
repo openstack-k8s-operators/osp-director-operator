@@ -15,7 +15,7 @@ metadata:
   name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1:8081/rhel-guest-image-8.4-1168.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
   count: 1
   ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-baremetalset-ssh-keys
