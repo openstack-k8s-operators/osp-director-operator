@@ -47,8 +47,9 @@ spec:
                 description: name of secret holding the stack-admin ssh keys
                 type: string
               gitSecret:
-                description: GitSecret used to pull playbooks into the openstackclient
-                  pod
+                description: GitSecret the name of the secret used to pull Ansible
+                  playbooks into the openstackclient pod. This secret should contain
+                  an entry for both 'git_url' and 'git_ssh_identity'
                 type: string
               imageURL:
                 description: Name of the image

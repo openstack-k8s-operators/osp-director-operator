@@ -80,11 +80,14 @@ spec:
                     type: string
                 type: object
               gitSecret:
-                description: GitSecret used to pull playbooks into the openstackclient
-                  pod
+                description: GitSecret the name of the secret used to configure the
+                  Git repository url and ssh private key credentials used to store
+                  generated Ansible playbooks. This secret should contain an entry
+                  for both 'git_url' and 'git_ssh_identity'.
                 type: string
               heatEnvConfigMap:
-                description: Required. config map containing Heat env file customizations
+                description: Required. the name of the config map containing Heat
+                  env file customizations
                 type: string
               imageURL:
                 description: Name of the image used to generate playbooks
@@ -97,8 +100,9 @@ spec:
                   playbooks will be required.
                 type: boolean
               tarballConfigMap:
-                description: Optional. config map containing custom Heat template
-                  tarball which will be extracted prior to playbook generation
+                description: Optional. the name of the config map containing custom
+                  Heat template tarball which will be extracted prior to playbook
+                  generation
                 type: string
             required:
             - gitSecret
