@@ -84,13 +84,13 @@ time openstack stack create --wait \
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
+    -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}
     -e {{ $key }} \
 {{- end }}
 {{- range $key, $value := .TripleoCustomDeployFiles }}
     -e {{ $key }} \
 {{- end }}
-    -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
     -t overcloud.yaml overcloud
 
 mkdir -p /home/cloud-admin/ansible
