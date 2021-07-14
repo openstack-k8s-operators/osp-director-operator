@@ -155,7 +155,7 @@ func generateCephKey() string {
 	binary.LittleEndian.PutUint16(header[0:], 1)                         // # le16 type: CEPH_CRYPTO_AES
 	binary.LittleEndian.PutUint32(header[2:], uint32(time.Now().Unix())) // le32 created: seconds
 	binary.LittleEndian.PutUint32(header[6:], 0)                         // le32 created: nanoseconds
-	binary.LittleEndian.PutUint16(header[10:], 12)                       // le16: len(key)
+	binary.LittleEndian.PutUint16(header[10:], len(key))                 // le16: len(key)
 
 	return base64.StdEncoding.EncodeToString(append(header, key...))
 }
