@@ -28,4 +28,7 @@ const (
 
 	// Role - controlplane has not tripleo role, set it as const
 	Role = "ControlPlane"
+
+	// TripleoPasswordSecret - name of the generated tripleo password secret
+	TripleoPasswordSecret = "tripleo-passwords"
 )
