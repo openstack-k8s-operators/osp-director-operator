@@ -105,30 +105,40 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Secret - containing Tripleo Passwords
 	envVars := make(map[string]common.EnvSetter)
-	pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
 
-	templateParameters := make(map[string]interface{})
-	templateParameters["TripleoPasswords"] = common.GeneratePasswords()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// check if "tripleo-passwords" controlplane.TripleoPasswordSecret secret already exist
+	_, secretHash, err := common.GetSecret(r, controlplane.TripleoPasswordSecret, instance.Namespace)
+	if err != nil && k8s_errors.IsNotFound(err) {
 
-	pwSecret := []common.Template{
-		{
-			Name:           "tripleo-passwords",
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeConfig,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			Labels:         pwSecretLabel,
-			ConfigOptions:  templateParameters,
-		},
-	}
+		r.Log.Info(fmt.Sprintf("Creating password secret: %s", controlplane.TripleoPasswordSecret))
 
-	err = common.EnsureSecrets(r, instance, pwSecret, &envVars)
-	if err != nil {
-		return ctrl.Result{}, err
+		pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
+
+		templateParameters := make(map[string]interface{})
+		templateParameters["TripleoPasswords"] = common.GeneratePasswords()
+		pwSecret := []common.Template{
+			{
+				Name:           controlplane.TripleoPasswordSecret,
+				Namespace:      instance.Namespace,
+				Type:           common.TemplateTypeConfig,
+				InstanceType:   instance.Kind,
+				AdditionalData: map[string]string{},
+				Labels:         pwSecretLabel,
+				ConfigOptions:  templateParameters,
+			},
+		}
+
+		err = common.EnsureSecrets(r, instance, pwSecret, &envVars)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
+		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
+		newProvStatus.Reason = err.Error()
+		_ = r.setProvisioningStatus(instance, newProvStatus)
+		return ctrl.Result{}, fmt.Errorf("error get secret %s: %v", controlplane.TripleoPasswordSecret, err)
 	}
+	envVars[controlplane.TripleoPasswordSecret] = common.EnvValue(secretHash)
 
 	// Secret - used for deployment to ssh into the overcloud nodes,
 	//          gets added to the controller VMs cloud-admin user using cloud-init

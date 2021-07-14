@@ -18,6 +18,7 @@ package openstackplaybookgenerator
 
 import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -30,7 +31,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 			ReadOnly:  true,
 		},
 		{
-			Name:      "tripleo-passwords",
+			Name:      controlplane.TripleoPasswordSecret,
 			MountPath: "/home/cloud-admin/config-passwords",
 			ReadOnly:  true,
 		},
@@ -95,11 +96,11 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev
 			},
 		},
 		{
-			Name: "tripleo-passwords",
+			Name: controlplane.TripleoPasswordSecret,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					DefaultMode: &config0644AccessMode,
-					SecretName:  "tripleo-passwords",
+					SecretName:  controlplane.TripleoPasswordSecret,
 				},
 			},
 		},
