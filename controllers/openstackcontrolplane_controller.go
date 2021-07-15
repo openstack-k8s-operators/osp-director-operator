@@ -287,7 +287,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, vmSet, func() error {
-			vmSet.Spec.BaseImageURL = vmRole.BaseImageURL
 			vmSet.Spec.VMCount = vmRole.RoleCount
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory

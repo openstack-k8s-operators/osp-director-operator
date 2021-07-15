@@ -22,8 +22,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,30 +49,18 @@ var _ webhook.Validator = &OpenStackControlPlane{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateCreate() error {
 	controlplanelog.Info("validate create", "name", r.Name)
-
-	return r.checkBaseImageReqs()
+	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	controlplanelog.Info("validate update", "name", r.Name)
-
-	return r.checkBaseImageReqs()
+	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateDelete() error {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
-	return nil
-}
-
-func (r *OpenStackControlPlane) checkBaseImageReqs() error {
-	for _, role := range r.Spec.VirtualMachineRoles {
-		if role.BaseImageURL == "" && role.BaseImageVolumeName == "" {
-			return fmt.Errorf(fmt.Sprintf("Either \"baseImageURL\" or \"baseImageVolumeName\" must be provided for role %s", role.RoleName))
-		}
-
-	}
 	return nil
 }

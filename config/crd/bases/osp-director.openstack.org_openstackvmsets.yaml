@@ -58,12 +58,9 @@ spec:
           spec:
             description: OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
             properties:
-              baseImageURL:
-                description: Name of the VM base image used to setup the VMs
-                type: string
               baseImageVolumeName:
-                description: BaseImageVolumeName Optional. If supplied will be used
-                  as the base volume for the VM instead of BaseImageURL.
+                description: BaseImageVolumeName Optional. used as the base volume
+                  for the VM
                 type: string
               cores:
                 description: number of Cores assigned to the VMs
@@ -117,6 +114,7 @@ spec:
                 description: Number of VMs to configure, 1 or 3
                 type: integer
             required:
+            - baseImageVolumeName
             - cores
             - ctlplaneInterface
             - deploymentSSHSecret

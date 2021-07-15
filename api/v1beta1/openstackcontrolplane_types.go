@@ -49,12 +49,10 @@ type OpenStackVirtualMachineRoleSpec struct {
 	Memory uint32 `json:"memory"`
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
-	// Name of the VM base image used to setup the VM
-	BaseImageURL string `json:"baseImageURL,omitempty"`
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass,omitempty"`
-	// BaseImageVolumeName Optional. If supplied will be used as the base volume for the VM instead of BaseImageURL.
-	BaseImageVolumeName string `json:"baseImageVolumeName,omitempty"`
+	// BaseImageVolumeName used as the base volume for the VM
+	BaseImageVolumeName string `json:"baseImageVolumeName"`
 
 	// +kubebuilder:default=enp2s0
 	// Interface to use for ctlplane network
