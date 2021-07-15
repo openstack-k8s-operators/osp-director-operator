@@ -102,7 +102,8 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
 3) If the rhel-guest-image is used, make sure to remove the net.ifnames=0 kernel parameter from the image to have the biosdev network interface naming. This can be done like:
     ```bash
     dnf install -y libguestfs-tools-c
-    virt-customize -a bms-image.qcow2 --run-command 'sed -i -e "s/^\(kernelopts=.*\)net.ifnames=0 \(.*\)/\1\2/" /boot/grub2/grubenv'
+    virt-customize -a <rhel guest image> --run-command 'sed -i -e "s/^\(kernelopts=.*\)net.ifnames=0 \(.*\)/\1\2/" /boot/grub2/grubenv'
+    virt-customize -a <rhel guest image> --run-command 'sed -i -e "s/^\(GRUB_CMDLINE_LINUX=.*\)net.ifnames=0 \(.*\)/\1\2/" /etc/default/grub'
     ```
 4) If your local machine cannot resolve hostnames for within the cluster, add the following to your `/etc/hosts`:
     ```
