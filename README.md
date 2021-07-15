@@ -116,16 +116,6 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
     ```
     oc get storageclass
     ```
-6) Now, when you create the `OpenStackControlPlane` below (as well as for individual `OpenStackVmSet`s), you may substitute `baseImageVolumeName` for `baseImageUrl` in the CR:
-    ```yaml
-    ...
-    spec:
-    ...
-      baseImageVolumeName: openstack-base-img
-    ...
-    ```
-    This will cause OpenShift Virtualization to clone that base image volume and use it for the VM(s), which is significantly faster than downloading and converting it on-the-fly.
-
 ## Deploying OpenStack once you have the OSP Director Operator installed
 
 1) Define your OpenStackNet custom resource. At least 1 network is required for the ctlplane. Optionally you may define multiple networks to be used with TripleO's network isolation architecture. In addition to IP address assignment the OpenStackNet includes information that is used to define the network configuration policy used to attach any VM's to this network via OpenShift Virtualization. The following is an example of a simple IPv4 ctlplane network which uses linux bridge for its host configuration.
@@ -323,7 +313,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
           cores: 6
           memory: 12
           diskSize: 40
-          baseImageURL: http://host/images/rhel-guest-image-8.4.x86_64.qcow2
+          baseImageVolumeName: openstack-base-img
           storageClass: host-nfs-storageclass
     ```
 
