@@ -23,6 +23,7 @@ The following table highlights features supported today in OSP 16.2 compared wit
 | DCN/Cells/Multiple Stacks          | No                      | Yes         |
 | IPv4                               | Yes                     | Yes         |
 | IPv6                               | No (untested)           | Yes         |
+| Spine Leaf networking              | No                      | Yes         |
 | TLS-Everywhere                     | No                      | Yes         |
 | Scale Testing                      | No                      | Yes         |
 | NFV features                       | No                      | Yes         |
