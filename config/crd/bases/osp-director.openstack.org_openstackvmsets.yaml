@@ -59,8 +59,7 @@ spec:
             description: OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
             properties:
               baseImageVolumeName:
-                description: BaseImageVolumeName Optional. used as the base volume
-                  for the VM
+                description: BaseImageVolumeName used as the base volume for the VM
                 type: string
               cores:
                 description: number of Cores assigned to the VMs

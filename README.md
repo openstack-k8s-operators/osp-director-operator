@@ -290,7 +290,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
       name: overcloud
       namespace: openstack
     spec:
-      openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
+      openStackClientImageURL: quay.io/openstack-k8s-operators/rhosp16-openstack-tripleoclient:16.2_20210713.1
       openStackClientNetworks:
             - ctlplane
             - external
@@ -391,13 +391,19 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
       name: default
       namespace: openstack
     spec:
-      imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210521.1
+      imageURL: quay.io/openstack-k8s-operators/rhosp16-openstack-tripleoclient:16.2_20210713.1
       gitSecret: git-secret
       heatEnvConfigMap: heat-env-config
       tarballConfigMap: tripleo-tarball-config
       # (optional) for debugging it is possible to set the interactive mode.
       # In this mode the playbooks won't get rendered automatically. Just the environment to start the rendering gets created
       # interactive: true
+      # (optional) provide custom registry or specific container versions via the ephemeralHeatSettings
+      #ephemeralHeatSettings:
+      #  heatAPIImageURL: quay.io/tripleotraincentos8/centos-binary-heat-api:current-tripleo
+      #  heatEngineImageURL: quay.io/tripleotraincentos8/centos-binary-heat-engine:current-tripleo
+      #  mariadbImageURL: quay.io/tripleotraincentos8/centos-binary-mariadb:current-tripleo
+      #  rabbitImageURL: quay.io/tripleotraincentos8/centos-binary-rabbitmq:current-tripleo
     ```
 
     If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:
