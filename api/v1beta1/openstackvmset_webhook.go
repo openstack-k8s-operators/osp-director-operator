@@ -22,8 +22,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -70,20 +68,8 @@ func (r *OpenStackVMSet) ValidateDelete() error {
 }
 
 func (r *OpenStackVMSet) validateCr() error {
-	if err := r.checkBaseImageReqs(); err != nil {
-		return err
-	}
-
 	if err := checkRoleNameExists(r.TypeMeta, r.ObjectMeta, r.Spec.RoleName); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (r *OpenStackVMSet) checkBaseImageReqs() error {
-	if r.Spec.BaseImageURL == "" && r.Spec.BaseImageVolumeName == "" {
-		return fmt.Errorf("Either \"baseImageURL\" or \"baseImageVolumeName\" must be provided")
 	}
 
 	return nil

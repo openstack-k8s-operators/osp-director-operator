@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -35,7 +34,6 @@ import (
 	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	//networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -430,14 +428,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		baseImageName = instance.Spec.BaseImageVolumeName
 	}
 
-	// Create base image, controller disks get cloned from this
-	if instance.Spec.BaseImageVolumeName == "" {
-		err = r.cdiCreateBaseDisk(instance, baseImageName)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	// wait for the base image conversion job to be finished before we create the VMs
 	// we check the pvc for the base image:
 	// - import in progress
@@ -790,62 +780,6 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&virtv1.VirtualMachine{}).
 		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Complete(r)
-}
-
-func (r *OpenStackVMSetReconciler) cdiCreateBaseDisk(instance *ospdirectorv1beta1.OpenStackVMSet, baseImageVolumeName string) error {
-
-	fsMode := corev1.PersistentVolumeFilesystem
-
-	cdi := cdiv1.DataVolume{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      baseImageVolumeName,
-			Namespace: instance.Namespace,
-			Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
-		},
-		Spec: cdiv1.DataVolumeSpec{
-			PVC: &corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					"ReadWriteOnce",
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.DiskSize)),
-					},
-				},
-				VolumeMode: &fsMode,
-			},
-			Source: cdiv1.DataVolumeSource{
-				HTTP: &cdiv1.DataVolumeSourceHTTP{
-					URL: instance.Spec.BaseImageURL,
-				},
-			},
-		},
-	}
-
-	cdi.Kind = "DataVolume"
-	cdi.APIVersion = "cdi.kubevirt.io/v1alpha1"
-
-	if instance.Spec.StorageClass != "" {
-		cdi.Spec.PVC.StorageClassName = &instance.Spec.StorageClass
-	}
-
-	b, err := json.Marshal(cdi.DeepCopyObject())
-	if err != nil {
-		return err
-	}
-
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return err
-	}
-
-	// apply object using server side apply
-	if err := common.SSAApplyYaml(context.TODO(), cfg, instance.Kind, b); err != nil {
-		r.Log.Error(err, fmt.Sprintf("Failed to apply object %s", cdi.GetName()))
-		return err
-	}
-
-	return err
 }
 
 func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string) error {

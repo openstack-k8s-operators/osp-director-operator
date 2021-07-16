@@ -4,11 +4,11 @@ metadata:
   name: customvmset
   namespace: openstack
 spec:
-  baseImageURL: http://download.devel.redhat.com/brewroot/packages/rhel-guest-image/8.4/1168/images/rhel-guest-image-8.4-1168.x86_64.qcow2
   vmCount: 1
   cores: 2
   memory: 5
   diskSize: 10
+  baseImageVolumeName: openstack-base-img
   storageClass: host-nfs-storageclass
   #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys

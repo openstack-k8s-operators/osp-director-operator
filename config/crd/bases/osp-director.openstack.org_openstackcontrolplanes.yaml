@@ -88,12 +88,9 @@ spec:
                   description: OpenStackVirtualMachineRoleSpec - defines the desired
                     state of VMs
                   properties:
-                    baseImageURL:
-                      description: Name of the VM base image used to setup the VM
-                      type: string
                     baseImageVolumeName:
-                      description: BaseImageVolumeName Optional. If supplied will
-                        be used as the base volume for the VM instead of BaseImageURL.
+                      description: BaseImageVolumeName used as the base volume for
+                        the VM
                       type: string
                     cores:
                       description: number of Cores assigned to the VM
@@ -142,6 +139,7 @@ spec:
                       description: StorageClass to be used for the controller disks
                       type: string
                   required:
+                  - baseImageVolumeName
                   - cores
                   - ctlplaneInterface
                   - diskSize
