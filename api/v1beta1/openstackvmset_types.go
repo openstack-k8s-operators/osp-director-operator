@@ -33,7 +33,7 @@ type OpenStackVMSetSpec struct {
 	DiskSize uint32 `json:"diskSize"`
 	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass,omitempty"`
-	// BaseImageVolumeName Optional. used as the base volume for the VM
+	// BaseImageVolumeName used as the base volume for the VM
 	BaseImageVolumeName string `json:"baseImageVolumeName"`
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
