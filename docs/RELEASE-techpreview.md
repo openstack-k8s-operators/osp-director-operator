@@ -15,7 +15,7 @@ The following table highlights features supported today in OSP 16.2 compared wit
 |                                    | OSP 16.2 (Tech Preview) | OSP 17 (GA)
 | ---------------------------------- | ----------------------- | ----------- |
 | Virtualized Controlplane (kubevirt)| Yes                     | Yes         |
-| Baremetal Compute (metal3)         | Yes                     | Yes         |
+| [Baremetal Compute](https://github.com/openstack-k8s-operators/osp-director-operator/blob/master/docs/README-baremetal-provisioning.md) (metal3)         | Yes                     | Yes         |
 | Network Isolation                  | Yes                     | Yes         |
 | Custom Roles                       | Yes                     | Yes         |
 | Playbook Generator (scale)         | Yes                     | Yes         |
