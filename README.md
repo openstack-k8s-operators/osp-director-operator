@@ -26,7 +26,7 @@ Installation
 ------------
 
 ## Prerequisite:
-- OCP 4.6+ installed
+- OCP 4.6+ installed.
 - OpenShift Virtualization 2.6+
 - SRIOV Operator
 
