@@ -35,6 +35,9 @@ const (
 	// HostRemovalAnnotation - Annotation key placed on VM or BMH resources to target them for scale-down
 	HostRemovalAnnotation = GroupLabel + "/delete-host"
 
+	// MustGatherSecret - Label placed on secrets that are safe to collect with must-gater
+	MustGatherSecret = GroupLabel + "/must-gather-secret"
+
 	// FinalizerName -
 	FinalizerName = GroupLabel
 )
