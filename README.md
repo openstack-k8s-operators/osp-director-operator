@@ -85,9 +85,9 @@ We have a script to automate the installation here with OLM for a specific tag: 
 
 **NOTE**: At some point in the future we may integrate into OperatorHub so that OSP Director Operator is available automatically in your OCP installations default OLM Catalog sources.
 
-## Creating a RHEL data volume (optional)
+## Creating a RHEL data volume
 
-It may be desirable to create a base RHEL data volume prior to deploying OpenStack.  This will greatly increase the speed at which controller VMs are provisioned via OpenShift Virtualization.  Certain OSP Director Operator CRDs allow the user to supply the name of a pre-existing data volume within the cluster for use as the base RHEL image in OpenShift Virtualization virtual machines, rather than providing a remote URL that must be downloaded and converted during provisioning.  The approach to doing this is as follows:
+Create a base RHEL data volume prior to deploying OpenStack.  This will be used by the controller VMs which are provisioned via OpenShift Virtualization. The approach to doing this is as follows:
 
 1) Install the KubeVirt CLI tool, `virtctl`:
     ```
@@ -111,7 +111,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
     ```
 5) Upload the image to OpenShift Virtualization via `virtctl`:
     ```
-    virtctl image-upload dv openstack-base-img -n openstack --size=40Gi --image-path=<local path to image> --storage-class <desired storage class> --insecure
+    virtctl image-upload dv openstack-base-img -n openstack --size=50Gi --image-path=<local path to image> --storage-class <desired storage class> --insecure
     ```
     For the `storage-class` above, pick one you want to use from those shown in:
     ```
@@ -313,7 +313,7 @@ It may be desirable to create a base RHEL data volume prior to deploying OpenSta
             - storagemgmt
           cores: 6
           memory: 12
-          diskSize: 40
+          diskSize: 50
           baseImageVolumeName: openstack-base-img
           storageClass: host-nfs-storageclass
     ```
