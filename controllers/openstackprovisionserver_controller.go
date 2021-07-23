@@ -309,7 +309,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 			Containers: []corev1.Container{
 				{
 					Name:  "osp-httpd",
-					Image: "quay.io/centos7/httpd-24-centos7:2.4",
+					Image: instance.Spec.ApacheImageURL,
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &trueValue,
 					},
@@ -328,7 +328,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 					Args:    []string{"start"},
 					Command: []string{"provision-ip-discovery-agent"},
 					// TODO: Create an openstack-k8s-operators quay image/tag for this
-					Image: "quay.io/abays/provision-ip-discovery-agent:0.0.1",
+					Image: instance.Spec.ProvisioningAgentImageURL,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "PROV_INTF",
@@ -350,7 +350,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 		initContainerDetails := []provisionserver.InitContainer{
 			{
 				// TODO: Create an openstack-k8s-operators quay image/tag for this
-				ContainerImage: "quay.io/abays/downloader:0.0.3",
+				ContainerImage: instance.Spec.DownloaderImageURL,
 				Env: []corev1.EnvVar{
 					{
 						Name:  "RHEL_IMAGE_URL",

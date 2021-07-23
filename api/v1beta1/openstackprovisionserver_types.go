@@ -26,8 +26,17 @@ type OpenStackProvisionServerSpec struct {
 	Port int `json:"port"`
 	// An optional interface to use instead of the cluster's default provisioning interface (if any)
 	Interface string `json:"interface,omitempty"`
-	// URL RHEL qcow2 image (compressed as gz, or uncompressed)
+	// URL for RHEL qcow2 image (compressed as gz, or uncompressed)
 	BaseImageURL string `json:"baseImageUrl"`
+	// Container image URL for init container that downloads the RHEL qcow2 image (baseImageUrl)
+	// +kubebuilder:default="quay.io/openstack-k8s-operators/rhel-downloader:0.0.1"
+	DownloaderImageURL string `json:"downloaderImageUrl,omitempty"`
+	// Container image URL for the main container that serves the downloaded RHEL qcow2 image (baseImageUrl)
+	// +kubebuilder:default="quay.io/openstack-k8s-operators/httpd-24-centos7:2.4"
+	ApacheImageURL string `json:"apacheImageUrl,omitempty"`
+	// Container image URL for the sidecar container that discovers provisioning network IPs
+	// +kubebuilder:default="quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1"
+	ProvisioningAgentImageURL string `json:"provisioningAgentImageUrl,omitempty"`
 }
 
 // OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer
