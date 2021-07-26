@@ -1,0 +1,9 @@
+#
+# Try to change the role name of the OpenStackVMSet to match that of the OpenStackBMSet
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      oc patch osvmset -n openstack customvmset --type='json' -p='[{"op": "replace", "path": "/spec/roleName", "value": "Compute"}]' || true

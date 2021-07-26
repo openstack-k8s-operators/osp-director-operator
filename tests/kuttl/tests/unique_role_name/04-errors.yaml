@@ -1,0 +1,9 @@
+#
+# Check that the "compute" OpenstackBMSet was not created
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: compute
+  namespace: openstack

@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Create the required userpassword Secret
+  - command: oc apply -f ../../common/manifests/userpassword.yaml
+    namespaced: true
+  # Create the OpenStackBaremetalSet from sample YAML
+  - script: |
+      oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml --dry-run=client -o yaml | sed 's/roleName: Compute/roleName: SomeCustomRole/g' | oc apply -f - || true
