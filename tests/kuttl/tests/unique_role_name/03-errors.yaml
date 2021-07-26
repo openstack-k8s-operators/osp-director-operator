@@ -1,0 +1,9 @@
+#
+# Check that the "badvmset" OpenstackVMSet was not created
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  name: badvmset
+  namespace: openstack
