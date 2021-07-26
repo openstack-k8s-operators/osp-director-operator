@@ -6,8 +6,8 @@ metadata:
 spec:
   vmCount: 1
   cores: 2
-  memory: 5
-  diskSize: 10
+  memory: 20
+  diskSize: 50
   baseImageVolumeName: openstack-base-img
   storageClass: host-nfs-storageclass
   #imageImportStorageClass: local #optional
