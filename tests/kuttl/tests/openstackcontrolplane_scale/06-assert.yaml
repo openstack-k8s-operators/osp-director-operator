@@ -1,9 +1,133 @@
 #
 # Check for:
 #
-# - 6 OpenStackNets
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 3 VirtualMachines
+# - 6 OpenStackNets (IP reservations)
+# - 1 OpenStackIPSet (IP reservations)
 #
 
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  virtualMachineRoles:
+    controller:
+      roleCount: 3
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: openstack-base-img
+  cores: 2
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  - external
+  - internalapi
+  - tenant
+  - storage
+  - storagemgmt
+  roleName: Controller
+  storageClass: host-nfs-storageclass
+  vmCount: 3
+status:
+  baseImageDVReady: true
+  conditions:
+  - message: All requested VirtualMachines have been provisioned
+    reason: All requested VirtualMachines have been provisioned
+    status: "True"
+    type: Provisioned
+  provisioningStatus:
+    readyCount: 3
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
+  vmHosts:
+    controller-0:
+      annotatedForDeletion: false
+      hostRef: controller-0
+      hostname: controller-0
+      ipaddresses:
+        ctlplane: 192.168.25.102/24
+        external: 10.0.0.6/24
+        internalapi: 172.16.2.5/24
+        storage: 172.16.1.5/24
+        storagemgmt: 172.16.3.5/24
+        tenant: 172.16.0.5/24
+      provisioningState: Provisioned
+    controller-1:
+      annotatedForDeletion: false
+      hostRef: controller-1
+      hostname: controller-1
+      ipaddresses:
+        ctlplane: 192.168.25.103/24
+        external: 10.0.0.7/24
+        internalapi: 172.16.2.6/24
+        storage: 172.16.1.6/24
+        storagemgmt: 172.16.3.6/24
+        tenant: 172.16.0.6/24
+      provisioningState: Provisioned
+    controller-2:
+      annotatedForDeletion: false
+      hostRef: controller-2
+      hostname: controller-2
+      ipaddresses:
+        ctlplane: 192.168.25.104/24
+        external: 10.0.0.8/24
+        internalapi: 172.16.2.7/24
+        storage: 172.16.1.7/24
+        storagemgmt: 172.16.3.7/24
+        tenant: 172.16.0.7/24
+      provisioningState: Provisioned
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-0
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+  created: true
+  ready: true
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-1
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+  created: true
+  ready: true
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-2
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+  created: true
+  ready: true
+---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
@@ -18,8 +142,37 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 5
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 192.168.25.100
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 192.168.25.102
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 192.168.25.103
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 192.168.25.104
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.101
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -57,8 +210,37 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 5
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 10.0.0.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 10.0.0.6
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 10.0.0.7
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 10.0.0.8
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 10.0.0.5
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -96,8 +278,30 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.2.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.2.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.2.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.2.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -135,8 +339,30 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.1.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.1.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.1.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.1.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -174,8 +400,30 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.3.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.3.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.3.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.3.7
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -213,5 +461,116 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 0
-  roleReservations: {}
+  reservedIpCount: 4
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.16.0.4
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 172.16.0.5
+        vip: false
+      - deleted: false
+        hostname: controller-1
+        ip: 172.16.0.6
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 172.16.0.7
+        vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  finalizers:
+  - osp-director.openstack.org
+  labels:
+    addToPredictableIPsLabel: "true"
+  name: controller
+  namespace: openstack
+spec:
+  addToPredictableIPs: true
+  hostCount: 3
+  hostNameRefs:
+    controller-0: controller-0
+    controller-1: controller-1
+    controller-2: controller-2
+  networks:
+  - ctlplane
+  - external
+  - internalapi
+  - tenant
+  - storage
+  - storagemgmt
+  roleName: Controller
+  vip: false
+status:
+  hosts:
+    controller-0:
+      ipaddresses:
+        ctlplane: 192.168.25.102/24
+        external: 10.0.0.6/24
+        internalapi: 172.16.2.5/24
+        storage: 172.16.1.5/24
+        storagemgmt: 172.16.3.5/24
+        tenant: 172.16.0.5/24
+    controller-1:
+      ipaddresses:
+        ctlplane: 192.168.25.103/24
+        external: 10.0.0.7/24
+        internalapi: 172.16.2.6/24
+        storage: 172.16.1.6/24
+        storagemgmt: 172.16.3.6/24
+        tenant: 172.16.0.6/24
+    controller-2:
+      ipaddresses:
+        ctlplane: 192.168.25.104/24
+        external: 10.0.0.8/24
+        internalapi: 172.16.2.7/24
+        storage: 172.16.1.7/24
+        storagemgmt: 172.16.3.7/24
+        tenant: 172.16.0.7/24
+  networks:
+    ctlplane:
+      allocationEnd: 192.168.25.250
+      allocationStart: 192.168.25.100
+      cidr: 192.168.25.0/24
+      gateway: 192.168.25.1
+      vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.4
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 10
+    internalapi:
+      allocationEnd: 172.16.2.250
+      allocationStart: 172.16.2.4
+      cidr: 172.16.2.0/24
+      gateway: ""
+      vlan: 20
+    storage:
+      allocationEnd: 172.16.1.250
+      allocationStart: 172.16.1.4
+      cidr: 172.16.1.0/24
+      gateway: ""
+      vlan: 30
+    storagemgmt:
+      allocationEnd: 172.16.3.250
+      allocationStart: 172.16.3.4
+      cidr: 172.16.3.0/24
+      gateway: ""
+      vlan: 40
+    tenant:
+      allocationEnd: 172.16.0.250
+      allocationStart: 172.16.0.4
+      cidr: 172.16.0.0/24
+      gateway: ""
+      vlan: 50

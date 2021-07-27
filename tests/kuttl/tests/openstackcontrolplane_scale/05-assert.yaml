@@ -3,7 +3,7 @@
 #
 # - 1 OpenStackControlPlane
 # - 1 OpenStackVMSet
-# - 3 VirtualMachines
+# - 1 VirtualMachine
 # - 6 OpenStackNets (IP reservations)
 # - 1 OpenStackIPSet (IP reservations)
 #
@@ -16,7 +16,20 @@ metadata:
 spec:
   virtualMachineRoles:
     controller:
-      roleCount: 3
+      roleCount: 1
+status:
+  vipStatus:
+    controlplane:
+      annotatedForDeletion: false
+      hostRef: overcloud
+      hostname: controlplane
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.4/24
+        internalapi: 172.16.2.4/24
+        storage: 172.16.1.4/24
+        storagemgmt: 172.16.3.4/24
+        tenant: 172.16.0.4/24
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -42,43 +55,10 @@ spec:
   - storagemgmt
   roleName: Controller
   storageClass: host-nfs-storageclass
-  vmCount: 3
+  vmCount: 1
 status:
   baseImageDVReady: true
-  conditions:
-  - message: All requested VirtualMachines have been provisioned
-    reason: All requested VirtualMachines have been provisioned
-    status: "True"
-    type: Provisioned
-  provisioningStatus:
-    readyCount: 3
-    reason: All requested VirtualMachines have been provisioned
-    state: Provisioned
   vmHosts:
-    controller-0:
-      annotatedForDeletion: false
-      hostRef: controller-0
-      hostname: controller-0
-      ipaddresses:
-        ctlplane: 192.168.25.102/24
-        external: 10.0.0.6/24
-        internalapi: 172.16.2.5/24
-        storage: 172.16.1.5/24
-        storagemgmt: 172.16.3.5/24
-        tenant: 172.16.0.5/24
-      provisioningState: Provisioned
-    controller-1:
-      annotatedForDeletion: false
-      hostRef: controller-1
-      hostname: controller-1
-      ipaddresses:
-        ctlplane: 192.168.25.103/24
-        external: 10.0.0.7/24
-        internalapi: 172.16.2.6/24
-        storage: 172.16.1.6/24
-        storagemgmt: 172.16.3.6/24
-        tenant: 172.16.0.6/24
-      provisioningState: Provisioned
     controller-2:
       annotatedForDeletion: false
       hostRef: controller-2
@@ -90,31 +70,6 @@ status:
         storage: 172.16.1.7/24
         storagemgmt: 172.16.3.7/24
         tenant: 172.16.0.7/24
-      provisioningState: Provisioned
----
-apiVersion: kubevirt.io/v1alpha3
-kind: VirtualMachine
-metadata:
-  name: controller-0
-  namespace: openstack
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-  created: true
-  ready: true
----
-apiVersion: kubevirt.io/v1alpha3
-kind: VirtualMachine
-metadata:
-  name: controller-1
-  namespace: openstack
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-  created: true
-  ready: true
 ---
 apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
@@ -154,11 +109,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 192.168.25.102
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 192.168.25.103
         vip: false
@@ -222,11 +177,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 10.0.0.6
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 10.0.0.7
         vip: false
@@ -269,7 +224,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
   cidr: 172.16.2.0/24
-  gateway: ""
   vlan: 20
 status:
   conditions:
@@ -290,11 +244,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 172.16.2.5
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 172.16.2.6
         vip: false
@@ -330,7 +284,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
   cidr: 172.16.1.0/24
-  gateway: ""
   vlan: 30
 status:
   conditions:
@@ -351,11 +304,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 172.16.1.5
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 172.16.1.6
         vip: false
@@ -391,7 +344,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
   cidr: 172.16.3.0/24
-  gateway: ""
   vlan: 40
 status:
   conditions:
@@ -412,11 +364,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 172.16.3.5
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 172.16.3.6
         vip: false
@@ -452,7 +404,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
   cidr: 172.16.0.0/24
-  gateway: ""
   vlan: 50
 status:
   conditions:
@@ -473,11 +424,11 @@ status:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 172.16.0.5
         vip: false
-      - deleted: false
+      - deleted: true
         hostname: controller-1
         ip: 172.16.0.6
         vip: false
@@ -497,10 +448,8 @@ metadata:
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 3
+  hostCount: 1
   hostNameRefs:
-    controller-0: controller-0
-    controller-1: controller-1
     controller-2: controller-2
   networks:
   - ctlplane
@@ -513,22 +462,6 @@ spec:
   vip: false
 status:
   hosts:
-    controller-0:
-      ipaddresses:
-        ctlplane: 192.168.25.102/24
-        external: 10.0.0.6/24
-        internalapi: 172.16.2.5/24
-        storage: 172.16.1.5/24
-        storagemgmt: 172.16.3.5/24
-        tenant: 172.16.0.5/24
-    controller-1:
-      ipaddresses:
-        ctlplane: 192.168.25.103/24
-        external: 10.0.0.7/24
-        internalapi: 172.16.2.6/24
-        storage: 172.16.1.6/24
-        storagemgmt: 172.16.3.6/24
-        tenant: 172.16.0.6/24
     controller-2:
       ipaddresses:
         ctlplane: 192.168.25.104/24

@@ -2,15 +2,10 @@
 # Check for:
 #
 # - 1 OpenStackBaremetalSet
-# - 2 BaremetalHosts
-# - 2 OpenStackNets (populated with reservations)
-# - 1 OpenStackIpSet (populated with reservations)
+# - 1 OpenStackProvisionServer
+# - 1 OpenStackIpSet
 #
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-timeout: 300
----
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
@@ -20,7 +15,7 @@ metadata:
   namespace: openstack
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  count: 2
+  count: 0
   ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
@@ -29,200 +24,35 @@ spec:
   passwordSecret: userpassword
   roleName: Compute
 status:
-  baremetalHosts:
-    compute-0:
-      annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.100/24
-      hostname: compute-0
-      provisioningState: provisioned
-    compute-1:
-      annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.101/24
-      hostname: compute-1
-      provisioningState: provisioned
   conditions:
-  - message: All requested BaremetalHosts have been provisioned
-    reason: All requested BaremetalHosts have been provisioned
+  - message: No BaremetalHosts have been requested
+    reason: No BaremetalHosts have been requested
+    status: "True"
+    type: Empty
+  provisioningStatus:
+    reason: No BaremetalHosts have been requested
+    state: Empty
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: compute-provisionserver
+  namespace: openstack
+spec:
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+  apacheImageUrl: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
+  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
+  port: 6190
+status:
+  conditions:
+  - message: ProvisionServer compute-provisionserver has been provisioned
+    reason: ProvisionServer compute-provisionserver has been provisioned
     status: "True"
     type: Provisioned
   provisioningStatus:
-    readyCount: 2
-    reason: All requested BaremetalHosts have been provisioned
+    reason: ProvisionServer compute-provisionserver has been provisioned
     state: Provisioned
----
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  finalizers:
-  - baremetalhost.metal3.io
-  labels:
-    osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: compute
-    osp-director.openstack.org/namespace: openstack
-    osp-director.openstack.org/osphostname: compute-0
-  namespace: openshift-machine-api
-spec:
-  bootMode: legacy
-  consumerRef:
-    kind: OpenStackBaremetalSet
-    name: compute
-    namespace: openstack
-  hardwareProfile: unknown
-  networkData:
-    namespace: openshift-machine-api
-  online: true
-  rootDeviceHints:
-    deviceName: /dev/sda
-  userData:
-    namespace: openshift-machine-api
-status:
-  errorCount: 0
-  errorMessage: ""
-  hardwareProfile: unknown
-  operationalStatus: OK
-  poweredOn: true
-  provisioning:
-    bootMode: legacy
-    rootDeviceHints:
-      deviceName: /dev/sda
-    state: provisioned
----
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  finalizers:
-  - baremetalhost.metal3.io
-  labels:
-    osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: compute
-    osp-director.openstack.org/namespace: openstack
-    osp-director.openstack.org/osphostname: compute-1
-  namespace: openshift-machine-api
-spec:
-  bootMode: legacy
-  consumerRef:
-    kind: OpenStackBaremetalSet
-    name: compute
-    namespace: openstack
-  hardwareProfile: unknown
-  networkData:
-    namespace: openshift-machine-api
-  online: true
-  rootDeviceHints:
-    deviceName: /dev/sda
-  userData:
-    namespace: openshift-machine-api
-status:
-  errorCount: 0
-  errorMessage: ""
-  hardwareProfile: unknown
-  operationalStatus: OK
-  poweredOn: true
-  provisioning:
-    bootMode: legacy
-    rootDeviceHints:
-      deviceName: /dev/sda
-    state: provisioned
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: ctlplane
-  namespace: openstack
-spec:
-  allocationEnd: 192.168.25.250
-  allocationStart: 192.168.25.100
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 192.168.25.0/24
-  gateway: 192.168.25.1
-  vlan: 0
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
-  roleReservations:
-    Compute:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: compute-0
-        ip: 192.168.25.100
-        vip: false
-      - deleted: false
-        hostname: compute-1
-        ip: 192.168.25.101
-        vip: false
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: tenant
-  namespace: openstack
-spec:
-  allocationEnd: 172.16.0.250
-  allocationStart: 172.16.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.0.0/24
-  gateway: ""
-  vlan: 50
-status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
-  roleReservations:
-    Compute:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: compute-0
-        ip: 172.16.0.4
-        vip: false
-      - deleted: false
-        hostname: compute-1
-        ip: 172.16.0.5
-        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -235,32 +65,10 @@ metadata:
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 2
+  hostCount: 0
+  hostNameRefs: {}
   networks:
   - ctlplane
   - tenant
   roleName: Compute
   vip: false
-status:
-  hosts:
-    compute-0:
-      ipaddresses:
-        ctlplane: 192.168.25.100/24
-        tenant: 172.16.0.4/24
-    compute-1:
-      ipaddresses:
-        ctlplane: 192.168.25.101/24
-        tenant: 172.16.0.5/24
-  networks:
-    ctlplane:
-      allocationEnd: 192.168.25.250
-      allocationStart: 192.168.25.100
-      cidr: 192.168.25.0/24
-      gateway: 192.168.25.1
-      vlan: 0
-    tenant:
-      allocationEnd: 172.16.0.250
-      allocationStart: 172.16.0.4
-      cidr: 172.16.0.0/24
-      gateway: ""
-      vlan: 50
