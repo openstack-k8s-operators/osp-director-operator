@@ -5,7 +5,7 @@
 #
 
 oc delete openstackcontrolplane overcloud -n openstack --ignore-not-found
-oc delete openstackvmset controller -n openstack --ignore-not-found
+oc delete openstackvmset --all -n openstack
 oc delete openstackbaremetalset --all -n openstack
 oc delete openstackprovisionserver --all -n openstack
 oc delete openstacknet --all -n openstack
