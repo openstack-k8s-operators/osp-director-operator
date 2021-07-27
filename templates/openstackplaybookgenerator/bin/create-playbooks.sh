@@ -61,7 +61,9 @@ python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLAT
 
 
 # NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
+OSP16=false
 if [ -e ./network/scripts/run-os-net-config.sh ]; then
+  OSP16=true
   # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
   sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
 fi
@@ -99,6 +101,7 @@ time openstack stack create --wait \
 
 mkdir -p /home/cloud-admin/ansible
 
+if [ "$OSP16" == "true" ]; then
 # FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
 /usr/bin/python3 - <<"EOF_PYTHON"
 from tripleoclient import utils as oooutils
@@ -147,6 +150,13 @@ ansible.write_default_ansible_cfg(
     ssh_private_key=None)
 
 EOF_PYTHON
+else
+
+openstack overcloud config download --config-dir /home/cloud-admin/ansible --no-preserve-config
+# remove the .git directory as it conflicts with the repo below
+rm -Rf /home/cloud-admin/ansible/overcloud/.git
+
+fi
 
 TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
