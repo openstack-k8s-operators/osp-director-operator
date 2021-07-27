@@ -3,5 +3,7 @@ kind: TestStep
 commands:
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_ctlplane.yaml
     namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_external.yaml
+    namespaced: true
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknet_tenant.yaml
     namespaced: true

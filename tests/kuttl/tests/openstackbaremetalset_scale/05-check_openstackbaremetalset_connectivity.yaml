@@ -1,0 +1,23 @@
+#
+# Make sure the OpenStackClient can SSH to the 2 OpenStackBaremetalSets
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      sleep 10
+      RETRIES="${RETRIES:-20}"
+      for i in $(seq 1 $RETRIES); do
+          SUCCESS="0"
+          for k in 101 102; do
+            oc rsh -n openstack openstackclient ssh cloud-admin@192.168.25.$k hostname && SUCCESS=$((SUCCESS+1));
+          done
+          if [ "$SUCCESS" -eq "2" ]; then
+            break
+          fi
+          sleep $i
+          if [ "$i" -eq "${RETRIES}" ]; then
+            exit 1
+          fi
+      done

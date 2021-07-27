@@ -3,8 +3,8 @@
 #
 # - 1 OpenStackBaremetalSet
 # - 2 BaremetalHosts
-# - 2 OpenStackNets (populated with reservations)
-# - 1 OpenStackIpSet (populated with reservations)
+# - 2 OpenStackNets
+# - 1 OpenStackIpSet
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -180,7 +180,6 @@ status:
         hostname: openstackclient-0
         ip: 192.168.25.100
         vip: false
-
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet

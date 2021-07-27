@@ -1,0 +1,68 @@
+#
+# Check for:
+#
+# - 2 OpenStackNets
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.100
+        vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: tenant
+  namespace: openstack
+spec:
+  allocationEnd: 172.16.0.250
+  allocationStart: 172.16.0.4
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 172.16.0.0/24
+  gateway: ""
+  vlan: 50
+status:
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
