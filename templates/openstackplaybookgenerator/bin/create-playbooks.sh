@@ -59,8 +59,12 @@ cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
 
 python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
-# disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
-sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
+
+# NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
+if [ -e ./network/scripts/run-os-net-config.sh ]; then
+  # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
+  sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
+fi
 
 # only use env files that have ContainerImagePrepare in them, if more than 1 the last wins
 PREPARE_ENV_ARGS=""
