@@ -2,15 +2,11 @@
 # Check for:
 #
 # - 1 OpenStackBaremetalSet
-# - 2 BaremetalHosts
+# - 2 BaremetalHost (1 provisioned, 1 deprovisioning)
 # - 2 OpenStackNets
 # - 1 OpenStackIpSet
 #
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-timeout: 300
----
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
@@ -20,7 +16,7 @@ metadata:
   namespace: openstack
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  count: 2
+  count: 1
   ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
@@ -30,14 +26,9 @@ spec:
   roleName: Compute
 status:
   baremetalHosts:
-    compute-0:
-      annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.100/24
-      hostname: compute-0
-      provisioningState: provisioned
     compute-1:
       annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.101/24
+      ctlplaneIP: 192.168.25.102/24
       hostname: compute-1
       provisioningState: provisioned
   conditions:
@@ -46,46 +37,33 @@ status:
     status: "True"
     type: Provisioned
   provisioningStatus:
-    readyCount: 2
+    readyCount: 1
     reason: All requested BaremetalHosts have been provisioned
     state: Provisioned
 ---
+# We don't know which BMH was chosen as compute-0 originally, so we just look
+# for one that is currently deprovisioning
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
   finalizers:
   - baremetalhost.metal3.io
-  labels:
-    osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: compute
-    osp-director.openstack.org/namespace: openstack
-    osp-director.openstack.org/osphostname: compute-0
   namespace: openshift-machine-api
 spec:
   bootMode: legacy
-  consumerRef:
-    kind: OpenStackBaremetalSet
-    name: compute
-    namespace: openstack
   hardwareProfile: unknown
-  networkData:
-    namespace: openshift-machine-api
-  online: true
   rootDeviceHints:
     deviceName: /dev/sda
-  userData:
-    namespace: openshift-machine-api
 status:
   errorCount: 0
   errorMessage: ""
   hardwareProfile: unknown
   operationalStatus: OK
-  poweredOn: true
   provisioning:
     bootMode: legacy
     rootDeviceHints:
       deviceName: /dev/sda
-    state: provisioned
+    state: deprovisioning
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
@@ -160,18 +138,25 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 2
+  reservedIpCount: 3
   roleReservations:
     Compute:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: compute-0
-        ip: 192.168.25.100
+        ip: 192.168.25.101
         vip: false
       - deleted: false
         hostname: compute-1
-        ip: 192.168.25.101
+        ip: 192.168.25.102
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.100
         vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -215,7 +200,7 @@ status:
     Compute:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: compute-0
         ip: 172.16.0.4
         vip: false
@@ -235,7 +220,7 @@ metadata:
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 2
+  hostCount: 1
   networks:
   - ctlplane
   - tenant
@@ -243,13 +228,9 @@ spec:
   vip: false
 status:
   hosts:
-    compute-0:
-      ipaddresses:
-        ctlplane: 192.168.25.100/24
-        tenant: 172.16.0.4/24
     compute-1:
       ipaddresses:
-        ctlplane: 192.168.25.101/24
+        ctlplane: 192.168.25.102/24
         tenant: 172.16.0.5/24
   networks:
     ctlplane:

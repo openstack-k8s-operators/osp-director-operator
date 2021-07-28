@@ -1,58 +1,137 @@
 #
 # Check for:
 #
-# - 1 OpenStackBaremetalSet
-# - 1 OpenStackProvisionServer
-# - 1 OpenStackIpSet
+# - 1 OpenStackControlPlane
+# - 1 OpenStackClient
+# - 2 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 2 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 1 Secret (TripleO passwords)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBaremetalSet
+kind: OpenStackControlPlane
 metadata:
-  finalizers:
-  - baremetalset.osp-director.openstack.org-compute
-  name: compute
+  name: overcloud
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  count: 0
-  ctlplaneInterface: enp7s0
-  deploymentSSHSecret: osp-controlplane-ssh-keys
-  networks:
-  - ctlplane
-  - tenant
-  passwordSecret: userpassword
-  roleName: Compute
-status:
-  conditions:
-  - message: No BaremetalHosts have been requested
-    reason: No BaremetalHosts have been requested
-    status: "True"
-    type: Empty
-  provisioningStatus:
-    reason: No BaremetalHosts have been requested
-    state: Empty
+  openStackClientImageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
+  openStackClientNetworks:
+    - ctlplane
+    - external
+  openStackClientStorageClass: host-nfs-storageclass
+  virtualMachineRoles: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackProvisionServer
+kind: OpenStackClient
 metadata:
-  name: compute-provisionserver
+  name: openstackclient
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
-  apacheImageUrl: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
-  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
-  port: 6190
+  cloudName: overcloud
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  imageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
+  networks:
+  - ctlplane
+  - external
+  storageClass: host-nfs-storageclass
+status:
+  netStatus:
+    openstackclient-0:
+      hostname: openstackclient-0
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.4/24
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1
 status:
   conditions:
-  - message: ProvisionServer compute-provisionserver has been provisioned
-    reason: ProvisionServer compute-provisionserver has been provisioned
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
     status: "True"
-    type: Provisioned
-  provisioningStatus:
-    reason: ProvisionServer compute-provisionserver has been provisioned
-    state: Provisioned
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.100
+        vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: external
+  namespace: openstack
+spec:
+  allocationEnd: 10.0.0.250
+  allocationStart: 10.0.0.4
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  vlan: 10
+status:
+  conditions:
+  - message: OpenStackNet external has been successfully configured on targeted node(s)
+    reason: OpenStackNet external has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 10.0.0.4
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -61,14 +140,65 @@ metadata:
   - osp-director.openstack.org
   labels:
     addToPredictableIPsLabel: "true"
-  name: compute
+  name: overcloud
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 0
-  hostNameRefs: {}
+  hostCount: 1
+  roleName: ControlPlane
+  vip: true
+status:
+  hosts:
+    controlplane:
+      ipaddresses: {}
+  networks: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  finalizers:
+  - osp-director.openstack.org
+  labels:
+    addToPredictableIPsLabel: "false"
+  name: openstackclient
+  namespace: openstack
+spec:
+  addToPredictableIPs: false
+  hostCount: 1
+  hostNameRefs:
+    openstackclient-0: openstackclient
   networks:
   - ctlplane
-  - tenant
-  roleName: Compute
+  - external
+  roleName: OpenstackClientopenstackclient
   vip: false
+status:
+  hosts:
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.4/24
+  networks:
+    ctlplane:
+      allocationEnd: 192.168.25.250
+      allocationStart: 192.168.25.100
+      cidr: 192.168.25.0/24
+      gateway: 192.168.25.1
+      vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.4
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 10
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-controlplane
+    osp-director.openstack.org/name: overcloud
+    osp-director.openstack.org/namespace: openstack
+  name: tripleo-passwords
+  namespace: openstack
+type: Opaque

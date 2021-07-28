@@ -4,9 +4,6 @@ commands:
   # Create the required userpassword Secret
   - command: oc apply -f ../../common/manifests/userpassword.yaml
     namespaced: true
-  # Create the required osp-controlplane-ssh-keys Secret
-  - command: oc apply -f ../../common/manifests/osp-controlplane-ssh-keys.yaml
-    namespaced: true
   # Create the OpenStackBaremetalSet from sample YAML
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml
     namespaced: true

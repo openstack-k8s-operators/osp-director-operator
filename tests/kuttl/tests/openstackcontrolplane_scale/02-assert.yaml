@@ -15,7 +15,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  openStackClientImageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
   openStackClientNetworks:
     - ctlplane
     - external
@@ -79,7 +79,7 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  imageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
   networks:
   - ctlplane
   - external
@@ -389,13 +389,7 @@ metadata:
 spec:
   addToPredictableIPs: true
   hostCount: 1
-  networks:
-  - ctlplane
-  - external
-  - internalapi
-  - tenant
-  - storage
-  - storagemgmt
+  # networks: verified in status
   roleName: ControlPlane
   vip: true
 status:

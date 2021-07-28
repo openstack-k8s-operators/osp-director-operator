@@ -1,7 +1,8 @@
 #
 # Check for:
 #
-# - 2 OpenStackNets
+# - 3 OpenStackNets
+# - 1 NodeNetworkConfigurationPolicy
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -32,6 +33,36 @@ spec:
         node-role.kubernetes.io/worker: ""
   cidr: 192.168.25.0/24
   gateway: 192.168.25.1
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: external
+  namespace: openstack
+spec:
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  vlan: 10
+  allocationStart: 10.0.0.4
+  allocationEnd: 10.0.0.250
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet

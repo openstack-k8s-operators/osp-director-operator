@@ -4,7 +4,7 @@ metadata:
   name: openstackclient
   namespace: openstack
 spec:
-  imageURL: quay.io/openstack-k8s-operators/tripleo-deploy
+  imageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
     - ctlplane
