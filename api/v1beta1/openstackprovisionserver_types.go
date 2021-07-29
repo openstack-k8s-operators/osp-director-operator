@@ -17,7 +17,10 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OpenStackProvisionServerSpec defines the desired state of OpenStackProvisionServer
@@ -95,6 +98,73 @@ type OpenStackProvisionServerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OpenStackProvisionServer `json:"items"`
+}
+
+// GetExistingProvServerPorts - Get all ports currently in use by all OpenStackProvisionServers in this namespace
+func (r *OpenStackProvisionServer) GetExistingProvServerPorts(client goClient.Client) (map[string]int, error) {
+	found := map[string]int{}
+
+	provServerList := &OpenStackProvisionServerList{}
+
+	listOpts := []goClient.ListOption{
+		goClient.InNamespace(r.Namespace),
+	}
+
+	err := client.List(context.TODO(), provServerList, listOpts...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, provServer := range provServerList.Items {
+		found[provServer.Name] = provServer.Spec.Port
+	}
+
+	return found, nil
+}
+
+// AssignProvisionServerPort - Assigns an Apache listening port for a particular OpenStackProvisionServer.
+func (r *OpenStackProvisionServer) AssignProvisionServerPort(client goClient.Client, portStart int) error {
+	if r.Spec.Port != 0 {
+		// Do nothing, already assigned
+		return nil
+	}
+
+	existingPorts, err := r.GetExistingProvServerPorts(client)
+
+	if err != nil {
+		return err
+	}
+
+	// It's possible that this prov server already exists and we are just dealing with
+	// a minimized version of it (only its ObjectMeta is set, etc)
+	r.Spec.Port = existingPorts[r.GetName()]
+
+	// If we get this far, no port has been previously assigned, so we pick one
+	if r.Spec.Port == 0 {
+		cur := portStart
+
+		for {
+			found := false
+
+			for _, port := range existingPorts {
+				if port == cur {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				break
+			}
+
+			cur++
+		}
+
+		r.Spec.Port = cur
+	}
+
+	return nil
 }
 
 func init() {
