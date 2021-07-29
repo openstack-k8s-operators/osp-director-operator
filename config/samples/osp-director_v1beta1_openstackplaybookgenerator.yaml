@@ -3,7 +3,7 @@ kind: OpenStackPlaybookGenerator
 metadata:
   name: default
 spec:
-  imageURL: quay.io/openstack-k8s-operators/tripleo-deploy:16.2_20210309.1
+  imageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
   gitSecret: git-secret
   heatEnvConfigMap: heat-env-config
   tarballConfigMap: tripleo-tarball-config

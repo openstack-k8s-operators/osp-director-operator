@@ -1,0 +1,12 @@
+#
+# Create an OpenStackControlPlane to generate SSH keys and an OpenStackClient to later use for SSH testing
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackcontrolplane.yaml
+    namespaced: true
+  - command: |
+      oc patch osctlplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles", "value": {}}]'
+    namespaced: true

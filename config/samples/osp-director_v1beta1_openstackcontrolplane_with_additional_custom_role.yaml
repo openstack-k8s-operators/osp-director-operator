@@ -4,7 +4,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  openStackClientImageURL: quay.io/openstack-k8s-operators/tripleo-deploy:latest
+  openStackClientImageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
   openStackClientNetworks:
     - ctlplane
     - external

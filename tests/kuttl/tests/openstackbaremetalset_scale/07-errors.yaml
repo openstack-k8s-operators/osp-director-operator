@@ -1,72 +1,15 @@
 #
 # Check for:
 #
-# - OpenStackBaremetalSet (should be deleted)
-# - OpenStackProvisionServer (should be deleted)
-# - BaremetalHosts (compute-0 and compute-1 should NOT be provisioned)
-# - OpenStackIpSet (should be deleted)
+# - 1 BaremetalHost (should be removed, for compute-0)
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBaremetalSet
-metadata:
-  name: compute
-  namespace: openstack
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackProvisionServer
-metadata:
-  name: compute-provisionserver
-  namespace: openstack
----
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
-  finalizers:
-  - baremetalhost.metal3.io
   labels:
     osp-director.openstack.org/controller: osp-baremetalset
     osp-director.openstack.org/name: compute
     osp-director.openstack.org/namespace: openstack
     osp-director.openstack.org/osphostname: compute-0
   namespace: openshift-machine-api
-spec:
-  consumerRef:
-    kind: OpenStackBaremetalSet
-    name: compute
-    namespace: openstack
-status:
-  provisioning:
-    bootMode: legacy
-    rootDeviceHints:
-      deviceName: /dev/sda
-    state: provisioned
----
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  finalizers:
-  - baremetalhost.metal3.io
-  labels:
-    osp-director.openstack.org/controller: osp-baremetalset
-    osp-director.openstack.org/name: compute
-    osp-director.openstack.org/namespace: openstack
-    osp-director.openstack.org/osphostname: compute-1
-  namespace: openshift-machine-api
-spec:
-  consumerRef:
-    kind: OpenStackBaremetalSet
-    name: compute
-    namespace: openstack
-status:
-  provisioning:
-    bootMode: legacy
-    rootDeviceHints:
-      deviceName: /dev/sda
-    state: provisioned
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  name: compute
-  namespace: openstack
