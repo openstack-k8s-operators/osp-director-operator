@@ -1,0 +1,109 @@
+{{/* info on golang template at https://pkg.go.dev/text/template */}}
+# Resource Registry
+resource_registry:
+  OS::TripleO::Server: deployed-server/deployed-server.yaml
+  OS::TripleO::Network: network/deployed_networks.yaml
+  OS::TripleO::DeployedServer::ControlPlanePort: deployed-server/deployed-neutron-port.yaml
+  OS::TripleO::Network::Ports::ControlPlaneVipPort: network/ports/deployed_vip_ctlplane.yaml
+  OS::TripleO::Network::Ports::ExternalVipPort: network/ports/deployed_vip_external.yaml
+  OS::TripleO::Network::Ports::InternalApiVipPort: network/ports/deployed_vip_internal_api.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: network/ports/deployed_vip_storage_mgmt.yaml
+  OS::TripleO::Network::Ports::StorageVipPort: network/ports/deployed_vip_storage.yaml
+{{- range $roleid, $role := .RolesMap }}
+{{- if ne $role.Name "ControlPlane" }}
+  OS::TripleO::{{ $role.Name }}::Net::SoftwareConfig: OS::Heat::None
+{{- range $netid, $net := $role.Networks }}
+{{- if ne $net.NameLower "ctlplane" }}
+  OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/deployed_{{ $net.NameLower }}.yaml
+{{- end}}
+{{- end }}
+{{- end }}
+{{- end }}
+  # for now set OVNMacAddressNetwork and OVNMacAddressPort to None, see https://github.com/openstack-k8s-operators/osp-director-operator/issues/254
+  OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
+  OS::TripleO::OVNMacAddressPort: OS::Heat::None
+{{/*
+  #OS::TripleO::Network::Ports::RedisVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  #OS::TripleO::Network::Ports::OVNDBsVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+*/}}
+
+# Parameter Defaults
+parameter_defaults:
+  StackAction: CREATE
+  DeployIdentifier: DeployIdentifier
+  SoftwareConfigTransport: POLL_SERVER_HEAT
+  RootStackName: overcloud
+  ManageNetworks: False
+{{- /* HostnameFormat and RoleCount */ -}}
+{{- range $roleid, $role := .RolesMap }}
+  {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
+  {{- $roleCount := len $role.Nodes }}
+  {{ $role.Name }}Count: {{ $roleCount }}
+{{- end }}
+  HostnameMap:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if and (not $node.VIP) }}
+    overcloud-{{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
+{{- end }}
+{{- end }}
+{{- end }}
+  DeployedServerPortMap:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if and (not $node.VIP) (eq $netname "ctlplane") }}
+    overcloud-{{ $node.Hostname }}-{{ $netname }}:
+      fixed_ips:
+        - ip_address: {{ $ip.IPaddr }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  NodePortMap:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if not $node.VIP }}
+    overcloud-{{ $node.Hostname }}:
+{{- range $netname, $ip := $node.IPaddr }}
+      {{ $netname }}:
+        ip_address: {{ $ip.IPaddr }}
+        ip_address_uri: {{ $ip.IPAddrURI }}
+        ip_subnet: {{ $ip.IPAddrSubnet }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  # VipPortMap and ControlPlaneVipData usually gets created by `openstack overcloud network vip provision`
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if $node.VIP }}
+  VipPortMap:
+{{- range $netname, $ip := $node.IPaddr }}
+    {{ $netname }}:
+      ip_address: {{ $ip.IPaddr }}
+      ip_address_uri: {{ $ip.IPAddrURI }}
+      ip_subnet: {{ $ip.IPAddrSubnet }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  ControlPlaneVipData:
+{{- range $roleid, $role := .RolesMap }}
+{{- if eq $role.Name "ControlPlane" }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if and ($node.VIP) (eq $netname "ctlplane") }}
+    fixed_ips:
+    - ip_address: {{ $ip.IPaddr }}
+    name: control_virtual_ip
+    network:
+      tags:
+      - {{ $ip.Subnet }}
+    subnets:
+    - ip_version: 4
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

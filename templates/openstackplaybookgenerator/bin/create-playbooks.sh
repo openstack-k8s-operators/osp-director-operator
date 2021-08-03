@@ -71,7 +71,7 @@ fi
 # only use env files that have ContainerImagePrepare in them, if more than 1 the last wins
 PREPARE_ENV_ARGS=""
 for ENV_FILE in $(grep -rl "ContainerImagePrepare:" *.yaml | grep -v overcloud-resource-registry-puppet); do
-PREPARE_ENV_ARGS="-e $ENV_FILE"
+  PREPARE_ENV_ARGS="-e $ENV_FILE"
 done
 
 # if no container image prepare env files are provided generate the defaults
@@ -79,7 +79,13 @@ if [ -z "$PREPARE_ENV_ARGS" ]; then
   openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
   PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
-openstack tripleo container image prepare $PREPARE_ENV_ARGS -e hostnamemap.yaml -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
+
+if [ "$OSP16" == "true" ]; then
+  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e hostnamemap.yaml"
+else
+  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
+fi
+openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
 mkdir -p ~/tripleo-deploy
 rm -rf ~/tripleo-deploy/overcloud-ansible*
@@ -87,7 +93,6 @@ rm -rf ~/tripleo-deploy/overcloud-ansible*
 time openstack stack create --wait \
     -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
     -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
-    -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
     -e ~/config-passwords/tripleo-overcloud-passwords.yaml \

@@ -1,6 +1,0 @@
-parameter_defaults:
-  StackAction: CREATE
-  DeployIdentifier: DeployIdentifier
-  SoftwareConfigTransport: POLL_SERVER_HEAT
-  RootStackName: overcloud
-  ManageNetworks: False

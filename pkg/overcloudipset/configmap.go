@@ -17,6 +17,7 @@ package overcloudipset
 
 import (
 	"fmt"
+
 	"strconv"
 	"strings"
 
@@ -24,149 +25,142 @@ import (
 	//	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 )
 
-type network struct {
-	Cidr   string
-	IPaddr string
+type networkType struct {
+	Name       string
+	NameLower  string
+	Cidr       string // e.g. 192.168.24.0/24
+	NetAddr    string // e.g. 192.168.24.0
+	CidrSuffix int    // e.g. 24
+	MTU        int
 }
 
-type deployedServerPortMapType struct {
-	Network  map[string]*network
+// information to build NodePortMap entry:
+//   ip_address: 192.168.24.9 (2001:DB8:24::9)
+//   ip_subnet: 192.168.24.9/24 (2001:DB8:24::9/64)
+//   ip_address_uri: 192.168.24.9 ([2001:DB8:24::9])
+type ipType struct {
+	IPaddr       string // e.g. 192.168.24.9
+	IPAddrURI    string // e.g. 192.168.24.9
+	IPAddrSubnet string // e.g. 192.168.24.9/24
+	Subnet       string // e.g. 192.168.24.0/24
+}
+
+type roleType struct {
+	Name      string
+	NameLower string
+	Networks  map[string]*networkType
+	Nodes     map[string]*nodeType
+}
+
+type nodeType struct {
+	Index    int
+	IPaddr   map[string]*ipType
 	Hostname string
 	VIP      bool
+}
+
+func getCidrParts(cidr string) (string, int, error) {
+	//ipv4Addr := net.ParseIP(ip)
+	cidrPieces := strings.Split(cidr, "/")
+	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
+	if err != nil {
+		return "", cidrSuffix, err
+	}
+	//ipv4Mask := net.CIDRMask(cidrPiecesInt, 32)
+	//fmt.Println(ipv4Addr.Mask(ipv4Mask))
+	//reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
+	return cidrPieces[0], cidrSuffix, nil
 }
 
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
 func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList, overcloudNetList ospdirectorv1beta1.OpenStackNetList) (map[string]interface{}, error) {
 
-	// network isolation w/ predictable IPs:
-	//	   https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/network_isolation.html
-	//     https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/provisioning/node_placement.html#predictable-ips
-	roleIPSets := map[string]map[string][]string{}
+	templateParameters := make(map[string]interface{})
+
 	// DeployedServerPortMap:
-	//     https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
-	ctlPlaneIps := map[string]*deployedServerPortMapType{}
+	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
+	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
+	// https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
 
-	//hostnameMap := make(map[string]string)
-	hostnameFormat := make(map[string]string)
-	roleCount := make(map[string]string)
-	rolePortsFromPool := make(map[string]map[string]string)
-	networkVipMap := make(map[string]string)
+	// map with details for all networks
+	networksMap := map[string]*networkType{}
+	rolesMap := map[string]*roleType{}
+	var osnetName string
 
-	for _, net := range overcloudNetList.Items {
+	for _, osnet := range overcloudNetList.Items {
 
 		// CR names won't allow '_', need to change tripleo nets using those
-		switch net.Name {
+		switch osnet.Name {
 		case "internalapi":
-			net.Name = InternalAPIName
+			osnetName = InternalAPIName
 		case "storagemgmt":
-			net.Name = StorageMgmtName
+			osnetName = StorageMgmtName
+		default:
+			osnetName = osnet.Name
 		}
 
-		for roleName, roleReservation := range net.Status.RoleReservations {
+		// create map of all network
+		if networksMap[osnetName] == nil {
+			netAddr, cidrSuffix, err := getCidrParts(osnet.Spec.Cidr)
+			if err != nil {
+				return templateParameters, err
+			}
+			networksMap[osnetName] = &networkType{
+				Name:       GetNetName(osnetName),
+				NameLower:  osnetName,
+				Cidr:       osnet.Spec.Cidr,
+				CidrSuffix: cidrSuffix,
+				NetAddr:    netAddr,
+				MTU:        1500, //TODO custom MTU per network
+			}
+		}
+
+		for roleName, roleReservation := range osnet.Status.RoleReservations {
 			if !roleReservation.AddToPredictableIPs {
 				continue
 			}
-			for _, reservation := range roleReservation.Reservations {
 
-				// if ctlplane network add to DeployedServerPortMap
-				if net.Name == "ctlplane" {
+			// create map of all roles with Name and Count
+			if rolesMap[roleName] == nil {
+				rolesMap[roleName] = &roleType{
+					Name:      roleName,
+					NameLower: strings.ToLower(roleName),
+					Networks:  map[string]*networkType{},
+					Nodes:     map[string]*nodeType{},
+				}
+			}
 
-					// do _NOT_ add ctlplane DeployedServerPortMap _IF_ reservation is marked as deleted
-					if !reservation.Deleted {
-						// in case of control plane vip the DeployedServerPortMap is
-						// named control_virtual_ip instead of ctlplane_virtual_ip
-						netName := net.Name
-						if reservation.VIP {
-							netName = GetNetNameLower("ctlplane")
-							networkVipMap["ControlPlaneIP"] = reservation.IP
-						}
+			// add network details to role
+			if rolesMap[roleName].Networks[osnetName] == nil {
+				rolesMap[roleName].Networks[osnetName] = networksMap[osnetName]
+			}
 
-						// create ctlPlaneIps for the host if it does not exist
-						if ctlPlaneIps[reservation.Hostname] == nil {
-							ctlPlaneIps[reservation.Hostname] = &deployedServerPortMapType{
-								Hostname: reservation.Hostname,
-								Network:  map[string]*network{},
-								VIP:      reservation.VIP,
-							}
-						}
+			for index, reservation := range roleReservation.Reservations {
 
-						if ctlPlaneIps[reservation.Hostname].Network[netName] == nil {
-							ctlPlaneIps[reservation.Hostname].Network[netName] = &network{
-								IPaddr: reservation.IP,
-								Cidr:   net.Spec.Cidr,
-							}
-						} else {
-							ctlPlaneIps[reservation.Hostname].Network[netName].IPaddr = reservation.IP
-							ctlPlaneIps[reservation.Hostname].Network[netName].Cidr = net.Spec.Cidr
+				if !reservation.Deleted {
+					if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
+						rolesMap[roleName].Nodes[reservation.Hostname] = &nodeType{
+							Index:    index,
+							IPaddr:   map[string]*ipType{},
+							Hostname: reservation.Hostname,
+							VIP:      reservation.VIP,
 						}
 					}
-				} else if reservation.VIP {
-					networkVipMap[fmt.Sprintf("%sNetworkVip", GetNetName(net.Name))] = reservation.IP
-				} else {
-					// Add host to hostnamemap
-					//hostnameMap[fmt.Sprintf("overcloud-%s", reservation.IDKey)] = reservation.Hostname
-
-					reservationIP := reservation.IP
-					if reservation.Deleted {
-						reservationIP = "deleted"
-					}
-
-					// if not ctlplane network entry, add to Predictible IPs entry
-					if roleIPSet, exists := roleIPSets[roleName]; exists {
-						roleIPSet[net.Name] = append(roleIPSet[net.Name], reservationIP)
-					} else {
-						roleIPSets[roleName] = map[string][]string{net.Name: {reservationIP}}
+					if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnetName] == nil {
+						rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnetName] = &ipType{
+							IPaddr:       reservation.IP,
+							IPAddrURI:    reservation.IP, // todo ipv6 uri [2001:DB8:24::15]
+							IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, networksMap[osnetName].CidrSuffix),
+							Subnet:       networksMap[osnetName].Cidr,
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// create role specific parameters from ipsets
-	// ipsets where _not_ overcloudipset.AddToPredictableIPsLabel: "true" will be skipped (openstackclient, controlplane)
-	for _, ipset := range overcloudIPList.Items {
-		// set <Role>HostnameFormat
-		hostnameFormat[fmt.Sprintf("%sHostnameFormat", ipset.Spec.RoleName)] = fmt.Sprintf("%s-%%index%%", strings.ToLower(ipset.Spec.RoleName))
-		// set <Role>Count
-		roleCount[fmt.Sprintf("%sCount", ipset.Spec.RoleName)] = strconv.Itoa(ipset.Spec.HostCount)
-		// create PortsFromPool map for network isolation to set Ports resource_registry entries
-		for _, net := range ipset.Spec.Networks {
-			if net == "ctlplane" {
-				continue
-			}
-
-			// CR names won't allow '_', need to change tripleo nets using those
-			switch net {
-			case "internalapi":
-				net = InternalAPIName
-			case "storagemgmt":
-				net = StorageMgmtName
-			}
-
-			portConfig := fmt.Sprintf("/usr/share/openstack-tripleo-heat-templates/network/ports/%s_from_pool.yaml", net)
-			if rolePortsFromPool[ipset.Spec.RoleName] == nil {
-				rolePortsFromPool[ipset.Spec.RoleName] = map[string]string{GetNetName(net): portConfig}
-			} else {
-				rolePortsFromPool[ipset.Spec.RoleName][GetNetName(net)] = portConfig
-			}
-		}
-
-	}
-
-	// the DefaultCount for the Compute is 1, set ComputeCount to 0 in the rendered deploy environment file
-	// if no Compute baremetalset got created that we can deploy a controlplane only overcloud.
-	if _, ok := roleCount["ComputeCount"]; !ok {
-		roleCount["ComputeCount"] = "0"
-	}
-
-	templateParameters := make(map[string]interface{})
-	// TODO: make sure the list order won't change
-	templateParameters["PredictableIps"] = roleIPSets
-	templateParameters["CtlPlaneIps"] = ctlPlaneIps
-	templateParameters["RoleCount"] = roleCount
-	templateParameters["HostnameFormat"] = hostnameFormat
-	templateParameters["RolePortsFromPool"] = rolePortsFromPool
-	templateParameters["NetworkVip"] = networkVipMap
+	templateParameters["RolesMap"] = rolesMap
+	//	templateParameters["NetworksMap"] = networksMap
 
 	return templateParameters, nil
 
