@@ -20,6 +20,9 @@ const (
 	// AppLabel -
 	AppLabel = "osp-provisionserver"
 
+	// DefaultPort - The starting default port for the OpenStackProvisionServer's Apache container
+	DefaultPort = 6190
+
 	// FinalizerName -
 	FinalizerName = "provisionservers.osp-director.openstack.org"
 
