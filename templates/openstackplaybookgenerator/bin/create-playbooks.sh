@@ -39,7 +39,6 @@ mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 pushd $TEMPLATES_DIR
-
 # extract any tar files into the $TEMPLATES_DIR
 {{- if .TripleoTarballFiles }}
 {{- range $key, $value := .TripleoTarballFiles }}
@@ -157,7 +156,20 @@ ansible.write_default_ansible_cfg(
 EOF_PYTHON
 else
 
-openstack overcloud config download --config-dir /home/cloud-admin/ansible --no-preserve-config
+TMP_DIR_ANSIBLE=$(mktemp -d)
+pushd $TMP_DIR_ANSIBLE
+
+cat <<EOF > $TMP_DIR_ANSIBLE/vars.yaml
+plan: overcloud
+ansible_ssh_user: cloud-admin
+ansible_ssh_private_key_file: /home/cloud-admin/.ssh/id_rsa
+EOF
+
+echo -e "localhost ansible_connection=local\n\n[convergence_base]\nlocalhost" > hosts
+
+ANSIBLE_FORCE_COLOR=true ansible-playbook -i hosts -e vars.yaml /usr/share/ansible/tripleo-playbooks/cli-config-download.yaml
+popd
+
 # remove the .git directory as it conflicts with the repo below
 rm -Rf /home/cloud-admin/ansible/overcloud/.git
 
@@ -179,3 +191,4 @@ git config --global user.name "OSP Director Operator"
 git add *
 git commit -a -m "Generated playbooks for $ConfigHash"
 git push -f origin $ConfigHash
+popd
