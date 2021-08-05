@@ -1,0 +1,11 @@
+#
+# Check for:
+#
+# - No OpenStackProvisionServer called "badprov" was created
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: badprov
+  namespace: openstack

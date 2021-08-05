@@ -46,6 +46,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 )
 
 // OpenStackBaremetalSetReconciler reconciles a OpenStackBaremetalSet object
@@ -510,11 +511,17 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, provisionServer, func() error {
-		// TODO: Surface the port in OpenStackBaremetalSet?
-		provisionServer.Spec.Port = 6190
+		// Assign the prov server its existing port if this is an update, otherwise pick a new one
+		// based on what is available
+		err := provisionServer.AssignProvisionServerPort(r.Client, provisionserver.DefaultPort)
+
+		if err != nil {
+			return err
+		}
+
 		provisionServer.Spec.BaseImageURL = instance.Spec.BaseImageURL
 
-		err := controllerutil.SetControllerReference(instance, provisionServer, r.Scheme)
+		err = controllerutil.SetControllerReference(instance, provisionServer, r.Scheme)
 
 		if err != nil {
 			return err
@@ -790,18 +797,13 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 
-	// Flag the network data secret as safe to collect with must-gather
-	secretLabelsWithMustGather := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
-		common.MustGatherSecret: "yes",
-	})
-
 	networkDataSt := common.Template{
 		Name:           networkDataSecretName,
 		Namespace:      "openshift-machine-api",
 		Type:           common.TemplateTypeConfig,
 		InstanceType:   instance.Kind,
 		AdditionalData: map[string]string{"networkData": "/baremetalset/cloudinit/networkdata"},
-		Labels:         secretLabelsWithMustGather,
+		Labels:         secretLabels,
 		ConfigOptions:  templateParameters,
 	}
 

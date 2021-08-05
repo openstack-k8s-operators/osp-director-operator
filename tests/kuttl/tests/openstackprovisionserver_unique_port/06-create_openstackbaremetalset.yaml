@@ -1,0 +1,18 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Create the OpenStackBaremetalSet from sample YAML
+  - script: |
+      sed 's/name: compute/name: compute2/g' ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml | sed 's/roleName: Compute/roleName: Compute2/g' | oc apply -f -
+  # Remove the OpenStackBaremetalSet tenant network from sample YAML
+  - command: |
+      oc patch openstackbaremetalset compute2 --type='json' -p='[{"op": "replace", "path": "/spec/networks", "value": ["ctlplane"]}]'
+    namespaced: true
+  # Remove sample YAML's bmhLabelSelector from spec
+  - command: |
+      oc patch openstackbaremetalset compute2 --type='json' -p='[{"op": "remove", "path": "/spec/bmhLabelSelector"}]'
+    namespaced: true
+  # Remove sample YAML's hardwareReqs from spec
+  - command: |
+      oc patch openstackbaremetalset compute2 --type='json' -p='[{"op": "remove", "path": "/spec/hardwareReqs"}]'
+    namespaced: true

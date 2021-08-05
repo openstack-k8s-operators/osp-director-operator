@@ -1,0 +1,26 @@
+#
+# Check for:
+#
+# - 1 OpenStackProvisionServer with a second user-defined httpd port
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: goodprov
+  namespace: openstack
+spec:
+  apacheImageUrl: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+  port: 8081
+  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
+status:
+  conditions:
+  - message: ProvisionServer goodprov has been provisioned
+    reason: ProvisionServer goodprov has been provisioned
+    status: "True"
+    type: Provisioned
+  provisioningStatus:
+    reason: ProvisionServer goodprov has been provisioned
+    state: Provisioned
