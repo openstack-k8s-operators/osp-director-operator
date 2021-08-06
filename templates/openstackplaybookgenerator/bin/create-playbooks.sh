@@ -1,22 +1,22 @@
 #!/bin/bash
 set -eux
 
-# add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
-mkdir -p /home/cloud-admin/.ssh
-cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
-chmod 600 /home/cloud-admin/.ssh/git_id_rsa
-chown -R cloud-admin: /home/cloud-admin/.ssh
+# add cloud-admin ssh keys to $HOME/.ssh
+mkdir -p $HOME/.ssh
+cp /mnt/ssh-config/* $HOME/.ssh/
+chmod 600 $HOME/.ssh/git_id_rsa
+chown -R cloud-admin: $HOME/.ssh
 
 GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
 GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
 
-cat <<EOF > /home/cloud-admin/.ssh/config
+cat <<EOF > $HOME/.ssh/config
 Host $GIT_HOST
     User $GIT_USER
-    IdentityFile /home/cloud-admin/.ssh/git_id_rsa
+    IdentityFile $HOME/.ssh/git_id_rsa
     StrictHostKeyChecking no
 EOF
-chmod 644 /home/cloud-admin/.ssh/config
+chmod 644 $HOME/.ssh/config
 
 unset OS_CLOUD
 export OS_AUTH_TYPE=none
@@ -42,19 +42,19 @@ pushd $TEMPLATES_DIR
 # extract any tar files into the $TEMPLATES_DIR
 {{- if .TripleoTarballFiles }}
 {{- range $key, $value := .TripleoTarballFiles }}
-tar -xvf /home/cloud-admin/tht-tars/{{ $key }}
+tar -xvf $HOME/tht-tars/{{ $key }}
 {{- end }}
 {{- end }}
 
 # copy to editable dir config-tmp
-rm -Rf ~/config-tmp
-mkdir -p ~/config-tmp
-cp ~/config/* ~/config-tmp
-cp ~/config-custom/* ~/config-tmp
+rm -Rf $HOME/config-tmp
+mkdir -p $HOME/config-tmp
+cp $HOME/config/* $HOME/config-tmp
+cp $HOME/config-custom/* $HOME/config-tmp
 #FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths in dev-tools!
-sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i ~/config-tmp/*.yaml
+sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tmp/*.yaml
 # copy to our temp t-h-t dir
-cp -a ~/config-tmp/* "$TEMPLATES_DIR/"
+cp -a $HOME/config-tmp/* "$TEMPLATES_DIR/"
 
 python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
@@ -86,8 +86,8 @@ else
 fi
 openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
-mkdir -p ~/tripleo-deploy
-rm -rf ~/tripleo-deploy/overcloud-ansible*
+mkdir -p $HOME/tripleo-deploy
+rm -rf $HOME/tripleo-deploy/overcloud-ansible*
 
 time openstack stack create --wait \
     -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
@@ -103,7 +103,7 @@ time openstack stack create --wait \
 {{- end }}
     -t overcloud.yaml overcloud
 
-mkdir -p /home/cloud-admin/ansible
+mkdir -p $HOME/ansible
 
 if [ "$OSP16" == "true" ]; then
 # FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
@@ -162,8 +162,8 @@ pushd $TMP_DIR_ANSIBLE
 cat <<EOF > $TMP_DIR_ANSIBLE/vars.yaml
 plan: overcloud
 ansible_ssh_user: cloud-admin
-ansible_ssh_private_key_file: /home/cloud-admin/.ssh/id_rsa
-output_dir: /home/cloud-admin/ansible
+ansible_ssh_private_key_file: $HOME/.ssh/id_rsa
+output_dir: $HOME/ansible
 EOF
 
 echo -e "localhost ansible_connection=local\n\n[convergence_base]\nlocalhost" > hosts
@@ -172,7 +172,7 @@ ANSIBLE_FORCE_COLOR=true ansible-playbook -i hosts -e @vars.yaml /usr/share/ansi
 popd
 
 # remove the .git directory as it conflicts with the repo below
-rm -Rf /home/cloud-admin/ansible/overcloud/.git
+rm -Rf $HOME/ansible/overcloud/.git
 
 fi
 
@@ -182,11 +182,23 @@ pushd $TMP_DIR
 git checkout -b $ConfigHash
 # add directory for playbooks
 mkdir tripleo-ansible
-cp -a /home/cloud-admin/ansible/overcloud/* tripleo-ansible
+cp -a $HOME/ansible/overcloud/* tripleo-ansible
 
 # add directory for templates
 mkdir source-templates
 cp -a $TEMPLATES_DIR/* source-templates
+
+# custom config
+mkdir config-custom
+cp -L $HOME/config-custom/* config-custom
+
+# add tarball files
+mkdir tarball
+{{- if .TripleoTarballFiles }}
+{{- range $key, $value := .TripleoTarballFiles }}
+tar -xvf $HOME/tht-tars/{{ $key }} -C tarball
+{{- end }}
+{{- end }}
 
 git config --global user.email "dev@null.io"
 git config --global user.name "OSP Director Operator"
