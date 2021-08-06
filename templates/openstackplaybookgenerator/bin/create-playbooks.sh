@@ -163,11 +163,12 @@ cat <<EOF > $TMP_DIR_ANSIBLE/vars.yaml
 plan: overcloud
 ansible_ssh_user: cloud-admin
 ansible_ssh_private_key_file: /home/cloud-admin/.ssh/id_rsa
+output_dir: /home/cloud-admin/ansible
 EOF
 
 echo -e "localhost ansible_connection=local\n\n[convergence_base]\nlocalhost" > hosts
 
-ANSIBLE_FORCE_COLOR=true ansible-playbook -i hosts -e vars.yaml /usr/share/ansible/tripleo-playbooks/cli-config-download.yaml
+ANSIBLE_FORCE_COLOR=true ansible-playbook -i hosts -e @vars.yaml /usr/share/ansible/tripleo-playbooks/cli-config-download.yaml
 popd
 
 # remove the .git directory as it conflicts with the repo below
@@ -179,7 +180,9 @@ TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
 pushd $TMP_DIR
 git checkout -b $ConfigHash
-cp -a /home/cloud-admin/ansible/* tripleo-ansible
+# add directory for playbooks
+mkdir tripleo-ansible
+cp -a /home/cloud-admin/ansible/overcloud/* tripleo-ansible
 
 # add directory for templates
 mkdir source-templates

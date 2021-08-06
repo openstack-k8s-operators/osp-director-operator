@@ -19,13 +19,6 @@ resource_registry:
 {{- end }}
 {{- end }}
 {{- end }}
-  # for now set OVNMacAddressNetwork and OVNMacAddressPort to None, see https://github.com/openstack-k8s-operators/osp-director-operator/issues/254
-  OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
-  OS::TripleO::OVNMacAddressPort: OS::Heat::None
-{{/*
-  #OS::TripleO::Network::Ports::RedisVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  #OS::TripleO::Network::Ports::OVNDBsVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-*/}}
 
 # Parameter Defaults
 parameter_defaults:
@@ -36,15 +29,17 @@ parameter_defaults:
   ManageNetworks: False
 {{- /* HostnameFormat and RoleCount */ -}}
 {{- range $roleid, $role := .RolesMap }}
+{{- if ne $role.Name "ControlPlane" }}
   {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
   {{- $roleCount := len $role.Nodes }}
   {{ $role.Name }}Count: {{ $roleCount }}
+{{- end }}
 {{- end }}
   HostnameMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- if and (not $node.VIP) }}
-    overcloud-{{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
+    {{ $node.Hostname }}: {{ $node.Hostname }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -53,7 +48,7 @@ parameter_defaults:
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
 {{- if and (not $node.VIP) (eq $netname "ctlplane") }}
-    overcloud-{{ $node.Hostname }}-{{ $netname }}:
+    {{ $node.Hostname }}-{{ $netname }}:
       fixed_ips:
         - ip_address: {{ $ip.IPaddr }}
 {{- end }}
@@ -64,7 +59,7 @@ parameter_defaults:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- if not $node.VIP }}
-    overcloud-{{ $node.Hostname }}:
+    {{ $node.Hostname }}:
 {{- range $netname, $ip := $node.IPaddr }}
       {{ $netname }}:
         ip_address: {{ $ip.IPaddr }}
@@ -102,6 +97,23 @@ parameter_defaults:
       - {{ $ip.Subnet }}
     subnets:
     - ip_version: 4
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+# Set VIP's for redis and OVN
+{{- range $roleid, $role := .RolesMap }}
+{{- if eq $role.Name "ControlPlane" }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if and ($node.VIP) (eq $netname "internal_api") }}
+  RedisVirtualFixedIPs:
+    - ip_address: {{ $ip.IPaddr }}
+      use_neutron: false
+  OVNDBsVirtualFixedIPs:
+    - ip_address: {{ $ip.IPaddr }}
+      use_neutron: false
 {{- end }}
 {{- end }}
 {{- end }}
