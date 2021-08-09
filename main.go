@@ -247,6 +247,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackEphemeralHeat")
 			os.Exit(1)
 		}
+		if err = (&ospdirectorv1beta1.OpenStackProvisionServer{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackProvisionServer")
+			os.Exit(1)
+		}
 	}
 
 	// +kubebuilder:scaffold:builder

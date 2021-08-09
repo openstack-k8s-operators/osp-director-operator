@@ -112,6 +112,25 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-openstackprovisionserver
+  failurePolicy: Fail
+  name: vopenstackprovisionserver.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackprovisionservers
+  sideEffects: None
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-osp-director-openstack-org-v1beta1-openstackvmset
   failurePolicy: Fail
   name: vopenstackvmset.kb.io
