@@ -797,13 +797,18 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 
+	// Flag the network data secret as safe to collect with must-gather
+	secretLabelsWithMustGather := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
+		common.MustGatherSecret: "yes",
+	})
+
 	networkDataSt := common.Template{
 		Name:           networkDataSecretName,
 		Namespace:      "openshift-machine-api",
 		Type:           common.TemplateTypeConfig,
 		InstanceType:   instance.Kind,
 		AdditionalData: map[string]string{"networkData": "/baremetalset/cloudinit/networkdata"},
-		Labels:         secretLabels,
+		Labels:         secretLabelsWithMustGather,
 		ConfigOptions:  templateParameters,
 	}
 
