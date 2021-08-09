@@ -1,0 +1,9 @@
+#
+# Try to create an OpenStackProvisionServer with another (invalid) user-defined httpd port
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      sed 's/name: openstack/name: badprov/g' ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml | oc apply -f - || true

@@ -1,0 +1,66 @@
+#
+# Check for:
+#
+# - 1 OpenStackNet
+# - 1 NodeNetworkConfigurationPolicy
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-openstacknet
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded

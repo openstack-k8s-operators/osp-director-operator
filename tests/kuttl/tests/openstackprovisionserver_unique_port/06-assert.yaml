@@ -1,0 +1,26 @@
+#
+# Check for:
+#
+# - 1 OpenStackProvisionServer (we don't actually care about the OpenStackBaremetalSet resource) with an auto-assigned httpd port
+# 
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackProvisionServer
+metadata:
+  name: compute2-provisionserver
+  namespace: openstack
+spec:
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+  apacheImageUrl: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
+  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
+  port: 6191
+status:
+  conditions:
+  - message: ProvisionServer compute2-provisionserver has been provisioned
+    reason: ProvisionServer compute2-provisionserver has been provisioned
+    status: "True"
+    type: Provisioned
+  provisioningStatus:
+    reason: ProvisionServer compute2-provisionserver has been provisioned
+    state: Provisioned

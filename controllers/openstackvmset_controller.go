@@ -527,6 +527,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// We will fill this map with newly-added hosts as well as existing ones
 	vmDetails := map[string]ospdirectorv1beta1.Host{}
 
+	// Flag the network data secret as safe to collect with must-gather
+	secretLabelsWithMustGather := common.GetLabels(instance, vmset.AppLabel, map[string]string{
+		common.MustGatherSecret: "yes",
+	})
+
 	// Func to help increase DRY below in NetworkData loops
 	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, vm *ospdirectorv1beta1.HostStatus) error {
 		// TODO: multi nic support with bindata template
@@ -539,7 +544,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
 			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
 			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
-			Labels:            secretLabels,
+			Labels:            secretLabelsWithMustGather,
 			NAD:               nadMap,
 		}
 
