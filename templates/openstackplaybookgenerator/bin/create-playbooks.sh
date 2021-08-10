@@ -58,15 +58,6 @@ cp -a $HOME/config-tmp/* "$TEMPLATES_DIR/"
 
 python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
-
-# NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
-OSP16=false
-if [ -e ./network/scripts/run-os-net-config.sh ]; then
-  OSP16=true
-  # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
-  sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
-fi
-
 # only use env files that have ContainerImagePrepare in them, if more than 1 the last wins
 PREPARE_ENV_ARGS=""
 for ENV_FILE in $(grep -rl "ContainerImagePrepare:" *.yaml | grep -v overcloud-resource-registry-puppet); do
@@ -79,11 +70,7 @@ if [ -z "$PREPARE_ENV_ARGS" ]; then
   PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
 
-if [ "$OSP16" == "true" ]; then
-  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e hostnamemap.yaml"
-else
-  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
-fi
+PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
 openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
 mkdir -p $HOME/tripleo-deploy
@@ -105,57 +92,6 @@ time openstack stack create --wait \
 
 mkdir -p $HOME/ansible
 
-if [ "$OSP16" == "true" ]; then
-# FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
-/usr/bin/python3 - <<"EOF_PYTHON"
-from tripleoclient import utils as oooutils
-from osc_lib import utils
-from tripleo_common.inventory import TripleoInventory
-from tripleo_common.actions import ansible
-import sys
-import os
-
-API_NAME = 'tripleoclient'
-API_VERSIONS = {
-    '1': 'heatclient.v1.client.Client',
-}
-api_port='8004'
-heat_client = utils.get_client_class(
-    API_NAME,
-    '1',
-    API_VERSIONS)
-client = heat_client(
-    endpoint='http://{{ .HeatServiceName }}:%s/v1/admin' % api_port,
-    username='admin',
-    password='fake',
-    region_name='regionOne',
-    token='fake',
-)
-out_dir = oooutils.download_ansible_playbooks(client, 'overcloud', output_dir='/home/cloud-admin/ansible')
-
-inventory = TripleoInventory(
-    hclient=client,
-    plan_name='overcloud',
-    ansible_ssh_user='cloud-admin')
-
-extra_vars = {
-    'Standalone': {
-        'ansible_connection': 'local',
-        'ansible_python_interpreter': sys.executable,
-        }
-    }
-inv_path = os.path.join(out_dir, 'inventory.yaml')
-inventory.write_static_inventory(inv_path, extra_vars)
-
-# NOTE: we don't use transport=local like tripleoclient standalone
-ansible.write_default_ansible_cfg(
-    out_dir,
-    'cloud-admin',
-    ssh_private_key=None)
-
-EOF_PYTHON
-else
-
 TMP_DIR_ANSIBLE=$(mktemp -d)
 pushd $TMP_DIR_ANSIBLE
 
@@ -173,8 +109,6 @@ popd
 
 # remove the .git directory as it conflicts with the repo below
 rm -Rf $HOME/ansible/overcloud/.git
-
-fi
 
 TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
