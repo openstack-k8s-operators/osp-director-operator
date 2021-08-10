@@ -102,6 +102,7 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+{{/*
 # Set VIP's for redis and OVN
 {{- range $roleid, $role := .RolesMap }}
 {{- if eq $role.Name "ControlPlane" }}
@@ -119,3 +120,4 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+*/}}
