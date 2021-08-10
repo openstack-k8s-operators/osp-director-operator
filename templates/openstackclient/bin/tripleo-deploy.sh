@@ -106,7 +106,8 @@ play() {
     /home/cloud-admin/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
 
   mkdir -p ~/.config/openstack
-  cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
+  sudo cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
+  sudo chown cloud-admin: ~/.config/openstack/clouds.yaml
   popd > /dev/null
 
 }
