@@ -101,12 +101,13 @@ play() {
   # e.g. The check fails because the lvm2 package is not installed in openstackclient container image image
   # and ansible_facts include packages from undercloud.
   ansible-playbook \
-    -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml \
+    -i /home/cloud-admin/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
     --skip-tags opendev-validation \
     /home/cloud-admin/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
 
   mkdir -p ~/.config/openstack
-  cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
+  sudo cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
+  sudo chown cloud-admin: ~/.config/openstack/clouds.yaml
   popd > /dev/null
 
 }

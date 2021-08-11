@@ -1,8 +1,0 @@
-parameter_defaults:
-{{- range $key, $value := .HostnameFormat }}
-  {{ $key }}: {{ $value }}
-{{- end }}
-{{- range $key, $value := .RoleCount }}
-  {{ $key }}: {{ $value }}
-{{- end }}
-

@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/openstack-k8s-operators/osp-director-operator
-  newTag: 0.0.1
+  newTag: 17.0.1
