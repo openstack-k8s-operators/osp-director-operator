@@ -60,15 +60,12 @@ type nodeType struct {
 }
 
 func getCidrParts(cidr string) (string, int, error) {
-	//ipv4Addr := net.ParseIP(ip)
 	cidrPieces := strings.Split(cidr, "/")
 	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
 	if err != nil {
 		return "", cidrSuffix, err
 	}
-	//ipv4Mask := net.CIDRMask(cidrPiecesInt, 32)
-	//fmt.Println(ipv4Addr.Mask(ipv4Mask))
-	//reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
+
 	return cidrPieces[0], cidrSuffix, nil
 }
 
@@ -160,7 +157,7 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 	}
 
 	templateParameters["RolesMap"] = rolesMap
-	//	templateParameters["NetworksMap"] = networksMap
+	templateParameters["NetworksMap"] = networksMap
 
 	return templateParameters, nil
 
