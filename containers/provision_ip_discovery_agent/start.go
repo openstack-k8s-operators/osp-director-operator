@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/openshift/sriov-network-operator/pkg/version"
 	"github.com/spf13/cobra"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,9 +57,6 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 	flag.Parse()
 
 	glog.V(0).Info("Starting ProvisionIpDiscoveryAgent")
-
-	// To help debugging, immediately log version
-	glog.V(2).Infof("Version: %+v", version.Version)
 
 	if startOpts.provIntf == "" {
 		name, ok := os.LookupEnv("PROV_INTF")
