@@ -928,6 +928,12 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		},
 	}
 
+	// This run strategy ensures that the VM boots upon creation and reboots upon
+	// failure, but also allows us to issue manual power commands to the Kubevirt API.
+	// The default strategy, "Always", disallows the direct power command API calls
+	// that are required by the Kubevirt fencing agent
+	runStrategy := virtv1.RunStrategyRerunOnFailure
+
 	// VM
 	vm := &virtv1.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
@@ -936,7 +942,8 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 			Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
 		},
 		Spec: virtv1.VirtualMachineSpec{
-			Template: &vmTemplate,
+			RunStrategy: &runStrategy,
+			Template:    &vmTemplate,
 		},
 	}
 
@@ -945,7 +952,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 
 		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
-		vm.Spec.Running = &trueValue
 
 		// merge additional networks
 		networks := instance.Spec.Networks
