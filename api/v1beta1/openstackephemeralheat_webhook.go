@@ -50,7 +50,7 @@ func (r *OpenStackEphemeralHeat) Default() {
 		r.Spec.ConfigHash = r.Name
 	}
 	if r.Spec.HeatAPIImageURL == "" {
-		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-api:16.2.0-58"
+		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-api:16.2.0-56"
 	}
 	if r.Spec.HeatEngineImageURL == "" {
 		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-engine:16.2.0-58"
