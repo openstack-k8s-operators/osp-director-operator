@@ -1,11 +1,10 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.13
+go 1.14
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -20,12 +19,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.1.1
-	github.com/tidwall/gjson v1.6.1
+	github.com/tidwall/gjson v1.6.5
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
-	google.golang.org/grpc/examples v0.0.0-20210512000516-62adda2ece5e // indirect
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3
 	k8s.io/apiserver v0.19.2
@@ -38,6 +36,7 @@ require (
 )
 
 replace (
+	github.com/mikefarah/yaml/v2 => gopkg.in/yaml.v2 v2.4.0
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200526144822-34f54f12813a
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
 	github.com/operator-framework/operator-lifecycle-manager => github.com/operator-framework/operator-lifecycle-manager v0.17.0
