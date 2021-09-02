@@ -51,7 +51,7 @@ spec:
               OpenStackProvisionServer
             properties:
               apacheImageUrl:
-                default: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
+                default: registry.redhat.io/rhel8/httpd-24:1-152
                 description: Container image URL for the main container that serves
                   the downloaded RHEL qcow2 image (baseImageUrl)
                 type: string
