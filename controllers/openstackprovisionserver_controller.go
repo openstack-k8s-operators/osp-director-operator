@@ -321,7 +321,8 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 						"-ec",
 						"cp -f /usr/local/apache2/conf/httpd.conf /etc/httpd/conf/httpd.conf && /usr/bin/run-httpd",
 					},
-					VolumeMounts: volumeMounts,
+					VolumeMounts:    volumeMounts,
+					ImagePullPolicy: corev1.PullAlways,
 				},
 				{
 					Name:    "osp-provision-ip-discovery-agent",
