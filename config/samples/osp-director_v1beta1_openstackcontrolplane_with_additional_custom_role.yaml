@@ -4,7 +4,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  openStackClientImageURL: registry.redhat.io/rhosp-beta/openstack-tripleoclient:16.2.0-4
+  openStackClientImageURL: registry.redhat.io/rhosp-beta/openstack-tripleoclient:16.2
   openStackClientNetworks:
     - ctlplane
     - external
