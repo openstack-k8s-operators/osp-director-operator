@@ -4,7 +4,7 @@ metadata:
   name: openstackclient
   namespace: openstack
 spec:
-  imageURL: registry.redhat.io/rhosp-beta/openstack-tripleoclient:16.2.0-4
+  imageURL: registry.redhat.io/rhosp-beta/openstack-tripleoclient:16.2
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
     - ctlplane

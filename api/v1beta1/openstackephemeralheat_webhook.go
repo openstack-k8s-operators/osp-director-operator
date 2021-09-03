@@ -50,16 +50,16 @@ func (r *OpenStackEphemeralHeat) Default() {
 		r.Spec.ConfigHash = r.Name
 	}
 	if r.Spec.HeatAPIImageURL == "" {
-		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-api:16.2.0-56"
+		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-api:16.2"
 	}
 	if r.Spec.HeatEngineImageURL == "" {
-		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-engine:16.2.0-58"
+		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-engine:16.2"
 	}
 	if r.Spec.MariadbImageURL == "" {
-		r.Spec.MariadbImageURL = "registry.redhat.io/rhosp-beta/openstack-mariadb:16.2.0-70"
+		r.Spec.MariadbImageURL = "registry.redhat.io/rhosp-beta/openstack-mariadb:16.2"
 	}
 	if r.Spec.RabbitImageURL == "" {
-		r.Spec.RabbitImageURL = "registry.redhat.io/rhosp-beta/openstack-rabbitmq:16.2.0-71"
+		r.Spec.RabbitImageURL = "registry.redhat.io/rhosp-beta/openstack-rabbitmq:16.2"
 	}
 
 }
