@@ -31,6 +31,7 @@ func GetInitContainers(inits []InitContainer) []corev1.Container {
 		container := corev1.Container{
 			Name:            fmt.Sprintf("init-%d", index),
 			Image:           init.ContainerImage,
+			ImagePullPolicy: corev1.PullAlways,
 			SecurityContext: securityContext,
 			VolumeMounts:    init.VolumeMounts,
 			Env:             init.Env,
