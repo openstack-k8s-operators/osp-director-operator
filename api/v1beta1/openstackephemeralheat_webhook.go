@@ -50,16 +50,16 @@ func (r *OpenStackEphemeralHeat) Default() {
 		r.Spec.ConfigHash = r.Name
 	}
 	if r.Spec.HeatAPIImageURL == "" {
-		r.Spec.HeatAPIImageURL = "quay.io/tripleomaster/openstack-heat-api:current-tripleo"
+		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-api:16.2.0-56"
 	}
 	if r.Spec.HeatEngineImageURL == "" {
-		r.Spec.HeatEngineImageURL = "quay.io/tripleomaster/openstack-heat-engine:current-tripleo"
+		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-beta/openstack-heat-engine:16.2.0-58"
 	}
 	if r.Spec.MariadbImageURL == "" {
-		r.Spec.MariadbImageURL = "quay.io/tripleomaster/openstack-mariadb:current-tripleo"
+		r.Spec.MariadbImageURL = "registry.redhat.io/rhosp-beta/openstack-mariadb:16.2.0-70"
 	}
 	if r.Spec.RabbitImageURL == "" {
-		r.Spec.RabbitImageURL = "quay.io/tripleomaster/openstack-rabbitmq:current-tripleo"
+		r.Spec.RabbitImageURL = "registry.redhat.io/rhosp-beta/openstack-rabbitmq:16.2.0-71"
 	}
 
 }
