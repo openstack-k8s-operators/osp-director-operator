@@ -29,8 +29,9 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			Containers: []corev1.Container{
 				{
-					Name:  "mariadb",
-					Image: instance.Spec.MariadbImageURL,
+					Name:            "mariadb",
+					Image:           instance.Spec.MariadbImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -46,8 +47,9 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name:  "mariadb-init",
-					Image: instance.Spec.MariadbImageURL,
+					Name:            "mariadb-init",
+					Image:           instance.Spec.MariadbImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",

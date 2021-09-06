@@ -29,8 +29,9 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 			},
 			Containers: []corev1.Container{
 				{
-					Name:  "rabbitmq",
-					Image: instance.Spec.RabbitImageURL,
+					Name:            "rabbitmq",
+					Image:           instance.Spec.RabbitImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						// added to resolve "Failed to create thread" aborts
 						{
@@ -51,8 +52,9 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name:  "rabbitmq-init",
-					Image: instance.Spec.RabbitImageURL,
+					Name:            "rabbitmq-init",
+					Image:           instance.Spec.RabbitImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
