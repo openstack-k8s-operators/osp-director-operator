@@ -308,8 +308,9 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 			},
 			Containers: []corev1.Container{
 				{
-					Name:  "osp-httpd",
-					Image: instance.Spec.ApacheImageURL,
+					Name:            "osp-httpd",
+					Image:           instance.Spec.ApacheImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &trueValue,
 					},
@@ -324,11 +325,11 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 					VolumeMounts: volumeMounts,
 				},
 				{
-					Name:    "osp-provision-ip-discovery-agent",
-					Args:    []string{"start"},
-					Command: []string{"provision-ip-discovery-agent"},
-					// TODO: Create an openstack-k8s-operators quay image/tag for this
-					Image: instance.Spec.ProvisioningAgentImageURL,
+					Name:            "osp-provision-ip-discovery-agent",
+					Args:            []string{"start"},
+					Command:         []string{"provision-ip-discovery-agent"},
+					Image:           instance.Spec.ProvisioningAgentImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "PROV_INTF",
@@ -349,7 +350,6 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 
 		initContainerDetails := []provisionserver.InitContainer{
 			{
-				// TODO: Create an openstack-k8s-operators quay image/tag for this
 				ContainerImage: instance.Spec.DownloaderImageURL,
 				Env: []corev1.EnvVar{
 					{

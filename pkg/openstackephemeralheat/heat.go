@@ -30,8 +30,9 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			Containers: []corev1.Container{
 				{
-					Name:  "heat",
-					Image: instance.Spec.HeatAPIImageURL,
+					Name:            "heat",
+					Image:           instance.Spec.HeatAPIImageURL,
+					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
 							Name:  "KOLLA_CONFIG_STRATEGY",
@@ -47,9 +48,10 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 			},
 			InitContainers: []corev1.Container{
 				{
-					Name:    "drop-heat",
-					Image:   instance.Spec.MariadbImageURL,
-					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"DROP DATABASE IF EXISTS heat\";"},
+					Name:            "drop-heat",
+					Image:           instance.Spec.MariadbImageURL,
+					ImagePullPolicy: corev1.PullAlways,
+					Command:         []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"DROP DATABASE IF EXISTS heat\";"},
 					Env: []corev1.EnvVar{
 						{
 							Name: "MYSQL_PWD",
@@ -65,9 +67,10 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 					},
 				},
 				{
-					Name:    "heat-db-create",
-					Image:   instance.Spec.MariadbImageURL,
-					Command: []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY '$MYSQL_PWD'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY '$MYSQL_PWD'; \""},
+					Name:            "heat-db-create",
+					Image:           instance.Spec.MariadbImageURL,
+					ImagePullPolicy: corev1.PullAlways,
+					Command:         []string{"sh", "-c", "mysql -h mariadb-" + instance.Name + " -u root -P 3306 -e \"CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY '$MYSQL_PWD'; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY '$MYSQL_PWD'; \""},
 					Env: []corev1.EnvVar{
 						{
 							Name: "MYSQL_PWD",
@@ -83,9 +86,10 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 					},
 				},
 				{
-					Name:    "heat-db-sync",
-					Image:   instance.Spec.HeatAPIImageURL,
-					Command: []string{"/usr/bin/heat-manage", "--config-file", "/var/lib/config-data/heat.conf", "db_sync"},
+					Name:            "heat-db-sync",
+					Image:           instance.Spec.HeatAPIImageURL,
+					ImagePullPolicy: corev1.PullAlways,
+					Command:         []string{"/usr/bin/heat-manage", "--config-file", "/var/lib/config-data/heat.conf", "db_sync"},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							MountPath: "/var/lib/config-data",
