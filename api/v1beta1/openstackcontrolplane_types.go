@@ -45,6 +45,10 @@ type OpenStackControlPlaneSpec struct {
 	// If PhysNetworks is not provided, the tripleo default physnet datacentre gets created
 	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
 	PhysNetworks []Physnet `json:"physNetworks"`
+
+	// +kubebuilder:default=true
+	// EnableFencing is provided so that users have the option to disable fencing if desired
+	EnableFencing bool `json:"enableFencing"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

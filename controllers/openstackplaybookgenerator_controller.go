@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
+	virtv1 "kubevirt.io/client-go/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,6 +41,7 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackplaybookgenerator "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackplaybookgenerator"
 )
 
@@ -78,16 +80,11 @@ func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;watch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets,verbs=get;list
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=get;list
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=get;list;watch
+// +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachineinstances,verbs=get;list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the OpenStackPlaybookGenerator object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
+// Reconcile - PlaybookGenerator
 func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackplaybookgenerator", req.NamespacedName)
 
@@ -114,6 +111,93 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 
+	// Check if fencing data is required as well (examine ControlPlane CR)
+	// FIXME: We assume there is only one ControlPlane CR for now (enforced by webhook), but this might need to change
+	controlPlaneList := &ospdirectorv1beta1.OpenStackControlPlaneList{}
+	controlPlaneListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.Client.List(context.TODO(), controlPlaneList, controlPlaneListOpts...)
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
+	if len(controlPlaneList.Items) == 0 {
+		err := fmt.Errorf("no OpenStackControlPlanes found in namespace %s. Requeing", instance.Namespace)
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+	}
+
+	// FIXME: See FIXME above
+	controlPlane := controlPlaneList.Items[0]
+
+	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
+		msg := fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
+		r.Log.Info(msg)
+		err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+	}
+
+	templateParameters["EnableFencing"] = false
+
+	if controlPlane.Spec.EnableFencing {
+		// TODO: This will likely need refactoring sooner or later
+		var virtualMachineInstanceLists []*virtv1.VirtualMachineInstanceList
+
+		for roleName, roleParams := range controlPlane.Spec.VirtualMachineRoles {
+			if common.StringInSlice(roleParams.RoleName, controlplane.GetFencingRoles()) && roleParams.RoleCount == 3 {
+				// Get the associated VM instances
+				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(r, instance.Namespace, map[string]string{
+					common.OwnerNameLabelSelector: roleName,
+				})
+
+				if err != nil {
+					_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+					return ctrl.Result{}, err
+				}
+
+				virtualMachineInstanceLists = append(virtualMachineInstanceLists, virtualMachineInstanceList)
+			}
+		}
+
+		if len(virtualMachineInstanceLists) > 0 {
+			templateParameters["EnableFencing"] = true
+
+			fencingTemplateParameters, err := controlplane.CreateFencingConfigMapParams(virtualMachineInstanceLists)
+
+			if err != nil {
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				return ctrl.Result{}, err
+			}
+
+			templateParameters = common.MergeMaps(templateParameters, fencingTemplateParameters)
+		}
+	}
+
+	cm := []common.Template{
+		{
+			Name:           "fencing-config",
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			Labels:         cmLabels,
+			ConfigOptions:  templateParameters,
+		},
+	}
+
+	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
+	// Reuse templateParameters, but reinitialize it (envVars and cmLabels are also reused, but do not require
+	// reinitialization)
+	templateParameters = make(map[string]interface{})
+
 	// check if heat-env-config (customizations provided by administrator) exist
 	// if it does not exist, requeue
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
@@ -133,8 +217,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
-	// check if tripleo-deploy-config (created/rendered by openstackipset controller) exist
-	// if it does not exist, requeue
+	// Now read the tripleo-deploy-config and the fencing-config CMs for use in the PlaybookGenerator
 	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -147,12 +230,26 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
+	fencingCM, _, err := common.GetConfigMapAndHashWithName(r, "fencing-config", instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			// This should really never happen, but putting the check here anyhow
+			msg := "The fencing-config map doesn't yet exist. Requeing..."
+			r.Log.Info(msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
 	tripleoDeployFiles := tripleoDeployCM.Data
+	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
 
 	// config hash
-	configMapHash, err := common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data})
+	configMapHash, err := common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, fencingCM.Data})
 	if err != nil {
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
@@ -170,7 +267,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			return ctrl.Result{}, err
 		}
 		// adjust the configMapHash
-		configMapHash, err = common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, tripleoTarballCM.BinaryData})
+		configMapHash, err = common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, fencingCM.Data, tripleoTarballCM.BinaryData})
 		if err != nil {
 			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 			return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
@@ -216,7 +313,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
 
 	if instance.Status.PlaybookHash != configMapHash {
-
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
 			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
 			if err != nil {

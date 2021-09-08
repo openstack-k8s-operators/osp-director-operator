@@ -51,6 +51,7 @@ rm -Rf $HOME/config-tmp
 mkdir -p $HOME/config-tmp
 cp $HOME/config/* $HOME/config-tmp
 cp $HOME/config-custom/* $HOME/config-tmp
+cp $HOME/config-fencing/* $HOME/config-tmp
 #FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths in dev-tools!
 sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tmp/*.yaml
 # copy to our temp t-h-t dir
@@ -82,6 +83,7 @@ time openstack stack create --wait \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
     -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
+    -e $TEMPLATES_DIR/fencing.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}
     -e {{ $key }} \
 {{- end }}
