@@ -53,10 +53,11 @@ type roleType struct {
 }
 
 type nodeType struct {
-	Index    int
-	IPaddr   map[string]*ipType
-	Hostname string
-	VIP      bool
+	Index                   int
+	IPaddr                  map[string]*ipType
+	Hostname                string
+	VIP                     bool
+	OVNStaticBridgeMappings map[string]string
 }
 
 func getCidrParts(cidr string) (string, int, error) {
@@ -70,7 +71,7 @@ func getCidrParts(cidr string) (string, int, error) {
 }
 
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
-func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList, overcloudNetList ospdirectorv1beta1.OpenStackNetList) (map[string]interface{}, error) {
+func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList, overcloudMACList ospdirectorv1beta1.OpenStackMACAddressList) (map[string]interface{}, error) {
 
 	templateParameters := make(map[string]interface{})
 
@@ -134,13 +135,26 @@ func CreateConfigMapParams(overcloudIPList ospdirectorv1beta1.OpenStackIPSetList
 
 			for index, reservation := range roleReservation.Reservations {
 
+				ovnStaticBridgeMappings := map[string]string{}
+				// get OVNStaticBridgeMacMappings information from overcloudMACList
+				for _, macReservations := range overcloudMACList.Items {
+					for node, macReservation := range macReservations.Status.MACReservations {
+						if node == reservation.Hostname {
+							for net, mac := range macReservation.Reservations {
+								ovnStaticBridgeMappings[net] = mac
+							}
+						}
+					}
+				}
+
 				if !reservation.Deleted {
 					if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
 						rolesMap[roleName].Nodes[reservation.Hostname] = &nodeType{
-							Index:    index,
-							IPaddr:   map[string]*ipType{},
-							Hostname: reservation.Hostname,
-							VIP:      reservation.VIP,
+							Index:                   index,
+							IPaddr:                  map[string]*ipType{},
+							Hostname:                reservation.Hostname,
+							VIP:                     reservation.VIP,
+							OVNStaticBridgeMappings: ovnStaticBridgeMappings,
 						}
 					}
 					if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnetName] == nil {

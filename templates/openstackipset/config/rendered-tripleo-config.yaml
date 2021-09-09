@@ -102,6 +102,17 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+  OVNStaticBridgeMacMappings:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if not $node.VIP }}
+    {{ $node.Hostname }}:
+{{- range $netname, $mac := $node.OVNStaticBridgeMappings }}
+      {{ $netname }}: {{ $mac }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{/*
 # Set VIP's for redis and OVN
 {{- range $roleid, $role := .RolesMap }}

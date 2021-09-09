@@ -300,6 +300,14 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       openStackClientStorageClass: host-nfs-storageclass
       passwordSecret: userpassword
       gitSecret: git-secret
+      # optional: specify all phys networks with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
+      # Unique OVN bridge mac address per node is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per
+      # physnet per node.
+      physNetworks:
+            - name: datacentre
+              macPrefix: fa:16:3a
+            - name: datacentre2
+              macPrefix: fa:16:3b 
       virtualMachineRoles:
         controller:
           roleName: Controller

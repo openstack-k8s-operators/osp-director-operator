@@ -212,13 +212,12 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	overcloudIPList := &ospdirectorv1beta1.OpenStackIPSetList{}
-	overcloudIPListOpts := []client.ListOption{
+	overcloudMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
+	overcloudMACListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
-		client.MatchingLabels{openstackipset.AddToPredictableIPsLabel: "true"},
 	}
-	err = r.Client.List(context.TODO(), overcloudIPList, overcloudIPListOpts...)
+	err = r.Client.List(context.TODO(), overcloudMACList, overcloudMACListOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -227,7 +226,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance, openstackipset.AppLabel, map[string]string{})
 
-	templateParameters, err := openstackipset.CreateConfigMapParams(*overcloudIPList, *overcloudNetList)
+	templateParameters, err := openstackipset.CreateConfigMapParams(*overcloudNetList, *overcloudMACList)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

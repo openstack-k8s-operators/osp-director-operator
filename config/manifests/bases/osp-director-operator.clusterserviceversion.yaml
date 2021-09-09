@@ -49,6 +49,11 @@ spec:
       kind: OpenStackIPSet
       name: openstackipsets.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackMACAddress is the Schema for the openstackmacaddresses API
+      displayName: OpenStack MACAddress
+      kind: OpenStackMACAddress
+      name: openstackmacaddresses.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
       displayName: OpenStack Net
       kind: OpenStackNet
