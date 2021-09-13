@@ -133,7 +133,8 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 				rolesMap[roleName].Networks[osnetName] = networksMap[osnetName]
 			}
 
-			for index, reservation := range roleReservation.Reservations {
+			hostnameMapIndex := 0
+			for _, reservation := range roleReservation.Reservations {
 
 				ovnStaticBridgeMappings := map[string]string{}
 				// get OVNStaticBridgeMacMappings information from overcloudMACList
@@ -150,7 +151,7 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 				if !reservation.Deleted {
 					if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
 						rolesMap[roleName].Nodes[reservation.Hostname] = &nodeType{
-							Index:                   index,
+							Index:                   hostnameMapIndex,
 							IPaddr:                  map[string]*ipType{},
 							Hostname:                reservation.Hostname,
 							VIP:                     reservation.VIP,
@@ -165,6 +166,7 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 							Subnet:       networksMap[osnetName].Cidr,
 						}
 					}
+					hostnameMapIndex++
 				}
 			}
 		}

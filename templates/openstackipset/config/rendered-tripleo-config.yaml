@@ -39,7 +39,7 @@ parameter_defaults:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- if and (not $node.VIP) }}
-    {{ $node.Hostname }}: {{ $node.Hostname }}
+    {{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
 {{- end }}
 {{- end }}
 {{- end }}
