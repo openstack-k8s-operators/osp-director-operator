@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -209,10 +210,40 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackMACAddressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all CRs from the same namespace, right now there should only be one
+		crs := &ospdirectorv1beta1.OpenStackMACAddressList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve CRs %v")
+			return nil
+		}
+
+		for _, cr := range crs.Items {
+			if o.GetNamespace() == cr.Namespace {
+				// return namespace and Name of CR
+				name := client.ObjectKey{
+					Namespace: cr.Namespace,
+					Name:      cr.Name,
+				}
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackMACAddress{}).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackIPSet{}}, &handler.EnqueueRequestForObject{}).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackNet{}}, &handler.EnqueueRequestForObject{}).
+		// Watch OpenStackNet to create/delete MAC
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackNet{}}, namespacedFn).
 		Complete(r)
 }
 
