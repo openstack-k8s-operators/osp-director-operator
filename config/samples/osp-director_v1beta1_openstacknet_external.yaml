@@ -21,6 +21,6 @@ spec:
             port:
             - name: enp7s0
           description: Linux bridge with enp7s0 as a port
-          name: br-osp
+          name: br-ex
           state: up
           type: linux-bridge

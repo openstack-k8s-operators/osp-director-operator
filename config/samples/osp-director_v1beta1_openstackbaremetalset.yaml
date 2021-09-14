@@ -20,7 +20,7 @@ spec:
   # to the secret data
   passwordSecret: userpassword
   # The interface on the nodes that will be assigned an IP from the ctlCidr
-  ctlplaneInterface: enp7s0
+  ctlplaneInterface: enp8s0
   # Arbitrary label selector for BaremetalHosts (optional)
   bmhLabelSelector:
     arbitraryKey: arbitraryValue

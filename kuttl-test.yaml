@@ -6,8 +6,8 @@
 # ASSUMPTIONS:
 #
 # 1. Latest version of kuttl is installed at /usr/local/bin/kubectl-kuttl
-#    - wget https://github.com/kudobuilder/kuttl/releases/download/v0.9.0/kubectl-kuttl_0.9.0_linux_x86_64
-#    - mv kubectl-kuttl_0.9.0_linux_x86_64 /usr/local/bin/kubectl-kuttl
+#    - wget https://github.com/kudobuilder/kuttl/releases/download/v0.11.1/kubectl-kuttl_0.11.1_linux_x86_64
+#    - mv kubectl-kuttl_0.11.1_linux_x86_64 /usr/local/bin/kubectl-kuttl
 #    - chmod 755 /usr/local/bin/kubectl-kuttl
 # 2. An OCP 4.6+ cluster with OSP Director Operator has been deployed via https://github.com/openstack-k8s-operators/osp-director-dev-tools
 # 3. CLI user has access to $KUBECONFIG
@@ -35,3 +35,4 @@ reportFormat: JSON
 reportName: kuttl-test
 namespace: openstack
 timeout: 180
+parallel: 1
