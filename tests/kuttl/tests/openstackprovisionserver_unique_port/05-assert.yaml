@@ -12,7 +12,7 @@ metadata:
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
   downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
-  apacheImageUrl: quay.io/openstack-k8s-operators/httpd-24-centos7:2.4
+  apacheImageUrl: registry.redhat.io/rhel8/httpd-24:latest
   provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
   port: 6190
 status:
