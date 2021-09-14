@@ -574,3 +574,30 @@ status:
       cidr: 172.16.0.0/24
       gateway: ""
       vlan: 50
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+status:
+  reservedMACCount: 6
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+timeout: 20
+commands:
+# verify scaled down controller nodes MAC entries are marked as deleted
+  - script: |
+      deletedFlaggedMAC=$(oc get -n openstack osmacaddr overcloud -o json | jq -r '.status.macReservations[] | select(.deleted==true) | .deleted' | wc -l)
+      if [ $deletedFlaggedMAC -eq 0 ]; then
+          exit 0
+      else
+          exit 1
+      fi
