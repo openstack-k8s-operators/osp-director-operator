@@ -1,0 +1,20 @@
+# permissions for end users to view openstackmacaddresses.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackmacaddress-viewer-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses/status
+  verbs:
+  - get

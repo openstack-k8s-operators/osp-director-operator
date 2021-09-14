@@ -226,6 +226,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.OpenStackMACAddressReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackMACAddress"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackMACAddress")
+		os.Exit(1)
+	}
+
 	if enableWebhooks {
 		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")

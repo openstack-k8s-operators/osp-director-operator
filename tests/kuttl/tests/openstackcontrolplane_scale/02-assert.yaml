@@ -511,3 +511,17 @@ metadata:
   name: tripleo-passwords
   namespace: openstack
 type: Opaque
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+status:
+  reservedMACCount: 0

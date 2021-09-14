@@ -337,6 +337,14 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackipset
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackipsets
   verbs:
   - create
@@ -362,6 +370,32 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstackipsets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses/status
   verbs:
   - get
   - patch

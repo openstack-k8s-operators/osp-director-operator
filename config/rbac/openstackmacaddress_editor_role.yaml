@@ -1,0 +1,24 @@
+# permissions for end users to edit openstackmacaddresses.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackmacaddress-editor-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackmacaddresses/status
+  verbs:
+  - get

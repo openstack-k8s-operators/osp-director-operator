@@ -37,6 +37,14 @@ type OpenStackControlPlaneSpec struct {
 	// +kubebuilder:default={ctlplane,external}
 	// OpenStackClientNetworks the name(s) of the OpenStackClientNetworks used to attach the openstackclient to
 	OpenStackClientNetworks []string `json:"openStackClientNetworks"`
+
+	// +kubebuilder:validation:Optional
+	// PhysNetworks - physical networks list with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
+	// Unique OVN bridge mac address is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per OpenStack node.
+	// This information is used to create the OVNStaticBridgeMacMappings.
+	// If PhysNetworks is not provided, the tripleo default physnet datacentre gets created
+	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+	PhysNetworks []Physnet `json:"physNetworks"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

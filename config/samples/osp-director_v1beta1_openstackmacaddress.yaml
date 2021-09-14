@@ -1,0 +1,8 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: openstackmacaddress-sample
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre

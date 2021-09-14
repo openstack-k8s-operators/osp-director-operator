@@ -39,7 +39,7 @@ parameter_defaults:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- if and (not $node.VIP) }}
-    {{ $node.Hostname }}: {{ $node.Hostname }}
+    {{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -98,6 +98,17 @@ parameter_defaults:
     subnets:
     - ip_version: 4
 {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  OVNStaticBridgeMacMappings:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if not $node.VIP }}
+    {{ $node.Hostname }}:
+{{- range $netname, $mac := $node.OVNStaticBridgeMappings }}
+      {{ $netname }}: {{ $mac }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -79,6 +79,7 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
@@ -278,6 +279,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		// Create or update the vmSet CR object
+		// TODO: mschuppert move to method like createOrUpdateOpenStackMACAddress to make reconcile easier to read
 		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
 			ObjectMeta: metav1.ObjectMeta{
 				// use the role name as the VM CR name
@@ -328,7 +330,14 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// - check vm container status and update CR.Status.VMsReady
 	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
 
+	// Create or update the MACAddress CR object
+	err = r.createOrUpdateOpenStackMACAddress(instance, newProvStatus)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Create openstack client pod
+	// TODO: mschuppert move to method like createOrUpdateOpenStackMACAddress to make reconcile easier to read
 	osc := &ospdirectorv1beta1.OpenStackClient{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "openstackclient",
@@ -465,6 +474,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Owns(&corev1.Secret{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
+		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		// watch vmset and openstackclient pods in the same namespace
 		// as we want to reconcile if VMs or openstack client pods change
 		Watches(&source.Kind{Type: &corev1.Pod{}}, podWatcher).
@@ -534,4 +544,59 @@ func (r *OpenStackControlPlaneReconciler) createUniqNetworkList(instance *ospdir
 	}
 
 	return uniqNetworksList
+}
+
+func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(instance *ospdirectorv1beta1.OpenStackControlPlane, newProvStatus ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus) error {
+
+	mac := &ospdirectorv1beta1.OpenStackMACAddress{
+		ObjectMeta: metav1.ObjectMeta{
+			// use the role name as the VM CR name
+			Name:      strings.ToLower(instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mac, func() error {
+		if len(instance.Spec.PhysNetworks) == 0 {
+			mac.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
+				{
+					Name:      controlplane.DefaultOVNChassisPhysNetName,
+					MACPrefix: controlplane.DefaultOVNChassisPhysNetMACPrefix,
+				},
+			}
+		} else {
+			macPhysnets := []ospdirectorv1beta1.Physnet{}
+			for _, physnet := range instance.Spec.PhysNetworks {
+				macPrefix := physnet.MACPrefix
+				// make sure if MACPrefix was not speficied to set the default prefix
+				if macPrefix == "" {
+					macPrefix = controlplane.DefaultOVNChassisPhysNetMACPrefix
+				}
+				macPhysnets = append(macPhysnets, ospdirectorv1beta1.Physnet{
+					Name:      physnet.Name,
+					MACPrefix: macPrefix,
+				})
+			}
+
+			mac.Spec.PhysNetworks = macPhysnets
+		}
+
+		err := controllerutil.SetControllerReference(instance, mac, r.Scheme)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
+		newProvStatus.Reason = err.Error()
+		_ = r.setProvisioningStatus(instance, newProvStatus)
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("OpenStackMACAddress CR successfully reconciled - operation: %s", string(op)))
+	}
+
+	return nil
 }

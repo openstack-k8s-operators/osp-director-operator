@@ -31,4 +31,10 @@ const (
 
 	// TripleoPasswordSecret - name of the generated tripleo password secret
 	TripleoPasswordSecret = "tripleo-passwords"
+
+	// DefaultOVNChassisPhysNetName - default physnet netname used for OVNStaticBridgeMacMappings
+	DefaultOVNChassisPhysNetName = "datacentre"
+
+	// DefaultOVNChassisPhysNetMACPrefix - default prefix used to create MAC addresses for OVNStaticBridgeMacMappings
+	DefaultOVNChassisPhysNetMACPrefix = "fa:16:3a"
 )
