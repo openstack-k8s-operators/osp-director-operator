@@ -40,7 +40,7 @@ type OpenStackControlPlaneSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// PhysNetworks - physical networks list with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
-	// Unique OVN bridge mac address per node is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per node.
+	// Unique OVN bridge mac address is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per OpenStack node.
 	// This information is used to create the OVNStaticBridgeMacMappings.
 	// If PhysNetworks is not provided, the tripleo default physnet datacentre gets created
 	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.

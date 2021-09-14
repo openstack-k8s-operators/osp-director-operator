@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -89,6 +90,35 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
+	// examine DeletionTimestamp to determine if object is under deletion
+	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(instance, macaddress.FinalizerName) {
+			controllerutil.AddFinalizer(instance, macaddress.FinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return reconcile.Result{}, err
+			}
+			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", macaddress.FinalizerName, instance.Name))
+		}
+	} else {
+		// 1. check if finalizer is there
+		// Reconcile if finalizer got already removed
+		if !controllerutil.ContainsFinalizer(instance, macaddress.FinalizerName) {
+			return ctrl.Result{}, nil
+		}
+
+		// 2. remove the finalizer on the operator CR to finish delete
+		controllerutil.RemoveFinalizer(instance, macaddress.FinalizerName)
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
+		return ctrl.Result{}, nil
+	}
+
 	// initilize MACReservations
 	if instance.Status.MACReservations == nil {
 		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeStatus{}
@@ -111,6 +141,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 			actualStatus.CurrentState = ospdirectorv1beta1.MACWaiting
 			actualStatus.Conditions.Set(ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACWaiting), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
 			_ = r.setStatus(instance, actualStatus)
+			return ctrl.Result{Requeue: true}, nil
 		}
 		msg := "Error fetching the ctlplane network"
 		actualStatus.CurrentState = ospdirectorv1beta1.MACError

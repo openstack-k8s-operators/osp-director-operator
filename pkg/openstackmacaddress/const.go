@@ -19,4 +19,7 @@ package openstackmacaddress
 const (
 	// AppLabel -
 	AppLabel = "osp-openstackmacaddress"
+
+	// FinalizerName -
+	FinalizerName = "openstackmacaddress.osp-director.openstack.org"
 )
