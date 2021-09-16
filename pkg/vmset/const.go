@@ -22,4 +22,10 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstackvmsets.osp-director.openstack.org/virtualmachine"
+
+	// KubevirtFencingServiceAccount -
+	KubevirtFencingServiceAccount = "osp-director-operator-kubevirtagent"
+
+	// KubevirtFencingSecret -
+	KubevirtFencingSecret = "osp-director-operator-kubevirtfencing"
 )
