@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 spec:
   gitSecret: git-secret
-  openStackClientImageURL: registry.redhat.io/rhosp-beta/openstack-tripleoclient:16.2
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2.0
   openStackClientNetworks:
     - ctlplane
     - external
