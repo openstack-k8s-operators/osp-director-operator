@@ -545,6 +545,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+- apiGroups:
   - hco.kubevirt.io
   resources:
   - '*'

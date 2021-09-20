@@ -10,3 +10,6 @@ chpasswd:
     root:{{ .NodeRootPassword }}
   expire: False
 {{- end }}
+bootcmd:
+  - "mkdir /mnt/kubeconfig"
+  - "mount /dev/disk/by-id/virtio-fencingdisk /mnt/kubeconfig"
