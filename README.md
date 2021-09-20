@@ -141,8 +141,8 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
                   stp:
                     enabled: false
                 port:
-                - name: enp6s0
-              description: Linux bridge with enp6s0 as a port
+                - name: enp7s0
+              description: Linux bridge with enp7s0 as a port
               name: br-osp
               state: up
               type: linux-bridge
@@ -355,7 +355,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       # NOTE: these are automatically created via the OpenStackControlplane CR above
       deploymentSSHSecret: osp-controlplane-ssh-keys
       # The interface on the nodes that will be assigned an IP from the mgmtCidr
-      ctlplaneInterface: enp2s0
+      ctlplaneInterface: enp7s0
       # Networks to associate with this host
       networks:
         - ctlplane
@@ -507,7 +507,7 @@ spec:
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-controlplane-ssh-keys
   # The interface on the nodes that will be assigned an IP from the mgmtCidr
-  ctlplaneInterface: enp8s0
+  ctlplaneInterface: enp7s0
   # Networks to associate with this host
   networks:
     - ctlplane

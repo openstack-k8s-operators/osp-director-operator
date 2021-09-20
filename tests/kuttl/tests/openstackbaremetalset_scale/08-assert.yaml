@@ -21,7 +21,7 @@ metadata:
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
   count: 2
-  ctlplaneInterface: enp8s0
+  ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
   - ctlplane
@@ -143,8 +143,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -200,8 +200,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge

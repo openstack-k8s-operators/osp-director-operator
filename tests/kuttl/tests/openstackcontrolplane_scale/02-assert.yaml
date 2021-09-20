@@ -111,8 +111,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -163,8 +163,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
           name: br-ex
           state: up
           type: linux-bridge
@@ -216,8 +216,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -261,8 +261,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -306,8 +306,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -351,8 +351,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
