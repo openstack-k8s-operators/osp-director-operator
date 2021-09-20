@@ -148,8 +148,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
           name: br-ex
           state: up
           type: linux-bridge
@@ -216,8 +216,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -276,8 +276,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -336,8 +336,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -396,8 +396,8 @@ spec:
               stp:
                 enabled: false
             port:
-            - name: enp8s0
-          description: Linux bridge with enp8s0 as a port
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
           name: br-osp
           state: up
           type: linux-bridge
@@ -529,6 +529,7 @@ timeout: 20
 commands:
 # verify scaled down controller nodes MAC entries are marked as deleted
   - script: |
+      set -x
       deletedFlaggedMAC=$(oc get -n openstack osmacaddr overcloud -o json | jq -r '.status.macReservations[] | select(.deleted==true) | .deleted' | wc -l)
       if [ $deletedFlaggedMAC -eq 2 ]; then
           exit 0
