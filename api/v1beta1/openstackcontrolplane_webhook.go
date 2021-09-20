@@ -22,8 +22,12 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -49,6 +53,23 @@ var _ webhook.Validator = &OpenStackControlPlane{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateCreate() error {
 	controlplanelog.Info("validate create", "name", r.Name)
+
+	controlPlaneList := &OpenStackControlPlaneList{}
+
+	listOpts := []client.ListOption{
+		client.InNamespace(r.Namespace),
+	}
+
+	err := webhookClient.List(context.TODO(), controlPlaneList, listOpts...)
+
+	if err != nil {
+		return err
+	}
+
+	if len(controlPlaneList.Items) >= 1 {
+		return fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
+	}
+
 	return nil
 }
 

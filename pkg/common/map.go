@@ -22,3 +22,14 @@ func InitMap(m *map[string]string) {
 		*m = make(map[string]string)
 	}
 }
+
+// MergeMaps - merge two or more maps
+func MergeMaps(baseMap map[string]interface{}, extraMaps ...map[string]interface{}) map[string]interface{} {
+	for _, extraMap := range extraMaps {
+		for key, value := range extraMap {
+			baseMap[key] = value
+		}
+	}
+
+	return baseMap
+}

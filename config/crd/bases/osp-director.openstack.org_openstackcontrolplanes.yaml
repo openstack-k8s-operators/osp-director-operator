@@ -61,6 +61,11 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              enableFencing:
+                default: true
+                description: EnableFencing is provided so that users have the option
+                  to disable fencing if desired
+                type: boolean
               gitSecret:
                 description: GitSecret used to pull playbooks into the openstackclient
                   pod
@@ -179,6 +184,7 @@ spec:
                 description: List of VirtualMachine roles
                 type: object
             required:
+            - enableFencing
             - gitSecret
             - openStackClientImageURL
             - virtualMachineRoles
