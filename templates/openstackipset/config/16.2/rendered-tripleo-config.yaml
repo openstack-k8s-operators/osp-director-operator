@@ -1,0 +1,127 @@
+{{/* info on golang template at https://pkg.go.dev/text/template */}}
+# Resource Registry
+resource_registry:
+  OS::TripleO::DeployedServer::ControlPlanePort: /usr/share/openstack-tripleo-heat-templates/deployed-server/deployed-neutron-port.yaml
+  OS::TripleO::Network::Ports::ControlPlaneVipPort: /usr/share/openstack-tripleo-heat-templates/deployed-server/deployed-neutron-port.yaml
+  OS::TripleO::Network::Ports::NetVipMap: /usr/share/openstack-tripleo-heat-templates/network/ports/net_vip_map_external.yaml
+  OS::TripleO::Network::Ports::RedisVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::OVNDBsVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::ExternalVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::InternalApiVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  # for OSP16.2 set OVNMacAddressNetwork and OVNMacAddressPort to None, see https://github.com/openstack-k8s-operators/osp-director-operator/issues/254
+  OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
+  OS::TripleO::OVNMacAddressPort: OS::Heat::None
+{{- range $roleid, $role := .RolesMap }}
+{{- if ne $role.Name "ControlPlane" }}
+{{- range $netid, $net := $role.Networks }}
+{{- if ne $net.NameLower "ctlplane" }}
+  OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: /usr/share/openstack-tripleo-heat-templates/network/ports/{{ $net.NameLower }}_from_pool.yaml
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Parameter Defaults
+parameter_defaults:
+  StackAction: CREATE
+  DeployIdentifier: DeployIdentifier
+  SoftwareConfigTransport: POLL_SERVER_HEAT
+  RootStackName: overcloud
+  ManageNetworks: False
+  #
+  # DeployedServerPortMap
+  DeployedServerPortMap:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if eq $netname "ctlplane" }}
+{{- if $node.VIP }}
+    control_virtual_ip:
+{{- else }}
+    {{ $node.Hostname }}-{{ $netname }}:
+{{- end }}
+      fixed_ips:
+        - ip_address: {{ $ip.IPaddr }}
+      subnets:
+        - cidr: {{ $ip.Subnet }}
+      network:
+        tags:
+          - {{ $ip.Subnet }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
+  # Per network details
+{{- range $netid, $net := .NetworksMap }}
+{{- if eq $net.Name "Control" }}
+  ControlPlaneDefaultRoute: {{ $net.Gateway }}
+  ControlPlaneSubnetCidr: {{ $net.CidrSuffix }}
+{{- else }}
+  {{ $net.Name }}NetCidr: {{ $net.Cidr }}
+  {{ $net.Name }}AllocationPools:
+  - end: {{ $net.AllocationEnd }}
+    start: {{ $net.AllocationStart }}
+{{- if ne $net.Vlan 0 }}
+  {{ $net.Name }}NetworkVlanID: {{ $net.Vlan }}
+{{- end }}
+{{- if ne $net.Gateway "" }}
+  {{ $net.Name }}InterfaceDefaultRoute: {{ $net.Gateway }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
+  #<NETNAME>NetworkVip
+  {{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if $node.VIP }}
+{{- if eq $netname "ctlplane" }}
+  ControlPlaneIP: {{ $ip.IPaddr }}
+{{- else }}
+  {{ with (index $.NetworksMap $netname) }}{{ .Name }}{{ end }}NetworkVip: {{ $ip.IPaddr }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
+  # HostnameFormat and RoleCount
+{{- range $roleid, $role := .RolesMap }}
+{{- if ne $role.Name "ControlPlane" }}
+  {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
+  {{- $roleCount := len $role.Nodes }}
+  {{ $role.Name }}Count: {{ $roleCount }}
+{{- end }}
+{{- end }}
+  #
+  # HostnameMap
+  HostnameMap:
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if and (not $node.VIP) }}
+    {{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
+  # ips-from-pool
+{{- range $roleid, $role := .RolesMap }}
+{{- if ne $role.Name "ControlPlane" }}
+  {{ $role.Name }}IPs:
+{{- range $networkid, $network := $role.Networks }}
+{{- if ne $network.NameLower "ctlplane" }}
+      {{ $network.NameLower }}:
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if eq $ip.Subnet $network.Cidr }}
+        - {{ $ip.IPaddr }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

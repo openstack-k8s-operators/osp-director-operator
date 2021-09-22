@@ -25,7 +25,7 @@ import (
 )
 
 // PlaybookJob -
-func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash string) *batchv1.Job {
+func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash string, ospVersion ospdirectorv1beta1.OSPVersion) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)
@@ -82,6 +82,10 @@ func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash s
 								Key: "git_url",
 							},
 						},
+					},
+					{
+						Name:  "OSPVersion",
+						Value: string(ospVersion),
 					},
 				},
 				VolumeMounts: volumeMounts,

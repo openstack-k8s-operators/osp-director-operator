@@ -72,6 +72,7 @@ func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch
 
 // Reconcile - reconcile OpenStackIPSet objects
 func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -136,6 +137,15 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
 		return ctrl.Result{}, nil
 	}
+
+	//
+	// Get OSPVersion from OSControlPlane status
+	//
+	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
+	if err != nil {
+		return ctrlResult, err
+	}
+	OSPVersion = controlPlane.Status.OSPVersion
 
 	// get a copy of the current CR status
 	currentStatus := instance.Status.DeepCopy()
@@ -241,6 +251,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Labels:         cmLabels,
 			ConfigOptions:  templateParameters,
 			SkipSetOwner:   true,
+			Version:        OSPVersion,
 		},
 	}
 

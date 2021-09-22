@@ -26,12 +26,16 @@ import (
 )
 
 type networkType struct {
-	Name       string
-	NameLower  string
-	Cidr       string // e.g. 192.168.24.0/24
-	NetAddr    string // e.g. 192.168.24.0
-	CidrSuffix int    // e.g. 24
-	MTU        int
+	Name            string
+	NameLower       string
+	Cidr            string // e.g. 192.168.24.0/24
+	NetAddr         string // e.g. 192.168.24.0
+	CidrSuffix      int    // e.g. 24
+	MTU             int
+	AllocationStart string
+	AllocationEnd   string
+	Gateway         string
+	Vlan            int
 }
 
 // information to build NodePortMap entry:
@@ -104,12 +108,16 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 				return templateParameters, err
 			}
 			networksMap[osnetName] = &networkType{
-				Name:       GetNetName(osnetName),
-				NameLower:  osnetName,
-				Cidr:       osnet.Spec.Cidr,
-				CidrSuffix: cidrSuffix,
-				NetAddr:    netAddr,
-				MTU:        1500, //TODO custom MTU per network
+				Name:            GetNetName(osnetName),
+				NameLower:       osnetName,
+				Cidr:            osnet.Spec.Cidr,
+				CidrSuffix:      cidrSuffix,
+				NetAddr:         netAddr,
+				MTU:             1500, //TODO custom MTU per network
+				AllocationStart: osnet.Spec.AllocationStart,
+				AllocationEnd:   osnet.Spec.AllocationEnd,
+				Gateway:         osnet.Spec.Gateway,
+				Vlan:            osnet.Spec.Vlan,
 			}
 		}
 

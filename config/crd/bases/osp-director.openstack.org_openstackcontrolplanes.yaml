@@ -222,6 +222,10 @@ spec:
                   - type
                   type: object
                 type: array
+              ospVersion:
+                description: OSPVersion the OpenStack version to render templates
+                  files
+                type: string
               provisioningStatus:
                 description: OpenStackControlPlaneProvisioningStatus represents the
                   overall provisioning state of the OpenStackControlPlane (with an
@@ -269,6 +273,8 @@ spec:
                   - provisioningState
                   type: object
                 type: object
+            required:
+            - ospVersion
             type: object
         type: object
     served: true

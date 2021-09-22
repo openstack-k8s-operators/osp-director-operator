@@ -61,9 +61,7 @@ python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLAT
 
 
 # NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
-OSP16=false
 if [ -e ./network/scripts/run-os-net-config.sh ]; then
-  OSP16=true
   # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
   sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
 fi
@@ -80,7 +78,7 @@ if [ -z "$PREPARE_ENV_ARGS" ]; then
   PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
 
-if [ "$OSP16" == "true" ]; then
+if [ "$OSPVersion" == "16.2" ]; then
   PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e hostnamemap.yaml"
 else
   PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
@@ -107,7 +105,7 @@ time openstack stack create --wait \
 
 mkdir -p $HOME/ansible
 
-if [ "$OSP16" == "true" ]; then
+if [ "$OSPVersion" == "16.2" ]; then
 # FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
 /usr/bin/python3 - <<"EOF_PYTHON"
 from tripleoclient import utils as oooutils
@@ -146,7 +144,7 @@ extra_vars = {
         'ansible_python_interpreter': sys.executable,
         }
     }
-inv_path = os.path.join(out_dir, 'inventory.yaml')
+inv_path = os.path.join(out_dir, 'tripleo-ansible-inventory.yaml')
 inventory.write_static_inventory(inv_path, extra_vars)
 
 # NOTE: we don't use transport=local like tripleoclient standalone
@@ -156,6 +154,11 @@ ansible.write_default_ansible_cfg(
     ssh_private_key=None)
 
 EOF_PYTHON
+
+# with OSP17 the rendered templates get into overcloud directory, create link to have the same dst
+output_dir=$(ls -dtr $HOME/ansible/tripleo-ansible-* | tail -1)
+ln -sf ${output_dir} $HOME/ansible/overcloud
+
 else
 
 TMP_DIR_ANSIBLE=$(mktemp -d)

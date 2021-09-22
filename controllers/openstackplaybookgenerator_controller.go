@@ -111,27 +111,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 
-	// Check if fencing data is required as well (examine ControlPlane CR)
-	// FIXME: We assume there is only one ControlPlane CR for now (enforced by webhook), but this might need to change
-	controlPlaneList := &ospdirectorv1beta1.OpenStackControlPlaneList{}
-	controlPlaneListOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-		client.Limit(1000),
-	}
-	err = r.Client.List(context.TODO(), controlPlaneList, controlPlaneListOpts...)
+	// get OSPVersion from ControlPlane CR
+	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
 	if err != nil {
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, err
+		return ctrlResult, err
 	}
-
-	if len(controlPlaneList.Items) == 0 {
-		err := fmt.Errorf("no OpenStackControlPlanes found in namespace %s. Requeing", instance.Namespace)
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err
-	}
-
-	// FIXME: See FIXME above
-	controlPlane := controlPlaneList.Items[0]
+	OSPVersion = controlPlane.Status.OSPVersion
 
 	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
 		msg := fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
@@ -310,7 +296,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	// Define a new Job object
-	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash)
+	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash, OSPVersion)
 
 	if instance.Status.PlaybookHash != configMapHash {
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {

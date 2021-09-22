@@ -44,6 +44,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// OSPVersion - global var to specify tge OSP version, defaults to OSP16.2 (train)
+var OSPVersion = ospdirectorv1beta1.TemplateVersionTrain
+
 // OpenStackControlPlaneReconciler reconciles an OpenStackControlPlane object
 type OpenStackControlPlaneReconciler struct {
 	client.Client
@@ -103,6 +106,15 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Used in comparisons below to determine whether a status update is actually needed
 	newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
+
+	//
+	// Get the version of the OpenStackClientImageURL from image tags and set the OSPVersion in the CR status
+	//
+	OSPVersion, err := common.GetVersionFromImageURL(instance.Spec.OpenStackClientImageURL)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	instance.Status.OSPVersion = OSPVersion
 
 	// Secret - containing Tripleo Passwords
 	envVars := make(map[string]common.EnvSetter)
