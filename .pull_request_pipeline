@@ -11,7 +11,8 @@ pipeline {
                     steps {
                         build job: 'osp-director-operator-distgit-pr',
                                   parameters: [
-                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID))
+                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
+                                      string(name: 'GITHUB_BRANCH', value: 'osp16_tech_preview')
                                   ]
                     }
                 }
@@ -20,7 +21,8 @@ pipeline {
                     steps {
                         build job: 'osp-director-operator-buildah',
                                   parameters: [
-                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID))
+                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
+                                      string(name: 'GITHUB_BRANCH', value: 'osp16_tech_preview')
                                   ]
                     }
                 }
@@ -31,7 +33,7 @@ pipeline {
             when {
                 allOf {
                     environment name: 'CHANGE_ID', value: ''
-                    branch 'master'
+                    branch 'osp16_tech_preview'
                 }
             }
 
