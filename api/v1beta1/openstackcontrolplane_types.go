@@ -20,6 +20,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// OSPVersion - OSP template version
+type OSPVersion string
+
+const (
+	// TemplateVersionTrain - OSP 16.2 template version
+	TemplateVersionTrain OSPVersion = "16.2"
+	// TemplateVersionWallaby - OSP 17.0 template version
+	TemplateVersionWallaby OSPVersion = "17.0"
+)
+
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
 type OpenStackControlPlaneSpec struct {
 	// List of VirtualMachine roles
@@ -86,6 +96,9 @@ type OpenStackControlPlaneStatus struct {
 	VIPStatus          map[string]HostStatus                   `json:"vipStatus,omitempty"`
 	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackControlPlaneProvisioningStatus `json:"provisioningStatus,omitempty"`
+
+	// OSPVersion the OpenStack version to render templates files
+	OSPVersion OSPVersion `json:"ospVersion"`
 }
 
 // OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of

@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"text/template"
+
+	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
 
 // TType - TemplateType
@@ -36,6 +38,7 @@ type Template struct {
 	Labels         map[string]string
 	ConfigOptions  map[string]interface{}
 	SkipSetOwner   bool // skip setting ownership on the associated configmap
+	Version        ospdirectorv1beta1.OSPVersion
 }
 
 // GetTemplatesPath get path to templates, either running local or deployed as container
@@ -56,9 +59,15 @@ func GetTemplatesPath() string {
 }
 
 // GetAllTemplates get all files from a templates sub folder
-func GetAllTemplates(path string, kind string, templateType string) []string {
+func GetAllTemplates(path string, kind string, templateType string, version string) []string {
 
-	templatesFiles, err := filepath.Glob(fmt.Sprintf("%s/%s/%s/*", path, strings.ToLower(kind), templateType))
+	templatePath := fmt.Sprintf("%s/%s/%s/*", path, strings.ToLower(kind), templateType)
+
+	if version != "" {
+		templatePath = fmt.Sprintf("%s/%s/%s/%s/*", path, strings.ToLower(kind), templateType, version)
+	}
+
+	templatesFiles, err := filepath.Glob(templatePath)
 	if err != nil {
 		fmt.Print(err)
 		os.Exit(1)
@@ -139,8 +148,8 @@ func getTemplateData(t Template) map[string]string {
 	data := make(map[string]string)
 
 	if t.Type != TemplateTypeNone {
-		// get all scripts templates which are in ../templesPath/cr.Kind/CMType
-		templatesFiles := GetAllTemplates(templatesPath, t.InstanceType, string(t.Type))
+		// get all scripts templates which are in ../templesPath/cr.Kind/CMType/<OSPVersion - optional>
+		templatesFiles := GetAllTemplates(templatesPath, t.InstanceType, string(t.Type), string(t.Version))
 
 		// render all template files
 		for _, file := range templatesFiles {
