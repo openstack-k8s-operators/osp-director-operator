@@ -1,0 +1,13 @@
+#
+# Check for:
+#
+# - 1 OpenStackVMSet with roleName unchanged
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  name: customvmset
+  namespace: openstack
+spec:
+  roleName: SomeCustomRole

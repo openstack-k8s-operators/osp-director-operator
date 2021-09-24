@@ -1,45 +1,204 @@
 #
 # Check for:
 #
-# - 1 OpenStackVMSet
+# - 1 OpenStackControlPlane
+# - 1 OpenStackClient
+# - 2 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 2 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 1 Secret (TripleO passwords)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackVMSet
+kind: OpenStackControlPlane
 metadata:
-  finalizers:
-  - openstackvmsets.osp-director.openstack.org/virtualmachine
-  name: customvmset
+  name: overcloud
   namespace: openstack
 spec:
-  baseImageVolumeName: openstack-base-img
-  cores: 2
-  ctlplaneInterface: enp2s0
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  openStackClientNetworks:
+    - ctlplane
+    - external
+  openStackClientStorageClass: host-nfs-storageclass
+  virtualMachineRoles: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackClient
+metadata:
+  name: openstackclient
+  namespace: openstack
+spec:
+  cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  diskSize: 50
-  isTripleoRole: true
-  memory: 20
+  imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
-  roleName: SomeCustomRole
+  - external
   storageClass: host-nfs-storageclass
-  vmCount: 1
 status:
-  baseImageDVReady: true
-  conditions:
-  - message: All requested VirtualMachines have been provisioned
-    reason: All requested VirtualMachines have been provisioned
-    status: "True"
-    type: Provisioned
-  provisioningStatus:
-    readyCount: 1
-    reason: All requested VirtualMachines have been provisioned
-    state: Provisioned
-  vmHosts:
-    somecustomrole-0:
-      annotatedForDeletion: false
-      hostRef: somecustomrole-0
-      hostname: somecustomrole-0
+  netStatus:
+    openstackclient-0:
+      hostname: openstackclient-0
       ipaddresses:
         ctlplane: 192.168.25.100/24
-      provisioningState: Provisioned
+        external: 10.0.0.4/24
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 192.168.25.100
+        vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: external
+  namespace: openstack
+spec:
+  allocationEnd: 10.0.0.250
+  allocationStart: 10.0.0.4
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-ex
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  vlan: 10
+status:
+  conditions:
+  - message: OpenStackNet external has been successfully configured on targeted node(s)
+    reason: OpenStackNet external has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations:
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 10.0.0.4
+        vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  finalizers:
+  - osp-director.openstack.org
+  labels:
+    addToPredictableIPsLabel: "true"
+  name: overcloud
+  namespace: openstack
+spec:
+  addToPredictableIPs: true
+  hostCount: 1
+  roleName: ControlPlane
+  vip: true
+status:
+  hosts:
+    controlplane:
+      ipaddresses: {}
+  networks: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  finalizers:
+  - osp-director.openstack.org
+  labels:
+    addToPredictableIPsLabel: "false"
+  name: openstackclient
+  namespace: openstack
+spec:
+  addToPredictableIPs: false
+  hostCount: 1
+  hostNameRefs:
+    openstackclient-0: openstackclient
+  networks:
+  - ctlplane
+  - external
+  roleName: OpenstackClientopenstackclient
+  vip: false
+status:
+  hosts:
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.4/24
+  networks:
+    ctlplane:
+      allocationEnd: 192.168.25.250
+      allocationStart: 192.168.25.100
+      cidr: 192.168.25.0/24
+      gateway: 192.168.25.1
+      vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.4
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 10
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-controlplane
+    osp-director.openstack.org/name: overcloud
+    osp-director.openstack.org/namespace: openstack
+  name: tripleo-passwords
+  namespace: openstack
+type: Opaque

@@ -1,9 +1,9 @@
 #
-# Check that the "compute" OpenstackBMSet was not created
+# Check that the "badvmset" OpenstackVMSet was not created
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBaremetalSet
+kind: OpenStackVMSet
 metadata:
-  name: compute
+  name: badvmset
   namespace: openstack
