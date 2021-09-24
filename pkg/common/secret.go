@@ -130,10 +130,15 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      st.Name,
-			Namespace: st.Namespace,
+			Name:        st.Name,
+			Namespace:   st.Namespace,
+			Annotations: st.Annotations,
 		},
 		Data: data,
+	}
+
+	if st.SecretType != "" {
+		secret.Type = st.SecretType
 	}
 
 	// create or update the CM
@@ -184,12 +189,18 @@ func createOrGetCustomSecret(r ReconcilerCommon, obj metav1.Object, st Template)
 	// Check if this secret already exists
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      st.Name,
-			Namespace: st.Namespace,
-			Labels:    st.Labels,
+			Name:        st.Name,
+			Namespace:   st.Namespace,
+			Labels:      st.Labels,
+			Annotations: st.Annotations,
 		},
 		Data: map[string][]byte{},
 	}
+
+	if st.SecretType != "" {
+		secret.Type = st.SecretType
+	}
+
 	foundSecret := &corev1.Secret{}
 	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: st.Name, Namespace: st.Namespace}, foundSecret)
 	if err != nil && k8s_errors.IsNotFound(err) {

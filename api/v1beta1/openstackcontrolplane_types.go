@@ -56,8 +56,9 @@ type OpenStackControlPlaneSpec struct {
 	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
 	PhysNetworks []Physnet `json:"physNetworks"`
 
-	// +kubebuilder:default=true
+	// +kubebuilder:default=false
 	// EnableFencing is provided so that users have the option to disable fencing if desired
+	// FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
 	EnableFencing bool `json:"enableFencing"`
 }
 

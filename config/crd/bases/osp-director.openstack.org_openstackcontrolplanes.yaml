@@ -62,9 +62,10 @@ spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
               enableFencing:
-                default: true
-                description: EnableFencing is provided so that users have the option
-                  to disable fencing if desired
+                default: false
+                description: 'EnableFencing is provided so that users have the option
+                  to disable fencing if desired FIXME: Defaulting to false until Kubevirt
+                  agent merged into RHEL overcloud image'
                 type: boolean
               gitSecret:
                 description: GitSecret used to pull playbooks into the openstackclient

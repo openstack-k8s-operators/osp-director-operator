@@ -40,4 +40,16 @@ const (
 
 	// FinalizerName -
 	FinalizerName = GroupLabel
+
+	// ServiceAccountAnnotationName -
+	ServiceAccountAnnotationName = "kubernetes.io/service-account.name"
+
+	// TripleOServicesDefaultKeyName -
+	TripleOServicesDefaultKeyName = "ServicesDefault"
+
+	// TripleOPacemakerServiceName -
+	TripleOPacemakerServiceName = "OS::TripleO::Services::Pacemaker"
+
+	// TripleORolesDataFile -
+	TripleORolesDataFile = "roles_data.yaml"
 )
