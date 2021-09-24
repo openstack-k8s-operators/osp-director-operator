@@ -111,6 +111,85 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 
+	// check if heat-env-config (customizations provided by administrator) exist
+	// if it does not exist, requeue
+	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			msg := fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
+			r.Log.Info(msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+		// Ignore any potential error from "setCurrentState"; focus on previous error
+		// NOTE: This pattern will be repeated a lot below, but the comment will not be copied
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
+	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
+	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
+
+	// Now read the tripleo-deploy-config and the fencing-config CMs for use in the PlaybookGenerator
+	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			msg := "The tripleo-deploy-config map doesn't yet exist. Requeing..."
+			r.Log.Info(msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
+	tripleoDeployFiles := tripleoDeployCM.Data
+	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
+	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
+	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+
+	var tripleoTarballCM *corev1.ConfigMap
+
+	// extra stuff if custom tarballs are provided
+	if instance.Spec.TarballConfigMap != "" {
+		tripleoTarballCM, _, err = common.GetConfigMapAndHashWithName(r, instance.Spec.TarballConfigMap, instance.Namespace)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, "Tarball config map not found, requeuing and waiting")
+				return ctrl.Result{RequeueAfter: time.Second * 10}, err
+			}
+			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+			return ctrl.Result{}, err
+		}
+		tripleoTarballFiles := tripleoTarballCM.BinaryData
+		templateParameters["TripleoTarballFiles"] = tripleoTarballFiles
+	}
+
+	cms := []common.Template{
+		{
+			Name:           "openstackplaybook-script-" + instance.Name,
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeScripts,
+			InstanceType:   instance.Kind,
+			AdditionalData: map[string]string{},
+			ConfigOptions:  templateParameters,
+			Labels:         cmLabels,
+		},
+	}
+	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrl.Result{}, err
+	}
+
+	//
+	// BEGIN: Fencing considerations
+	//
+
+	// Reuse templateParameters, but reinitialize it (envVars and cmLabels are also reused, but do not require
+	// reinitialization)
+	templateParameters = make(map[string]interface{})
+
 	// get OSPVersion from ControlPlane CR
 	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
 	if err != nil {
@@ -129,11 +208,25 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters["EnableFencing"] = false
 
 	if controlPlane.Spec.EnableFencing {
+		fencingRoles := common.GetFencingRoles()
+
+		// First check if custom roles were included that require fencing
+		if tripleoTarballCM != nil {
+			customFencingRoles, err := common.GetCustomFencingRoles(tripleoTarballCM.BinaryData)
+
+			if err != nil {
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				return ctrl.Result{}, err
+			}
+
+			fencingRoles = append(fencingRoles, customFencingRoles...)
+		}
+
 		// TODO: This will likely need refactoring sooner or later
 		var virtualMachineInstanceLists []*virtv1.VirtualMachineInstanceList
 
 		for roleName, roleParams := range controlPlane.Spec.VirtualMachineRoles {
-			if common.StringInSlice(roleParams.RoleName, controlplane.GetFencingRoles()) && roleParams.RoleCount == 3 {
+			if common.StringInSlice(roleParams.RoleName, fencingRoles) && roleParams.RoleCount == 3 {
 				// Get the associated VM instances
 				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(r, instance.Namespace, map[string]string{
 					common.OwnerNameLabelSelector: roleName,
@@ -180,42 +273,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
-	// Reuse templateParameters, but reinitialize it (envVars and cmLabels are also reused, but do not require
-	// reinitialization)
-	templateParameters = make(map[string]interface{})
-
-	// check if heat-env-config (customizations provided by administrator) exist
-	// if it does not exist, requeue
-	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
-	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			msg := fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
-			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
-			return ctrl.Result{RequeueAfter: time.Second * 10}, err
-		}
-		// Ignore any potential error from "setCurrentState"; focus on previous error
-		// NOTE: This pattern will be repeated a lot below, but the comment will not be copied
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, err
-	}
-
-	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
-	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
-
-	// Now read the tripleo-deploy-config and the fencing-config CMs for use in the PlaybookGenerator
-	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
-	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			msg := "The tripleo-deploy-config map doesn't yet exist. Requeing..."
-			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
-			return ctrl.Result{RequeueAfter: time.Second * 10}, err
-		}
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, err
-	}
-
 	fencingCM, _, err := common.GetConfigMapAndHashWithName(r, "fencing-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -229,54 +286,25 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
-	tripleoDeployFiles := tripleoDeployCM.Data
-	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
-	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
-	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+	//
+	// END: Fencing considerations
+	//
 
-	// config hash
-	configMapHash, err := common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, fencingCM.Data})
+	// Calc config map hash
+	hashList := []interface{}{
+		tripleoCustomDeployCM.Data,
+		tripleoDeployCM.Data,
+		fencingCM.Data,
+	}
+
+	if tripleoTarballCM != nil {
+		hashList = append(hashList, tripleoTarballCM.BinaryData)
+	}
+
+	configMapHash, err := common.ObjectHash(hashList)
 	if err != nil {
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
-	}
-
-	// extra stuff if custom tarballs are provided
-	if instance.Spec.TarballConfigMap != "" {
-		tripleoTarballCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.TarballConfigMap, instance.Namespace)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, "Tarball config map not found, requeuing and waiting")
-				return ctrl.Result{RequeueAfter: time.Second * 10}, err
-			}
-			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-			return ctrl.Result{}, err
-		}
-		// adjust the configMapHash
-		configMapHash, err = common.ObjectHash([]interface{}{tripleoCustomDeployCM.Data, tripleoDeployCM.Data, fencingCM.Data, tripleoTarballCM.BinaryData})
-		if err != nil {
-			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-			return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
-		}
-		tripleoTarballFiles := tripleoTarballCM.BinaryData
-		templateParameters["TripleoTarballFiles"] = tripleoTarballFiles
-	}
-
-	cms := []common.Template{
-		{
-			Name:           "openstackplaybook-script-" + instance.Name,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeScripts,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			ConfigOptions:  templateParameters,
-			Labels:         cmLabels,
-		},
-	}
-	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
-	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrl.Result{}, err
 	}
 
 	// Create ephemeral heat

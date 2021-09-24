@@ -39,7 +39,7 @@ import (
 
 	//networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
@@ -158,6 +158,13 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
+		return ctrl.Result{}, nil
+	}
+
+	// Generate fencing data potentially needed by all VMSets in this instance's namespace
+	err = r.generateNamespaceFencingData(instance)
+
+	if err != nil {
 		return ctrl.Result{}, nil
 	}
 
@@ -606,19 +613,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	// Get Kubevirt fencing agent service account and generate associated kubeconfig
-	//
-
-	err = r.generateVMSetFencingKubeconfig(instance, secretLabels, &envVars)
-
-	if err != nil {
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetError
-		actualProvisioningState.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, actualProvisioningState)
-		return ctrl.Result{}, err
-	}
-
-	//
 	//   Create the VM objects
 	//
 	if instance.Status.BaseImageDVReady {
@@ -690,7 +684,40 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *OpenStackVMSetReconciler) generateVMSetFencingKubeconfig(instance *ospdirectorv1beta1.OpenStackVMSet, labels map[string]string, envVars *map[string]common.EnvSetter) error {
+func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdirectorv1beta1.OpenStackVMSet) error {
+	// Ensure that a namespace-scoped kubevirt fencing agent service account token secret has been
+	// created for any OSVMSet instances in this instance's namespace (all OSVMSets in this namespace
+	// will share this same secret)
+
+	labels := map[string]string{
+		common.OwnerNameSpaceLabelSelector:      instance.Namespace,
+		common.OwnerControllerNameLabelSelector: vmset.AppLabel,
+	}
+
+	saSecretTemplate := []common.Template{
+		{
+			Name:           vmset.KubevirtFencingServiceAccountSecret,
+			Namespace:      instance.Namespace,
+			Type:           common.TemplateTypeCustom,
+			SecretType:     corev1.SecretTypeServiceAccountToken,
+			InstanceType:   instance.Kind,
+			AdditionalData: nil,
+			Annotations: map[string]string{
+				common.ServiceAccountAnnotationName: vmset.KubevirtFencingServiceAccount,
+			},
+			Labels:        labels,
+			ConfigOptions: nil,
+		},
+	}
+
+	if err := common.EnsureSecrets(r, instance, saSecretTemplate, nil); err != nil {
+		return err
+	}
+
+	// Use aforementioned namespace-scoped kubevirt fencing agent service account token secret to
+	// generate a namespace-scoped kubevirt fencing kubeconfig (all OSVMSets in this namespace will
+	// share this same secret)
+
 	// Get the kubeconfig used by the operator to acquire the cluster's API address
 	kubeconfig, err := config.GetConfig()
 
@@ -702,11 +729,8 @@ func (r *OpenStackVMSetReconciler) generateVMSetFencingKubeconfig(instance *ospd
 	templateParameters["Server"] = kubeconfig.Host
 	templateParameters["Namespace"] = instance.Namespace
 
-	// Find the API token for the osp-director-operator-kubevirtagent service account.
-	// This secret should have been created by OLM during operator installation.  If you are
-	// running the operator outside of OLM, you will need to manually create it (it can be
-	// found in config/rbac/service_account.yaml)
-	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), vmset.KubevirtFencingSecret, metav1.GetOptions{})
+	// Read-back the secret for the kubevirt agent service account token
+	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), vmset.KubevirtFencingServiceAccountSecret, metav1.GetOptions{})
 
 	if err != nil {
 		return err
@@ -716,7 +740,7 @@ func (r *OpenStackVMSetReconciler) generateVMSetFencingKubeconfig(instance *ospd
 
 	kubeconfigTemplate := []common.Template{
 		{
-			Name:           fmt.Sprintf("openstackvmset-%s-fencing-kubeconfig", instance.Name),
+			Name:           vmset.KubevirtFencingKubeconfigSecret,
 			Namespace:      instance.Namespace,
 			Type:           common.TemplateTypeNone,
 			InstanceType:   instance.Kind,
@@ -726,12 +750,9 @@ func (r *OpenStackVMSetReconciler) generateVMSetFencingKubeconfig(instance *ospd
 		},
 	}
 
-	err = common.EnsureSecrets(r, instance, kubeconfigTemplate, envVars)
-	if err != nil {
-		return err
-	}
+	err = common.EnsureSecrets(r, instance, kubeconfigTemplate, nil)
 
-	return nil
+	return err
 }
 
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
@@ -892,30 +913,62 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		dvTemplateSpec.Spec.PVC.StorageClassName = &instance.Spec.StorageClass
 	}
 
-	rootDisk := virtv1.Disk{
-		Name: "rootdisk",
-		DiskDevice: virtv1.DiskDevice{
-			Disk: &virtv1.DiskTarget{
-				Bus: "virtio",
+	disks := []virtv1.Disk{
+		{
+			Name: "rootdisk",
+			DiskDevice: virtv1.DiskDevice{
+				Disk: &virtv1.DiskTarget{
+					Bus: "virtio",
+				},
+			},
+		},
+		{
+			Name: "cloudinitdisk",
+			DiskDevice: virtv1.DiskDevice{
+				Disk: &virtv1.DiskTarget{
+					Bus: "virtio",
+				},
+			},
+		},
+		{
+			Name:   "fencingdisk",
+			Serial: "fencingdisk",
+			DiskDevice: virtv1.DiskDevice{
+				Disk: &virtv1.DiskTarget{
+					Bus: "virtio",
+				},
 			},
 		},
 	}
 
-	cloudinitdisk := virtv1.Disk{
-		Name: "cloudinitdisk",
-		DiskDevice: virtv1.DiskDevice{
-			Disk: &virtv1.DiskTarget{
-				Bus: "virtio",
+	volumes := []virtv1.Volume{
+		{
+			Name: "rootdisk",
+			VolumeSource: virtv1.VolumeSource{
+				DataVolume: &virtv1.DataVolumeSource{
+					Name: ctl.DomainNameUniq,
+				},
 			},
 		},
-	}
-
-	fencingDisk := virtv1.Disk{
-		Name:   "fencingdisk",
-		Serial: "fencingdisk",
-		DiskDevice: virtv1.DiskDevice{
-			Disk: &virtv1.DiskTarget{
-				Bus: "virtio",
+		{
+			Name: "cloudinitdisk",
+			VolumeSource: virtv1.VolumeSource{
+				CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
+					UserDataSecretRef: &corev1.LocalObjectReference{
+						Name: secret.Name,
+					},
+					NetworkDataSecretRef: &corev1.LocalObjectReference{
+						Name: ctl.NetworkDataSecret,
+					},
+				},
+			},
+		},
+		{
+			Name: "fencingdisk",
+			VolumeSource: virtv1.VolumeSource{
+				Secret: &virtv1.SecretVolumeSource{
+					SecretName: vmset.KubevirtFencingKubeconfigSecret,
+				},
 			},
 		},
 	}
@@ -938,11 +991,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 					Cores: instance.Spec.Cores,
 				},
 				Devices: virtv1.Devices{
-					Disks: []virtv1.Disk{
-						rootDisk,
-						cloudinitdisk,
-						fencingDisk,
-					},
+					Disks: disks,
 					Interfaces: []virtv1.Interface{
 						{
 							Name:  "default",
@@ -964,37 +1013,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 					},
 				},
 			},
-			Volumes: []virtv1.Volume{
-				{
-					Name: "rootdisk",
-					VolumeSource: virtv1.VolumeSource{
-						DataVolume: &virtv1.DataVolumeSource{
-							Name: ctl.DomainNameUniq,
-						},
-					},
-				},
-				{
-					Name: "cloudinitdisk",
-					VolumeSource: virtv1.VolumeSource{
-						CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
-							UserDataSecretRef: &corev1.LocalObjectReference{
-								Name: secret.Name,
-							},
-							NetworkDataSecretRef: &corev1.LocalObjectReference{
-								Name: ctl.NetworkDataSecret,
-							},
-						},
-					},
-				},
-				{
-					Name: "fencingdisk",
-					VolumeSource: virtv1.VolumeSource{
-						Secret: &virtv1.SecretVolumeSource{
-							SecretName: fmt.Sprintf("openstackvmset-%s-fencing-kubeconfig", instance.Name),
-						},
-					},
-				},
-			},
+			Volumes: volumes,
 			Networks: []virtv1.Network{
 				{
 					Name: "default",

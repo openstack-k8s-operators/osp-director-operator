@@ -37,8 +37,9 @@ func createOrUpdateConfigMap(r ReconcilerCommon, obj metav1.Object, cm Template)
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cm.Name,
-			Namespace: cm.Namespace,
+			Name:        cm.Name,
+			Namespace:   cm.Namespace,
+			Annotations: cm.Annotations,
 		},
 		Data: data,
 	}
@@ -76,9 +77,10 @@ func createOrGetCustomConfigMap(r ReconcilerCommon, obj metav1.Object, cm Templa
 	// Check if this configMap already exists
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cm.Name,
-			Namespace: cm.Namespace,
-			Labels:    cm.Labels,
+			Name:        cm.Name,
+			Namespace:   cm.Namespace,
+			Labels:      cm.Labels,
+			Annotations: cm.Annotations,
 		},
 		Data: map[string]string{},
 	}

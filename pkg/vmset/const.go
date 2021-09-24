@@ -26,6 +26,9 @@ const (
 	// KubevirtFencingServiceAccount -
 	KubevirtFencingServiceAccount = "osp-director-operator-kubevirtagent"
 
-	// KubevirtFencingSecret -
-	KubevirtFencingSecret = "osp-director-operator-kubevirtfencing"
+	// KubevirtFencingServiceAccountSecret -
+	KubevirtFencingServiceAccountSecret = "osp-director-operator-fencing-sa"
+
+	// KubevirtFencingKubeconfigSecret -
+	KubevirtFencingKubeconfigSecret = "osp-director-operator-fencing-kubeconfig"
 )

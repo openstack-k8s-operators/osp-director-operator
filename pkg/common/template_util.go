@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // TType - TemplateType
@@ -28,14 +29,16 @@ const (
 	TemplateTypeNone TType = "none"
 )
 
-// Template - config map details
+// Template - config map and secret details
 type Template struct {
 	Name           string
 	Namespace      string
 	Type           TType
 	InstanceType   string
+	SecretType     corev1.SecretType // Secrets only, defaults to "Opaque"
 	AdditionalData map[string]string
 	Labels         map[string]string
+	Annotations    map[string]string
 	ConfigOptions  map[string]interface{}
 	SkipSetOwner   bool // skip setting ownership on the associated configmap
 	Version        ospdirectorv1beta1.OSPVersion

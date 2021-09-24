@@ -13,6 +13,6 @@ parameter_defaults:
           namespace: {{ $fencingConfig.Namespace }}
           ssl_insecure: true
           power_timeout: 30
-          kubeconfig: /home/cloud-admin/kubeconfig
+          kubeconfig: /root/kubeconfig/kubeconfig
 {{- end }}
 {{- end }}
