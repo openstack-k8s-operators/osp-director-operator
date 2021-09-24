@@ -51,6 +51,8 @@ type OpenStackBaremetalSetSpec struct {
 	// BootstrapDNS - initial DNS nameserver values to set on the BaremetalHosts when they are provisioned.
 	// Note that subsequent TripleO deployment will overwrite these values
 	BootstrapDNS []string `json:"bootstrapDns,omitempty"`
+	// Domain name used to build fqdn
+	DomainName string `json:"domainName,omitempty"`
 }
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet

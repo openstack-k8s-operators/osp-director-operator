@@ -1,4 +1,6 @@
+## template: jinja
 #cloud-config
+fqdn: {{ "{{ v1.local_hostname }}" }}{{ if .DomainName }}.{{ .DomainName }}{{ end }}
 users:
   - name: cloud-admin
     ssh-authorized-keys: {{ .AuthorizedKeys }}

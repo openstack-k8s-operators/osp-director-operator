@@ -763,6 +763,10 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 	templateParameters["Hostname"] = bmhStatus.Hostname
 
+	if instance.Spec.DomainName != "" {
+		templateParameters["DomainName"] = instance.Spec.DomainName
+	}
+
 	// use same NodeRootPassword paremater as tripleo have
 	if passwordSecret != nil && len(passwordSecret.Data["NodeRootPassword"]) > 0 {
 		templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])

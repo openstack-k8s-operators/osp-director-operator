@@ -54,6 +54,8 @@ type OpenStackVMSetSpec struct {
 	// NodeRootPassword: <base64 enc pwd>
 	// to the secret data
 	PasswordSecret string `json:"passwordSecret,omitempty"`
+	// Domain name used to build fqdn
+	DomainName string `json:"domainName,omitempty"`
 }
 
 // OpenStackVMSetStatus defines the observed state of OpenStackVMSet

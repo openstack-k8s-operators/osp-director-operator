@@ -46,6 +46,9 @@ spec:
               deploymentSSHSecret:
                 description: name of secret holding the stack-admin ssh keys
                 type: string
+              domainName:
+                description: Domain name used to build fqdn
+                type: string
               gitSecret:
                 description: GitSecret the name of the secret used to pull Ansible
                   playbooks into the openstackclient pod. This secret should contain

@@ -15,6 +15,12 @@
 # under the License.
 set -ex
 
+if [ -v FQDN ]; then
+  echo "$FQDN" > /mnt/etc/hostname
+else
+  cp /etc/hostname /mnt/etc/hostname
+fi
+
 # if the pvc is an empty volume, copy the existing hosts file to it
 if [ ! -f /mnt/etc/hosts ]; then
   cp /etc/hosts /mnt/etc/

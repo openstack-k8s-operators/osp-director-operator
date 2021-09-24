@@ -199,6 +199,10 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 
+	if instance.Spec.DomainName != "" {
+		templateParameters["DomainName"] = instance.Spec.DomainName
+	}
+
 	if instance.Spec.PasswordSecret != "" {
 		// check if specified password secret exists before creating the controlplane
 		passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)

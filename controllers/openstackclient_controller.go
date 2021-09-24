@@ -319,6 +319,10 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}
 
+	if instance.Spec.DomainName != "" {
+		envVars["FQDN"] = common.EnvValue(hostnameDetails.Hostname + "." + instance.Spec.DomainName)
+	}
+
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotation := "["
 	for id, net := range instance.Spec.Networks {

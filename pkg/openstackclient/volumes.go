@@ -34,6 +34,12 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			ReadOnly:  false,
 		},
 		{
+			Name:      fmt.Sprintf("%s-hosts", instance.Name),
+			MountPath: "/etc/hostname",
+			SubPath:   "hostname",
+			ReadOnly:  false,
+		},
+		{
 			Name:      fmt.Sprintf("%s-cloud-admin", instance.Name),
 			MountPath: "/home/cloud-admin",
 			ReadOnly:  false,
