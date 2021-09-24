@@ -1,13 +1,13 @@
 #
 # Check for:
 #
-# - 1 OpenStackVMSet with roleName unchanged
+# - 1 OpenStackBMSet
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackVMSet
+kind: OpenStackBaremetalSet
 metadata:
-  name: customvmset
+  name: compute
   namespace: openstack
 spec:
-  roleName: SomeCustomRole
+  roleName: Compute

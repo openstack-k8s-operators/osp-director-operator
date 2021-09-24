@@ -1,0 +1,45 @@
+#
+# Check for:
+#
+# - 1 OpenStackVMSet
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: customvmset
+  namespace: openstack
+spec:
+  baseImageVolumeName: openstack-base-img
+  cores: 2
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  roleName: SomeCustomRole
+  storageClass: host-nfs-storageclass
+  vmCount: 1
+status:
+  baseImageDVReady: true
+  conditions:
+  - message: All requested VirtualMachines have been provisioned
+    reason: All requested VirtualMachines have been provisioned
+    status: "True"
+    type: Provisioned
+  provisioningStatus:
+    readyCount: 1
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
+  vmHosts:
+    somecustomrole-0:
+      annotatedForDeletion: false
+      hostRef: somecustomrole-0
+      hostname: somecustomrole-0
+      ipaddresses:
+        ctlplane: 192.168.25.101/24
+      provisioningState: Provisioned

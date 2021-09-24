@@ -14,7 +14,7 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  openStackClientImageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
     - ctlplane
     - external
@@ -29,7 +29,7 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  imageURL: quay.io/openstack-k8s-operators/rhosp17-openstack-tripleoclient:17.0_20210720.1
+  imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
   - external

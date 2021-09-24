@@ -591,7 +591,6 @@ status:
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 namespaced: true
-timeout: 20
 commands:
 # verify again scaled up controller nodes MAC entries are not marked as deleted
   - script: |

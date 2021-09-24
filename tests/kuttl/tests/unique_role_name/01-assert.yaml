@@ -1,7 +1,8 @@
 #
 # Check for:
 #
-# - 1 OpenStackNet
+# - 2 OpenStackNets
+# - 1 NodeNetworkConfigurationPolicy
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -32,10 +33,65 @@ spec:
         node-role.kubernetes.io/worker: ""
   cidr: 192.168.25.0/24
   gateway: 192.168.25.1
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: external
+  namespace: openstack
+spec:
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  vlan: 10
+  allocationStart: 10.0.0.4
+  allocationEnd: 10.0.0.250
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          name: br-ex
+          state: up
+          type: linux-bridge
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-openstacknet
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
 status:
   conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+  - reason: SuccessfullyConfigured
     status: "True"
-    type: Configured
-  currentState: Configured
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+

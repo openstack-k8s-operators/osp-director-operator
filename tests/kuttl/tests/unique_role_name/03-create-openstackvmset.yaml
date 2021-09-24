@@ -1,9 +1,9 @@
 #
-# - Try to create 1 additional OpenStackVMSet with a different resource name, but same role name
+# - Create 1 OpenStackVMSet
 #
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  - script: |
-      oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackvmset.yaml --dry-run=client -o yaml | sed 's/customvmset/badvmset/g' | oc apply -f - || true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackvmset.yaml
+    namespaced: true
