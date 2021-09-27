@@ -54,22 +54,11 @@ parameter_defaults:
 {{- end }}
 {{- end }}
   #
-  # Per network details
+  # Per ctlplane details
 {{- range $netid, $net := .NetworksMap }}
 {{- if eq $net.Name "Control" }}
   ControlPlaneDefaultRoute: {{ $net.Gateway }}
   ControlPlaneSubnetCidr: {{ $net.CidrSuffix }}
-{{- else }}
-  {{ $net.Name }}NetCidr: {{ $net.Cidr }}
-  {{ $net.Name }}AllocationPools:
-  - end: {{ $net.AllocationEnd }}
-    start: {{ $net.AllocationStart }}
-{{- if ne $net.Vlan 0 }}
-  {{ $net.Name }}NetworkVlanID: {{ $net.Vlan }}
-{{- end }}
-{{- if ne $net.Gateway "" }}
-  {{ $net.Name }}InterfaceDefaultRoute: {{ $net.Gateway }}
-{{- end }}
 {{- end }}
 {{- end }}
   #

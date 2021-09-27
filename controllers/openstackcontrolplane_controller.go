@@ -39,6 +39,7 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,7 +255,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		AddToPredictableIPs: true,
 		HostNameRefs:        hostnameRefs,
 	}
-	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
 		newProvStatus.Reason = err.Error()
