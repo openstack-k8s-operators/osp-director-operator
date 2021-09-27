@@ -37,7 +37,7 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 )
 
 // OpenStackIPSetReconciler reconciles a OpenStackIPSet object

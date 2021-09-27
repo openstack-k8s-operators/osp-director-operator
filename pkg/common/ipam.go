@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -261,7 +261,7 @@ func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset I
 			Name:      obj.GetName(),
 			Namespace: obj.GetNamespace(),
 			Labels: map[string]string{
-				overcloudipset.AddToPredictableIPsLabel: strconv.FormatBool(ipset.AddToPredictableIPs),
+				openstackipset.AddToPredictableIPsLabel: strconv.FormatBool(ipset.AddToPredictableIPs),
 			},
 		},
 	}
