@@ -3,7 +3,7 @@ OSP Director Operator Architecture
 
 Architecture:
 -------------
-This shows the OSP architecure that we currently support from a high level. The Controllers are hosted as VM on OpenShift Virtualization/Kubevirt. Baremetal Hosts are used for OSP Computes.
+This shows the OSP architecure that we currently support from a high level. The Controllers are hosted as VMs on OpenShift Virtualization/Kubevirt. Baremetal Hosts are used for OSP Computes.
 
 The Undercloud implemented via OpenShift, and OpenStack is deployed via a pod.
 ![Architecture](./arch.png)
