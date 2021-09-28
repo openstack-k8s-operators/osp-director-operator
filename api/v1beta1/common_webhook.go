@@ -6,6 +6,7 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,4 +66,14 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	return found, nil
+}
+
+func checkDomainName(domainName string) error {
+
+	// TODO: implement the same validation as freeipa validate_domain_name()
+	//       in https://github.com/freeipa/freeipa/blob/master/ipalib/util.py
+	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
+		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
+	}
+	return nil
 }

@@ -84,9 +84,6 @@ spec:
               deploymentSSHSecret:
                 description: Name of secret holding the stack-admin ssh keys
                 type: string
-              domainName:
-                description: Domain name used to build fqdn
-                type: string
               hardwareReqs:
                 description: Hardware requests for sub-selection of BaremetalHosts
                   with certain hardware specs
