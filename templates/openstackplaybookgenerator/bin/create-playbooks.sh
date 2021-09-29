@@ -78,11 +78,8 @@ if [ -z "$PREPARE_ENV_ARGS" ]; then
   PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
 
-if [ "$OSPVersion" == "16.2" ]; then
-  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e hostnamemap.yaml"
-else
-  PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
-fi
+PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
+
 openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml --output-env-file=tripleo-overcloud-images.yaml
 
 mkdir -p $HOME/tripleo-deploy
