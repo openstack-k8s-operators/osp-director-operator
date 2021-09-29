@@ -70,12 +70,23 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		return fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
 	}
 
+	err = checkDomainName(r.Spec.DomainName)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	controlplanelog.Info("validate update", "name", r.Name)
+
+	oldControlPlane := old.(*OpenStackControlPlane)
+	if r.Spec.DomainName != oldControlPlane.Spec.DomainName {
+		return fmt.Errorf("domainName cannot be modified")
+	}
 	return nil
 }
 

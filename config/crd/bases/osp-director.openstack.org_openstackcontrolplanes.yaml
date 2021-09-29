@@ -61,6 +61,9 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              domainName:
+                description: Domain name used to build fqdn
+                type: string
               enableFencing:
                 default: false
                 description: 'EnableFencing is provided so that users have the option

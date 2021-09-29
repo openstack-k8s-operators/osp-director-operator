@@ -51,6 +51,9 @@ type OpenStackClientSpec struct {
 	// +kubebuilder:default=42401
 	// RunGID user ID to run the pod with
 	RunGID int `json:"runGID"`
+
+	// Domain name used to build fqdn
+	DomainName string `json:"domainName,omitempty"`
 }
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

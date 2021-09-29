@@ -60,6 +60,8 @@ type OpenStackControlPlaneSpec struct {
 	// EnableFencing is provided so that users have the option to disable fencing if desired
 	// FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
 	EnableFencing bool `json:"enableFencing"`
+	// Domain name used to build fqdn
+	DomainName string `json:"domainName,omitempty"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

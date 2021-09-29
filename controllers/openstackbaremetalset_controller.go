@@ -373,9 +373,18 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
+	//   Get domain name from controlplane spec
+	//
+	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
+	if err != nil {
+		return ctrlResult, err
+	}
+	domainName := controlPlane.Spec.DomainName
+
+	//
 	//   Provision / deprovision requested replicas
 	//
-	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, passwordSecret, ipset, &actualProvisioningState); err != nil {
+	if err := r.ensureBaremetalHosts(instance, provisionServer, sshSecret, passwordSecret, ipset, domainName, &actualProvisioningState); err != nil {
 		// As we know, this transient "object has been modified, please try again" error occurs from time
 		// to time in the reconcile loop.  Let's avoid counting that as an error for the purposes of
 		// status display
@@ -534,7 +543,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(instance
 }
 
 // Provision or deprovision BaremetalHost resources based on replica count
-func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.OpenStackProvisionServer, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet, actualProvisioningState *ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus) error {
+func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdirectorv1beta1.OpenStackBaremetalSet, provisionServer *ospdirectorv1beta1.OpenStackProvisionServer, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet, domainName string, actualProvisioningState *ospdirectorv1beta1.OpenStackBaremetalSetProvisioningStatus) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
 	listOpts := []client.ListOption{
@@ -694,7 +703,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 		// Then we add the status to store the BMH name, cloud-init secret name, management
 		// IP and BMH power status for the particular worker
 		for i := 0; i < len(availableBaremetalHosts) && i < newBmhsNeededCount; i++ {
-			err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret, passwordSecret, ipset)
+			err := r.baremetalHostProvision(instance, availableBaremetalHosts[i], provisionServer.Status.LocalImageURL, sshSecret, passwordSecret, ipset, domainName)
 
 			if err != nil {
 				return err
@@ -704,7 +713,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(instance *ospdire
 
 	// Now reconcile existing BaremetalHosts for this OpenStackBaremetalSet
 	for bmhName := range existingBaremetalHosts {
-		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret, passwordSecret, ipset)
+		err := r.baremetalHostProvision(instance, bmhName, provisionServer.Status.LocalImageURL, sshSecret, passwordSecret, ipset, domainName)
 
 		if err != nil {
 			return err
@@ -726,7 +735,7 @@ func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(instance *ospdirec
 }
 
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
-func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet) error {
+func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdirectorv1beta1.OpenStackBaremetalSet, bmh string, localImageURL string, sshSecret *corev1.Secret, passwordSecret *corev1.Secret, ipset *ospdirectorv1beta1.OpenStackIPSet, domainName string) error {
 	// Prepare cloudinit (create secret)
 	sts := []common.Template{}
 	secretLabels := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{})
@@ -762,6 +771,10 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(instance *ospdi
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
 	templateParameters["Hostname"] = bmhStatus.Hostname
+
+	if domainName != "" {
+		templateParameters["DomainName"] = domainName
+	}
 
 	// use same NodeRootPassword paremater as tripleo have
 	if passwordSecret != nil && len(passwordSecret.Data["NodeRootPassword"]) > 0 {

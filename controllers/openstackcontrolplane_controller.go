@@ -305,6 +305,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
 			vmSet.Spec.DiskSize = vmRole.DiskSize
+			if instance.Spec.DomainName != "" {
+				vmSet.Spec.DomainName = instance.Spec.DomainName
+			}
 			if vmRole.StorageClass != "" {
 				vmSet.Spec.StorageClass = vmRole.StorageClass
 			}
@@ -364,6 +367,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		osc.Spec.GitSecret = instance.Spec.GitSecret
 		osc.Spec.RunUID = openstackclient.CloudAdminUID
 		osc.Spec.RunGID = openstackclient.CloudAdminGID
+		if instance.Spec.DomainName != "" {
+			osc.Spec.DomainName = instance.Spec.DomainName
+		}
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks

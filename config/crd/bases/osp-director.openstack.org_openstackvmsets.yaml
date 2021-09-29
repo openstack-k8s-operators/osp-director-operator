@@ -76,6 +76,9 @@ spec:
                 description: root Disc size in GB
                 format: int32
                 type: integer
+              domainName:
+                description: Domain name used to build fqdn
+                type: string
               isTripleoRole:
                 description: in case of external functionality, like 3rd party network
                   controllers, set to false to ignore role in rendered overcloud templates.
