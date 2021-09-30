@@ -37,7 +37,7 @@ ARG USER_ID=nonroot:nonroot
 
 LABEL com.redhat.component="osp-director-operator-container" \
       name="osp-director-operator" \
-      version="1.0" \
+      version="1.0.0" \
       summary="OSP Director Operator" \
       io.k8s.name="osp-director-operator" \
       io.k8s.description="This image includes the osp-director-operator" \
