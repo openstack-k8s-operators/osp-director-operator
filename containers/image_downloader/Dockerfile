@@ -10,11 +10,14 @@ ARG ENTRYPOINT_PATH=entrypoint.sh
 
 RUN ${PKG_CMD} install -y qemu-img
 
+ARG IMAGE_DOWNLOADER_NAME="osp-director-downloader"
+ARG IMAGE_DOWNLOADER_VER="1.0.0"
+
 LABEL   com.redhat.component="osp-director-downloader-container" \
-        name="osp-director-downloader" \
-        version="1.0" \
+        name="${IMAGE_DOWNLOADER_NAME}" \
+        version="${IMAGE_DOWNLOADER_VER}" \
         summary="OSP Director Image Downloader" \
-        io.k8s.name="osp director image downloader" \
+        io.k8s.name="${IMAGE_DOWNLOADER_NAME}" \
         io.k8s.description="This image includes the osp-director-downloader" \
         io.openshift.tags="cn-openstack openstack"
 
