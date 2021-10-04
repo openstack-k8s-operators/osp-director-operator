@@ -35,7 +35,7 @@ LABEL io.k8s.display-name="OSP-Director-Operator provision-ip-discovery-agent" \
 
 LABEL com.redhat.component="osp-director-provisioner-container" \
       name="osp-director-provisioner-container" \
-      version="1.0"
+      version="1.0.0"
 
 WORKDIR /
 
