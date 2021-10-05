@@ -36,6 +36,7 @@ require (
 )
 
 replace (
+	github.com/golang-jwt/jwt => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
 	github.com/mikefarah/yaml/v2 => gopkg.in/yaml.v2 v2.4.0
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200526144822-34f54f12813a
