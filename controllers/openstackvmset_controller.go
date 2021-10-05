@@ -227,6 +227,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
 		}
 	}
+	templateParameters["IsTripleoRole"] = instance.Spec.IsTripleoRole
 
 	cloudinit := []common.Template{
 		// CloudInitSecret
