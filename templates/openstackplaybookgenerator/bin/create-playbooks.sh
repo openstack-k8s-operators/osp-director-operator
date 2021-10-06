@@ -38,25 +38,26 @@ rm -Rf "$TEMPLATES_DIR"
 mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
-pushd $TEMPLATES_DIR
-# extract any tar files into the $TEMPLATES_DIR
+
+# copy to editable dir config-tmp
+rm -Rf $HOME/config-tmp
+mkdir -p $HOME/config-tmp
+pushd $HOME/config-tmp
+# extract any tar files into $HOME/config-tmp
 {{- if .TripleoTarballFiles }}
 {{- range $key, $value := .TripleoTarballFiles }}
 tar -xvf $HOME/tht-tars/{{ $key }}
 {{- end }}
 {{- end }}
-
-# copy to editable dir config-tmp
-rm -Rf $HOME/config-tmp
-mkdir -p $HOME/config-tmp
 cp $HOME/config/* $HOME/config-tmp
 cp $HOME/config-custom/* $HOME/config-tmp
 cp $HOME/config-fencing/* $HOME/config-tmp
-#FIXME: get rid of /usr/share/openstack-tripleo-heat-templates/ and use relative paths in dev-tools!
+# remove all references to the default tht dir
 sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tmp/*.yaml
 # copy to our temp t-h-t dir
 cp -a $HOME/config-tmp/* "$TEMPLATES_DIR/"
 
+pushd $TEMPLATES_DIR
 python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
 
