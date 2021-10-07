@@ -182,6 +182,19 @@ fi
 TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
 pushd $TMP_DIR
+
+git config --global user.email "dev@null.io"
+git config --global user.name "OSP Director Operator"
+# initialize master if it doesn't exist
+# Avoids (warning: remote HEAD refers to nonexistent ref, unable to checkout.)
+if ! git branch -la | grep origin\/master &>/dev/null; then
+  git checkout -b master
+  echo "This repo contains automatically generated playbooks for the OSP Director Operator" > README
+  git add README
+  git commit -a -m "Add README to master branch."
+  git push -f origin master
+fi
+
 git checkout -b $ConfigHash
 # add directory for playbooks
 mkdir tripleo-ansible
@@ -202,9 +215,6 @@ mkdir tarball
 tar -xvf $HOME/tht-tars/{{ $key }} -C tarball
 {{- end }}
 {{- end }}
-
-git config --global user.email "dev@null.io"
-git config --global user.name "OSP Director Operator"
 
 git add *
 git commit -a -m "Generated playbooks for $ConfigHash"
