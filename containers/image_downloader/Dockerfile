@@ -10,16 +10,26 @@ ARG ENTRYPOINT_PATH=entrypoint.sh
 
 RUN ${PKG_CMD} install -y qemu-img
 
-ARG IMAGE_DOWNLOADER_NAME="osp-director-downloader"
-ARG IMAGE_DOWNLOADER_VER="1.0.0"
+ARG IMAGE_COMPONENT="osp-director-downloader-container"
+ARG IMAGE_NAME="osp-director-downloader"
+ARG IMAGE_VERSION="1.0.0"
+ARG IMAGE_SUMMARY="OSP Director Image Downloader"
+ARG IMAGE_DESC="This image includes the osp-director-downloader"
+ARG IMAGE_TAGS="openstack director"
 
-LABEL   com.redhat.component="osp-director-downloader-container" \
-        name="${IMAGE_DOWNLOADER_NAME}" \
-        version="${IMAGE_DOWNLOADER_VER}" \
-        summary="OSP Director Image Downloader" \
-        io.k8s.name="${IMAGE_DOWNLOADER_NAME}" \
-        io.k8s.description="This image includes the osp-director-downloader" \
-        io.openshift.tags="cn-openstack openstack"
+### DO NOT EDIT LINES BELOW
+# Auto generated using CI tools from
+# https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci
+
+# Labels required by upstream and osbs build system
+LABEL com.redhat.component="${IMAGE_COMPONENT}" \
+      name="${IMAGE_NAME}" \
+      version="${IMAGE_VERSION}" \
+      summary="${IMAGE_SUMMARY}" \
+      io.k8s.name="${IMAGE_NAME}" \
+      io.k8s.description="${IMAGE_DESC}" \
+      io.openshift.tags="${IMAGE_TAGS}"
+### DO NOT EDIT LINES ABOVE
 
 WORKDIR /
 
