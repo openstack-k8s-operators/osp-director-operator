@@ -61,6 +61,11 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              dnsServers:
+                description: Upstream DNS servers
+                items:
+                  type: string
+                type: array
               domainName:
                 description: Domain name used to build fqdn
                 type: string

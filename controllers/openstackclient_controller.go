@@ -320,7 +320,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	}
 
 	if instance.Spec.DomainName != "" {
-		envVars["FQDN"] = common.EnvValue(hostnameDetails.Hostname + "." + instance.Spec.DomainName)
+		envVars["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
 	}
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
@@ -383,6 +383,13 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 				VolumeMounts: volumeMounts,
 			},
 		},
+	}
+
+	if len(instance.Spec.DNSServers) != 0 {
+		pod.Spec.DNSPolicy = corev1.DNSNone
+		pod.Spec.DNSConfig = &corev1.PodDNSConfig{
+			Nameservers: instance.Spec.DNSServers,
+		}
 	}
 
 	initContainerDetails := []openstackclient.InitContainer{

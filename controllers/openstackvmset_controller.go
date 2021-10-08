@@ -762,6 +762,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
 	templateParameters["ControllerIP"] = host.IPAddress
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
+	templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
 
 	gateway := ipset.Status.Networks["ctlplane"].Gateway
 	if gateway != "" {
