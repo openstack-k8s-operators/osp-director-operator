@@ -11,7 +11,6 @@ resource_registry:
   OS::TripleO::Network::Ports::StorageVipPort: network/ports/deployed_vip_storage.yaml
 {{- range $roleid, $role := .RolesMap }}
 {{- if ne $role.Name "ControlPlane" }}
-  OS::TripleO::{{ $role.Name }}::Net::SoftwareConfig: OS::Heat::None
 {{- range $netid, $net := $role.Networks }}
 {{- if ne $net.NameLower "ctlplane" }}
   OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/deployed_{{ $net.NameLower }}.yaml
@@ -83,6 +82,7 @@ parameter_defaults:
   # VipPortMap
   VipPortMap:
 {{- range $netname, $ip := $node.IPaddr }}
+{{- if and (ne $netname "ctlplane") (ne $netname "tenant") }}
     {{ $netname }}:
       ip_address: {{ $ip.IPaddr }}
       ip_address_uri: '{{ $ip.IPAddrURI }}'
@@ -91,27 +91,7 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
-{{/*
-#
-#<NETNAME>VirtualFixedIPs
-{{- range $roleid, $role := .RolesMap }}
-{{- range $nodeid, $node := $role.Nodes }}
-{{- range $netname, $ip := $node.IPaddr }}
-{{- if and ($node.VIP) (ne $netname "ctlplane") }}
-{{- if eq $netname "external" }}
-  PublicVirtualFixedIPs:
-  - ip_address: {{ $ip.IPaddr }}
-    use_neutron: false
-#{{- else }}
-#  {{ with (index $.NetworksMap $netname) }}{{ .Name }}{{ end }}NetworkVip:
-#  - ip_address: {{ $ip.IPaddr }}
-#    use_neutron: false
 {{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-*/}}
   #
   # ControlPlaneVipData
   ControlPlaneVipData:
