@@ -54,6 +54,9 @@ type OpenStackClientSpec struct {
 
 	// Domain name used to build fqdn
 	DomainName string `json:"domainName,omitempty"`
+
+	// Upstream DNS servers
+	DNSServers []string `json:"dnsServers,omitempty"`
 }
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

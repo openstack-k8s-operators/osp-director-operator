@@ -46,6 +46,11 @@ spec:
               deploymentSSHSecret:
                 description: name of secret holding the stack-admin ssh keys
                 type: string
+              dnsServers:
+                description: Upstream DNS servers
+                items:
+                  type: string
+                type: array
               domainName:
                 description: Domain name used to build fqdn
                 type: string

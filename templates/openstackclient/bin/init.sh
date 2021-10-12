@@ -24,6 +24,15 @@ fi
 # if the pvc is an empty volume, copy the existing hosts file to it
 if [ ! -f /mnt/etc/hosts ]; then
   cp /etc/hosts /mnt/etc/
+
+  # Ensure hostname -f and python socket.getfqdn() return the FQDN
+  if [ -v FQDN ]; then
+    SHORT_HOSTNAME=$(hostname -s)
+    LONG_HOSTNAME=$(hostname -f)
+    if [ "$LONG_HOSTNAME" != "$FQDN" ]; then
+      sed -i -e "s/^\([0-9.]\+\)\s\+\(.*\)${SHORT_HOSTNAME}\$/\1\t\2${FQDN} ${SHORT_HOSTNAME}/" /mnt/etc/hosts
+    fi
+  fi
 fi
 
 mkdir -p /home/cloud-admin/tripleo-deploy/validations

@@ -61,6 +61,13 @@ spec:
               baseImageVolumeName:
                 description: BaseImageVolumeName used as the base volume for the VM
                 type: string
+              bootstrapDns:
+                description: BootstrapDNS - initial DNS nameserver values to set on
+                  the VM when they are provisioned. Note that subsequent TripleO deployment
+                  will overwrite these values
+                items:
+                  type: string
+                type: array
               cores:
                 description: number of Cores assigned to the VMs
                 format: int32

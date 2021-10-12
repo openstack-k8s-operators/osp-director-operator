@@ -2,6 +2,13 @@ version: 2
 ethernets:
   {{ .CtlplaneInterface }}:
     addresses: [ {{ .ControllerIP }} ]
+    {{ if not (eq (len .CtlplaneDns) 0) }}
+    nameservers:
+      addresses:
+         {{ range $value := .CtlplaneDns }}
+         - {{ $value }}
+         {{ end }}
+    {{ end }}
 {{- if .Gateway }}
     {{ .Gateway }}
 {{- end }}
