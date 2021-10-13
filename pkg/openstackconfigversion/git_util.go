@@ -205,7 +205,7 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackPlaybookGenerator, client client.
 				} else {
 					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "generate-playbooks-" + ref.Hash().String(),
+							Name:      ref.Hash().String(),
 							Namespace: inst.Namespace,
 						},
 						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: ref.Hash().String(), Diff: ""}}
