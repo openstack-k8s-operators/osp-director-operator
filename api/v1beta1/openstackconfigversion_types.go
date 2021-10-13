@@ -20,26 +20,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // OpenStackConfigVersionSpec defines the desired state of OpenStackConfigVersion
 type OpenStackConfigVersionSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of OpenStackConfigVersion. Edit openstackconfigversion_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Hash string `json:"hash"`
+	Diff string `json:"diff"`
 }
 
 // OpenStackConfigVersionStatus defines the observed state of OpenStackConfigVersion
 type OpenStackConfigVersionStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=osipset;osconfigversion;osconfigversions
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Version"
 
 // OpenStackConfigVersion is the Schema for the openstackconfigversions API
 type OpenStackConfigVersion struct {

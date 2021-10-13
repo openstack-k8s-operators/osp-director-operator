@@ -40,5 +40,5 @@ podman push ${BUNDLE_IMG}
 #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
 # Index image
-opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman
+opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman --pull-tool podman
 podman push ${INDEX_IMG}

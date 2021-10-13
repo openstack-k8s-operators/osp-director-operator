@@ -14,62 +14,81 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: VMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
+    - description: VMSet represents a set of virtual machines hosts for a specific
+        role within the Overcloud deployment
       displayName: VMSet
       kind: VMSet
       name: openstackvmsets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackProvisionServer is the Schema for the provisionservers API
+    - description: OpenStackProvisionServer is the Schema for the provisionservers
+        API
       displayName: OpenStack Provision Server
       kind: ProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackBaremetalSet represent a set of baremetal hosts for a specific role within the Overcloud deployment
+    - description: OpenStackBaremetalSet represent a set of baremetal hosts for a
+        specific role within the Overcloud deployment
       displayName: OpenStack BaremetalSet
       kind: OpenStackBaremetalSet
       name: openstackbaremetalsets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackClient used to create a container for deploying, scaling, and managing the OpenStack Overcloud
+    - description: OpenStackClient used to create a container for deploying, scaling,
+        and managing the OpenStack Overcloud
       displayName: OpenStack Client
       kind: OpenStackClient
       name: openstackclients.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackControlPlane represents a virtualized OpenStack control plane configuration
+    - description: OpenStackConfigVersion is the Schema for the openstackconfigversions
+        API
+      displayName: Open Stack Config Version
+      kind: OpenStackConfigVersion
+      name: openstackconfigversions.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackControlPlane represents a virtualized OpenStack control
+        plane configuration
       displayName: OpenStack ControlPlane
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
+    - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
+        API
       displayName: OpenStack Ephemeral Heat
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackIPSet represents a group of IP addresses for a specific deployment role within the OpenStack Overcloud
+    - description: OpenStackIPSet represents a group of IP addresses for a specific
+        deployment role within the OpenStack Overcloud
       displayName: OpenStack IpSet
       kind: OpenStackIPSet
       name: openstackipsets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackMACAddress is the Schema for the openstackmacaddresses API
+    - description: OpenStackMACAddress is the Schema for the openstackmacaddresses
+        API
       displayName: OpenStack MACAddress
       kind: OpenStackMACAddress
       name: openstackmacaddresses.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackNet represents the IPAM configuration for baremetal and VM hosts within OpenStack Overcloud deployment
+    - description: OpenStackNet represents the IPAM configuration for baremetal and
+        VM hosts within OpenStack Overcloud deployment
       displayName: OpenStack Net
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackPlaybookGenerator Used to configure Heat environments and template customizations to generate Ansible playbooks for OpenStack Overcloud deployment
+    - description: OpenStackPlaybookGenerator Used to configure Heat environments
+        and template customizations to generate Ansible playbooks for OpenStack Overcloud
+        deployment
       displayName: OpenStack Playbook Generator
       kind: OpenStackPlaybookGenerator
       name: openstackplaybookgenerators.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers API
+    - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
+        API
       displayName: OpenStack ProvisionServer
       kind: OpenStackProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackVMSet represents a set of virtual machines hosts for a specific role within the Overcloud deployment
+    - description: OpenStackVMSet represents a set of virtual machines hosts for a
+        specific role within the Overcloud deployment
       displayName: OpenStack VMSet
       kind: OpenStackVMSet
       name: openstackvmsets.osp-director.openstack.org
