@@ -26,7 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func getOSPVersion(parsedVersion string) (ospdirectorv1beta1.OSPVersion, error) {
+// GetOSPVersion -
+func GetOSPVersion(parsedVersion string) (ospdirectorv1beta1.OSPVersion, error) {
 	log.Log.Info(fmt.Sprintf("Parsed OSP Version %s", parsedVersion))
 	switch parsedVersion {
 	case string(ospdirectorv1beta1.TemplateVersionTrain):
@@ -74,7 +75,7 @@ func GetVersionFromImageURL(r ReconcilerCommon, imageURL string) (ospdirectorv1b
 
 	if len(match) > 0 && match[1] != "" {
 		// verify parsed OSP version
-		ospVersion, err := getOSPVersion(match[1])
+		ospVersion, err := GetOSPVersion(match[1])
 		r.GetLogger().Info(fmt.Sprintf("OSP version %s", ospVersion))
 		return ospVersion, err
 	}

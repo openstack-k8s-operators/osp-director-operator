@@ -111,7 +111,12 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// Get the version of the OpenStackClientImageURL from image tags and set the OSPVersion in the CR status
 	//
-	OSPVersion, err := common.GetVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
+	var OSPVersion ospdirectorv1beta1.OSPVersion
+	if instance.Spec.OpenStackRelease != "" {
+		OSPVersion, err = common.GetOSPVersion(instance.Spec.OpenStackRelease)
+	} else {
+		OSPVersion, err = common.GetVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
+	}
 	if err != nil {
 		return ctrl.Result{}, err
 	}

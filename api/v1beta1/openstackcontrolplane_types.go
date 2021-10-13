@@ -70,6 +70,11 @@ type OpenStackControlPlaneSpec struct {
 
 	// Upstream DNS servers
 	DNSServers []string `json:"dnsServers,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
+	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image
+	OpenStackRelease string `json:"openStackRelease"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

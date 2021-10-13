@@ -94,6 +94,15 @@ spec:
               openStackClientStorageClass:
                 description: OpenStackClientStorageClass storage class
                 type: string
+              openStackRelease:
+                description: OpenStackRelease to overwrite OSPrelease auto detection
+                  from tripleoclient container image
+                enum:
+                - train
+                - wallaby
+                - "16.2"
+                - "17.0"
+                type: string
               passwordSecret:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string
