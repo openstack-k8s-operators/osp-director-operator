@@ -1,6 +1,8 @@
 {{/* info on golang template at https://pkg.go.dev/text/template */}}
 # Resource Registry
 resource_registry:
+  OS::TripleO::Services::Docker: OS::Heat::None
+  OS::TripleO::Services::Podman: deployment/podman/podman-baremetal-ansible.yaml
   OS::TripleO::DeployedServer::ControlPlanePort: deployed-server/deployed-neutron-port.yaml
   OS::TripleO::Network::Ports::ControlPlaneVipPort: deployed-server/deployed-neutron-port.yaml
   OS::TripleO::Network::Ports::NetVipMap: network/ports/net_vip_map_external.yaml
@@ -30,6 +32,8 @@ parameter_defaults:
   SoftwareConfigTransport: POLL_SERVER_HEAT
   RootStackName: overcloud
   ManageNetworks: False
+  MistralDockerGroup: false
+  ContainerCli: podman
   #
   # DeployedServerPortMap
   DeployedServerPortMap:
