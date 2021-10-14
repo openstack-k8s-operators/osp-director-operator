@@ -48,8 +48,8 @@ func GetOSPVersion(parsedVersion string) (ospdirectorv1beta1.OSPVersion, error) 
 	}
 }
 
-// GetVersionFromImageURL -
-func GetVersionFromImageURL(r ReconcilerCommon, imageURL string) (ospdirectorv1beta1.OSPVersion, error) {
+// GetOSPVersionFromImageURL -
+func GetOSPVersionFromImageURL(r ReconcilerCommon, imageURL string) (ospdirectorv1beta1.OSPVersion, error) {
 
 	parts := strings.SplitN(imageURL, ":", 2)
 	if len(parts) != 2 {

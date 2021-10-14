@@ -115,7 +115,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	if instance.Spec.OpenStackRelease != "" {
 		OSPVersion, err = common.GetOSPVersion(instance.Spec.OpenStackRelease)
 	} else {
-		OSPVersion, err = common.GetVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
+		OSPVersion, err = common.GetOSPVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
 	}
 	if err != nil {
 		return ctrl.Result{}, err
