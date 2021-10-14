@@ -113,11 +113,11 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackPlaybookGenerator, client client.
 
 	configVersions := make(map[string]ospdirectorv1beta1.OpenStackConfigVersion)
 
-	// Check if this Job already exists
+	// Check if this Secret already exists
 	foundSecret := &corev1.Secret{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: inst.Spec.GitSecret, Namespace: inst.Namespace}, foundSecret)
 	if err != nil {
-		log.Info("GitRepo err")
+		log.Error(err, "GitRepo secret was not found.")
 		return nil, err
 	} else if foundSecret != nil {
 		log.Info("GitRepo foundSecret")

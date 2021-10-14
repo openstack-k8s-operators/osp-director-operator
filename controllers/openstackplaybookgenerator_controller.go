@@ -512,7 +512,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) syncConfigVersions(instance *ospd
 
 	for _, version := range configVersions {
 
-		// Check if this Route already exists
+		// Check if this ConfigVersion already exists
 		foundVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
 		if err == nil {
