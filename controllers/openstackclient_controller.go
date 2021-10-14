@@ -391,6 +391,9 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		pod.Spec.DNSConfig = &corev1.PodDNSConfig{
 			Nameservers: instance.Spec.DNSServers,
 		}
+		if len(instance.Spec.DNSSearchDomains) != 0 {
+			pod.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+		}
 	}
 
 	initContainerDetails := []openstackclient.InitContainer{

@@ -765,6 +765,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *o
 	templateParameters["ControllerIP"] = host.IPAddress
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
+	templateParameters["CtlplaneDnsSearch"] = instance.Spec.DNSSearchDomains
 
 	gateway := ipset.Status.Networks["ctlplane"].Gateway
 	if gateway != "" {

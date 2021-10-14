@@ -11,8 +11,15 @@ networks:
   gateway: {{ .CtlplaneGateway }}
 {{ if not (eq (len .CtlplaneDns) 0) }}
 services:
-{{ range $value := .CtlplaneDns }}
 - type: dns-nameserver
-  address: {{ $value }}
-{{ end }}
+  address:
+    {{ range $value := .CtlplaneDns }}
+    - {{ $value }}
+    {{ end }}
+  {{ if not (eq (len .CtlplaneDnsSearch) 0) }}
+  search:
+    {{ range $value := .CtlplaneDnsSearch }}
+    - {{ $value }}
+    {{ end }}
+  {{ end }}
 {{ end }}

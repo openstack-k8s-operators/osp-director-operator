@@ -4,6 +4,12 @@ ethernets:
     addresses: [ {{ .ControllerIP }} ]
     {{ if not (eq (len .CtlplaneDns) 0) }}
     nameservers:
+      {{ if not (eq (len .CtlplaneDnsSearch) 0) }}
+      search:
+         {{ range $value := .CtlplaneDnsSearch }}
+         - {{ $value }}
+        {{ end }}
+      {{ end }}
       addresses:
          {{ range $value := .CtlplaneDns }}
          - {{ $value }}
