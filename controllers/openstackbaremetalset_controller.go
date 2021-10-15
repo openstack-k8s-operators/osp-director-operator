@@ -46,6 +46,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 )
 
@@ -351,7 +352,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		AddToPredictableIPs: true,
 		HostNameRefs:        hostnameRefs,
 	}
-	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -622,7 +623,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(controlPlane *osp
 					AddToPredictableIPs: true,
 					HostNameRefs:        instance.GetHostnames(),
 				}
-				ipset, op, err = common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+				ipset, op, err = openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 				if err != nil {
 					return err
 				}

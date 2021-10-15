@@ -1,15 +1,17 @@
 {{/* info on golang template at https://pkg.go.dev/text/template */}}
 # Resource Registry
 resource_registry:
-  OS::TripleO::DeployedServer::ControlPlanePort: /usr/share/openstack-tripleo-heat-templates/deployed-server/deployed-neutron-port.yaml
-  OS::TripleO::Network::Ports::ControlPlaneVipPort: /usr/share/openstack-tripleo-heat-templates/deployed-server/deployed-neutron-port.yaml
-  OS::TripleO::Network::Ports::NetVipMap: /usr/share/openstack-tripleo-heat-templates/network/ports/net_vip_map_external.yaml
-  OS::TripleO::Network::Ports::RedisVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::OVNDBsVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::ExternalVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::InternalApiVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::StorageVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: /usr/share/openstack-tripleo-heat-templates/network/ports/noop.yaml
+  OS::TripleO::Services::Docker: OS::Heat::None
+  OS::TripleO::Services::Podman: deployment/podman/podman-baremetal-ansible.yaml
+  OS::TripleO::DeployedServer::ControlPlanePort: deployed-server/deployed-neutron-port.yaml
+  OS::TripleO::Network::Ports::ControlPlaneVipPort: deployed-server/deployed-neutron-port.yaml
+  OS::TripleO::Network::Ports::NetVipMap: network/ports/net_vip_map_external.yaml
+  OS::TripleO::Network::Ports::RedisVipPort: network/ports/noop.yaml
+  OS::TripleO::Network::Ports::OVNDBsVipPort: network/ports/noop.yaml
+  OS::TripleO::Network::Ports::ExternalVipPort: network/ports/noop.yaml
+  OS::TripleO::Network::Ports::InternalApiVipPort: network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageVipPort: network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: network/ports/noop.yaml
   # for OSP16.2 set OVNMacAddressNetwork and OVNMacAddressPort to None, see https://github.com/openstack-k8s-operators/osp-director-operator/issues/254
   OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
   OS::TripleO::OVNMacAddressPort: OS::Heat::None
@@ -17,7 +19,7 @@ resource_registry:
 {{- if ne $role.Name "ControlPlane" }}
 {{- range $netid, $net := $role.Networks }}
 {{- if ne $net.NameLower "ctlplane" }}
-  OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: /usr/share/openstack-tripleo-heat-templates/network/ports/{{ $net.NameLower }}_from_pool.yaml
+  OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/{{ $net.NameLower }}_from_pool.yaml
 {{- end }}
 {{- end }}
 {{- end }}
@@ -30,6 +32,8 @@ parameter_defaults:
   SoftwareConfigTransport: POLL_SERVER_HEAT
   RootStackName: overcloud
   ManageNetworks: False
+  MistralDockerGroup: false
+  ContainerCli: podman
   #
   # DeployedServerPortMap
   DeployedServerPortMap:
@@ -54,22 +58,11 @@ parameter_defaults:
 {{- end }}
 {{- end }}
   #
-  # Per network details
+  # Per ctlplane details
 {{- range $netid, $net := .NetworksMap }}
 {{- if eq $net.Name "Control" }}
   ControlPlaneDefaultRoute: {{ $net.Gateway }}
   ControlPlaneSubnetCidr: {{ $net.CidrSuffix }}
-{{- else }}
-  {{ $net.Name }}NetCidr: {{ $net.Cidr }}
-  {{ $net.Name }}AllocationPools:
-  - end: {{ $net.AllocationEnd }}
-    start: {{ $net.AllocationStart }}
-{{- if ne $net.Vlan 0 }}
-  {{ $net.Name }}NetworkVlanID: {{ $net.Vlan }}
-{{- end }}
-{{- if ne $net.Gateway "" }}
-  {{ $net.Name }}InterfaceDefaultRoute: {{ $net.Gateway }}
-{{- end }}
 {{- end }}
 {{- end }}
   #

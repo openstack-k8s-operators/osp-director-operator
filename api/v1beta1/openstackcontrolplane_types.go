@@ -24,10 +24,14 @@ import (
 type OSPVersion string
 
 const (
-	// TemplateVersionTrain - OSP 16.2 template version
-	TemplateVersionTrain OSPVersion = "16.2"
-	// TemplateVersionWallaby - OSP 17.0 template version
-	TemplateVersionWallaby OSPVersion = "17.0"
+	// TemplateVersionTrain - upstream train template version
+	TemplateVersionTrain OSPVersion = "train"
+	// TemplateVersion16_2 - OSP 16.2 template version
+	TemplateVersion16_2 OSPVersion = "16.2"
+	// TemplateVersionWallaby - upstream wallaby template version
+	TemplateVersionWallaby OSPVersion = "wallaby"
+	// TemplateVersion17_0 - OSP 17.0 template version
+	TemplateVersion17_0 OSPVersion = "17.0"
 )
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
@@ -66,6 +70,11 @@ type OpenStackControlPlaneSpec struct {
 
 	// Upstream DNS servers
 	DNSServers []string `json:"dnsServers,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
+	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image
+	OpenStackRelease string `json:"openStackRelease"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

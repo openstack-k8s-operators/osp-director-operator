@@ -13,16 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package overcloudipset
+package openstackipset
 
 import (
 	"fmt"
+	"net"
 
 	"strconv"
 	"strings"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	//	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 )
 
 type networkType struct {
@@ -166,10 +167,16 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 							OVNStaticBridgeMappings: ovnStaticBridgeMappings,
 						}
 					}
+
+					uri := reservation.IP
+					if common.IsIPv6(net.ParseIP(reservation.IP)) {
+						// IP address with brackets in case of IPv6, e.g. [2001:DB8:24::15]
+						uri = fmt.Sprintf("[%s]", uri)
+					}
 					if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnetName] == nil {
 						rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnetName] = &ipType{
 							IPaddr:       reservation.IP,
-							IPAddrURI:    reservation.IP, // todo ipv6 uri [2001:DB8:24::15]
+							IPAddrURI:    uri,
 							IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, networksMap[osnetName].CidrSuffix),
 							Subnet:       networksMap[osnetName].Cidr,
 						}

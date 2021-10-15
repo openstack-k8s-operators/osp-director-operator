@@ -9,6 +9,7 @@ spec:
     - ctlplane
     - external
   openStackClientStorageClass: host-nfs-storageclass
+  openStackRelease: wallaby
   virtualMachineRoles:
     controller:
       roleName: Controller

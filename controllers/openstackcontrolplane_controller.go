@@ -39,6 +39,7 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,7 +111,12 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// Get the version of the OpenStackClientImageURL from image tags and set the OSPVersion in the CR status
 	//
-	OSPVersion, err := common.GetVersionFromImageURL(instance.Spec.OpenStackClientImageURL)
+	var OSPVersion ospdirectorv1beta1.OSPVersion
+	if instance.Spec.OpenStackRelease != "" {
+		OSPVersion, err = common.GetOSPVersion(instance.Spec.OpenStackRelease)
+	} else {
+		OSPVersion, err = common.GetOSPVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
+	}
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -254,7 +260,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		AddToPredictableIPs: true,
 		HostNameRefs:        hostnameRefs,
 	}
-	ipset, op, err := common.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
 	if err != nil {
 		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
 		newProvStatus.Reason = err.Error()

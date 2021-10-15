@@ -4,16 +4,11 @@ package common
 // There is potential to refactor into a library perhaps useful to both projects?
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 	"net"
-	"strconv"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	overcloudipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/overcloudipset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // AssignmentError defines an IP assignment error.
@@ -225,6 +220,15 @@ func IsIPv4(checkip net.IP) bool {
 	return checkip.To4() != nil
 }
 
+// IsIPv6 checks if an IP is v6.
+func IsIPv6(checkip net.IP) bool {
+	if IsIPv4(checkip) {
+		return false
+	}
+
+	return checkip.To16() != nil
+}
+
 func isIntIPv4(checkipint *big.Int) bool {
 	return !(len(checkipint.Bytes()) == net.IPv6len)
 }
@@ -252,36 +256,4 @@ func IPToBigInt(IPv6Addr net.IP) *big.Int {
 	IPv6Int := big.NewInt(0)
 	IPv6Int.SetBytes(IPv6Addr)
 	return IPv6Int
-}
-
-// OvercloudipsetCreateOrUpdate -
-func OvercloudipsetCreateOrUpdate(r ReconcilerCommon, obj metav1.Object, ipset IPSet) (*ospdirectorv1beta1.OpenStackIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OpenStackIPSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      obj.GetName(),
-			Namespace: obj.GetNamespace(),
-			Labels: map[string]string{
-				overcloudipset.AddToPredictableIPsLabel: strconv.FormatBool(ipset.AddToPredictableIPs),
-			},
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), overcloudIPSet, func() error {
-		overcloudIPSet.Spec.Networks = ipset.Networks
-		overcloudIPSet.Spec.RoleName = ipset.Role
-		overcloudIPSet.Spec.HostCount = ipset.HostCount
-		overcloudIPSet.Spec.VIP = ipset.VIP
-		overcloudIPSet.Spec.AddToPredictableIPs = ipset.AddToPredictableIPs
-		overcloudIPSet.Spec.HostNameRefs = ipset.HostNameRefs
-
-		err := controllerutil.SetControllerReference(obj, overcloudIPSet, r.GetScheme())
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return overcloudIPSet, op, err
 }

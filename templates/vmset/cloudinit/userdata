@@ -12,6 +12,8 @@ chpasswd:
     root:{{ .NodeRootPassword }}
   expire: False
 {{- end }}
+{{/* if the VM is _NOT_ part of a tripleo role, keep them as clean as possible and do _NOT_ run the following modifications */}}
+{{- if .IsTripleoRole }}
 bootcmd:
   - "mkdir -p /mnt/kubeconfig"
   - "mkdir -p /root/kubeconfig"
@@ -20,3 +22,11 @@ bootcmd:
   - "chown -R root:root /root/kubeconfig"
   - "chmod -R 0600 /root/kubeconfig"
   - "umount /mnt/kubeconfig"
+runcmd:
+  # On initial boot set NM ipv6 connection method to link local to remove all IPs which might have been configured via SLAAC.
+  # This is especially required for interface where VIPs get created. The puppt module might otherwise pick a wrong interface
+  # and fail, e.g external interface, where the VIP should create on br-ex. With the oo deployment we switch to network-scripts
+  - set -x; for if in $(/bin/nmcli -f device,state device status | egrep '[[:space:]]+connected' | awk '{print $1}'); do nmcli device modify $if ipv6.method link-local; done
+  # Disable IPv6 autoconf per default, we only want the ooo static IP config
+  - set -x; echo 'IPV6_AUTOCONF=no' >> /etc/sysconfig/network
+{{- end }}

@@ -11,7 +11,6 @@ resource_registry:
   OS::TripleO::Network::Ports::StorageVipPort: network/ports/deployed_vip_storage.yaml
 {{- range $roleid, $role := .RolesMap }}
 {{- if ne $role.Name "ControlPlane" }}
-  OS::TripleO::{{ $role.Name }}::Net::SoftwareConfig: OS::Heat::None
 {{- range $netid, $net := $role.Networks }}
 {{- if ne $net.NameLower "ctlplane" }}
   OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/deployed_{{ $net.NameLower }}.yaml
@@ -35,6 +34,8 @@ parameter_defaults:
   {{ $role.Name }}Count: {{ $roleCount }}
 {{- end }}
 {{- end }}
+  #
+  # HostnameMap
   HostnameMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
@@ -43,6 +44,8 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+  #
+  # DeployedServerPortMap
   DeployedServerPortMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
@@ -55,6 +58,8 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+  #
+  # NodePortMap
   NodePortMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
@@ -63,7 +68,7 @@ parameter_defaults:
 {{- range $netname, $ip := $node.IPaddr }}
       {{ $netname }}:
         ip_address: {{ $ip.IPaddr }}
-        ip_address_uri: {{ $ip.IPAddrURI }}
+        ip_address_uri: '{{ $ip.IPAddrURI }}'
         ip_subnet: {{ $ip.IPAddrSubnet }}
 {{- end }}
 {{- end }}
@@ -73,16 +78,22 @@ parameter_defaults:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- if $node.VIP }}
+  #
+  # VipPortMap
   VipPortMap:
 {{- range $netname, $ip := $node.IPaddr }}
+{{- if and (ne $netname "ctlplane") (ne $netname "tenant") }}
     {{ $netname }}:
       ip_address: {{ $ip.IPaddr }}
-      ip_address_uri: {{ $ip.IPAddrURI }}
+      ip_address_uri: '{{ $ip.IPAddrURI }}'
       ip_subnet: {{ $ip.IPAddrSubnet }}
 {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
+  #
+  # ControlPlaneVipData
   ControlPlaneVipData:
 {{- range $roleid, $role := .RolesMap }}
 {{- if eq $role.Name "ControlPlane" }}
@@ -102,6 +113,8 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+  #
+  # OVNStaticBridgeMacMappings
   OVNStaticBridgeMacMappings:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
