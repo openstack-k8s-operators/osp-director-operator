@@ -32,7 +32,7 @@ type OpenStackConfigVersionStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=osipset;osconfigversion;osconfigversions
+// +kubebuilder:resource:shortName=osconfigversion;osconfigversions
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Version"
 
 // OpenStackConfigVersion is the Schema for the openstackconfigversions API
