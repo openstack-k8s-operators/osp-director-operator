@@ -144,6 +144,8 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	tripleoDeployFiles := tripleoDeployCM.Data
+	// Delete network_data.yaml from tripleoDeployFiles as it is not an ooo parameter env file
+	delete(tripleoDeployFiles, "network_data.yaml")
 	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name

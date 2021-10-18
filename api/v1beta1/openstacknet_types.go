@@ -85,6 +85,16 @@ type OpenStackNetSpec struct {
 	// Gateway optional gateway for the network
 	Gateway string `json:"gateway"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=1500
+	// MTU of the network
+	MTU int `json:"mtu"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// VIP create virtual ip on the network
+	VIP bool `json:"vip"`
+
 	// +kubebuilder:validation:Required
 	// AttachConfiguration used for NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
 	AttachConfiguration NetworkConfiguration `json:"attachConfiguration"`
@@ -135,7 +145,9 @@ const (
 // +kubebuilder:resource:shortName=osnet;osnets
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Net"
 // +kubebuilder:printcolumn:name="CIDR",type=string,JSONPath=`.spec.cidr`
+// +kubebuilder:printcolumn:name="MTU",type=string,JSONPath=`.spec.mtu`
 // +kubebuilder:printcolumn:name="VLAN",type=string,JSONPath=`.spec.vlan`
+// +kubebuilder:printcolumn:name="VIP",type=boolean,JSONPath=`.spec.vip`
 // +kubebuilder:printcolumn:name="Gateway",type=string,JSONPath=`.spec.gateway`
 // +kubebuilder:printcolumn:name="Reserved IPs",type="integer",JSONPath=".status.reservedIpCount"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"

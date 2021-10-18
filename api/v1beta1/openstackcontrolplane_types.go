@@ -69,7 +69,7 @@ type OpenStackControlPlaneSpec struct {
 	DomainName string `json:"domainName,omitempty"`
 
 	// Upstream DNS servers
-	DNSServers []string `json:"dnsServers,omitempty"`
+	DNSServers       []string `json:"dnsServers,omitempty"`
 	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
 
 	// +kubebuilder:validation:Optional

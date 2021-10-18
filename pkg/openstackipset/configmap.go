@@ -32,11 +32,13 @@ type networkType struct {
 	Cidr            string // e.g. 192.168.24.0/24
 	NetAddr         string // e.g. 192.168.24.0
 	CidrSuffix      int    // e.g. 24
-	MTU             int
+	MTU             int    // default 1500
 	AllocationStart string
 	AllocationEnd   string
 	Gateway         string
+	VIP             bool // allocate VIP on network, defaut true
 	Vlan            int
+	NetType         string
 }
 
 // information to build NodePortMap entry:
@@ -108,17 +110,25 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 			if err != nil {
 				return templateParameters, err
 			}
+
+			netType := "ipv4"
+			if common.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
+				netType = "ipv6"
+			}
+
 			networksMap[osnetName] = &networkType{
 				Name:            GetNetName(osnetName),
 				NameLower:       osnetName,
 				Cidr:            osnet.Spec.Cidr,
 				CidrSuffix:      cidrSuffix,
 				NetAddr:         netAddr,
-				MTU:             1500, //TODO custom MTU per network
+				MTU:             osnet.Spec.MTU,
 				AllocationStart: osnet.Spec.AllocationStart,
 				AllocationEnd:   osnet.Spec.AllocationEnd,
 				Gateway:         osnet.Spec.Gateway,
+				VIP:             osnet.Spec.VIP,
 				Vlan:            osnet.Spec.Vlan,
+				NetType:         netType,
 			}
 		}
 

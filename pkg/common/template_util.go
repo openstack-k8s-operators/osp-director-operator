@@ -75,6 +75,19 @@ func GetAllTemplates(path string, kind string, templateType string, version stri
 		fmt.Print(err)
 		os.Exit(1)
 	}
+
+	// remove any subdiretories from templatesFiles
+	for index, file := range templatesFiles {
+		fi, err := os.Stat(file)
+		if err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+		if fi.Mode().IsDir() {
+			RemoveIndex(templatesFiles, index)
+		}
+	}
+
 	return templatesFiles
 }
 
