@@ -315,6 +315,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 				vmSet.Spec.DomainName = instance.Spec.DomainName
 			}
 			vmSet.Spec.BootstrapDNS = instance.Spec.DNSServers
+			vmSet.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
 			if vmRole.StorageClass != "" {
 				vmSet.Spec.StorageClass = vmRole.StorageClass
 			}
@@ -378,6 +379,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			osc.Spec.DomainName = instance.Spec.DomainName
 		}
 		osc.Spec.DNSServers = instance.Spec.DNSServers
+		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks

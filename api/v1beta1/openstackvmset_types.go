@@ -59,7 +59,8 @@ type OpenStackVMSetSpec struct {
 	DomainName string `json:"domainName,omitempty"`
 	// BootstrapDNS - initial DNS nameserver values to set on the VM when they are provisioned.
 	// Note that subsequent TripleO deployment will overwrite these values
-	BootstrapDNS []string `json:"bootstrapDns,omitempty"`
+	BootstrapDNS     []string `json:"bootstrapDns,omitempty"`
+	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
 }
 
 // OpenStackVMSetStatus defines the observed state of OpenStackVMSet

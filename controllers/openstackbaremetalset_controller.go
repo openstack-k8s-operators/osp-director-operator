@@ -780,6 +780,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(controlPlane *o
 	if DNSServers == nil {
 		DNSServers = controlPlane.Spec.DNSServers
 	}
+	DNSSearchDomains := controlPlane.Spec.DNSSearchDomains
 	if domainName != "" {
 		templateParameters["DomainName"] = domainName
 	}
@@ -815,6 +816,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(controlPlane *o
 	templateParameters["CtlplaneGateway"] = ipset.Status.Networks["ctlplane"].Gateway
 	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
 	templateParameters["CtlplaneDns"] = DNSServers
+	templateParameters["CtlplaneDnsSearch"] = DNSSearchDomains
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 

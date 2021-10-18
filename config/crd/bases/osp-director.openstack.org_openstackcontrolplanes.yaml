@@ -61,6 +61,10 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              dnsSearchDomains:
+                items:
+                  type: string
+                type: array
               dnsServers:
                 description: Upstream DNS servers
                 items:

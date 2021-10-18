@@ -83,6 +83,10 @@ spec:
                 description: root Disc size in GB
                 format: int32
                 type: integer
+              dnsSearchDomains:
+                items:
+                  type: string
+                type: array
               domainName:
                 description: Domain name used to build fqdn
                 type: string
