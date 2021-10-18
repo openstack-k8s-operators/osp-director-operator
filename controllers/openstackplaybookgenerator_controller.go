@@ -466,7 +466,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	configVersions, gerr := openstackconfigversion.SyncGit(instance, r.Client, r.Log)
 	if gerr != nil {
 		r.Log.Error(gerr, "ConfigVersions")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, gerr
 	}
 
 	if err := r.syncConfigVersions(instance, configVersions); err != nil {
