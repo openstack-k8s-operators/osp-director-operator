@@ -23,11 +23,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DeleteSericesWithLabel - Delete all services in namespace of the obj matching label selector
-func DeleteSericesWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+// DeleteServicesWithLabel - Delete all services in namespace of the obj matching label selector
+func DeleteServicesWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
 	// Service have not implemented DeleteAllOf
 	// https://github.com/operator-framework/operator-sdk/issues/3101
 	// https://github.com/kubernetes/kubernetes/issues/68468#issuecomment-419981870
@@ -53,4 +54,20 @@ func DeleteSericesWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelector
 	}
 
 	return nil
+}
+
+// GetServicesListWithLabel - Get all services in namespace of the obj matching label selector
+func GetServicesListWithLabel(r ReconcilerCommon, namespace string, labelSelectorMap map[string]string) (*corev1.ServiceList, error) {
+
+	labelSelectorString := labels.Set(labelSelectorMap).String()
+
+	// use kclient to not use a cached client to be able to list services in namespace which are not cached
+	// otherwise we hit "Error listing services for labels: map[ ... ] - unable to get: default because of unknown namespace for the cache"
+	serviceList, err := r.GetKClient().CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelectorString})
+	if err != nil {
+		err = fmt.Errorf("Error listing services for labels: %v - %v", labelSelectorMap, err)
+		return nil, err
+	}
+
+	return serviceList, nil
 }

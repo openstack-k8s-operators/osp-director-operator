@@ -126,13 +126,13 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	cm := []common.Template{
 		// Apache server config
 		{
-			Name:           fmt.Sprintf("%s-httpd-config", instance.Name),
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeConfig,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			Labels:         cmLabels,
-			ConfigOptions:  templateParameters,
+			Name:               fmt.Sprintf("%s-httpd-config", instance.Name),
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeConfig,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			Labels:             cmLabels,
+			ConfigOptions:      templateParameters,
 		},
 	}
 

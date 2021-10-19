@@ -26,12 +26,20 @@ parameter_defaults:
   SoftwareConfigTransport: POLL_SERVER_HEAT
   RootStackName: overcloud
   ManageNetworks: False
+  NeutronPublicInterface: nic3
 {{- /* HostnameFormat and RoleCount */ -}}
 {{- range $roleid, $role := .RolesMap }}
 {{- if ne $role.Name "ControlPlane" }}
   {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
   {{- $roleCount := len $role.Nodes }}
   {{ $role.Name }}Count: {{ $roleCount }}
+{{- end }}
+{{- end }}
+  #
+  # VM NIC templates
+{{- range $roleid, $role := .RolesMap }}
+{{- if and $role.IsVMType $role.IsTripleoRole }}
+  {{ $role.Name }}NetworkConfigTemplate: '/home/cloud-admin/playbooks/tarball/multiple_nics_dvr.j2'
 {{- end }}
 {{- end }}
   #

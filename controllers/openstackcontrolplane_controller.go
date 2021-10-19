@@ -137,13 +137,13 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		templateParameters["TripleoPasswords"] = common.GeneratePasswords()
 		pwSecret := []common.Template{
 			{
-				Name:           controlplane.TripleoPasswordSecret,
-				Namespace:      instance.Namespace,
-				Type:           common.TemplateTypeConfig,
-				InstanceType:   instance.Kind,
-				AdditionalData: map[string]string{},
-				Labels:         pwSecretLabel,
-				ConfigOptions:  templateParameters,
+				Name:               controlplane.TripleoPasswordSecret,
+				Namespace:          instance.Namespace,
+				Type:               common.TemplateTypeConfig,
+				InstanceType:       instance.Kind,
+				AdditionalTemplate: map[string]string{},
+				Labels:             pwSecretLabel,
+				ConfigOptions:      templateParameters,
 			},
 		}
 

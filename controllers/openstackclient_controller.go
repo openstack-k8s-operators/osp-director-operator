@@ -207,13 +207,13 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{
-			Name:           "openstackclient-sh",
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeScripts,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			ConfigOptions:  make(map[string]interface{}),
-			Labels:         cmLabels,
+			Name:               "openstackclient-sh",
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeScripts,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			ConfigOptions:      make(map[string]interface{}),
+			Labels:             cmLabels,
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)

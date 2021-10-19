@@ -793,13 +793,13 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(controlPlane *o
 	userDataSecretName := fmt.Sprintf(baremetalset.CloudInitUserDataSecretName, instance.Name, bmh)
 
 	userDataSt := common.Template{
-		Name:           userDataSecretName,
-		Namespace:      "openshift-machine-api",
-		Type:           common.TemplateTypeConfig,
-		InstanceType:   instance.Kind,
-		AdditionalData: map[string]string{"userData": "/baremetalset/cloudinit/userdata"},
-		Labels:         secretLabels,
-		ConfigOptions:  templateParameters,
+		Name:               userDataSecretName,
+		Namespace:          "openshift-machine-api",
+		Type:               common.TemplateTypeConfig,
+		InstanceType:       instance.Kind,
+		AdditionalTemplate: map[string]string{"userData": "/baremetalset/cloudinit/userdata"},
+		Labels:             secretLabels,
+		ConfigOptions:      templateParameters,
 	}
 
 	sts = append(sts, userDataSt)
@@ -826,13 +826,13 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(controlPlane *o
 	})
 
 	networkDataSt := common.Template{
-		Name:           networkDataSecretName,
-		Namespace:      "openshift-machine-api",
-		Type:           common.TemplateTypeConfig,
-		InstanceType:   instance.Kind,
-		AdditionalData: map[string]string{"networkData": "/baremetalset/cloudinit/networkdata"},
-		Labels:         secretLabelsWithMustGather,
-		ConfigOptions:  templateParameters,
+		Name:               networkDataSecretName,
+		Namespace:          "openshift-machine-api",
+		Type:               common.TemplateTypeConfig,
+		InstanceType:       instance.Kind,
+		AdditionalTemplate: map[string]string{"networkData": "/baremetalset/cloudinit/networkdata"},
+		Labels:             secretLabelsWithMustGather,
+		ConfigOptions:      templateParameters,
 	}
 
 	sts = append(sts, networkDataSt)

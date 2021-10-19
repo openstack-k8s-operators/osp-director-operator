@@ -31,17 +31,18 @@ const (
 
 // Template - config map and secret details
 type Template struct {
-	Name           string
-	Namespace      string
-	Type           TType
-	InstanceType   string
-	SecretType     corev1.SecretType // Secrets only, defaults to "Opaque"
-	AdditionalData map[string]string
-	Labels         map[string]string
-	Annotations    map[string]string
-	ConfigOptions  map[string]interface{}
-	SkipSetOwner   bool // skip setting ownership on the associated configmap
-	Version        ospdirectorv1beta1.OSPVersion
+	Name               string
+	Namespace          string
+	Type               TType
+	InstanceType       string
+	SecretType         corev1.SecretType // Secrets only, defaults to "Opaque"
+	AdditionalTemplate map[string]string
+	CustomData         map[string]string
+	Labels             map[string]string
+	Annotations        map[string]string
+	ConfigOptions      map[string]interface{}
+	SkipSetOwner       bool // skip setting ownership on the associated configmap
+	Version            ospdirectorv1beta1.OSPVersion
 }
 
 // GetTemplatesPath get path to templates, either running local or deployed as container
@@ -104,12 +105,18 @@ func ExecuteTemplate(templateFile string, data interface{}) string {
 	return ExecuteTemplateData(file, data)
 }
 
+// template function to increment an int
+func add(x, y int) int {
+	return x + y
+}
+
 // ExecuteTemplateData creates a template from string and
 // execute it with the specified data
 func ExecuteTemplateData(templateData string, data interface{}) string {
 
 	var buff bytes.Buffer
-	tmpl, err := template.New("tmp").Parse(templateData)
+	funcs := template.FuncMap{"add": add}
+	tmpl, err := template.New("tmp").Funcs(funcs).Parse(templateData)
 	if err != nil {
 		panic(err)
 	}
@@ -143,7 +150,8 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 	}
 	file := string(b)
 	var buff bytes.Buffer
-	tmpl, err := template.New("tmp").Parse(file)
+	funcs := template.FuncMap{"add": add}
+	tmpl, err := template.New("tmp").Funcs(funcs).Parse(file)
 	if err != nil {
 		panic(err)
 	}
@@ -154,8 +162,8 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 	return buff.String()
 }
 
-// getTemplateData -
-func getTemplateData(t Template) map[string]string {
+// GetTemplateData -
+func GetTemplateData(t Template) map[string]string {
 	opts := t.ConfigOptions
 
 	// get templates base path, either running local or deployed as container
@@ -172,9 +180,9 @@ func getTemplateData(t Template) map[string]string {
 			data[filepath.Base(file)] = ExecuteTemplate(file, opts)
 		}
 	}
-	// add additional files e.g. from different directory, which
-	// can be common to multiple controllers
-	for filename, file := range t.AdditionalData {
+	// add additional template files from different directory, which
+	// e.g. can be common to multiple controllers
+	for filename, file := range t.AdditionalTemplate {
 		data[filename] = ExecuteTemplateFile(file, opts)
 	}
 

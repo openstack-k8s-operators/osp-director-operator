@@ -212,22 +212,35 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// generate pre assigned IPs environment file for Heat
-	overcloudNetList := &ospdirectorv1beta1.OpenStackNetList{}
-	overcloudNetListOpts := []client.ListOption{
+	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
+	osNetListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
 	}
-	err = r.Client.List(context.TODO(), overcloudNetList, overcloudNetListOpts...)
+	err = r.Client.List(context.TODO(), osNetList, osNetListOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	overcloudMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
-	overcloudMACListOpts := []client.ListOption{
+	osMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
+	osMACListOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
 	}
-	err = r.Client.List(context.TODO(), overcloudMACList, overcloudMACListOpts...)
+	err = r.Client.List(context.TODO(), osMACList, osMACListOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// get all VMset which are tripleo role
+	osVMsetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+	osVMsetListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingFields{
+			"spec.isTripleoRole": "true",
+		},
+	}
+	err = r.Client.List(context.TODO(), osVMsetList, osVMsetListOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -236,22 +249,75 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance, openstackipset.AppLabel, map[string]string{})
 
-	templateParameters, err := openstackipset.CreateConfigMapParams(*overcloudNetList, *overcloudMACList)
+	templateParameters, rolesMap, err := openstackipset.CreateConfigMapParams(r, *instance, *osNetList, *osMACList)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	// get clusterServiceIP for fencing routing in the nic templates
+	clusterServiceIP, err := r.getClusterServiceEndpoint(
+		"default",
+		map[string]string{
+			"component": "apiserver",
+			"provider":  "kubernetes",
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	roleNicTemplates := map[string]string{}
+	for _, role := range rolesMap {
+		// render nic template for VM role which, but only for tripleo roles
+		if role.IsVMType && role.IsTripleoRole {
+			roleTemplateParameters := make(map[string]interface{})
+			roleTemplateParameters["ClusterServiceIP"] = clusterServiceIP
+			roleTemplateParameters["Role"] = role
+
+			file := ""
+			nicTemplate := ""
+			if OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) {
+				file = fmt.Sprintf("%s-nic-template.yaml", role.NameLower)
+				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/net-config-multi-nic.yaml", OSPVersion)
+			}
+			if OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
+				file = fmt.Sprintf("%s-nic-template.j2", role.NameLower)
+				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/multiple_nics_dvr.j2", OSPVersion)
+			}
+
+			r.Log.Info(fmt.Sprintf("NIC template %s added to tripleo-deploy-config CM for role %s. Add a custom %s NIC template to the tarballConfigMap to overwrite.", file, role.Name, file))
+
+			roleTemplate := common.Template{
+				Name:         "tripleo-nic-template",
+				Namespace:    instance.Namespace,
+				Type:         common.TemplateTypeNone,
+				InstanceType: instance.Kind,
+				AdditionalTemplate: map[string]string{
+					file: nicTemplate,
+				},
+				Labels:        cmLabels,
+				ConfigOptions: roleTemplateParameters,
+				SkipSetOwner:  true,
+				Version:       OSPVersion,
+			}
+			for k, v := range common.GetTemplateData(roleTemplate) {
+				roleNicTemplates[k] = v
+			}
+		}
+	}
+
 	cm := []common.Template{
 		{
-			Name:           "tripleo-deploy-config",
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeConfig,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			Labels:         cmLabels,
-			ConfigOptions:  templateParameters,
-			SkipSetOwner:   true,
-			Version:        OSPVersion,
+			Name:               "tripleo-deploy-config",
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeConfig,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			CustomData:         roleNicTemplates,
+			Labels:             cmLabels,
+			ConfigOptions:      templateParameters,
+			SkipSetOwner:       true,
+			Version:            OSPVersion,
 		},
 	}
 
@@ -466,4 +532,18 @@ func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1bet
 	}
 
 	return nil
+}
+
+func (r *OpenStackIPSetReconciler) getClusterServiceEndpoint(namespace string, labelSelector map[string]string) (string, error) {
+
+	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
+	if err != nil {
+		return "", err
+	}
+
+	// for now assume there is always only one
+	if len(serviceList.Items) > 0 {
+		return serviceList.Items[0].Spec.ClusterIP, nil
+	}
+	return "", fmt.Errorf("failed to get Cluster ServiceEndpoint")
 }
