@@ -250,8 +250,30 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	currentStatus := instance.Status.DeepCopy()
 	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
 
-	// create VIP for all networks
+	// Create VIPs for networks where VIP parameter is true
+	// 1) Create network list of all VM role networks
 	uniqNetworksList := r.createUniqNetworkList(instance)
+	// 2) get list of networks
+	overcloudNetList := &ospdirectorv1beta1.OpenStackNetList{}
+	overcloudNetListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.Client.List(context.TODO(), overcloudNetList, overcloudNetListOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// 3) remove all networks from uniqNetworksList where VIP == false
+	for _, osNet := range overcloudNetList.Items {
+		if !osNet.Spec.VIP {
+			for index, name := range uniqNetworksList {
+				if osNet.Name == name {
+					common.RemoveIndex(uniqNetworksList, index)
+				}
+			}
+		}
+	}
+
 	ipsetDetails := common.IPSet{
 		Networks:            uniqNetworksList,
 		Role:                controlplane.Role,
