@@ -294,6 +294,32 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackconfigversions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackconfigversions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackconfigversions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackcontrolplanes
   verbs:
   - create

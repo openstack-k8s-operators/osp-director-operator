@@ -77,4 +77,13 @@ resources:
   kind: OpenStackMACAddress
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openstack.org
+  group: osp-director
+  kind: OpenStackConfigVersion
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
+  version: v1beta1
 version: "3"

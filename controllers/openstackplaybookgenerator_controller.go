@@ -29,6 +29,7 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
 	virtv1 "kubevirt.io/client-go/api/v1"
@@ -42,6 +43,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
+	openstackconfigversion "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackconfigversion"
 	openstackplaybookgenerator "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackplaybookgenerator"
 )
 
@@ -462,6 +464,17 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
+	// update ConfigVersions with Git Commits
+	configVersions, gerr := openstackconfigversion.SyncGit(instance, r.Client, r.Log)
+	if gerr != nil {
+		r.Log.Error(gerr, "ConfigVersions")
+		return ctrl.Result{}, gerr
+	}
+
+	if err := r.syncConfigVersions(instance, configVersions); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if err := r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorFinished, "The OpenStackPlaybookGenerator job has completed"); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -495,6 +508,29 @@ func (r *OpenStackPlaybookGeneratorReconciler) setCurrentState(instance *ospdire
 	}
 	return nil
 
+}
+
+func (r *OpenStackPlaybookGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion) error {
+
+	for _, version := range configVersions {
+
+		// Check if this ConfigVersion already exists
+		foundVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
+		if err == nil {
+			//FIXME(dprince): update existing?
+		} else if err != nil && k8s_errors.IsNotFound(err) {
+			r.Log.Info("Creating a ConfigVersion", "ConfigVersion.Namespace", instance.Namespace, "ConfigVersion.Name", version.Name)
+			err = r.Client.Create(context.TODO(), &version)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	}
+	//FIXME(dprince): remove deleted?
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
