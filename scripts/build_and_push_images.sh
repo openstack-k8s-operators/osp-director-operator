@@ -11,8 +11,10 @@ VERSION=${1:-"17.0.1"}
 REPO=${2:-"quay.io/openstack-k8s-operators"}
 OP_NAME=${3:-"osp-director-operator"}
 IMG="$REPO/$OP_NAME":$VERSION
-BUNDLE_IMG="$REPO/$OP_NAME-bundle":$VERSION
+IMAGE_TAG_BASE="$REPO/$OP_NAME"
 INDEX_IMG="$REPO/$OP_NAME-index:$VERSION"
+
+BUNDLE_IMG="$REPO/$OP_NAME-bundle":$VERSION
 
 # Base operator image
 make manager
@@ -33,10 +35,10 @@ sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 
 sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' bundle/manifests/osp-director-operator.clusterserviceversion.yaml
 
 # Build bundle image
-VERSION=${VERSION} BUNDLE_IMG=${BUNDLE_IMG} make bundle-build
+VERSION=${VERSION} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-build
 
 # Push bundle image
-podman push ${BUNDLE_IMG}
+VERSION=${VERSION} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-push
 #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
 # Index image
