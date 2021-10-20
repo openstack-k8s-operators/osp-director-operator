@@ -1,0 +1,26 @@
+{{- range $netname, $net := .NetworksMap }}
+{{- if ne $net.Name "Control" }}
+- name: {{ $net.Name }}
+  vip: {{ $net.VIP }}
+  name_lower: {{ $net.NameLower }}
+{{- if eq $net.NetType "ipv4" }}
+  ip_subnet: '{{ $net.Cidr }}'
+  allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
+{{- if ne $net.Gateway "" }}
+  gateway_ip: '{{ $net.Gateway }}'
+{{- end }}
+{{- end }}
+{{- if eq $net.NetType "ipv6" }}
+  ipv6: true
+  ipv6_subnet: '{{ $net.Cidr }}'
+  ipv6_allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
+{{- if ne $net.Gateway "" }}
+  gateway_ipv6: '{{ $net.Gateway }}'
+{{- end }}
+{{- end }}
+  mtu: {{ $net.MTU }}
+{{- if ne $net.Vlan 0 }}
+  vlan: {{ $net.Vlan }}
+{{- end }}
+{{- end }}
+{{- end }}

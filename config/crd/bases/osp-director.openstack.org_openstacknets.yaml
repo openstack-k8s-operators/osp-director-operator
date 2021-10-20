@@ -23,9 +23,15 @@ spec:
     - jsonPath: .spec.cidr
       name: CIDR
       type: string
+    - jsonPath: .spec.mtu
+      name: MTU
+      type: string
     - jsonPath: .spec.vlan
       name: VLAN
       type: string
+    - jsonPath: .spec.vip
+      name: VIP
+      type: boolean
     - jsonPath: .spec.gateway
       name: Gateway
       type: string
@@ -136,6 +142,14 @@ spec:
               gateway:
                 description: Gateway optional gateway for the network
                 type: string
+              mtu:
+                default: 1500
+                description: MTU of the network
+                type: integer
+              vip:
+                default: true
+                description: VIP create virtual ip on the network
+                type: boolean
               vlan:
                 description: Vlan ID of the network
                 type: integer

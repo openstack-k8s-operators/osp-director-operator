@@ -52,3 +52,8 @@ func isJSON(s string) error {
 	var js map[string]interface{}
 	return json.Unmarshal([]byte(s), &js)
 }
+
+// RemoveIndex - remove int from slice
+func RemoveIndex(s []string, index int) []string {
+	return append(s[:index], s[index+1:]...)
+}
