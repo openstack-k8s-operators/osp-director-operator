@@ -165,9 +165,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
 	err = r.generateNamespaceFencingData(instance)
-
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	// Initialize conditions list if not already set
@@ -754,6 +753,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 			AdditionalTemplate: map[string]string{"kubeconfig": "/vmset/fencing-kubeconfig/fencing-kubeconfig"},
 			Labels:             labels,
 			ConfigOptions:      templateParameters,
+			SkipSetOwner:       true,
 		},
 	}
 

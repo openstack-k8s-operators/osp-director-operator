@@ -161,9 +161,11 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 
 		// Only set controller ref if namespaces are equal, else we hit an error
 		if obj.GetNamespace() == secret.Namespace {
-			err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
-			if err != nil {
-				return err
+			if !st.SkipSetOwner {
+				err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			// Set ownership labels that can be found by the respective controller kind
