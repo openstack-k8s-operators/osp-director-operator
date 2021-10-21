@@ -40,7 +40,7 @@ spec:
       version: v1beta1
     - description: OpenStackConfigVersion is the Schema for the openstackconfigversions
         API
-      displayName: Open Stack Config Version
+      displayName: OpenStack Config Version
       kind: OpenStackConfigVersion
       name: openstackconfigversions.osp-director.openstack.org
       version: v1beta1

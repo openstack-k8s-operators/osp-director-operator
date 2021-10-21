@@ -12,9 +12,9 @@ REPO=${2:-"quay.io/openstack-k8s-operators"}
 OP_NAME=${3:-"osp-director-operator"}
 IMG="$REPO/$OP_NAME":$VERSION
 IMAGE_TAG_BASE="$REPO/$OP_NAME"
-INDEX_IMG="$REPO/$OP_NAME-index:$VERSION"
+INDEX_IMG="$REPO/$OP_NAME-index:v$VERSION"
 
-BUNDLE_IMG="$REPO/$OP_NAME-bundle":$VERSION
+BUNDLE_IMG="$REPO/$OP_NAME-bundle:v$VERSION"
 
 # Base operator image
 make manager
