@@ -1,0 +1,167 @@
+{{/* info on golang template at https://pkg.go.dev/text/template */}}
+heat_template_version: rocky
+description: >
+  Software Config to drive os-net-config to configure multiple interfaces for the Controller role.
+parameters:
+  ControlPlaneIp:
+    default: ''
+    description: IP address/subnet on the ctlplane network
+    type: string
+  ControlPlaneSubnetCidr:
+    default: ''
+    description: >
+      The subnet CIDR of the control plane network. (The parameter is
+      automatically resolved from the ctlplane subnet's cidr attribute.)
+    type: string
+  ControlPlaneDefaultRoute:
+    default: ''
+    description: The default route of the control plane network. (The parameter
+      is automatically resolved from the ctlplane subnet's gateway_ip attribute.)
+    type: string
+  ControlPlaneStaticRoutes:
+    default: []
+    description: >
+      Routes for the ctlplane network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  ControlPlaneMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the network.
+      (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
+    type: number
+{{- range $netid, $net := .Role.Networks }}
+{{- if ne $net.NameLower "ctlplane" }}
+  {{ $net.Name }}IpSubnet:
+    default: ''
+    description: IP address/subnet on the {{ $net.NameLower }} network
+    type: string
+  {{ $net.Name }}NetworkVlanID:
+    default: {{ $net.Vlan }}
+    description: Vlan ID for the {{ $net.NameLower }} network traffic.
+    type: number
+  {{ $net.Name }}Mtu:
+    default: {{ $net.MTU }}
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      Storage network.
+    type: number
+  {{ $net.Name }}InterfaceDefaultRoute:
+    default: ''
+    description: default route for the external network
+    type: string
+  {{ $net.Name }}InterfaceRoutes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+{{- end }}
+{{- end }}
+  DnsServers: # Override this via parameter_defaults
+    default: []
+    description: >
+      DNS servers to use for the Overcloud (2 max for some implementations).
+      If not set the nameservers configured in the ctlplane subnet's
+      dns_nameservers attribute will be used.
+    type: comma_delimited_list
+  DnsSearchDomains: # Override this via parameter_defaults
+    default: []
+    description: A list of DNS search domains to be added (in order) to resolv.conf.
+    type: comma_delimited_list
+resources:
+  OsNetConfigImpl:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+          template:
+            get_file: network/scripts/run-os-net-config.sh
+          params:
+            $network_config:
+              network_config:
+              - type: interface
+                name: nic1
+                use_dhcp: false
+                addresses:
+                - ip_netmask: 10.0.2.2/24
+                routes:
+                - ip_netmask: {{ .ClusterServiceIP }}/32
+                  next_hop: 10.0.2.1
+              - type: interface
+                name: nic2
+                mtu:
+                  get_param: ControlPlaneMtu
+                use_dhcp: false
+                dns_servers:
+                  get_param: DnsServers
+                domain:
+                  get_param: DnsSearchDomains
+                addresses:
+                - ip_netmask:
+                    list_join:
+                    - /
+                    - - get_param: ControlPlaneIp
+                      - get_param: ControlPlaneSubnetCidr
+                routes:
+                  list_concat_unique:
+                    - get_param: ControlPlaneStaticRoutes
+                    - - default: true
+                        next_hop:
+                          get_param: ControlPlaneDefaultRoute
+{{- $nic_counter := 2 }}
+{{- range $netid, $net := .Role.Networks }}
+{{- if and (ne $net.Name "External") (ne $net.Name "Tenant") (ne $net.NameLower "ctlplane") }}
+{{- $nic_counter = add $nic_counter 1 }}
+              - type: interface
+                name: nic{{ $nic_counter }}
+                mtu:
+                  get_param: {{ $net.Name }}Mtu
+                use_dhcp: false
+                addresses:
+                - ip_netmask:
+                    get_param: {{ $net.Name }}IpSubnet
+                routes:
+                  list_concat_unique:
+                    - get_param: {{ $net.Name }}InterfaceRoutes
+{{- else if ne $net.NameLower "ctlplane" }}
+{{- $nic_counter = add $nic_counter 1 }}
+              - type: ovs_bridge
+{{- if eq $net.Name "External" }}
+                name: bridge_name
+{{- else }}
+                name: br-{{ $net.NameLower }}
+{{- end }}
+                mtu:
+                  get_param: {{ $net.Name }}Mtu
+                dns_servers:
+                  get_param: DnsServers
+                use_dhcp: false
+                addresses:
+                - ip_netmask:
+                    get_param: {{ $net.Name }}IpSubnet
+                routes:
+                  list_concat_unique:
+                    - get_param: {{ $net.Name }}InterfaceRoutes
+                    - - default: true
+                        next_hop:
+                          get_param: {{ $net.Name }}InterfaceDefaultRoute
+                members:
+                - type: interface
+                  name: nic{{ $nic_counter }}
+                  mtu:
+                    get_param: {{ $net.Name }}Mtu
+                  use_dhcp: false
+                  primary: true
+{{- end }}
+{{- end }}
+outputs:
+  OS::stack_id:
+    description: The OsNetConfigImpl resource.
+    value:
+      get_resource: OsNetConfigImpl

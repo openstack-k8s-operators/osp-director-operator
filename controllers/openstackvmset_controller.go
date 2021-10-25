@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -164,9 +165,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
 	err = r.generateNamespaceFencingData(instance)
-
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	// Initialize conditions list if not already set
@@ -232,13 +232,13 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	cloudinit := []common.Template{
 		// CloudInitSecret
 		{
-			Name:           fmt.Sprintf("%s-cloudinit", instance.Name),
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeNone,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{"userdata": "/vmset/cloudinit/userdata"},
-			Labels:         secretLabels,
-			ConfigOptions:  templateParameters,
+			Name:               fmt.Sprintf("%s-cloudinit", instance.Name),
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeNone,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{"userdata": "/vmset/cloudinit/userdata"},
+			Labels:             secretLabels,
+			ConfigOptions:      templateParameters,
 		},
 		// TODO: mschuppert should we have this?
 		// CloudInitCustomSecret
@@ -702,12 +702,12 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 
 	saSecretTemplate := []common.Template{
 		{
-			Name:           vmset.KubevirtFencingServiceAccountSecret,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeCustom,
-			SecretType:     corev1.SecretTypeServiceAccountToken,
-			InstanceType:   instance.Kind,
-			AdditionalData: nil,
+			Name:               vmset.KubevirtFencingServiceAccountSecret,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeCustom,
+			SecretType:         corev1.SecretTypeServiceAccountToken,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: nil,
 			Annotations: map[string]string{
 				common.ServiceAccountAnnotationName: vmset.KubevirtFencingServiceAccount,
 			},
@@ -746,13 +746,14 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 
 	kubeconfigTemplate := []common.Template{
 		{
-			Name:           vmset.KubevirtFencingKubeconfigSecret,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeNone,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{"kubeconfig": "/vmset/fencing-kubeconfig/fencing-kubeconfig"},
-			Labels:         labels,
-			ConfigOptions:  templateParameters,
+			Name:               vmset.KubevirtFencingKubeconfigSecret,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeNone,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{"kubeconfig": "/vmset/fencing-kubeconfig/fencing-kubeconfig"},
+			Labels:             labels,
+			ConfigOptions:      templateParameters,
+			SkipSetOwner:       true,
 		},
 	}
 
@@ -777,13 +778,13 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *o
 	}
 	networkdata := []common.Template{
 		{
-			Name:           host.NetworkDataSecret,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeNone,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
-			Labels:         host.Labels,
-			ConfigOptions:  templateParameters,
+			Name:               host.NetworkDataSecret,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeNone,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{"networkdata": "/vmset/cloudinit/networkdata"},
+			Labels:             host.Labels,
+			ConfigOptions:      templateParameters,
 		},
 	}
 
@@ -863,6 +864,16 @@ func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine
 
 // SetupWithManager -
 func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// index spec.isTripleoRole so that it can be used to
+	// https://github.com/kubernetes-sigs/kubebuilder/issues/547#issuecomment-573870160
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &ospdirectorv1beta1.OpenStackVMSet{}, "spec.isTripleoRole", func(obj client.Object) []string {
+		vmset := obj.(*ospdirectorv1beta1.OpenStackVMSet)
+		return []string{strconv.FormatBool(vmset.Spec.IsTripleoRole)}
+	}); err != nil {
+		return err
+	}
+
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).

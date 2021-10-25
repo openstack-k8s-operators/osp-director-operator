@@ -148,6 +148,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	tripleoDeployFiles := tripleoDeployCM.Data
 	// Delete network_data.yaml from tripleoDeployFiles as it is not an ooo parameter env file
 	delete(tripleoDeployFiles, "network_data.yaml")
+	// Delete all role nic templates from tripleoDeployFiles as it is not an ooo parameter env file
+	for k := range tripleoDeployFiles {
+		if strings.HasSuffix(k, "nic-template.yaml") || strings.HasSuffix(k, "nic-template.j2") {
+			delete(tripleoDeployFiles, k)
+		}
+	}
+
 	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
@@ -171,13 +178,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	cms := []common.Template{
 		{
-			Name:           "openstackplaybook-script-" + instance.Name,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeScripts,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			ConfigOptions:  templateParameters,
-			Labels:         cmLabels,
+			Name:               "openstackplaybook-script-" + instance.Name,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeScripts,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			ConfigOptions:      templateParameters,
+			Labels:             cmLabels,
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
@@ -261,13 +268,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	cm := []common.Template{
 		{
-			Name:           "fencing-config",
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeConfig,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			Labels:         cmLabels,
-			ConfigOptions:  templateParameters,
+			Name:               "fencing-config",
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeConfig,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			Labels:             cmLabels,
+			ConfigOptions:      templateParameters,
 		},
 	}
 

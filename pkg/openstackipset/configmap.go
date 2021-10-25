@@ -16,14 +16,18 @@ limitations under the License.
 package openstackipset
 
 import (
+	"context"
 	"fmt"
 	"net"
 
 	"strconv"
 	"strings"
 
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type networkType struct {
@@ -52,11 +56,14 @@ type ipType struct {
 	Subnet       string // e.g. 192.168.24.0/24
 }
 
-type roleType struct {
-	Name      string
-	NameLower string
-	Networks  map[string]*networkType
-	Nodes     map[string]*nodeType
+// RoleType - details of the tripleo role
+type RoleType struct {
+	Name          string
+	NameLower     string
+	Networks      map[string]*networkType
+	Nodes         map[string]*nodeType
+	IsVMType      bool
+	IsTripleoRole bool
 }
 
 type nodeType struct {
@@ -78,7 +85,7 @@ func getCidrParts(cidr string) (string, int, error) {
 }
 
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
-func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList, overcloudMACList ospdirectorv1beta1.OpenStackMACAddressList) (map[string]interface{}, error) {
+func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta1.OpenStackIPSet, osNetList ospdirectorv1beta1.OpenStackNetList, osMACList ospdirectorv1beta1.OpenStackMACAddressList) (map[string]interface{}, map[string]*RoleType, error) {
 
 	templateParameters := make(map[string]interface{})
 
@@ -89,10 +96,10 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 
 	// map with details for all networks
 	networksMap := map[string]*networkType{}
-	rolesMap := map[string]*roleType{}
+	rolesMap := map[string]*RoleType{}
 	var osnetName string
 
-	for _, osnet := range overcloudNetList.Items {
+	for _, osnet := range osNetList.Items {
 
 		// CR names won't allow '_', need to change tripleo nets using those
 		switch osnet.Name {
@@ -108,7 +115,7 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 		if networksMap[osnetName] == nil {
 			netAddr, cidrSuffix, err := getCidrParts(osnet.Spec.Cidr)
 			if err != nil {
-				return templateParameters, err
+				return templateParameters, rolesMap, err
 			}
 
 			netType := "ipv4"
@@ -133,17 +140,25 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 		}
 
 		for roleName, roleReservation := range osnet.Status.RoleReservations {
+			// check if role is VM
+			isVMType, isTripleoRole, err := isVMRole(r, strings.ToLower(roleName), instance.Namespace)
+			if err != nil {
+				return templateParameters, rolesMap, err
+			}
+
 			if !roleReservation.AddToPredictableIPs {
 				continue
 			}
 
 			// create map of all roles with Name and Count
 			if rolesMap[roleName] == nil {
-				rolesMap[roleName] = &roleType{
-					Name:      roleName,
-					NameLower: strings.ToLower(roleName),
-					Networks:  map[string]*networkType{},
-					Nodes:     map[string]*nodeType{},
+				rolesMap[roleName] = &RoleType{
+					Name:          roleName,
+					NameLower:     strings.ToLower(roleName),
+					Networks:      map[string]*networkType{},
+					Nodes:         map[string]*nodeType{},
+					IsVMType:      isVMType,
+					IsTripleoRole: isTripleoRole,
 				}
 			}
 
@@ -157,7 +172,7 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 
 				ovnStaticBridgeMappings := map[string]string{}
 				// get OVNStaticBridgeMacMappings information from overcloudMACList
-				for _, macReservations := range overcloudMACList.Items {
+				for _, macReservations := range osMACList.Items {
 					for node, macReservation := range macReservations.Status.MACReservations {
 						if node == reservation.Hostname {
 							for net, mac := range macReservation.Reservations {
@@ -200,8 +215,25 @@ func CreateConfigMapParams(overcloudNetList ospdirectorv1beta1.OpenStackNetList,
 	templateParameters["RolesMap"] = rolesMap
 	templateParameters["NetworksMap"] = networksMap
 
-	return templateParameters, nil
+	return templateParameters, rolesMap, nil
 
+}
+
+// isVMRole - check if role is VMset and tripleo role
+func isVMRole(r common.ReconcilerCommon, roleName string, namespace string) (bool, bool, error) {
+
+	vmset := &ospdirectorv1beta1.OpenStackVMSet{}
+
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: roleName, Namespace: namespace}, vmset)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return false, false, err
+	}
+
+	if vmset != nil {
+		return true, vmset.Spec.IsTripleoRole, nil
+	}
+
+	return false, false, nil
 }
 
 // GetNetNameLower -

@@ -16,6 +16,9 @@ resource_registry:
   OS::TripleO::OVNMacAddressNetwork: OS::Heat::None
   OS::TripleO::OVNMacAddressPort: OS::Heat::None
 {{- range $roleid, $role := .RolesMap }}
+{{- if and $role.IsVMType $role.IsTripleoRole }}
+  OS::TripleO::{{ $role.Name }}::Net::SoftwareConfig: {{ $role.NameLower }}-nic-template.yaml
+{{- end }}
 {{- if ne $role.Name "ControlPlane" }}
 {{- range $netid, $net := $role.Networks }}
 {{- if ne $net.NameLower "ctlplane" }}
@@ -34,6 +37,7 @@ parameter_defaults:
   ManageNetworks: False
   MistralDockerGroup: false
   ContainerCli: podman
+  NeutronPublicInterface: nic3
   #
   # DeployedServerPortMap
   DeployedServerPortMap:

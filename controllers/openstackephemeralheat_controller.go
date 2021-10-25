@@ -159,13 +159,13 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{
-			Name:           "openstackephemeralheat-" + instance.Name,
-			Namespace:      instance.Namespace,
-			Type:           common.TemplateTypeScripts,
-			InstanceType:   instance.Kind,
-			AdditionalData: map[string]string{},
-			ConfigOptions:  templateParameters,
-			Labels:         cmLabels,
+			Name:               "openstackephemeralheat-" + instance.Name,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeScripts,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			ConfigOptions:      templateParameters,
+			Labels:             cmLabels,
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
@@ -346,7 +346,7 @@ func (r *OpenStackEphemeralHeatReconciler) resourceCleanup(instance *ospdirector
 		return err
 	}
 	// delete service
-	if err := common.DeleteSericesWithLabel(r, instance, labelSelector); err != nil {
+	if err := common.DeleteServicesWithLabel(r, instance, labelSelector); err != nil {
 		return err
 	}
 	// delete replicaset

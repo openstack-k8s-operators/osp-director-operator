@@ -145,7 +145,15 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), secret, func() error {
 		secret.Labels = st.Labels
 		// add data from templates
-		dataString := getTemplateData(st)
+		dataString := GetTemplateData(st)
+		// add provided custom data to dataString
+		// Note: this can overwrite data rendered from GetTemplateData() if key is same
+		if len(st.CustomData) > 0 {
+			for k, v := range st.CustomData {
+				dataString[k] = v
+			}
+		}
+
 		for k, d := range dataString {
 			data[k] = []byte(d)
 		}
@@ -153,9 +161,11 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 
 		// Only set controller ref if namespaces are equal, else we hit an error
 		if obj.GetNamespace() == secret.Namespace {
-			err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
-			if err != nil {
-				return err
+			if !st.SkipSetOwner {
+				err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			// Set ownership labels that can be found by the respective controller kind

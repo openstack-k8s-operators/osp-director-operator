@@ -49,7 +49,14 @@ func createOrUpdateConfigMap(r ReconcilerCommon, obj metav1.Object, cm Template)
 
 		configMap.Labels = cm.Labels
 		// add data from templates
-		configMap.Data = getTemplateData(cm)
+		configMap.Data = GetTemplateData(cm)
+		// add provided custom data to configMap.Data
+		// Note: this can overwrite data rendered from GetTemplateData() if key is same
+		if len(cm.CustomData) > 0 {
+			for k, v := range cm.CustomData {
+				configMap.Data[k] = v
+			}
+		}
 
 		if !cm.SkipSetOwner {
 			err := controllerutil.SetControllerReference(obj, configMap, r.GetScheme())
