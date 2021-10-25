@@ -3,23 +3,12 @@ kind: OpenStackNet
 metadata:
   name: internalapi
 spec:
-  cidr: 172.16.2.0/24
+  allocationEnd: 172.17.0.250
+  allocationStart: 172.17.0.10
+  attachConfiguration: br-osp
+  cidr: 172.17.0.0/24
+  mtu: 1350
+  name: InternalApi
+  nameLower: internal_api
+  vip: true
   vlan: 20
-  allocationStart: 172.16.2.4
-  allocationEnd: 172.16.2.250
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge

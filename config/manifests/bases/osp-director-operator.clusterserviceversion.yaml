@@ -69,6 +69,17 @@ spec:
       kind: OpenStackMACAddress
       name: openstackmacaddresses.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackNetAttachment is the Schema for the openstacknetattachments
+        API
+      displayName: OpenStack NetAttachment
+      kind: OpenStackNetAttachment
+      name: openstacknetattachments.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackNetConfig is the Schema for the openstacknetconfigs API
+      displayName: OpenStack NetConfig
+      kind: OpenStackNetConfig
+      name: openstacknetconfigs.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackNet represents the IPAM configuration for baremetal and
         VM hosts within OpenStack Overcloud deployment
       displayName: OpenStack Net

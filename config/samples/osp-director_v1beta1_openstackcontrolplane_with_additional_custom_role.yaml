@@ -23,10 +23,10 @@ spec:
       networks:
       - ctlplane
       - external
-      - internalapi
+      - internal_api
       - tenant
       - storage
-      - storagemgmt
+      - storage_mgmt
     somecustomrole:
       roleName: SomeCustomRole
       isTripleoRole: false
@@ -40,4 +40,4 @@ spec:
       networks:
       - ctlplane
       - external
-      - internalapi
+      - internal_api

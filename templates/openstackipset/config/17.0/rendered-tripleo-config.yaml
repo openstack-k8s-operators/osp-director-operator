@@ -1,4 +1,4 @@
-{{/* info on golang template at https://pkg.go.dev/text/template */}}
+{{- /* golang template - https://pkg.go.dev/text/template */ -}}
 # Resource Registry
 resource_registry:
   OS::TripleO::Server: deployed-server/deployed-server.yaml
@@ -74,7 +74,7 @@ parameter_defaults:
 {{- if not $node.VIP }}
     {{ $node.Hostname }}:
 {{- range $netname, $ip := $node.IPaddr }}
-      {{ $netname }}:
+      {{ $ip.Network.NameLower }}:
         ip_address: {{ $ip.IPaddr }}
         ip_address_uri: '{{ $ip.IPAddrURI }}'
         ip_subnet: {{ $ip.IPAddrSubnet }}
@@ -113,7 +113,7 @@ parameter_defaults:
     name: control_virtual_ip
     network:
       tags:
-      - {{ $ip.Subnet }}
+      - {{ $ip.Network.Cidr }}
     subnets:
     - ip_version: 4
 {{- end }}

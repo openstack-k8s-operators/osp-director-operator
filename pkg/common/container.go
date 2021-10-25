@@ -26,7 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// GetOSPVersion -
+// GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
+//  - TemplateVersion16_2 for eitner 16.2 or upstream train
+//  - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
 func GetOSPVersion(parsedVersion string) (ospdirectorv1beta1.OSPVersion, error) {
 	log.Log.Info(fmt.Sprintf("Parsed OSP Version %s", parsedVersion))
 	switch parsedVersion {

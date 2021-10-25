@@ -13,6 +13,7 @@ spec:
   # Networks to associate with this host
   networks:
     - ctlplane
+    - internal_api
     - tenant
   roleName: Compute
   # PasswordSecret the name of the secret used to optionally set the root pwd by adding

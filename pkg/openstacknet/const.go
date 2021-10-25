@@ -22,4 +22,11 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstacknet.osp-director.openstack.org"
+
+	// NetworkNameLabelSelector -
+	NetworkNameLabelSelector = "ooo-netname"
+	// NetworkNameLowerLabelSelector -
+	NetworkNameLowerLabelSelector = "ooo-netname-lower"
+	// SubNetNameLabelSelector -
+	SubNetNameLabelSelector = "ooo-subnetname"
 )

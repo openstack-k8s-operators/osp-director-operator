@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,8 +31,9 @@ import (
 // OpenStackConfigVersionReconciler reconciles a OpenStackConfigVersion object
 type OpenStackConfigVersionReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfigversions,verbs=get;list;watch;create;update;patch;delete

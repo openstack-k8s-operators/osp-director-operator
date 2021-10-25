@@ -3,24 +3,12 @@ kind: OpenStackNet
 metadata:
   name: external
 spec:
+  allocationEnd: 10.0.0.250
+  allocationStart: 10.0.0.10
+  attachConfiguration: br-ex
   cidr: 10.0.0.0/24
   gateway: 10.0.0.1
-  vlan: 10
-  allocationStart: 10.0.0.4
-  allocationEnd: 10.0.0.250
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
-          name: br-ex
-          state: up
-          type: linux-bridge
+  mtu: 1500
+  name: External
+  nameLower: external
+  vip: true

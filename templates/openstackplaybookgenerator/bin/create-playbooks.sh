@@ -39,6 +39,10 @@ mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 
+# temporary fix for multiple subnets - https://review.opendev.org/c/openstack/tripleo-heat-templates/+/817966
+sed -i "s/network\.subnets\[subnet\]\[routes\]/network\.subnets\[subnet\]\['routes'\]/" $TEMPLATES_DIR/environments/network-environment.j2.yaml
+sed -i "s/network\.subnets\[subnet\]\[routes_ipv6\]/network\.subnets\[subnet\]\['routes_ipv6'\]/" $TEMPLATES_DIR/environments/network-environment.j2.yaml
+
 # copy to editable dir config-tmp
 rm -Rf $HOME/config-tmp
 mkdir -p $HOME/config-tmp
@@ -91,6 +95,8 @@ time openstack stack create --wait \
     -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
+    -e $TEMPLATES_DIR/environments/network-isolation.yaml \
+    -e $TEMPLATES_DIR/environments/network-environment.yaml \
     -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
     -e $TEMPLATES_DIR/fencing.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}

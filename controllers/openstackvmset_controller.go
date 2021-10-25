@@ -240,14 +240,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Labels:             secretLabels,
 			ConfigOptions:      templateParameters,
 		},
-		// TODO: mschuppert should we have this?
-		// CloudInitCustomSecret
-		//{
-		//	Name:      fmt.Sprintf("%s-cloudinit-custom", instance.Name),
-		//	Namespace: instance.Namespace,
-		//	Type:      common.TemplateTypeCustom,
-		//	Labels:    secretLabels,
-		//},
 	}
 
 	err = common.EnsureSecrets(r, instance, cloudinit, &envVars)
@@ -281,22 +273,39 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	for _, net := range instance.Spec.Networks {
+	for _, netNameLower := range instance.Spec.Networks {
 		timeout := 10
 		var msg string
 		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
 
-		if osNetBindings[net] == "" {
-			// Non-SRIOV networks should have a NetworkAttachmentDefinition
-			if _, ok := nadMap[net]; !ok {
-				msg = fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
+				continue
 			}
-		} else if osNetBindings[net] == "sriov" {
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+
+		if osNetBindings[network.Spec.NameLower] == "" {
+			// Non-SRIOV networks should have a NetworkAttachmentDefinition
+			if _, ok := nadMap[network.Name]; !ok {
+				msg = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
+			}
+		} else if osNetBindings[network.Spec.NameLower] == "sriov" {
 			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
-			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", net)]; !ok {
-				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
-			} else if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", net)]; !ok {
-				msg = fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in %d seconds", net, timeout)
+			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", network.Spec.NameLower)]; !ok {
+				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
+			} else if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", network.Spec.NameLower)]; !ok {
+				msg = fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
 			}
 		}
 
@@ -1073,23 +1082,40 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		networks := instance.Spec.Networks
 		// sort networks to get an expected ordering for easier ooo nic template creation
 		sort.Strings(networks)
-		for _, net := range networks {
+		for _, netNameLower := range networks {
 
-			if _, ok := osNetBindings[net]; !ok {
-				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found for network %s", net)
+			// get network with name_lower label
+			network, err := openstacknet.GetOpenStackNetWithLabel(
+				r,
+				instance.Namespace,
+				map[string]string{
+					openstacknet.SubNetNameLabelSelector: netNameLower,
+				},
+			)
+			if err != nil {
+				if k8s_errors.IsNotFound(err) {
+					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
+					continue
+				}
+				// Error reading the object - requeue the request.
+				return err
+			}
+
+			if _, ok := osNetBindings[netNameLower]; !ok {
+				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found %s - available bindings: %v", network.Name, osNetBindings)
 			}
 
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
 				vm.Spec.Template.Spec.Domain.Devices.Interfaces,
 				vmset.InterfaceSetterMap{
-					net: vmset.Interface(net, osNetBindings[net]),
+					network.Name: vmset.Interface(network.Name, osNetBindings[netNameLower]),
 				},
 			)
 
 			vm.Spec.Template.Spec.Networks = vmset.MergeVMNetworks(
 				vm.Spec.Template.Spec.Networks,
 				vmset.NetSetterMap{
-					net: vmset.Network(net, osNetBindings[net]),
+					network.Name: vmset.Network(network.Name, osNetBindings[netNameLower]),
 				},
 			)
 		}

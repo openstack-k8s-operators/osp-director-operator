@@ -35,6 +35,9 @@ spec:
     - jsonPath: .spec.gateway
       name: Gateway
       type: string
+    - jsonPath: .spec.routes
+      name: Routes
+      type: string
     - jsonPath: .status.reservedIpCount
       name: Reserved IPs
       type: integer
@@ -72,70 +75,9 @@ spec:
                   not be assigned
                 type: string
               attachConfiguration:
-                description: AttachConfiguration used for NodeNetworkConfigurationPolicy
-                  and NetworkAttachmentDefinition
-                properties:
-                  nodeNetworkConfigurationPolicy:
-                    description: NodeNetworkConfigurationPolicySpec defines the desired
-                      state of NodeNetworkConfigurationPolicy
-                    properties:
-                      desiredState:
-                        description: The desired configuration of the policy
-                        type: object
-                        x-kubernetes-preserve-unknown-fields: true
-                      nodeSelector:
-                        additionalProperties:
-                          type: string
-                        description: 'NodeSelector is a selector which must be true
-                          for the policy to be applied to the node. Selector which
-                          must match a node''s labels for the policy to be scheduled
-                          on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
-                        type: object
-                    type: object
-                  nodeSriovConfigurationPolicy:
-                    description: NodeSriovConfigurationPolicy - Node selector and
-                      desired state for SRIOV network
-                    properties:
-                      desiredState:
-                        description: SriovState - SRIOV-specific configuration details
-                          for an OSP network
-                        properties:
-                          deviceType:
-                            default: vfio-pci
-                            type: string
-                          mtu:
-                            default: 9000
-                            format: int32
-                            type: integer
-                          numVfs:
-                            format: int32
-                            type: integer
-                          port:
-                            type: string
-                          rootDevice:
-                            type: string
-                          spoofCheck:
-                            default: "on"
-                            enum:
-                            - "on"
-                            - "off"
-                            type: string
-                          trust:
-                            default: "off"
-                            enum:
-                            - "on"
-                            - "off"
-                            type: string
-                        required:
-                        - numVfs
-                        - port
-                        type: object
-                      nodeSelector:
-                        additionalProperties:
-                          type: string
-                        type: object
-                    type: object
-                type: object
+                description: AttachConfiguration, which attachConfigurations this
+                  OSNet uses
+                type: string
               cidr:
                 description: Cidr the cidr to use for this network
                 type: string
@@ -146,6 +88,31 @@ spec:
                 default: 1500
                 description: MTU of the network
                 type: integer
+              name:
+                description: Name of the tripleo network this network belongs to,
+                  e.g. External, InternalApi, ...
+                type: string
+              nameLower:
+                description: NameLower the name of the subnet, name_lower name of
+                  the tripleo subnet, e.g. external, internal_api, internal_api_leaf1
+                type: string
+              routes:
+                description: Routes, list of networks that should be routed via network
+                  gateway.
+                items:
+                  description: Route definition
+                  properties:
+                    destination:
+                      description: Destination, network CIDR
+                      type: string
+                    nexthop:
+                      description: Nexthop, gateway for the destination
+                      type: string
+                  required:
+                  - destination
+                  - nexthop
+                  type: object
+                type: array
               vip:
                 default: true
                 description: VIP create virtual ip on the network
@@ -158,6 +125,8 @@ spec:
             - allocationStart
             - attachConfiguration
             - cidr
+            - name
+            - nameLower
             type: object
           status:
             description: OpenStackNetStatus defines the observed state of OpenStackNet

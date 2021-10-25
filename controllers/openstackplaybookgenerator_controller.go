@@ -201,13 +201,18 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	// reinitialization)
 	templateParameters = make(map[string]interface{})
 
-	// get OSPVersion from ControlPlane CR
+	// get unified OSPVersion from ControlPlane CR
+	// which means also get either 16.2 or 17.0 for upstream versions
 	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
 	if err != nil {
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrlResult, err
 	}
-	OSPVersion = controlPlane.Status.OSPVersion
+	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrlResult, err
+	}
 
 	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
 		msg := fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
@@ -612,7 +617,11 @@ func (r *OpenStackPlaybookGeneratorReconciler) verifyNodeResourceStatus(instance
 	}
 
 	for _, bmset := range bmsetList.Items {
-		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioningState(ospdirectorv1beta1.BaremetalSetProvisioned) {
+		//
+		// wait for all BMS be provisioned if baremetalhosts for the bms are requested
+		//
+		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioningState(ospdirectorv1beta1.BaremetalSetProvisioned) &&
+			bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioningState(ospdirectorv1beta1.BaremetalSetEmpty) {
 			msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
 			return msg, false, nil
 		}

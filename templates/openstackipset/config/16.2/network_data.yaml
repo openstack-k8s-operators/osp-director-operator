@@ -1,26 +1,92 @@
+{{- /* golang template - https://pkg.go.dev/text/template */ -}}
 {{- range $netname, $net := .NetworksMap }}
 {{- if ne $net.Name "Control" }}
 - name: {{ $net.Name }}
-  vip: {{ $net.VIP }}
   name_lower: {{ $net.NameLower }}
-{{- if eq $net.NetType "ipv4" }}
-  ip_subnet: '{{ $net.Cidr }}'
-  allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
-{{- if ne $net.Gateway "" }}
-  gateway_ip: '{{ $net.Gateway }}'
-{{- end }}
-{{- end }}
-{{- if eq $net.NetType "ipv6" }}
-  ipv6: true
-  ipv6_subnet: '{{ $net.Cidr }}'
-  ipv6_allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
-{{- if ne $net.Gateway "" }}
-  gateway_ipv6: '{{ $net.Gateway }}'
-{{- end }}
-{{- end }}
+  vip: {{ $net.VIP }}
   mtu: {{ $net.MTU }}
-{{- if ne $net.Vlan 0 }}
-  vlan: {{ $net.Vlan }}
+{{- /* Default net start */ -}}
+{{- if ne $net.DefaultSubnet.Vlan 0 }}
+  vlan: {{ $net.DefaultSubnet.Vlan }}
+{{- end }}
+{{- /* IPv4 default net start */ -}}
+{{- if ne $net.DefaultSubnet.IPv4.Cidr "" }}
+  ip_subnet: '{{ $net.DefaultSubnet.IPv4.Cidr }}'
+  allocation_pools: [{'start': '{{ $net.DefaultSubnet.IPv4.AllocationStart }}', 'end': '{{ $net.DefaultSubnet.IPv4.AllocationEnd }}'}]
+{{- if ne $net.DefaultSubnet.IPv4.Gateway "" }}
+  gateway_ip: '{{ $net.DefaultSubnet.IPv4.Gateway }}'
+{{- end }}
+{{- if not (eq (len $net.DefaultSubnet.IPv4.Routes) 0) }}
+  routes:
+{{- range $netname, $route := $net.DefaultSubnet.IPv4.Routes }}
+  - destination: '{{ $route.Destination }}'
+    nexthop: '{{ $route.Nexthop }}'
+{{- end }}
+{{- end }}
+{{- /* IPv6 only if ip_subnet not defined */ -}}
+{{- else }}
+  ipv6: true
+{{- end }}
+{{- /* IPv4 default net end */ -}}
+{{- /* IPv6 default net start */ -}}
+{{- if ne $net.DefaultSubnet.IPv6.Cidr "" }}
+  ipv6_subnet: '{{ $net.DefaultSubnet.IPv6.Cidr }}'
+  ipv6_allocation_pools: [{'start': '{{ $net.DefaultSubnet.IPv6.AllocationStart }}', 'end': '{{ $net.DefaultSubnet.IPv6.AllocationEnd }}'}]
+{{- if ne $net.DefaultSubnet.IPv6.Gateway "" }}
+  gateway_ipv6: '{{ $net.DefaultSubnet.IPv6.Gateway }}'
+{{- end }}
+{{- if not (eq (len $net.DefaultSubnet.IPv6.Routes) 0) }}
+  routes_ipv6:
+{{- range $netname, $route := $net.DefaultSubnet.IPv6.Routes }}
+  - destination: '{{ $route.Destination }}'
+    nexthop: '{{ $route.Nexthop }}'
 {{- end }}
 {{- end }}
 {{- end }}
+{{- /* IPv6 default net end */ -}}
+{{- /* Default net end */ -}}
+{{- /* subnets start */ -}}
+{{- if not (eq (len $net.Subnets) 0) }}
+  subnets:
+{{- range $subnetname, $subnet := $net.Subnets }}
+    {{ $subnet.Name }}:
+{{- if ne $subnet.Vlan 0 }}
+      vlan: {{ $subnet.Vlan }}
+{{- end }}
+{{- /* IPv4 subnet start */ -}}
+{{- if ne $subnet.IPv4.Cidr "" }}
+      ip_subnet: '{{ $subnet.IPv4.Cidr }}'
+      allocation_pools: [{'start': '{{ $subnet.IPv4.AllocationStart }}', 'end': '{{ $subnet.IPv4.AllocationEnd }}'}]
+{{- if ne $subnet.IPv4.Gateway "" }}
+      gateway_ip: '{{ $subnet.IPv4.Gateway }}'
+{{- end }}
+{{- if not (eq (len $subnet.IPv4.Routes) 0) }}
+      routes:
+{{- range $netname, $route := $subnet.IPv4.Routes }}
+      - destination: '{{ $route.Destination }}'
+        nexthop: '{{ $route.Nexthop }}'
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /* IPv4 subnet end */ -}}
+{{- /* IPv6 subnet start */ -}}
+{{- if ne $subnet.IPv6.Cidr "" }}
+      ipv6_subnet: '{{ $subnet.IPv6.Cidr }}'
+      ipv6_allocation_pools: [{'start': '{{ $subnet.IPv6.AllocationStart }}', 'end': '{{ $subnet.IPv6.AllocationEnd }}'}]
+{{- if ne $subnet.IPv6.Gateway "" }}
+      gateway_ipv6: '{{ $subnet.IPv6.Gateway }}'
+{{- end }}
+{{- if not (eq (len $subnet.IPv6.Routes) 0) }}
+      routes:
+{{- range $netname, $route := $subnet.IPv6.Routes }}
+      - destination: '{{ $route.Destination }}'
+        nexthop: '{{ $route.Nexthop }}'
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /* IPv6 subnet end */ -}}
+{{- end }}
+{{- end }}
+{{- /* subnets end */ -}}
+{{- end }}
+{{- end -}}

@@ -70,15 +70,36 @@ webhooks:
     - openstacknets
   sideEffects: None
 - admissionReviewVersions:
+￼  - v1
+￼  - v1beta1
+￼  clientConfig:
+￼    service:
+￼      name: webhook-service
+￼      namespace: system
+￼      path: /mutate-osp-director-openstack-org-v1beta1-openstackplaybookgenerator
+￼  failurePolicy: Fail
+￼  name: mopenstackplaybookgenerator.kb.io
+￼  rules:
+￼  - apiGroups:
+￼    - osp-director.openstack.org
+￼    apiVersions:
+￼    - v1beta1
+￼    operations:
+￼    - CREATE
+￼    - UPDATE
+￼    resources:
+￼    - openstackplaybookgenerators
+￼  sideEffects: None
+- admissionReviewVersions:
   - v1
   - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-osp-director-openstack-org-v1beta1-openstackplaybookgenerator
+      path: /mutate-osp-director-openstack-org-v1beta1-openstacknetattachment
   failurePolicy: Fail
-  name: mopenstackplaybookgenerator.kb.io
+  name: mopenstacknetattachment.kb.io
   rules:
   - apiGroups:
     - osp-director.openstack.org
@@ -88,7 +109,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - openstackplaybookgenerators
+    - openstacknetattachments
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -181,6 +202,27 @@ webhooks:
     - UPDATE
     resources:
     - openstacknets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-openstacknetattachment
+  failurePolicy: Fail
+  name: vopenstacknetattachment.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstacknetattachments
   sideEffects: None
 - admissionReviewVersions:
   - v1

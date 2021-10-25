@@ -1,4 +1,4 @@
-{{/* info on golang template at https://pkg.go.dev/text/template */}}
+{{- /* golang template - https://pkg.go.dev/text/template */ -}}
 # Resource Registry
 resource_registry:
   OS::TripleO::Services::Docker: OS::Heat::None
@@ -53,10 +53,10 @@ parameter_defaults:
       fixed_ips:
         - ip_address: {{ $ip.IPaddr }}
       subnets:
-        - cidr: {{ $ip.Subnet }}
+        - cidr: {{ $ip.Network.Cidr }}
       network:
         tags:
-          - {{ $ip.Subnet }}
+          - {{ $ip.Network.Cidr }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -65,13 +65,15 @@ parameter_defaults:
   # Per ctlplane details
 {{- range $netid, $net := .NetworksMap }}
 {{- if eq $net.Name "Control" }}
-  ControlPlaneDefaultRoute: {{ $net.Gateway }}
-  ControlPlaneSubnetCidr: {{ $net.CidrSuffix }}
+{{- if ne $net.DefaultSubnet.IPv4.Cidr "" }}
+  ControlPlaneDefaultRoute: {{ $net.DefaultSubnet.IPv4.Gateway }}
+  ControlPlaneSubnetCidr: {{ $net.DefaultSubnet.IPv4.CidrSuffix }}
+{{- end }}
 {{- end }}
 {{- end }}
   #
   #<NETNAME>NetworkVip
-  {{- range $roleid, $role := .RolesMap }}
+{{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
 {{- if $node.VIP }}
@@ -113,7 +115,7 @@ parameter_defaults:
       {{ $network.NameLower }}:
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
-{{- if eq $ip.Subnet $network.Cidr }}
+{{- if eq $ip.Network.Cidr $network.Cidr }}
         - {{ $ip.IPaddr }}
 {{- end }}
 {{- end }}

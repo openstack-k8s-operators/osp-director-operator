@@ -36,6 +36,7 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -202,9 +203,26 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	for _, net := range instance.Spec.Networks {
-		if _, ok := nadMap[net]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", net))
+	for _, netNameLower := range instance.Spec.Networks {
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
+				continue
+			}
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+
+		if _, ok := nadMap[network.Name]; !ok {
+			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", netNameLower))
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
@@ -356,8 +374,26 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotation := "["
-	for id, net := range instance.Spec.Networks {
-		annotation += fmt.Sprintf("{\"name\": \"%s-static\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", net, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses[net])
+	for id, netName := range instance.Spec.Networks {
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netName,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
+				continue
+			}
+			// Error reading the object - requeue the request.
+			return "", err
+		}
+
+		nad := fmt.Sprintf("%s-static", network.Name)
+		annotation += fmt.Sprintf("{\"name\": \"%s\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", nad, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses[netName])
 		if id < len(instance.Spec.Networks)-1 {
 			annotation += ", "
 		}

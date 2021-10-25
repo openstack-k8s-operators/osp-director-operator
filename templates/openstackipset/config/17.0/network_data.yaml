@@ -1,31 +1,57 @@
+{{- /* golang template - https://pkg.go.dev/text/template */ -}}
 {{- range $netname, $net := .NetworksMap }}
 {{- if ne $net.Name "Control" }}
 - name: {{ $net.Name }}
-  vip: {{ $net.VIP }}
   name_lower: {{ $net.NameLower }}
+  vip: {{ $net.VIP }}
   mtu: {{ $net.MTU }}
+{{- /* TODO: ipv6 only
 {{- if eq $net.NetType "ipv6" }}
   ipv6: true
 {{- end }}
+*/ -}}
+{{- /* subnets start */ -}}
+{{- if not (eq (len $net.Subnets) 0) }}
   subnets:
-    {{ $net.NameLower }}_subnet:
-      enable_dhcp: false
-{{- if ne $net.Vlan 0 }}
-      vlan: {{ $net.Vlan }}
+{{- range $subnetname, $subnet := $net.Subnets }}
+    {{ $subnet.Name }}_subnet:
+{{- if ne $subnet.Vlan 0 }}
+      vlan: {{ $subnet.Vlan }}
 {{- end }}
-{{- if eq $net.NetType "ipv4" }}
-      ip_subnet: '{{ $net.Cidr }}'
-      allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
-{{- if ne $net.Gateway "" }}
-      gateway_ip: '{{ $net.Gateway }}'
+{{- /* IPv4 subnet start */ -}}
+{{- if ne $subnet.IPv4.Cidr "" }}
+      ip_subnet: '{{ $subnet.IPv4.Cidr }}'
+      allocation_pools: [{'start': '{{ $subnet.IPv4.AllocationStart }}', 'end': '{{ $subnet.IPv4.AllocationEnd }}'}]
+{{- if ne $subnet.IPv4.Gateway "" }}
+      gateway_ip: '{{ $subnet.IPv4.Gateway }}'
 {{- end }}
-{{- end }}
-{{- if eq $net.NetType "ipv6" }}
-      ipv6_subnet: '{{ $net.Cidr }}'
-      ipv6_allocation_pools: [{'start': '{{ $net.AllocationStart }}', 'end': '{{ $net.AllocationEnd }}'}]
-{{- if ne $net.Gateway "" }}
-      gateway_ipv6: '{{ $net.Gateway }}'
-{{- end }}
-{{- end }}
+{{- if not (eq (len $subnet.IPv4.Routes) 0) }}
+      routes:
+{{- range $netname, $route := $subnet.IPv4.Routes }}
+      - destination: '{{ $route.Destination }}'
+        nexthop: '{{ $route.Nexthop }}'
 {{- end }}
 {{- end }}
+{{- end }}
+{{- /* IPv4 subnet end */ -}}
+{{- /* IPv6 subnet start */ -}}
+{{- if ne $subnet.IPv6.Cidr "" }}
+      ipv6_subnet: '{{ $subnet.IPv6.Cidr }}'
+      ipv6_allocation_pools: [{'start': '{{ $subnet.IPv6.AllocationStart }}', 'end': '{{ $subnet.IPv6.AllocationEnd }}'}]
+{{- if ne $subnet.IPv6.Gateway "" }}
+      gateway_ipv6: '{{ $subnet.IPv6.Gateway }}'
+{{- end }}
+{{- if not (eq (len $subnet.IPv6.Routes) 0) }}
+      routes:
+{{- range $netname, $route := $subnet.IPv6.Routes }}
+      - destination: '{{ $route.Destination }}'
+        nexthop: '{{ $route.Nexthop }}'
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /* IPv6 subnet end */ -}}
+{{- end }}
+{{- end }}
+{{- /* subnets end */ -}}
+{{- end }}
+{{- end -}}

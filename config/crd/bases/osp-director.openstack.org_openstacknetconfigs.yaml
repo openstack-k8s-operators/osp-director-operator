@@ -1,0 +1,338 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstacknetconfigs.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackNetConfig
+    listKind: OpenStackNetConfigList
+    plural: openstacknetconfigs
+    shortNames:
+    - osnetconfig
+    - osnetsconfig
+    - osnetcfg
+    - osnetscfg
+    singular: openstacknetconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: AttachConfig Desired
+      jsonPath: .status.provisioningStatus.attachDesiredCount
+      name: AttachConfig Desired
+      type: integer
+    - description: AttachConfig Ready
+      jsonPath: .status.provisioningStatus.attachReadyCount
+      name: AttachConfig Ready
+      type: integer
+    - description: Networks Desired
+      jsonPath: .status.provisioningStatus.netDesiredCount
+      name: Networks Desired
+      type: integer
+    - description: Networks Ready
+      jsonPath: .status.provisioningStatus.netReadyCount
+      name: Networks Ready
+      type: integer
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackNetConfig is the Schema for the openstacknetconfigs
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackNetConfigSpec defines the desired state of OpenStackNetConfig
+            properties:
+              attachConfigurations:
+                additionalProperties:
+                  description: NodeConfigurationPolicy - policy definition to create
+                    NodeNetworkConfigurationPolicy or NodeSriovConfigurationPolicy
+                  properties:
+                    nodeNetworkConfigurationPolicy:
+                      description: "\t\t// +kubebuilder:validation:Required \t\t//
+                        Name of the NetworkConfiguration used to reference from the
+                        OpenStackNetworks \t\tName string `json:\"name\"` \n \t\t//
+                        +kubebuilder:validation:Required \t\t// +kubebuilder:validation:Enum={\"bridge\",\"sriov\"}
+                        \t\t// ConfigType \t\tConfigType AttachType `json:\"configType\"`"
+                      properties:
+                        desiredState:
+                          description: The desired configuration of the policy
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        nodeSelector:
+                          additionalProperties:
+                            type: string
+                          description: 'NodeSelector is a selector which must be true
+                            for the policy to be applied to the node. Selector which
+                            must match a node''s labels for the policy to be scheduled
+                            on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                          type: object
+                      type: object
+                    nodeSriovConfigurationPolicy:
+                      description: NodeSriovConfigurationPolicy - Node selector and
+                        desired state for SRIOV network
+                      properties:
+                        desiredState:
+                          description: SriovState - SRIOV-specific configuration details
+                            for an OSP network
+                          properties:
+                            deviceType:
+                              default: vfio-pci
+                              type: string
+                            mtu:
+                              default: 9000
+                              format: int32
+                              type: integer
+                            numVfs:
+                              format: int32
+                              type: integer
+                            port:
+                              type: string
+                            rootDevice:
+                              type: string
+                            spoofCheck:
+                              default: "on"
+                              enum:
+                              - "on"
+                              - "off"
+                              type: string
+                            trust:
+                              default: "off"
+                              enum:
+                              - "on"
+                              - "off"
+                              type: string
+                          required:
+                          - numVfs
+                          - port
+                          type: object
+                        nodeSelector:
+                          additionalProperties:
+                            type: string
+                          type: object
+                      type: object
+                  type: object
+                description: AttachConfigurations used for NodeNetworkConfigurationPolicy
+                  or NodeSriovConfigurationPolicy
+                type: object
+              networks:
+                description: Networks, list of all tripleo networks of the deployment
+                items:
+                  description: Network describes a tripleo network
+                  properties:
+                    mtu:
+                      default: 1500
+                      description: MTU of the network
+                      type: integer
+                    name:
+                      description: Name of the tripleo network this network belongs
+                        to, e.g. External, InternalApi, ...
+                      type: string
+                    nameLower:
+                      description: NameLower the name of the subnet, name_lower name
+                        of the tripleo subnet, e.g. external, internal_api, internal_api_leaf1
+                      type: string
+                    subnets:
+                      description: Subnets of the tripleo network
+                      items:
+                        description: Subnet defines the tripleo subnet
+                        properties:
+                          attachConfiguration:
+                            description: AttachConfiguration, which attachConfigurations
+                              this OSNet uses
+                            type: string
+                          ipv4:
+                            description: IPv4 subnet details
+                            properties:
+                              allocationEnd:
+                                description: AllocationEnd a set of IPs that are reserved
+                                  and will not be assigned
+                                type: string
+                              allocationStart:
+                                description: AllocationStart a set of IPs that are
+                                  reserved and will not be assigned
+                                type: string
+                              cidr:
+                                description: Cidr, network Cidr e.g. 192.168.24.0/24
+                                type: string
+                              gateway:
+                                description: Gateway optional gateway for the network
+                                type: string
+                              routes:
+                                description: Routes, list of networks that should
+                                  be routed via network gateway.
+                                items:
+                                  description: Route definition
+                                  properties:
+                                    destination:
+                                      description: Destination, network CIDR
+                                      type: string
+                                    nexthop:
+                                      description: Nexthop, gateway for the destination
+                                      type: string
+                                  required:
+                                  - destination
+                                  - nexthop
+                                  type: object
+                                type: array
+                            required:
+                            - allocationEnd
+                            - allocationStart
+                            - cidr
+                            type: object
+                          ipv6:
+                            description: IPv6 subnet details
+                            properties:
+                              allocationEnd:
+                                description: AllocationEnd a set of IPs that are reserved
+                                  and will not be assigned
+                                type: string
+                              allocationStart:
+                                description: AllocationStart a set of IPs that are
+                                  reserved and will not be assigned
+                                type: string
+                              cidr:
+                                description: Cidr, network Cidr e.g. 192.168.24.0/24
+                                type: string
+                              gateway:
+                                description: Gateway optional gateway for the network
+                                type: string
+                              routes:
+                                description: Routes, list of networks that should
+                                  be routed via network gateway.
+                                items:
+                                  description: Route definition
+                                  properties:
+                                    destination:
+                                      description: Destination, network CIDR
+                                      type: string
+                                    nexthop:
+                                      description: Nexthop, gateway for the destination
+                                      type: string
+                                  required:
+                                  - destination
+                                  - nexthop
+                                  type: object
+                                type: array
+                            required:
+                            - allocationEnd
+                            - allocationStart
+                            - cidr
+                            type: object
+                          name:
+                            description: Name the name of the subnet, for the default
+                              ip_subnet, use the same NameLower as the osnet
+                            type: string
+                          vlan:
+                            description: Vlan ID of the network
+                            type: integer
+                        required:
+                        - attachConfiguration
+                        - name
+                        type: object
+                      type: array
+                    vip:
+                      default: true
+                      description: VIP create virtual ip on the network
+                      type: boolean
+                  required:
+                  - name
+                  - nameLower
+                  - subnets
+                  type: object
+                type: array
+            required:
+            - attachConfigurations
+            - networks
+            type: object
+          status:
+            description: OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig
+            properties:
+              conditions:
+                description: 'TODO: It would be simpler, perhaps, to just have Conditions
+                  and get rid of CurrentState, but we are using the same approach
+                  in other CRDs for now anyhow Conditions - conditions to display
+                  in the OpenShift GUI, which reflect CurrentState'
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              provisioningStatus:
+                description: OpenStackNetConfigProvisioningStatus represents the overall
+                  provisioning state of the OpenStackNetConfig (with an optional explanatory
+                  message)
+                properties:
+                  attachDesiredCount:
+                    type: integer
+                  attachReadyCount:
+                    type: integer
+                  netDesiredCount:
+                    type: integer
+                  netReadyCount:
+                    type: integer
+                  reason:
+                    type: string
+                  state:
+                    description: NetConfigState - the state of this openstack network
+                      config
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

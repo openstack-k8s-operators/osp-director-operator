@@ -231,9 +231,10 @@ func main() {
 	}
 
 	if err = (&controllers.OpenStackConfigVersionReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("OpenStackConfigVersion"),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackConfigVersion"),
+		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackConfigVersion")
 		os.Exit(1)
@@ -246,6 +247,26 @@ func main() {
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackMACAddress")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.OpenStackNetConfigReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackNetConfig"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackNetConfig")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.OpenStackNetAttachmentReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackNetAttachment"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackNetAttachment")
 		os.Exit(1)
 	}
 
@@ -299,6 +320,11 @@ func main() {
 
 		if err = (&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).SetupWebhookWithManager(mgr, openstackPlaybookGeneratorDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackPlaybookGenerator")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackNetAttachment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNetAttachment")
 			os.Exit(1)
 		}
 	}

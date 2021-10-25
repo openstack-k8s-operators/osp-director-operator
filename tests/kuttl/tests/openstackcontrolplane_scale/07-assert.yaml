@@ -49,7 +49,6 @@ spec:
         node-role.kubernetes.io/worker: ""
   cidr: 10.0.0.0/24
   gateway: 10.0.0.1
-  vlan: 10
 status:
   conditions:
   - message: OpenStackNet external has been successfully configured on targeted node(s)

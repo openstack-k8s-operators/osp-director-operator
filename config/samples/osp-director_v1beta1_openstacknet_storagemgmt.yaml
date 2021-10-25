@@ -3,23 +3,12 @@ kind: OpenStackNet
 metadata:
   name: storagemgmt
 spec:
-  cidr: 172.16.3.0/24
+  allocationEnd: 172.19.0.250
+  allocationStart: 172.19.0.10
+  attachConfiguration: br-osp
+  cidr: 172.19.0.0/24
+  mtu: 1350
+  name: StorageMgmt
+  nameLower: storage_mgmt
+  vip: true
   vlan: 40
-  allocationStart: 172.16.3.4
-  allocationEnd: 172.16.3.250
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge

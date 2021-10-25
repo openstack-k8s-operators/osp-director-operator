@@ -5,21 +5,10 @@ metadata:
 spec:
   allocationEnd: 192.168.25.250
   allocationStart: 192.168.25.100
+  attachConfiguration: br-osp
   cidr: 192.168.25.0/24
-  gateway: 192.168.25.1 # optional
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
+  gateway: 192.168.25.1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
+  vip: true

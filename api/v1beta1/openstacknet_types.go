@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,41 +28,27 @@ type IPReservation struct {
 	Deleted  bool   `json:"deleted"`
 }
 
-// NetworkConfiguration - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
-type NetworkConfiguration struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={}
-	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={}
-	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy,omitempty"`
-}
+// Route definition
+type Route struct {
+	// +kubebuilder:validation:Required
+	// Destination, network CIDR
+	Destination string `json:"destination"`
 
-// NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network
-type NodeSriovConfigurationPolicy struct {
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	DesiredState SriovState        `json:"desiredState,omitempty"`
-}
-
-// SriovState - SRIOV-specific configuration details for an OSP network
-type SriovState struct {
-	// +kubebuilder:default=vfio-pci
-	DeviceType string `json:"deviceType,omitempty"`
-	// +kubebuilder:default=9000
-	Mtu        uint32 `json:"mtu,omitempty"`
-	NumVfs     uint32 `json:"numVfs"`
-	Port       string `json:"port"`
-	RootDevice string `json:"rootDevice,omitempty"`
-	// +kubebuilder:validation:Enum={"on","off"}
-	// +kubebuilder:default=on
-	SpoofCheck string `json:"spoofCheck,omitempty"`
-	// +kubebuilder:validation:Enum={"on","off"}
-	// +kubebuilder:default=off
-	Trust string `json:"trust,omitempty"`
+	// +kubebuilder:validation:Required
+	// Nexthop, gateway for the destination
+	Nexthop string `json:"nexthop"`
 }
 
 // OpenStackNetSpec defines the desired state of OpenStackNet
 type OpenStackNetSpec struct {
+
+	// +kubebuilder:validation:Required
+	// Name of the tripleo network this network belongs to, e.g. External, InternalApi, ...
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Required
+	// NameLower the name of the subnet, name_lower name of the tripleo subnet, e.g. external, internal_api, internal_api_leaf1
+	NameLower string `json:"nameLower"`
 
 	// +kubebuilder:validation:Required
 	// Cidr the cidr to use for this network
@@ -95,9 +80,13 @@ type OpenStackNetSpec struct {
 	// VIP create virtual ip on the network
 	VIP bool `json:"vip"`
 
+	// +kubebuilder:validation:Optional
+	// Routes, list of networks that should be routed via network gateway.
+	Routes []Route `json:"routes"`
+
 	// +kubebuilder:validation:Required
-	// AttachConfiguration used for NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
-	AttachConfiguration NetworkConfiguration `json:"attachConfiguration"`
+	// AttachConfiguration, which attachConfigurations this OSNet uses
+	AttachConfiguration string `json:"attachConfiguration"`
 }
 
 // OpenStackNetRoleStatus defines the observed state of the Role Net status
@@ -149,6 +138,7 @@ const (
 // +kubebuilder:printcolumn:name="VLAN",type=string,JSONPath=`.spec.vlan`
 // +kubebuilder:printcolumn:name="VIP",type=boolean,JSONPath=`.spec.vip`
 // +kubebuilder:printcolumn:name="Gateway",type=string,JSONPath=`.spec.gateway`
+// +kubebuilder:printcolumn:name="Routes",type=string,JSONPath=`.spec.routes`
 // +kubebuilder:printcolumn:name="Reserved IPs",type="integer",JSONPath=".status.reservedIpCount"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
