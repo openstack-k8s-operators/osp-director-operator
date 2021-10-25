@@ -47,7 +47,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	virtv1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1beta1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 // OpenStackVMSetReconciler reconciles a VMSet object
@@ -919,7 +919,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 				},
 				VolumeMode: &fsMode,
 			},
-			Source: &cdiv1.DataVolumeSource{
+			Source: cdiv1.DataVolumeSource{
 				PVC: &cdiv1.DataVolumeSourcePVC{
 					Name:      ctl.BaseImageName,
 					Namespace: instance.Namespace,
@@ -1023,7 +1023,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 					NetworkInterfaceMultiQueue: &trueValue,
 					Rng:                        &virtv1.Rng{},
 				},
-				Machine: &virtv1.Machine{
+				Machine: virtv1.Machine{
 					Type: "",
 				},
 				Resources: virtv1.ResourceRequirements{
