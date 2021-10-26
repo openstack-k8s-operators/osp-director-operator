@@ -1,6 +1,8 @@
 OSP Director Operator
 =====================
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/openstack-k8s-operators/osp-director-operator)](https://goreportcard.com/report/github.com/openstack-k8s-operators/osp-director-operator)
+
 Description
 -----------
 
