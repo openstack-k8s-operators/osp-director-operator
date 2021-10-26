@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.14
+go 1.16
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
@@ -9,7 +9,6 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/go-logr/logr v0.4.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/uuid v1.1.2
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
@@ -42,8 +41,6 @@ replace (
 	// dependabot fixes
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
-
-	//github.com/mikefarah/yaml/v2 => gopkg.in/yaml.v2 v2.4.0
 
 	// controller runtime
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200331152225-585af27e34fd // release-4.5
