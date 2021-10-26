@@ -1074,10 +1074,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		// sort networks to get an expected ordering for easier ooo nic template creation
 		sort.Strings(networks)
 		for _, net := range networks {
-			ok := false
-			osNetBinding := ""
 
-			if osNetBinding, ok = osNetBindings[net]; !ok {
+			osNetBinding := osNetBindings[net]
+			if osNetBinding == "" {
 				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found for network %s", net)
 			}
 
