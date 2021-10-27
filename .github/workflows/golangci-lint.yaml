@@ -4,19 +4,14 @@ on: [push, pull_request]
 
 jobs:
   test:
-    strategy:
-      matrix:
-        go-version: [1.14.x]
-        os: [ubuntu-latest]
-
-    name: govet, golint and gotest
-    runs-on: ${{ matrix.os }}
-
+    #FIXME: Remove the 1.14... here once we update https://github.com/openshift/release/blob/master/core-services/prow/02_config/openstack-k8s-operators/osp-director-operator/_prowconfig.yaml#L10-L11 
+    name: govet, golint and gotest (1.14.x, ubuntu-latest)
+    runs-on: ubuntu-latest
     steps:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: 1.16.x
       - name: Checkout project code
         uses: actions/checkout@v2
       - name: Checkout openstack-k8s-operators-ci project
@@ -32,19 +27,14 @@ jobs:
         run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
 
   golangci:
-    strategy:
-      matrix:
-        go-version: [1.14.x]
-        os: [ubuntu-latest]
-
-    name: golangci
-    runs-on: ${{ matrix.os }}
-
+    #FIXME: Remove the 1.14... here once we update https://github.com/openshift/release/blob/master/core-services/prow/02_config/openstack-k8s-operators/osp-director-operator/_prowconfig.yaml#L10-L11 
+    name: golangci (1.14.x, ubuntu-latest)
+    runs-on: ubuntu-latest
     steps:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: 1.16.x
       - name: Checkout project code
         uses: actions/checkout@v2
       - name: Run golangci lint
