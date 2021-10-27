@@ -4,8 +4,7 @@ on: [push, pull_request]
 
 jobs:
   test:
-    #FIXME: Remove the 1.14... here once we update https://github.com/openshift/release/blob/master/core-services/prow/02_config/openstack-k8s-operators/osp-director-operator/_prowconfig.yaml#L10-L11 
-    name: govet, golint and gotest (1.14.x, ubuntu-latest)
+    name: github (govet, golint and gotest)
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
@@ -27,8 +26,7 @@ jobs:
         run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
 
   golangci:
-    #FIXME: Remove the 1.14... here once we update https://github.com/openshift/release/blob/master/core-services/prow/02_config/openstack-k8s-operators/osp-director-operator/_prowconfig.yaml#L10-L11 
-    name: golangci (1.14.x, ubuntu-latest)
+    name: github (golangci)
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
