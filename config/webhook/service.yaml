@@ -10,5 +10,6 @@ spec:
   ports:
     - port: 4343
       targetPort: 4343
+      protocol: TCP
   selector:
     control-plane: controller-manager

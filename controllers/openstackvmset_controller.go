@@ -1074,24 +1074,22 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1
 		// sort networks to get an expected ordering for easier ooo nic template creation
 		sort.Strings(networks)
 		for _, net := range networks {
-			ok := false
-			osNetBinding := ""
 
-			if osNetBinding, ok = osNetBindings[net]; !ok {
+			if _, ok := osNetBindings[net]; !ok {
 				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found for network %s", net)
 			}
 
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
 				vm.Spec.Template.Spec.Domain.Devices.Interfaces,
 				vmset.InterfaceSetterMap{
-					net: vmset.Interface(net, osNetBinding),
+					net: vmset.Interface(net, osNetBindings[net]),
 				},
 			)
 
 			vm.Spec.Template.Spec.Networks = vmset.MergeVMNetworks(
 				vm.Spec.Template.Spec.Networks,
 				vmset.NetSetterMap{
-					net: vmset.Network(net, osNetBinding),
+					net: vmset.Network(net, osNetBindings[net]),
 				},
 			)
 		}
