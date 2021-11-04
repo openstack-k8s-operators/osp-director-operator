@@ -37,7 +37,7 @@ func (r *OpenStackEphemeralHeat) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackephemeralheat,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackephemeralheats,verbs=create;update,versions=v1beta1,name=mopenstackephemeralheat.kb.io
+// +kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackephemeralheat,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackephemeralheats,verbs=create;update,versions=v1beta1,name=mopenstackephemeralheat.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &OpenStackEphemeralHeat{}
 
