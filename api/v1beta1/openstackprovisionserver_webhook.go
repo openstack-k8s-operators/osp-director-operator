@@ -44,7 +44,7 @@ func (r *OpenStackProvisionServer) SetupWebhookWithManager(mgr ctrl.Manager) err
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=vopenstackprovisionserver.kb.io
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=vopenstackprovisionserver.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackProvisionServer{}
 

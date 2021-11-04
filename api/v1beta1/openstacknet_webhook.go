@@ -42,7 +42,7 @@ func (r *OpenStackNet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstacknet,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update,versions=v1beta1,name=mopenstacknet.kb.io
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstacknet,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update,versions=v1beta1,name=mopenstacknet.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &OpenStackNet{}
 
@@ -61,7 +61,7 @@ func (r *OpenStackNet) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknet,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update,versions=v1beta1,name=vopenstacknet.kb.io
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknet,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update,versions=v1beta1,name=vopenstacknet.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackNet{}
 

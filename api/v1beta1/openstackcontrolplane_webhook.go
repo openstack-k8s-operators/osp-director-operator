@@ -46,7 +46,7 @@ func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager) error 
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplane.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplane.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackControlPlane{}
 
