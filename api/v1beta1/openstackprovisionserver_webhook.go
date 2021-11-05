@@ -23,6 +23,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,4 +85,20 @@ func (r *OpenStackProvisionServer) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
+}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *OpenStackProvisionServer) Default() {
+	openstackephemeralheatlog.Info("default", "name", r.Name)
+
+	if r.Spec.DownloaderImageURL == "" {
+		r.Spec.DownloaderImageURL = os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT")
+	}
+	if r.Spec.ProvisioningAgentImageURL == "" {
+		r.Spec.ProvisioningAgentImageURL = os.Getenv("PROVISIONING_AGENT_IMAGE_URL_DEFAULT")
+	}
+	if r.Spec.ApacheImageURL == "" {
+		r.Spec.ApacheImageURL = os.Getenv("APACHE_IMAGE_URL_DEFAULT")
+	}
+
 }

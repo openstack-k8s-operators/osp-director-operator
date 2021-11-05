@@ -22,6 +22,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"os"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -50,16 +52,16 @@ func (r *OpenStackEphemeralHeat) Default() {
 		r.Spec.ConfigHash = r.Name
 	}
 	if r.Spec.HeatAPIImageURL == "" {
-		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-rhel8/openstack-heat-api:16.2"
+		r.Spec.HeatAPIImageURL = os.Getenv("HEAT_API_IMAGE_URL_DEFAULT")
 	}
 	if r.Spec.HeatEngineImageURL == "" {
-		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-rhel8/openstack-heat-engine:16.2"
+		r.Spec.HeatEngineImageURL = os.Getenv("HEAT_ENGINE_IMAGE_URL_DEFAULT")
 	}
 	if r.Spec.MariadbImageURL == "" {
-		r.Spec.MariadbImageURL = "registry.redhat.io/rhosp-rhel8/openstack-mariadb:16.2"
+		r.Spec.MariadbImageURL = os.Getenv("MARIADB_IMAGE_URL_DEFAULT")
 	}
 	if r.Spec.RabbitImageURL == "" {
-		r.Spec.RabbitImageURL = "registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2"
+		r.Spec.RabbitImageURL = os.Getenv("RABBITMQ_IMAGE_URL_DEFAULT")
 	}
 
 }
