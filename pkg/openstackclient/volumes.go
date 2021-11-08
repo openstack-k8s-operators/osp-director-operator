@@ -50,6 +50,16 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			SubPath:   "tripleo-deploy.sh",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "kolla-config",
+			MountPath: "/var/lib/kolla/config_files",
+			ReadOnly:  true,
+		},
+		{
+			Name:      fmt.Sprintf("%s-kolla-src", instance.Name),
+			MountPath: "/var/lib/kolla/src",
+			ReadOnly:  true,
+		},
 	}
 
 	if instance.Spec.DeploymentSSHSecret != "" {
@@ -86,6 +96,16 @@ func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.
 			Name:      "root-ssh",
 			MountPath: "/root/.ssh",
 			ReadOnly:  false,
+		},
+		{
+			Name:      fmt.Sprintf("%s-kolla-src", instance.Name),
+			MountPath: "/var/lib/kolla/src",
+			ReadOnly:  false,
+		},
+		{
+			Name:      "kolla-config-init",
+			MountPath: "/var/lib/kolla/config_files",
+			ReadOnly:  true,
 		},
 	}
 
@@ -171,6 +191,48 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 					ClaimName: fmt.Sprintf("%s-cloud-admin", instance.Name),
+				},
+			},
+		},
+		{
+			Name: fmt.Sprintf("%s-kolla-src", instance.Name),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: fmt.Sprintf("%s-kolla-src", instance.Name),
+				},
+			},
+		},
+		{
+			Name: "kolla-config-init",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "openstackclient-sh",
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "kolla_config_init.json",
+							Path: "config.json",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "kolla-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "openstackclient-sh",
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "kolla_config.json",
+							Path: "config.json",
+						},
+					},
 				},
 			},
 		},

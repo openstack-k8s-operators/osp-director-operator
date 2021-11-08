@@ -58,6 +58,9 @@ type OpenStackClientSpec struct {
 	// Upstream DNS servers
 	DNSServers       []string `json:"dnsServers,omitempty"`
 	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
+
+	// Idm secret used to register openstack client in IPA
+	IdmSecret string `json:"idmSecret,omitempty"`
 }
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

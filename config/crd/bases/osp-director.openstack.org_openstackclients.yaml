@@ -63,6 +63,9 @@ spec:
                   playbooks into the openstackclient pod. This secret should contain
                   an entry for both 'git_url' and 'git_ssh_identity'
                 type: string
+              idmSecret:
+                description: Idm secret used to register openstack client in IPA
+                type: string
               imageURL:
                 description: Name of the image
                 type: string

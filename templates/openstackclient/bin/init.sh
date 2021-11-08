@@ -24,15 +24,6 @@ fi
 # if the pvc is an empty volume, copy the existing hosts file to it
 if [ ! -f /mnt/etc/hosts ]; then
   cp /etc/hosts /mnt/etc/
-
-  # Ensure hostname -f and python socket.getfqdn() return the FQDN
-  if [ -v FQDN ]; then
-    SHORT_HOSTNAME=$(hostname -s)
-    LONG_HOSTNAME=$(hostname -f)
-    if [ "$LONG_HOSTNAME" != "$FQDN" ]; then
-      sed -i -e "s/^\([0-9.]\+\)\s\+\(.*\)${SHORT_HOSTNAME}\$/\1\t\2${FQDN} ${SHORT_HOSTNAME}/" /mnt/etc/hosts
-    fi
-  fi
 fi
 
 mkdir -p /home/cloud-admin/tripleo-deploy/validations
@@ -68,4 +59,60 @@ EOF
 
   git config --global user.email "dev@null.io"
   git config --global user.name "OSP Director Operator"
+fi
+
+
+# Skip the rest on tempest pod
+if cat /etc/hostname | grep ^tempest 2>&1 > /dev/null; then exit 0; fi
+
+if [ "$IPA_SERVER" != "" -a ! -f /var/lib/ipa-client/sysrestore/sysrestore.index ]; then
+
+  # Ensure hostname is correct for ipa-client install
+  sudo bash -c "cat /mnt/etc/hostname > /etc/hostname"
+  # Ensure hostname -f and python socket.getfqdn() return the FQDN
+  SHORT_HOSTNAME=$(hostname -s)
+  LONG_HOSTNAME=$(hostname -f)
+  if [ "$LONG_HOSTNAME" != "$FQDN" ]; then
+    sed -i -e "s/^\([0-9.]\+\)\s\+\(.*\)${SHORT_HOSTNAME}\$/\1\t\2${FQDN} ${SHORT_HOSTNAME}/" /mnt/etc/hosts
+    sudo bash -c "cat /mnt/etc/hosts > /etc/hosts"
+  fi
+
+  cat <<EOF > /home/cloud-admin/openstackclient_ipa_install.yaml
+{{`---
+- hosts: localhost
+  become: true
+  environment:
+    IPA_USER: "{{ ipa_server_user }}"
+    IPA_HOST: "{{ ipa_server_hostname }}"
+    IPA_PASS: "{{ ipa_server_password }}"
+  vars:
+    undercloud_fqdn: "{{ lookup('env', 'FQDN') }}"
+    ipa_server_password: "{{ lookup('env', 'IPA_SERVER_PASSWORD') }}"
+    ipa_domain: "{{ lookup('env', 'IPA_DOMAIN') }}"
+  tasks:
+    - name: IPA Client install
+      command: "ipa-client-install -U --force-join --no-ntp --no-nisdomain --no-sshd --no-ssh --no-sudo --no-dns-sshfp --principal='{{ ipa_server_user }}' --domain='{{ ipa_domain }}' --realm='{{ ipa_realm }}' --server '{{ ipa_server_hostname }}'"
+      args:
+        stdin: "{{ ipa_server_password }}"
+    - name: Disable sssd
+      command: "authselect select minimal"
+    - name: kinit to get admin credentials
+      command: kinit "{{ ipa_server_user }}@{{ ipa_realm }}"
+      args:
+        stdin: "{{ ipa_server_password }}"
+      register: kinit
+      changed_when: kinit.rc == 0
+      no_log: true
+
+    - name: setup the undercloud and get keytab
+      include_role:
+        name: tripleo_ipa_setup
+EOF`}}
+
+  sudo touch /run/ipa-epoch
+  ansible-playbook -e ipa_server_user=${IPA_SERVER_USER} -e ipa_realm=${IPA_REALM} -e ipa_server_hostname=${IPA_SERVER} -e ipa_domain=${IPA_DOMAIN} /home/cloud-admin/openstackclient_ipa_install.yaml
+
+  # Add all files modified by ipa client install to kolla src
+  # TODO: could use overlayfs mounts instead?
+  sudo bash -c 'find /etc/krb5* /etc/sssd /etc/authselect /etc/novajoin /etc/openldap /etc/ipa /etc/pki /var/lib/ipa-client /var/lib/authselect /var/log/ipaclient-install.log -newer /run/ipa-epoch -print0 | tar -c --null -T - | tar -C /var/lib/kolla/src -xvf -'
 fi
