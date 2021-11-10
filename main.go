@@ -266,11 +266,24 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.OpenStackEphemeralHeat{}).SetupWebhookWithManager(mgr); err != nil {
+
+		ephemeralHeatDefaults := ospdirectorv1beta1.OpenStackEphemeralHeatDefaults{
+			HeatAPIImageURL:    os.Getenv("HEAT_API_IMAGE_URL_DEFAULT"),
+			HeatEngineImageURL: os.Getenv("HEAT_ENGINE_IMAGE_URL_DEFAULT"),
+			MariaDBImageURL:    os.Getenv("MARIADB_IMAGE_URL_DEFAULT"),
+			RabbitImageURL:     os.Getenv("RABBITMQ_IMAGE_URL_DEFAULT"),
+		}
+		if err = (&ospdirectorv1beta1.OpenStackEphemeralHeat{}).SetupWebhookWithManager(mgr, ephemeralHeatDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackEphemeralHeat")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.OpenStackProvisionServer{}).SetupWebhookWithManager(mgr); err != nil {
+
+		provisionServerDefaults := ospdirectorv1beta1.OpenStackProvisionServerDefaults{
+			DownloaderImageURL:        os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
+			ProvisioningAgentImageURL: os.Getenv("PROVISIONING_AGENT_IMAGE_URL_DEFAULT"),
+			ApacheImageURL:            os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
+		}
+		if err = (&ospdirectorv1beta1.OpenStackProvisionServer{}).SetupWebhookWithManager(mgr, provisionServerDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackProvisionServer")
 			os.Exit(1)
 		}

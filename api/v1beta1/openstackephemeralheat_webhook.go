@@ -27,11 +27,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// OpenStackEphemeralHeatDefaults -
+type OpenStackEphemeralHeatDefaults struct {
+	HeatAPIImageURL    string
+	HeatEngineImageURL string
+	MariaDBImageURL    string
+	RabbitImageURL     string
+}
+
+var openstackEphemeralHeatDefaults OpenStackEphemeralHeatDefaults
+
 // log is for logging in this package.
 var openstackephemeralheatlog = logf.Log.WithName("openstackephemeralheat-resource")
 
 // SetupWebhookWithManager -
-func (r *OpenStackEphemeralHeat) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackEphemeralHeat) SetupWebhookWithManager(mgr ctrl.Manager, defaults OpenStackEphemeralHeatDefaults) error {
+
+	openstackEphemeralHeatDefaults = defaults
+
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -50,16 +63,16 @@ func (r *OpenStackEphemeralHeat) Default() {
 		r.Spec.ConfigHash = r.Name
 	}
 	if r.Spec.HeatAPIImageURL == "" {
-		r.Spec.HeatAPIImageURL = "registry.redhat.io/rhosp-rhel8/openstack-heat-api:16.2"
+		r.Spec.HeatAPIImageURL = openstackEphemeralHeatDefaults.HeatAPIImageURL
 	}
 	if r.Spec.HeatEngineImageURL == "" {
-		r.Spec.HeatEngineImageURL = "registry.redhat.io/rhosp-rhel8/openstack-heat-engine:16.2"
+		r.Spec.HeatEngineImageURL = openstackEphemeralHeatDefaults.HeatEngineImageURL
 	}
 	if r.Spec.MariadbImageURL == "" {
-		r.Spec.MariadbImageURL = "registry.redhat.io/rhosp-rhel8/openstack-mariadb:16.2"
+		r.Spec.MariadbImageURL = openstackEphemeralHeatDefaults.MariaDBImageURL
 	}
 	if r.Spec.RabbitImageURL == "" {
-		r.Spec.RabbitImageURL = "registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2"
+		r.Spec.RabbitImageURL = openstackEphemeralHeatDefaults.RabbitImageURL
 	}
 
 }
