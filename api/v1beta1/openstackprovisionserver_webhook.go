@@ -30,11 +30,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// OpenStackProvisionServerDefaults -
+type OpenStackProvisionServerDefaults struct {
+	DownloaderImageURL        string
+	ProvisioningAgentImageURL string
+	ApacheImageURL            string
+}
+
+var openstackProvisionServerDefaults OpenStackProvisionServerDefaults
+
 // log is for logging in this package.
 var openstackprovisionserverlog = logf.Log.WithName("openstackprovisionserver-resource")
 
 // SetupWebhookWithManager - register this webhook with the controller manager
-func (r *OpenStackProvisionServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackProvisionServer) SetupWebhookWithManager(mgr ctrl.Manager, defaults OpenStackProvisionServerDefaults) error {
+
+	openstackProvisionServerDefaults = defaults
+
 	if webhookClient == nil {
 		webhookClient = mgr.GetClient()
 	}
@@ -84,4 +96,20 @@ func (r *OpenStackProvisionServer) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
+}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *OpenStackProvisionServer) Default() {
+	openstackephemeralheatlog.Info("default", "name", r.Name)
+
+	if r.Spec.DownloaderImageURL == "" {
+		r.Spec.DownloaderImageURL = openstackProvisionServerDefaults.DownloaderImageURL
+	}
+	if r.Spec.ProvisioningAgentImageURL == "" {
+		r.Spec.ProvisioningAgentImageURL = openstackProvisionServerDefaults.ProvisioningAgentImageURL
+	}
+	if r.Spec.ApacheImageURL == "" {
+		r.Spec.ApacheImageURL = openstackProvisionServerDefaults.ApacheImageURL
+	}
+
 }
