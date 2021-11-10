@@ -51,6 +51,7 @@ spec:
               OpenStackProvisionServer
             properties:
               apacheImageUrl:
+                default: registry.redhat.io/rhel8/httpd-24:latest
                 description: Container image URL for the main container that serves
                   the downloaded RHEL qcow2 image (baseImageUrl)
                 type: string
@@ -58,6 +59,7 @@ spec:
                 description: URL for RHEL qcow2 image (compressed as gz, or uncompressed)
                 type: string
               downloaderImageUrl:
+                default: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
                 description: Container image URL for init container that downloads
                   the RHEL qcow2 image (baseImageUrl)
                 type: string
@@ -69,6 +71,7 @@ spec:
                 description: The port on which the Apache server should listen
                 type: integer
               provisioningAgentImageUrl:
+                default: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
                 description: Container image URL for the sidecar container that discovers
                   provisioning network IPs
                 type: string

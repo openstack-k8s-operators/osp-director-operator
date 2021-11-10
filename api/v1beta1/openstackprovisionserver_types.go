@@ -32,10 +32,13 @@ type OpenStackProvisionServerSpec struct {
 	// URL for RHEL qcow2 image (compressed as gz, or uncompressed)
 	BaseImageURL string `json:"baseImageUrl"`
 	// Container image URL for init container that downloads the RHEL qcow2 image (baseImageUrl)
+	// +kubebuilder:default="quay.io/openstack-k8s-operators/rhel-downloader:0.0.1"
 	DownloaderImageURL string `json:"downloaderImageUrl,omitempty"`
 	// Container image URL for the main container that serves the downloaded RHEL qcow2 image (baseImageUrl)
+	// +kubebuilder:default="registry.redhat.io/rhel8/httpd-24:latest"
 	ApacheImageURL string `json:"apacheImageUrl,omitempty"`
 	// Container image URL for the sidecar container that discovers provisioning network IPs
+	// +kubebuilder:default="quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1"
 	ProvisioningAgentImageURL string `json:"provisioningAgentImageUrl,omitempty"`
 }
 
