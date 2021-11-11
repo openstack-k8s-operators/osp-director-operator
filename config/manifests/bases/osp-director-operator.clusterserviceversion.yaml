@@ -120,4 +120,19 @@ spec:
   maturity: beta
   provider:
     name: Red Hat Inc.
+  relatedImages:
+  - image: registry.redhat.io/rhosp-rhel8/openstack-heat-api:16.2
+    name: openstack-heat-api
+  - image: registry.redhat.io/rhosp-rhel8/openstack-heat-engine:16.2
+    name: openstack-heat-engine
+  - image: registry.redhat.io/rhosp-rhel8/openstack-mariadb:16.2
+    name: openstack-mariadb
+  - image: registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2
+    name: openstack-rabbitmq
+  - image: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+    name: osp-director-operator-downloader
+  - image: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
+    name: osp-director-operator-provision-ip-discovery-agent
+  - image: registry.redhat.io/rhel8/httpd-24:latest
+    name: apache
   version: 0.0.0
