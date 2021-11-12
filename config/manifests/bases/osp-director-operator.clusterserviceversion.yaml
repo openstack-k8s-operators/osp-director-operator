@@ -134,6 +134,8 @@ spec:
     name: osp-director-operator-downloader
   - image: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
     name: osp-director-operator-provision-ip-discovery-agent
+  - image: quay.io/openstack-k8s-operators/osp-director-operator:0.0.1
+    name: osp-director-operator
   - image: registry.redhat.io/rhel8/httpd-24:latest
     name: apache
   - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
