@@ -98,6 +98,8 @@ func (r *OpenStackProvisionServer) ValidateDelete() error {
 	return nil
 }
 
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=mopenstackprovisionserver.kb.io,admissionReviewVersions={v1,v1beta1}
+
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackProvisionServer) Default() {
 	openstackephemeralheatlog.Info("default", "name", r.Name)
