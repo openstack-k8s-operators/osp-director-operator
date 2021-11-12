@@ -34,6 +34,15 @@ VERSION=${VERSION} IMG=${IMG} make bundle
 sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' bundle/manifests/osp-director-operator.clusterserviceversion.yaml
 sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' bundle/manifests/osp-director-operator.clusterserviceversion.yaml
 
+# Convert any tags to digests within the CSV (for offline/air gapped environments)
+for csv_image in $(cat bundle/manifests/osp-director-operator.clusterserviceversion.yaml | grep "image:" | sed -e "s|.*image:||" | sort -u); do
+  base_image=$(echo $csv_image | cut -f 1 -d':')
+  tag_image=$(echo $csv_image | cut -f 2 -d':')
+  digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
+  echo "$base_image:$tag_image becomes $base_image@$digest_image."
+  sed -i "s#$base_image:$tag_image#$base_image@$digest_image#g" bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+done
+
 # Build bundle image
 VERSION=${VERSION} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-build
 
