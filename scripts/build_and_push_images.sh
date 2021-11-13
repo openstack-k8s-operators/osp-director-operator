@@ -38,9 +38,13 @@ sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controll
 for csv_image in $(cat bundle/manifests/osp-director-operator.clusterserviceversion.yaml | grep "image:" | sed -e "s|.*image:||" | sort -u); do
   base_image=$(echo $csv_image | cut -f 1 -d':')
   tag_image=$(echo $csv_image | cut -f 2 -d':')
-  digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
-  echo "$base_image:$tag_image becomes $base_image@$digest_image."
-  sed -i "s#$base_image:$tag_image#$base_image@$digest_image#g" bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+  if ["$base_image:$tag_image" -eq "controller:latest"]; then
+    sed -e "s|$base_image:$tag_image|$IMG|g" -i bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+  else
+    digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
+    echo "$base_image:$tag_image becomes $base_image@$digest_image."
+    sed -e "s|$base_image:$tag_image|$base_image@$digest_image|g" -i bundle/manifests/osp-director-operator.clusterserviceversion.yaml
+  fi
 done
 
 # Build bundle image
