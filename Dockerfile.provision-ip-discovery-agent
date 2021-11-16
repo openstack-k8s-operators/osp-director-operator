@@ -30,7 +30,7 @@ ARG WHAT=provision-ip-discovery-agent
 
 ARG IMAGE_COMPONENT="osp-director-provisioner-container"
 ARG IMAGE_NAME="osp-director-provisioner-container"
-ARG IMAGE_VERSION="1.0.0"
+ARG IMAGE_VERSION="1.1.0"
 ARG IMAGE_SUMMARY="OSP-Director-Operator provision-ip-discovery-agent"
 ARG IMAGE_DESC="This is an agent that discovers the IP of a designated provisioning interface on a given host"
 ARG IMAGE_TAGS="openstack director"
