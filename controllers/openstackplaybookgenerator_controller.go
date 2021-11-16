@@ -240,7 +240,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			if common.StringInSlice(roleParams.RoleName, fencingRoles) && roleParams.RoleCount == 3 {
 				// Get the associated VM instances
 				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(r, instance.Namespace, map[string]string{
-					common.OwnerNameLabelSelector: roleName,
+					common.OwnerNameLabelSelector: strings.ToLower(roleName),
 				})
 
 				if err != nil {
