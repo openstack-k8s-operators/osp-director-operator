@@ -1,0 +1,18 @@
+CHANGELOG
+=========
+
+1.1.0
+-----
+- IPv6 support/testing
+- Initial OSP 17 networkv2 support
+- Initial HA support (pacemaker fencing)
+- Support for offline gapped operator installation (air gapped envs)
+- New CRD: OsConfigVersion (used in future to drive operator native OSP deployment workflow)
+- Ability to configure custom images for provision server
+- Support OSP 16.2 and OSP 17.x
+- Set default images to OSP 16.2
+- Internal: update to golang 1.6, operator sdk 1.13
+
+1.0.0
+-----
+- Initial release for OSP 16 tech preview (osp16_tech_preview branch)
