@@ -13,6 +13,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane
+  failurePolicy: Fail
+  name: mopenstackcontrolplane.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackcontrolplanes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-osp-director-openstack-org-v1beta1-openstackephemeralheat
   failurePolicy: Fail
   name: mopenstackephemeralheat.kb.io
@@ -47,6 +68,27 @@ webhooks:
     - UPDATE
     resources:
     - openstacknets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackplaybookgenerator
+  failurePolicy: Fail
+  name: mopenstackplaybookgenerator.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackplaybookgenerators
   sideEffects: None
 - admissionReviewVersions:
   - v1

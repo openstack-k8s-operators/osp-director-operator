@@ -130,6 +130,8 @@ spec:
     name: openstack-mariadb
   - image: registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2
     name: openstack-rabbitmq
+  - image: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+    name: openstackclient
   - image: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
     name: osp-director-operator-downloader
   - image: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1

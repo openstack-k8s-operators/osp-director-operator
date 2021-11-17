@@ -90,7 +90,9 @@ spec:
                   env file customizations
                 type: string
               imageURL:
-                description: Name of the image used to generate playbooks
+                description: Name of the image used to generate playbooks. If missing
+                  will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT
+                  in the CSV for the OSP Director Operator.
                 type: string
               interactive:
                 default: false
@@ -107,7 +109,6 @@ spec:
             required:
             - gitSecret
             - heatEnvConfigMap
-            - imageURL
             type: object
           status:
             description: OpenStackPlaybookGeneratorStatus defines the observed state

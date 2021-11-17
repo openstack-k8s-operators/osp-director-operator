@@ -84,7 +84,9 @@ spec:
                   pod
                 type: string
               openStackClientImageURL:
-                description: OpenstackClient image
+                description: OpenstackClient image. If missing will be set to the
+                  configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the
+                  OSP Director Operator.
                 type: string
               openStackClientNetworks:
                 default:
@@ -208,7 +210,6 @@ spec:
             required:
             - enableFencing
             - gitSecret
-            - openStackClientImageURL
             - virtualMachineRoles
             type: object
           status:

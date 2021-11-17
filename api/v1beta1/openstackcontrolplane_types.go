@@ -38,8 +38,8 @@ const (
 type OpenStackControlPlaneSpec struct {
 	// List of VirtualMachine roles
 	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
-	// OpenstackClient image
-	OpenStackClientImageURL string `json:"openStackClientImageURL"`
+	// OpenstackClient image. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
+	OpenStackClientImageURL string `json:"openStackClientImageURL,omitempty"`
 	// OpenStackClientStorageClass storage class
 	OpenStackClientStorageClass string `json:"openStackClientStorageClass,omitempty"`
 	// PasswordSecret used to e.g specify root pwd
