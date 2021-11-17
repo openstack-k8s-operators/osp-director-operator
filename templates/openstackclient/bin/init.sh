@@ -62,9 +62,6 @@ EOF
 fi
 
 
-# Skip the rest on tempest pod
-if cat /etc/hostname | grep ^tempest 2>&1 > /dev/null; then exit 0; fi
-
 if [ "$IPA_SERVER" != "" -a ! -f /var/lib/ipa-client/sysrestore/sysrestore.index ]; then
 
   # Ensure hostname is correct for ipa-client install
