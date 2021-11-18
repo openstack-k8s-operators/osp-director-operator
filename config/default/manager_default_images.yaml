@@ -11,6 +11,8 @@ spec:
       containers:
       - name: manager
         env:
+        - name: OPENSTACKCLIENT_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
         - name: HEAT_API_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhosp-rhel8/openstack-heat-api:16.2
         - name: HEAT_ENGINE_IMAGE_URL_DEFAULT
