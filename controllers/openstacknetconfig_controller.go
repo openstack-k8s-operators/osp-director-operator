@@ -442,11 +442,14 @@ func (r *OpenStackNetConfigReconciler) attachCleanup(
 
 	cond.Message = fmt.Sprintf("OpenStackNetAttachment %s delete started", attachConfig.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
-	common.LogForObject(r, cond.Message, instance)
 
-	if err := r.Client.Delete(context.TODO(), attachConfig, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
+	if err := r.Client.Delete(context.TODO(), attachConfig, &client.DeleteOptions{}); err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
+	common.LogForObject(r, cond.Message, instance)
 
 	return nil
 }
@@ -568,18 +571,19 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 	osNet := &ospdirectorv1beta1.OpenStackNet{}
 
 	osNet.Name = strings.ToLower(strings.Replace(subnet.Name, "_", "", -1))
-
-	//osNet.Name = strings.ToLower(strings.Replace(netSpec.Name, "_", "", -1))
 	osNet.Namespace = instance.Namespace
 
 	cond.Message = fmt.Sprintf("OpenStackNet %s delete started", osNet.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
-	common.LogForObject(r, cond.Message, instance)
-
-	if err := r.Client.Delete(context.TODO(), osNet, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
+	if err := r.Client.Delete(context.TODO(), osNet, &client.DeleteOptions{}); err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
+
+	common.LogForObject(r, cond.Message, instance)
 
 	return nil
 }
