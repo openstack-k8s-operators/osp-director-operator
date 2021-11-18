@@ -125,6 +125,8 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		// Update object conditions
 		//
 		instance.Status.CurrentState = ospdirectorv1beta1.NetAttachState(cond.Type)
+
+		// TODO, we should set some proper cond.Reason type
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
 			ospdirectorv1beta1.ConditionReason(cond.Message),
@@ -418,6 +420,8 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 
 			} else if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionDegraded {
 				cond.Message = fmt.Sprintf("underlying NNCP error: %s", condition.Message)
+				// set condition reason from nncp that we can react on CR cleanup
+				cond.Reason = ospdirectorv1beta1.ConditionReason(condition.Reason)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
 				return common.WrapErrorForObject(cond.Message, instance, err)
@@ -469,7 +473,12 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 	//
 	// Set/update CR status from NNCP status
 	//
-	if err := r.getNodeNetworkConfigurationPolicyStatus(instance, cond); err != nil {
+	err = r.getNodeNetworkConfigurationPolicyStatus(instance, cond)
+
+	// in case of nncp cond.Reason == FailedToConfigure, still continue to try to
+	// cleanup and delete the nncp
+	if err != nil &&
+		cond.Reason != ospdirectorv1beta1.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionFailedToConfigure) {
 		return ctrl.Result{}, err
 	}
 
@@ -495,6 +504,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkConfigurationPolicy, apply)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
 			err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)

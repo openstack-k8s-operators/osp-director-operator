@@ -97,7 +97,7 @@ func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {
 	var oldInstance *OpenStackNetAttachment
 
 	if oldInstance, ok = old.(*OpenStackNetAttachment); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackNet")
+		return fmt.Errorf("runtime object is not an OpenStackNetAttachment")
 	}
 
 	oldBridge, err := nmstate.GetDesiredStatedBridgeName(oldInstance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)

@@ -459,7 +459,6 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 	cond *ospdirectorv1beta1.Condition,
 	net *ospdirectorv1beta1.Network,
 	subnet *ospdirectorv1beta1.Subnet,
-	//netSpec *ospdirectorv1beta1.OpenStackNetSpec,
 ) (*ospdirectorv1beta1.OpenStackNet, error) {
 	osNet := &ospdirectorv1beta1.OpenStackNet{}
 
@@ -564,7 +563,6 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 
 func (r *OpenStackNetConfigReconciler) osnetCleanup(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
-	//netSpec *ospdirectorv1beta1.OpenStackNetSpec,
 	subnet *ospdirectorv1beta1.Subnet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
