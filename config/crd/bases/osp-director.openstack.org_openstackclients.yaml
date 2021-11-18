@@ -40,6 +40,10 @@ spec:
           spec:
             description: OpenStackClientSpec defines the desired state of OpenStackClient
             properties:
+              caConfigMap:
+                description: Name of the config map containing custom CA certificates
+                  to trust
+                type: string
               cloudName:
                 description: cloudname passed in via OS_CLOUDNAME
                 type: string

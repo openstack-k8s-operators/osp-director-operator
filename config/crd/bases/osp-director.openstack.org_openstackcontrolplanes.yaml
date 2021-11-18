@@ -61,6 +61,10 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              caConfigMap:
+                description: Name of the config map containing custom CA certificates
+                  to trust
+                type: string
               dnsSearchDomains:
                 items:
                   type: string

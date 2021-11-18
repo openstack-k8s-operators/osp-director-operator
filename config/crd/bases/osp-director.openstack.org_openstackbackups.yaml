@@ -567,6 +567,10 @@ spec:
                               description: OpenStackClientSpec defines the desired
                                 state of OpenStackClient
                               properties:
+                                caConfigMap:
+                                  description: Name of the config map containing custom
+                                    CA certificates to trust
+                                  type: string
                                 cloudName:
                                   description: cloudname passed in via OS_CLOUDNAME
                                   type: string
@@ -630,6 +634,36 @@ spec:
                               description: OpenStackClientStatus defines the observed
                                 state of OpenStackClient
                               properties:
+                                conditions:
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
+                                  items:
+                                    description: Condition - A particular overall
+                                      condition of a certain resource
+                                    properties:
+                                      lastHearbeatTime:
+                                        format: date-time
+                                        type: string
+                                      lastTransitionTime:
+                                        format: date-time
+                                        type: string
+                                      message:
+                                        type: string
+                                      reason:
+                                        description: ConditionReason - Why a particular
+                                          condition is true, false or unknown
+                                        type: string
+                                      status:
+                                        type: string
+                                      type:
+                                        description: ConditionType - A summarizing
+                                          name for a given condition
+                                        type: string
+                                    required:
+                                    - status
+                                    - type
+                                    type: object
+                                  type: array
                                 netStatus:
                                   additionalProperties:
                                     description: HostStatus represents the hostname
@@ -771,6 +805,10 @@ spec:
                               description: OpenStackControlPlaneSpec defines the desired
                                 state of OpenStackControlPlane
                               properties:
+                                caConfigMap:
+                                  description: Name of the config map containing custom
+                                    CA certificates to trust
+                                  type: string
                                 dnsSearchDomains:
                                   items:
                                     type: string

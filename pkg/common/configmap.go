@@ -19,11 +19,14 @@ package common
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -201,4 +204,40 @@ func GetConfigMapAndHashWithName(r ReconcilerCommon, configMapName string, names
 		return configMap, "", fmt.Errorf("error calculating configuration hash: %v", err)
 	}
 	return configMap, configMapHash, nil
+}
+
+//
+// GetConfigMap - Get config map
+//
+// if the config map is not found, requeue after requeueTimeout in seconds
+func GetConfigMap(
+	r ReconcilerCommon,
+	object client.Object,
+	cond *ospdirectorv1beta1.Condition,
+	conditionDetails ospdirectorv1beta1.ConditionDetails,
+	configMapName string,
+	requeueTimeout int,
+) (*corev1.ConfigMap, ctrl.Result, error) {
+
+	configMap := &corev1.ConfigMap{}
+	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: configMapName, Namespace: object.GetNamespace()}, configMap)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("%s config map does not exist: %v", configMapName, err)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionNotFoundReason)
+			cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionNotFoundType)
+
+			LogForObject(r, cond.Message, object)
+
+			return configMap, ctrl.Result{RequeueAfter: time.Duration(requeueTimeout) * time.Second}, nil
+		}
+		cond.Message = fmt.Sprintf("Error getting %s config map: %v", configMapName, err)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionErrordReason)
+		cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionErrorType)
+		err = WrapErrorForObject(cond.Message, object, err)
+
+		return configMap, ctrl.Result{}, err
+	}
+
+	return configMap, ctrl.Result{}, nil
 }

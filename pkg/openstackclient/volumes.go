@@ -141,6 +141,14 @@ func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.
 
 	}
 
+	if instance.Spec.CAConfigMap != "" {
+		volumes = append(volumes, corev1.VolumeMount{
+			Name:      "ca-certs",
+			MountPath: "/mnt/ca-certs",
+			ReadOnly:  true,
+		})
+	}
+
 	return volumes
 }
 
@@ -278,6 +286,20 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 							Path: "git_id_rsa",
 							Mode: &config0600AccessMode,
 						},
+					},
+				},
+			},
+		})
+	}
+
+	if instance.Spec.CAConfigMap != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "ca-certs",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.Spec.CAConfigMap,
 					},
 				},
 			},

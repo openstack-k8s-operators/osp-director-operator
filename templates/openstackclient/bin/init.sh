@@ -61,6 +61,12 @@ EOF
   git config --global user.name "OSP Director Operator"
 fi
 
+if [ -d /mnt/ca-certs ]; then
+  sudo touch /run/ca-certs-epoch
+  sudo cp -v /mnt/ca-certs/* /etc/pki/ca-trust/source/anchors/
+  sudo update-ca-trust
+  sudo bash -c 'find /etc/pki/ca-trust -newer /run/ca-certs-epoch -print0 | tar -c --null -T - | tar -C /var/lib/kolla/src -xvf -'
+fi
 
 if [ "$IPA_SERVER" != "" -a ! -f /var/lib/ipa-client/sysrestore/sysrestore.index ]; then
 

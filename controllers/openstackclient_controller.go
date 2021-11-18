@@ -179,6 +179,28 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	//
+	// check CAConfigMap is there
+	//
+	if instance.Spec.CAConfigMap != "" {
+		_, ctrlResult, err = common.GetConfigMap(
+			r,
+			instance,
+			cond,
+			ospdirectorv1beta1.ConditionDetails{
+				ConditionNotFoundType:   ospdirectorv1beta1.CommonCondTypeWaiting,
+				ConditionNotFoundReason: ospdirectorv1beta1.CommonCondReasonCAConfigMapMissing,
+				ConditionErrorType:      ospdirectorv1beta1.CommonCondTypeError,
+				ConditionErrordReason:   ospdirectorv1beta1.CommonCondReasonCAConfigMapError,
+			},
+			instance.Spec.CAConfigMap,
+			20,
+		)
+		if (err != nil) || (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, err
+		}
+	}
+
+	//
 	// check for IdmSecret is there
 	//
 	if instance.Spec.IdmSecret != "" {
