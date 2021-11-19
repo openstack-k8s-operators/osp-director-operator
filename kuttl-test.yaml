@@ -3,6 +3,9 @@
 #
 #   kubectl-kuttl test
 #
+# Note: To run a single test use:
+#         kubectl-kuttl test ./tests/kuttl/tests/ --test openstackcontrolplane_scale
+#
 # ASSUMPTIONS:
 #
 # 1. Latest version of kuttl is installed at /usr/local/bin/kubectl-kuttl

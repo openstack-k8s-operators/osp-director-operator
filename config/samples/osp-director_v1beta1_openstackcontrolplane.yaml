@@ -30,11 +30,11 @@ spec:
       memory: 20
       networks:
       - ctlplane
-      - internal_api
       - external
-      - tenant
+      - internal_api
       - storage
       - storage_mgmt
+      - tenant
       roleCount: 0
       roleName: Controller
       storageClass: host-nfs-storageclass

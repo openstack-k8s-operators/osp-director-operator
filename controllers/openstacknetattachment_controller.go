@@ -217,20 +217,6 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 
 		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeBridge
 
-		/*
-			//
-			// Add bridge name information to CR status
-			//
-			bridgeName, err := nmstate.GetDesiredStatedBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
-			if err != nil {
-				cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error getting the bridge name from the NodeNetworkConfigurationPolicy", instance.Name)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
-
-				return ctrl.Result{}, err
-			}
-			instance.Status.BridgeName = bridgeName
-		*/
-
 		//
 		// Set/update CR status from NNCP status
 		//

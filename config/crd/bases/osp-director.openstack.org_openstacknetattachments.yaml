@@ -52,11 +52,8 @@ spec:
                   or NodeSriovConfigurationPolicy
                 properties:
                   nodeNetworkConfigurationPolicy:
-                    description: "\t\t// +kubebuilder:validation:Required \t\t// Name
-                      of the NetworkConfiguration used to reference from the OpenStackNetworks
-                      \t\tName string `json:\"name\"` \n \t\t// +kubebuilder:validation:Required
-                      \t\t// +kubebuilder:validation:Enum={\"bridge\",\"sriov\"} \t\t//
-                      ConfigType \t\tConfigType AttachType `json:\"configType\"`"
+                    description: NodeNetworkConfigurationPolicySpec defines the desired
+                      state of NodeNetworkConfigurationPolicy
                     properties:
                       desiredState:
                         description: The desired configuration of the policy

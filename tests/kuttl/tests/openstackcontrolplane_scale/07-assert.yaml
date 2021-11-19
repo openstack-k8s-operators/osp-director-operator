@@ -28,27 +28,6 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: external
   namespace: openstack
-spec:
-  allocationEnd: 10.0.0.250
-  allocationStart: 10.0.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
-          name: br-ex
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 10.0.0.0/24
-  gateway: 10.0.0.1
 status:
   conditions:
   - message: OpenStackNet external has been successfully configured on targeted node(s)
@@ -66,28 +45,6 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: internalapi
   namespace: openstack
-spec:
-  allocationEnd: 172.16.2.250
-  allocationStart: 172.16.2.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.2.0/24
-  gateway: ""
-  vlan: 20
 status:
   conditions:
   - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
@@ -105,28 +62,6 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storage
   namespace: openstack
-spec:
-  allocationEnd: 172.16.1.250
-  allocationStart: 172.16.1.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.1.0/24
-  gateway: ""
-  vlan: 30
 status:
   conditions:
   - message: OpenStackNet storage has been successfully configured on targeted node(s)
@@ -144,28 +79,6 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storagemgmt
   namespace: openstack
-spec:
-  allocationEnd: 172.16.3.250
-  allocationStart: 172.16.3.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.3.0/24
-  gateway: ""
-  vlan: 40
 status:
   conditions:
   - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
@@ -183,28 +96,6 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: tenant
   namespace: openstack
-spec:
-  allocationEnd: 172.16.0.250
-  allocationStart: 172.16.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.0.0/24
-  gateway: ""
-  vlan: 50
 status:
   conditions:
   - message: OpenStackNet tenant has been successfully configured on targeted node(s)

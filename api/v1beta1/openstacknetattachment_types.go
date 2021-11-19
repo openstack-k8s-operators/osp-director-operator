@@ -33,17 +33,6 @@ const (
 
 // NodeConfigurationPolicy - policy definition to create NodeNetworkConfigurationPolicy or NodeSriovConfigurationPolicy
 type NodeConfigurationPolicy struct {
-	/*
-		// +kubebuilder:validation:Required
-		// Name of the NetworkConfiguration used to reference from the OpenStackNetworks
-		Name string `json:"name"`
-	*/
-	/*
-		// +kubebuilder:validation:Required
-		// +kubebuilder:validation:Enum={"bridge","sriov"}
-		// ConfigType
-		ConfigType AttachType `json:"configType"`
-	*/
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
 	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`

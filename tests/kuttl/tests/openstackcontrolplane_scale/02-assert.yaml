@@ -15,25 +15,37 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
+  domainName: ostest.test.metalkube.org
+  enableFencing: false
+  gitSecret: git-secret
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
-    - ctlplane
-    - external
+  - ctlplane
+  - external
+  - internal_api
   openStackClientStorageClass: host-nfs-storageclass
+  openStackRelease: "16.2"
+  passwordSecret: userpassword
+  physNetworks:
+  - name: datacentre
+    macPrefix: fa:16:3a
+  - name: datacentre2
+    macPrefix: fa:16:3b
   virtualMachineRoles:
     controller:
-      baseImageVolumeName: openstack-base-img
-      cores: 2
+      baseImageVolumeName: controller-base-img
+      cores: 6
+      ctlplaneInterface: enp2s0
       diskSize: 50
       isTripleoRole: true
       memory: 20
       networks:
       - ctlplane
       - external
-      - internalapi
-      - tenant
+      - internal_api
       - storage
-      - storagemgmt
+      - storage_mgmt
+      - tenant
       roleCount: 0
       roleName: Controller
       storageClass: host-nfs-storageclass
@@ -41,22 +53,27 @@ spec:
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
 metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
   name: controller
   namespace: openstack
 spec:
-  baseImageVolumeName: openstack-base-img
-  cores: 2
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
+  domainName: ostest.test.metalkube.org
   isTripleoRole: true
   memory: 20
   networks:
   - ctlplane
   - external
-  - internalapi
-  - tenant
+  - internal_api
   - storage
-  - storagemgmt
+  - storage_mgmt
+  - tenant
+  passwordSecret: userpassword
   roleName: Controller
   storageClass: host-nfs-storageclass
   vmCount: 0
@@ -79,47 +96,51 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  domainName: ostest.test.metalkube.org
+  gitSecret: git-secret
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
   - external
+  - internal_api
+  runGID: 42401
+  runUID: 42401
   storageClass: host-nfs-storageclass
 status:
   netStatus:
     openstackclient-0:
+      hostRef: openstackclient
       hostname: openstackclient-0
       ipaddresses:
         ctlplane: 192.168.25.101/24
-        external: 10.0.0.5/24
+        external: 10.0.0.11/24
+        internal_api: 172.17.0.11/24
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Control
+    ooo-netname-lower: ctlplane
+    ooo-subnetname: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: ctlplane
   namespace: openstack
 spec:
   allocationEnd: 192.168.25.250
   allocationStart: 192.168.25.100
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
+  attachConfiguration: br-osp
   cidr: 192.168.25.0/24
   gateway: 192.168.25.1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
+  vip: true
+  vlan: 0
 status:
   conditions:
   - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
@@ -149,29 +170,26 @@ kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: External
+    ooo-netname-lower: external
+    ooo-subnetname: external
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: external
   namespace: openstack
 spec:
   allocationEnd: 10.0.0.250
-  allocationStart: 10.0.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
-          name: br-ex
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
+  allocationStart: 10.0.0.10
+  attachConfiguration: br-ex
   cidr: 10.0.0.0/24
   gateway: 10.0.0.1
+  mtu: 1500
+  name: External
+  nameLower: external
+  vip: true
+  vlan: 0
 status:
   conditions:
   - message: OpenStackNet external has been successfully configured on targeted node(s)
@@ -186,14 +204,14 @@ status:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 10.0.0.4
+        ip: 10.0.0.10
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 10.0.0.5
+        ip: 10.0.0.11
         vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -201,28 +219,25 @@ kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: InternalApi
+    ooo-netname-lower: internal_api
+    ooo-subnetname: internal_api
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: internalapi
   namespace: openstack
 spec:
-  allocationEnd: 172.16.2.250
-  allocationStart: 172.16.2.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.2.0/24
+  allocationEnd: 172.17.0.250
+  allocationStart: 172.17.0.10
+  attachConfiguration: br-osp
+  cidr: 172.17.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: InternalApi
+  nameLower: internal_api
+  vip: true
   vlan: 20
 status:
   conditions:
@@ -231,88 +246,47 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 1
+  reservedIpCount: 2
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 172.16.2.4
+        ip: 172.17.0.10
         vip: true
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: tenant
-  namespace: openstack
-spec:
-  allocationEnd: 172.16.0.250
-  allocationStart: 172.16.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.0.0/24
-  vlan: 50
-status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 1
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
       reservations:
       - deleted: false
-        hostname: controlplane
-        ip: 172.16.0.4
-        vip: true
+        hostname: openstackclient-0
+        ip: 172.17.0.11
+        vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Storage
+    ooo-netname-lower: storage
+    ooo-subnetname: storage
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: storage
   namespace: openstack
 spec:
-  allocationEnd: 172.16.1.250
-  allocationStart: 172.16.1.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.1.0/24
+  allocationEnd: 172.18.0.250
+  allocationStart: 172.18.0.10
+  attachConfiguration: br-osp
+  cidr: 172.18.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: Storage
+  nameLower: storage
+  vip: true
   vlan: 30
 status:
   conditions:
@@ -328,7 +302,7 @@ status:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 172.16.1.4
+        ip: 172.18.0.10
         vip: true
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -336,28 +310,25 @@ kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: StorageMgmt
+    ooo-netname-lower: storage_mgmt
+    ooo-subnetname: storage_mgmt
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: storagemgmt
   namespace: openstack
 spec:
-  allocationEnd: 172.16.3.250
-  allocationStart: 172.16.3.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-  cidr: 172.16.3.0/24
+  allocationEnd: 172.19.0.250
+  allocationStart: 172.19.0.10
+  attachConfiguration: br-osp
+  cidr: 172.19.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: StorageMgmt
+  nameLower: storage_mgmt
+  vip: true
   vlan: 40
 status:
   conditions:
@@ -373,8 +344,43 @@ status:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 172.16.3.4
+        ip: 172.19.0.10
         vip: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Tenant
+    ooo-netname-lower: tenant
+    ooo-subnetname: tenant
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: tenant
+  namespace: openstack
+spec:
+  allocationEnd: 172.20.0.250
+  allocationStart: 172.20.0.10
+  attachConfiguration: br-osp
+  cidr: 172.20.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: Tenant
+  nameLower: tenant
+  vip: false
+  vlan: 50
+status:
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -388,7 +394,14 @@ metadata:
 spec:
   addToPredictableIPs: true
   hostCount: 1
-  # networks: verified in status
+  hostNameRefs:
+    controlplane: overcloud
+  networks:
+  - ctlplane
+  - external
+  - internal_api
+  - storage
+  - storage_mgmt
   roleName: ControlPlane
   vip: true
 status:
@@ -396,11 +409,10 @@ status:
     controlplane:
       ipaddresses:
         ctlplane: 192.168.25.100/24
-        external: 10.0.0.4/24
-        internalapi: 172.16.2.4/24
-        storage: 172.16.1.4/24
-        storagemgmt: 172.16.3.4/24
-        tenant: 172.16.0.4/24
+        external: 10.0.0.10/24
+        internal_api: 172.17.0.10/24
+        storage: 172.18.0.10/24
+        storage_mgmt: 172.19.0.10/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -410,34 +422,28 @@ status:
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.4
+      allocationStart: 10.0.0.10
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 0
     internalapi:
-      allocationEnd: 172.16.2.250
-      allocationStart: 172.16.2.4
-      cidr: 172.16.2.0/24
+      allocationEnd: 172.17.0.250
+      allocationStart: 172.17.0.10
+      cidr: 172.17.0.0/24
       gateway: ""
       vlan: 20
     storage:
-      allocationEnd: 172.16.1.250
-      allocationStart: 172.16.1.4
-      cidr: 172.16.1.0/24
+      allocationEnd: 172.18.0.250
+      allocationStart: 172.18.0.10
+      cidr: 172.18.0.0/24
       gateway: ""
       vlan: 30
     storagemgmt:
-      allocationEnd: 172.16.3.250
-      allocationStart: 172.16.3.4
-      cidr: 172.16.3.0/24
+      allocationEnd: 172.19.0.250
+      allocationStart: 172.19.0.10
+      cidr: 172.19.0.0/24
       gateway: ""
       vlan: 40
-    tenant:
-      allocationEnd: 172.16.0.250
-      allocationStart: 172.16.0.4
-      cidr: 172.16.0.0/24
-      gateway: ""
-      vlan: 50
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -451,13 +457,14 @@ metadata:
 spec:
   addToPredictableIPs: true
   hostCount: 0
+  hostNameRefs: {}
   networks:
   - ctlplane
   - external
-  - internalapi
-  - tenant
+  - internal_api
   - storage
-  - storagemgmt
+  - storage_mgmt
+  - tenant
   roleName: Controller
   vip: false
 ---
@@ -478,6 +485,7 @@ spec:
   networks:
   - ctlplane
   - external
+  - internal_api
   roleName: OpenstackClientopenstackclient
   vip: false
 status:
@@ -485,7 +493,8 @@ status:
     openstackclient-0:
       ipaddresses:
         ctlplane: 192.168.25.101/24
-        external: 10.0.0.5/24
+        external: 10.0.0.11/24
+        internal_api: 172.17.0.11/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -495,9 +504,16 @@ status:
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.4
+      allocationStart: 10.0.0.10
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
+      vlan: 0
+    internalapi:
+      allocationEnd: 172.17.0.250
+      allocationStart: 172.17.0.10
+      cidr: 172.17.0.0/24
+      gateway: ""
+      vlan: 20
 ---
 apiVersion: v1
 kind: Secret
@@ -522,4 +538,11 @@ spec:
   - macPrefix: fa:16:3b
     name: datacentre2
 status:
+  conditions:
+  - message: All MAC addresses created
+    reason: All MAC addresses created
+    status: "True"
+    type: Created
+  currentState: Created
+  macReservations: {}
   reservedMACCount: 0
