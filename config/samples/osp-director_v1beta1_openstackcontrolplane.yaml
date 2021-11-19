@@ -21,7 +21,7 @@ spec:
     - name: datacentre2
       macPrefix: fa:16:3b
   virtualMachineRoles:
-    Controller:
+    controller:
       baseImageVolumeName: controller-base-img
       cores: 6
       ctlplaneInterface: enp2s0

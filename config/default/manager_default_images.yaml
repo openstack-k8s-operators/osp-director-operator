@@ -27,3 +27,5 @@ spec:
           value: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
         - name: APACHE_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhel8/httpd-24:latest
+        - name: OPENSTACK_RELEASE_DEFAULT
+          value: 16.2

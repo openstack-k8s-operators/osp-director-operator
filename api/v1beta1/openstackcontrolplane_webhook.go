@@ -30,11 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 )
 
 // OpenStackControlPlaneDefaults -
 type OpenStackControlPlaneDefaults struct {
 	OpenStackClientImageURL string
+	OpenStackRelease        string
 }
 
 var openstackControlPlaneDefaults OpenStackControlPlaneDefaults
@@ -115,6 +118,25 @@ func (r *OpenStackControlPlane) Default() {
 
 	if r.Spec.OpenStackClientImageURL == "" {
 		r.Spec.OpenStackClientImageURL = openstackControlPlaneDefaults.OpenStackClientImageURL
+	}
+
+	//
+	// set default PhysNetworks name/prefix if non speficied
+	//
+	if len(r.Spec.PhysNetworks) == 0 {
+		r.Spec.PhysNetworks = []Physnet{
+			{
+				Name:      controlplane.DefaultOVNChassisPhysNetName,
+				MACPrefix: controlplane.DefaultOVNChassisPhysNetMACPrefix,
+			},
+		}
+	}
+
+	//
+	// set default OpenStackRelease
+	//
+	if r.Spec.OpenStackRelease == "" {
+		r.Spec.OpenStackRelease = openstackControlPlaneDefaults.OpenStackRelease
 	}
 
 }

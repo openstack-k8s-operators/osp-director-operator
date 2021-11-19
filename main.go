@@ -278,6 +278,7 @@ func main() {
 
 		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
 			OpenStackClientImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+			OpenStackRelease:        os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
 		}
 
 		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
