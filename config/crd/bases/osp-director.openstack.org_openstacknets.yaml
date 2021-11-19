@@ -75,8 +75,8 @@ spec:
                   not be assigned
                 type: string
               attachConfiguration:
-                description: AttachConfiguration, which attachConfigurations this
-                  OSNet uses
+                description: AttachConfiguration, used for virtual machines to attach
+                  to this network
                 type: string
               cidr:
                 description: Cidr the cidr to use for this network

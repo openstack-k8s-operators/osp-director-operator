@@ -23,6 +23,9 @@ const (
 	// FinalizerName -
 	FinalizerName = "openstacknetattachment"
 
+	// AttachReference - name of the NetAttachment used in osnet to reference the attachment
+	AttachReference = "ooo-attach-reference"
+
 	// AttachType -
 	AttachType = "ooo-attach-type"
 

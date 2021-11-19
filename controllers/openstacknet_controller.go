@@ -35,7 +35,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
+	openstacknetattachment "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
 )
 
 // OpenStackNetReconciler reconciles a OpenStackNet object
@@ -74,7 +74,7 @@ func (r *OpenStackNetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=create;delete;deletecollection;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
 
-// Reconcile -, cond
+// Reconcile -
 func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstacknet", req.NamespacedName)
 
@@ -251,9 +251,27 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	networkAttachmentDefinition := &networkv1.NetworkAttachmentDefinition{}
 	networkAttachmentDefinition.Name = instance.Name
 
+	//
+	// get bridge name from referenced osnetattach CR status
+	//
+	bridgeName, err := openstacknetattachment.GetOpenStackNetAttachmentBridgeName(
+		r,
+		instance.Namespace,
+		instance.Spec.AttachConfiguration,
+	)
+	if err != nil {
+		cond.Message = fmt.Sprintf("OpenStackNet %s failure get bridge for OpenStackNetAttachment %s", instance.Name, instance.Spec.AttachConfiguration)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+
+		return common.WrapErrorForObject(fmt.Sprintf("failure get bridge name for OpenStackNetAttachment referenc: %s", instance.Spec.AttachConfiguration), instance, err)
+	}
+
+	//
+	// NAD static for openstackclient pods
+	//
 	templateData := map[string]string{
 		"Name":       instance.Name,
-		"BridgeName": instance.Spec.AttachConfiguration, // TODO get from NNCP label?
+		"BridgeName": bridgeName,
 		"Vlan":       strconv.Itoa(instance.Spec.Vlan),
 	}
 

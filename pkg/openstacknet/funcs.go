@@ -5,68 +5,46 @@ import (
 	"fmt"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstacknetattachment "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetOpenStackNetsBindingMap - Returns map of OpenStackNet name to binding type
-func GetOpenStackNetsBindingMap(r common.ReconcilerCommon, namespace string) (map[string]string, error) {
-	// Acquire a list and map of all OpenStackNetworks available in this namespace
-	osNetList, err := GetOpenStackNetsWithLabel(r, namespace, map[string]string{})
+func GetOpenStackNetsBindingMap(r common.ReconcilerCommon, namespace string) (map[string]ospdirectorv1beta1.AttachType, error) {
 
+	//
+	// Acquire a list and map of all OpenStackNetworks available in this namespace
+	//
+	osNetList, err := GetOpenStackNetsWithLabel(r, namespace, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
 
-	osNets := map[string]string{}
+	//
+	// mapping of osNet name and binding type
+	//
+	osNetBindings := map[string]ospdirectorv1beta1.AttachType{}
 	for _, osNet := range osNetList.Items {
 
-		/*
-			// Currently there are two binding types: SRIOV and...not-SRIOV.
-			// If a network has SRIOV configuration, then that currently overrides any non-SRIOV configuration it might have
-			if osNet.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
-				osNets[osNet.Spec.NameLower] = "sriov"
-			} else {
-				osNets[osNet.Spec.NameLower] = ""
-			}
-		*/
-		osNets[osNet.Spec.NameLower] = ""
+		//
+		// get osnetattachment used by this network
+		//
+		attachType, err := openstacknetattachment.GetOpenStackNetAttachmentType(
+			r,
+			namespace,
+			osNet.Spec.AttachConfiguration,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		osNetBindings[osNet.Spec.NameLower] = *attachType
 	}
 
-	return osNets, nil
-}
-
-// GetOpenStackNetsAttachConfigBridgeNames - Return a map of OpenStackNet names in the passed namespace to the bridge-name in their attachConfig
-func GetOpenStackNetsAttachConfigBridgeNames(r common.ReconcilerCommon, namespace string) (map[string]string, error) {
-	osNets, err := GetOpenStackNetsWithLabel(r, namespace, map[string]string{})
-
-	if err != nil {
-		return nil, err
-	}
-
-	osNetBridgeNames := map[string]string{}
-
-	for _, osNet := range osNets.Items {
-		/*
-			desiredStateBytes := osNet.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw
-
-				if len(desiredStateBytes) > 0 {
-					bridgeName, err := nmstate.GetDesiredStatedBridgeName(desiredStateBytes)
-
-					if err != nil {
-						return nil, err
-					}
-
-					osNetBridgeNames[osNet.Spec.NameLower] = bridgeName
-				}
-		*/
-		osNetBridgeNames[osNet.Spec.NameLower] = "br-osp"
-
-	}
-
-	return osNetBridgeNames, nil
+	return osNetBindings, nil
 }
 
 // GetOpenStackNetsWithLabel - Return a list of all OpenStackNets in the namespace that have (optional) labels
@@ -102,7 +80,6 @@ func GetOpenStackNetWithLabel(r common.ReconcilerCommon, namespace string, label
 	}
 	if len(osNetList.Items) == 0 {
 		return nil, k8s_errors.NewNotFound(v1.Resource("openstacknet"), fmt.Sprint(labelSelector))
-		//return nil, fmt.Errorf("OpenStackNet with label %v not found", labelSelector)
 	} else if len(osNetList.Items) > 1 {
 		return nil, fmt.Errorf("multiple OpenStackNet with label %v not found", labelSelector)
 	}

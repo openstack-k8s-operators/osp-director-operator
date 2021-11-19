@@ -122,6 +122,12 @@ spec:
             description: OpenStackNetAttachmentStatus defines the observed state of
               OpenStackNetAttachment
             properties:
+              attachType:
+                description: AttachType of the OpenStackNetAttachment
+                type: string
+              bridgeName:
+                description: BridgeName of the OpenStackNetAttachment
+                type: string
               conditions:
                 description: 'TODO: It would be simpler, perhaps, to just have Conditions
                   and get rid of CurrentState, but we are using the same approach
@@ -158,6 +164,8 @@ spec:
                 description: CurrentState - the overall state of the network attachment
                 type: string
             required:
+            - attachType
+            - bridgeName
             - currentState
             type: object
         type: object

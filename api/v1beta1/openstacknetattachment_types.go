@@ -93,6 +93,12 @@ type OpenStackNetAttachmentStatus struct {
 	// but we are using the same approach in other CRDs for now anyhow
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+
+	// AttachType of the OpenStackNetAttachment
+	AttachType AttachType `json:"attachType"`
+
+	// BridgeName of the OpenStackNetAttachment
+	BridgeName string `json:"bridgeName"`
 }
 
 // NetAttachState - the state of this openstack network

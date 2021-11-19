@@ -11,18 +11,13 @@ import (
 func GetDesiredStatedBridgeName(desiredStateBytes []byte) (string, error) {
 	bridge := ""
 
-	if len(desiredStateBytes) > 0 {
-		jsonBytes, err := yaml.YAMLToJSON(desiredStateBytes)
+	jsonStr, err := GetDesiredStateAsString(desiredStateBytes)
+	if err != nil {
+		return "", err
+	}
 
-		if err != nil {
-			return "", err
-		}
-
-		jsonStr := string(jsonBytes)
-
-		if gjson.Get(jsonStr, "interfaces.#.name").Exists() {
-			bridge = gjson.Get(jsonStr, "interfaces.#.name").Array()[0].String()
-		}
+	if gjson.Get(jsonStr, "interfaces.#.name").Exists() {
+		bridge = gjson.Get(jsonStr, "interfaces.#.name").Array()[0].String()
 	}
 
 	return bridge, nil
@@ -37,4 +32,37 @@ func GetCurrentCondition(conditions nmstateshared.ConditionList) *nmstateshared.
 	}
 
 	return nil
+}
+
+// GetDesiredStateInterfaceState - Get the state of the bridge associated interface of the attachConfiguration
+func GetDesiredStateInterfaceState(desiredStateBytes []byte) (string, error) {
+	state := ""
+
+	jsonStr, err := GetDesiredStateAsString(desiredStateBytes)
+	if err != nil {
+		return "", err
+	}
+
+	if gjson.Get(jsonStr, "interfaces.#.state").Exists() {
+		state = gjson.Get(jsonStr, "interfaces.#.state").Array()[0].String()
+	}
+
+	return state, nil
+}
+
+// GetDesiredStateAsString - Get the state as string
+func GetDesiredStateAsString(desiredStateBytes []byte) (string, error) {
+	jsonStr := ""
+
+	if len(desiredStateBytes) > 0 {
+		jsonBytes, err := yaml.YAMLToJSON(desiredStateBytes)
+
+		if err != nil {
+			return "", err
+		}
+
+		jsonStr = string(jsonBytes)
+	}
+
+	return jsonStr, nil
 }

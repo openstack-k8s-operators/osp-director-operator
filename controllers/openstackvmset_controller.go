@@ -247,7 +247,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	// Get mapping of OSNets to binding type for this namespace
+	// Get mapping of all OSNets with their binding type for this namespace
 	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(r, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -295,12 +295,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 
-		if osNetBindings[network.Spec.NameLower] == "" {
+		// We currently support SRIOV and bridge interfaces, with anything other than "sriov" indicating a bridge
+		switch osNetBindings[network.Spec.NameLower] {
+		case ospdirectorv1beta1.AttachTypeBridge:
 			// Non-SRIOV networks should have a NetworkAttachmentDefinition
 			if _, ok := nadMap[network.Name]; !ok {
 				msg = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
 			}
-		} else if osNetBindings[network.Spec.NameLower] == "sriov" {
+		case ospdirectorv1beta1.AttachTypeSrIOV:
 			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
 			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", network.Spec.NameLower)]; !ok {
 				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
@@ -895,7 +897,12 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackVMSetReconciler) vmCreateInstance(instance *ospdirectorv1beta1.OpenStackVMSet, envVars map[string]common.EnvSetter, ctl *ospdirectorv1beta1.Host, osNetBindings map[string]string) error {
+func (r *OpenStackVMSetReconciler) vmCreateInstance(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	envVars map[string]common.EnvSetter,
+	ctl *ospdirectorv1beta1.Host,
+	osNetBindings map[string]ospdirectorv1beta1.AttachType,
+) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	fsMode := corev1.PersistentVolumeFilesystem

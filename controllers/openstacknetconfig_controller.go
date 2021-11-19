@@ -352,6 +352,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 		attachConfig.Labels[common.OwnerNameLabelSelector] = instance.Name
 		attachConfig.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
 		attachConfig.Labels[common.OwnerControllerNameLabelSelector] = openstacknetconfig.AppLabel
+		attachConfig.Labels[openstacknetattachment.AttachReference] = nodeConfName
 		attachConfig.Labels[openstacknetattachment.AttachType] = string(attachType)
 		attachConfig.Labels[string(attachType)] = nodeConfName
 
@@ -485,7 +486,6 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 		osNet.Spec.VIP = net.VIP
 		osNet.Spec.Vlan = subnet.Vlan
 
-		// TODO ipv4/ipv6 dual stack handling
 		if subnet.IPv4.Cidr != "" {
 			osNet.Spec.AllocationEnd = subnet.IPv4.AllocationEnd
 			osNet.Spec.AllocationStart = subnet.IPv4.AllocationStart

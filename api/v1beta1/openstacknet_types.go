@@ -85,7 +85,7 @@ type OpenStackNetSpec struct {
 	Routes []Route `json:"routes"`
 
 	// +kubebuilder:validation:Required
-	// AttachConfiguration, which attachConfigurations this OSNet uses
+	// AttachConfiguration, used for virtual machines to attach to this network
 	AttachConfiguration string `json:"attachConfiguration"`
 }
 

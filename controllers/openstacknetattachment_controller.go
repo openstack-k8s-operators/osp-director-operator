@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -45,9 +44,7 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-
-	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
-	"github.com/tidwall/gjson"
+	openstacknetattachment "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
 )
 
 // OpenStackNetAttachmentReconciler reconciles a OpenStackNetAttachment object
@@ -205,6 +202,8 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 			return ctrl.Result{}, err
 		}
+
+		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeSrIOV
 	} else {
 		//
 		// Create/update Bridge
@@ -215,6 +214,22 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 
 			return ctrl.Result{}, err
 		}
+
+		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeBridge
+
+		/*
+			//
+			// Add bridge name information to CR status
+			//
+			bridgeName, err := nmstate.GetDesiredStatedBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+			if err != nil {
+				cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error getting the bridge name from the NodeNetworkConfigurationPolicy", instance.Name)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+
+				return ctrl.Result{}, err
+			}
+			instance.Status.BridgeName = bridgeName
+		*/
 
 		//
 		// Set/update CR status from NNCP status
@@ -273,38 +288,6 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 		Complete(r)
 }
 
-func (r *OpenStackNetAttachmentReconciler) getNNCPDesiredState(
-	instance *ospdirectorv1beta1.OpenStackNetAttachment,
-	nncp *nmstateshared.NodeNetworkConfigurationPolicySpec,
-	cond *ospdirectorv1beta1.Condition,
-) (map[string]json.RawMessage, error) {
-	var desiredState map[string]json.RawMessage
-
-	//
-	// get the desired state
-	//
-	// the desired state is raw json, marshal -> unmarshal to parse it
-	desiredStateByte, err := json.Marshal(nncp)
-	if err != nil {
-		cond.Message = fmt.Sprintf("Error marshal NodeNetworkConfigurationPolicy desired state: %v", nncp)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
-
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-		return desiredState, err
-	}
-
-	err = json.Unmarshal(desiredStateByte, &desiredState)
-	if err != nil {
-		cond.Message = fmt.Sprintf("Error unmarshal NodeNetworkConfigurationPolicy desired state: %v", string(desiredStateByte))
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
-
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-		return desiredState, err
-	}
-
-	return desiredState, nil
-}
-
 // createOrUpdateNetworkConfigurationPolicy - create or update NetworkConfigurationPolicy
 func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfigurationPolicy(
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
@@ -315,24 +298,23 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
 	//
-	// get the desired state from instance spec
+	// get bridgeName from desiredState
 	//
-	desiredState, err := r.getNNCPDesiredState(
-		instance,
-		&instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
-		cond,
-	)
+	bridgeName, err := nmstate.GetDesiredStatedBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 	if err != nil {
+		cond.Message = fmt.Sprintf("Error get bridge name from NetworkConfigurationPolicy desired state - %s", instance.Name)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
 
-	//
-	// get bridgeName from desiredState
-	//
-	bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0]
-
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
-	networkConfigurationPolicy.Name = bridgeName.String()
+	networkConfigurationPolicy.Name = bridgeName
+
+	// set bridgeName to instance status to be able to consume information from there
+	instance.Status.BridgeName = bridgeName
 
 	apply := func() error {
 		common.InitMap(&networkConfigurationPolicy.Labels)
@@ -340,7 +322,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 		networkConfigurationPolicy.Labels[common.OwnerNameLabelSelector] = instance.Name
 		networkConfigurationPolicy.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
 		networkConfigurationPolicy.Labels[common.OwnerControllerNameLabelSelector] = openstacknetattachment.AppLabel
-		networkConfigurationPolicy.Labels[openstacknetattachment.BridgeLabel] = bridgeName.String()
+		networkConfigurationPolicy.Labels[openstacknetattachment.BridgeLabel] = bridgeName
 
 		networkConfigurationPolicy.Spec = instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy
 
@@ -349,7 +331,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 
 	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkConfigurationPolicy, apply)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName.String())
+		cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
 		err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)
@@ -387,21 +369,8 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 ) error {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
-	//
-	// Get the bridge name from CR desired state
-	//
-	desiredState, err := r.getNNCPDesiredState(
-		instance,
-		&instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
-		cond,
-	)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
-		return err
-	}
-
-	bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0].String()
-
-	if err = r.Client.Get(context.TODO(), types.NamespacedName{Name: bridgeName}, networkConfigurationPolicy); err != nil {
 		return err
 	}
 
@@ -439,34 +408,8 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 ) (ctrl.Result, error) {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
-	//
-	// Get the bridge name from CR desired state
-	//
-	desiredState, err := r.getNNCPDesiredState(
-		instance,
-		&instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy,
-		cond,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	bridgeName := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.name").Array()[0].String()
-
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: bridgeName}, networkConfigurationPolicy)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
-
-	//
-	// Get the current desired state from nncp object
-	//
-	desiredState, err = r.getNNCPDesiredState(
-		instance,
-		&networkConfigurationPolicy.Spec,
-		cond,
-	)
-	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -482,15 +425,29 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		return ctrl.Result{}, err
 	}
 
-	bridgeState := gjson.Get(string(desiredState["desiredState"]), "interfaces.#.state").Array()[0].String()
+	bridgeState, err := nmstate.GetDesiredStateInterfaceState(networkConfigurationPolicy.Spec.DesiredState.Raw)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Error getting interface state for bride %s from %s networkConfigurationPolicy", instance.Status.BridgeName, networkConfigurationPolicy.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+
+		err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)
+		return ctrl.Result{}, err
+	}
 
 	if bridgeState != "absent" && bridgeState != "down" {
 		apply := func() error {
+			desiredState, err := nmstate.GetDesiredStateAsString(networkConfigurationPolicy.Spec.DesiredState.Raw)
+			if err != nil {
+				return err
+			}
+
 			//
 			// Update nncp desired state to down to unconfigure the device on the worker nodes
 			//
 			re := regexp.MustCompile(`"state":"up"`)
-			desiredStateAbsent := re.ReplaceAllString(string(desiredState["desiredState"]), `"state":"down"`)
+			desiredStateAbsent := re.ReplaceAllString(desiredState, `"state":"down"`)
+
 			networkConfigurationPolicy.Spec.DesiredState = nmstateshared.State{
 				Raw: nmstateshared.RawState(desiredStateAbsent),
 			}
@@ -503,7 +460,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		//
 		op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkConfigurationPolicy, apply)
 		if err != nil {
-			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
+			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", instance.Status.BridgeName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
@@ -541,7 +498,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 					return ctrl.Result{}, err
 				}
 
-				common.LogForObject(r, fmt.Sprintf("NodeNetworkConfigurationPolicy is no longer required and has been deleted: %s", bridgeName), instance)
+				common.LogForObject(r, fmt.Sprintf("NodeNetworkConfigurationPolicy is no longer required and has been deleted: %s", networkConfigurationPolicy.Name), instance)
 
 				return ctrl.Result{}, nil
 
