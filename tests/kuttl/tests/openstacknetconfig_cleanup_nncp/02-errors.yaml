@@ -1,0 +1,57 @@
+#
+# Check for:
+#
+# - OpenStackNet "tenant" has been deleted
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: ctlplane
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: external
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: internalapi
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: storage
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: storagemgmt
+  namespace: openstack
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: tenant
+  namespace: openstack
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-openstacknet
+    osp-director.openstack.org/namespace: openstack
+  name: br-ex
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-openstacknet
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp

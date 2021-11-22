@@ -1,0 +1,25 @@
+#
+# Check for:
+#
+# - bridge interfaces got remove from worker nodes
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      sleep 10
+      RETRIES="${RETRIES:-20}"
+      for i in $(seq 1 $RETRIES); do
+          SUCCESS="0"
+          for k in 20 21 22; do
+            NOBRIDGES=$(ssh core@192.168.111.$k "ip a" | egrep "br-ex:|br-osp:" | wc -l)
+          done
+          if [ "$NOBRIDGES" -eq "0" ]; then
+            break
+          fi
+          sleep $i
+          if [ "$i" -eq "${RETRIES}" ]; then
+            exit 1
+          fi
+      done

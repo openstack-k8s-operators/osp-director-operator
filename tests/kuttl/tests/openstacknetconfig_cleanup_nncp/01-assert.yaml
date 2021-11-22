@@ -1,0 +1,543 @@
+#
+# Check for:
+#
+# - 1 OpenstackNetworkConfig
+# - 2 OpenStackNetworkAttachment
+# - 2 NodeNetworkConfigurationPolicy
+# - 6 OpenStackNets
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  finalizers:
+  - openstacknetconfig.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  attachConfigurations:
+    br-ex:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp6s0
+            description: Linux bridge with enp6s0 as a port
+            mtu: 1500
+            name: br-ex
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            mtu: 1500
+            name: br-osp
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+  networks:
+  - mtu: 1500
+    name: Control
+    nameLower: ctlplane
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 192.168.25.250
+        allocationStart: 192.168.25.100
+        cidr: 192.168.25.0/24
+        gateway: 192.168.25.1
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: ctlplane
+      vlan: 0
+    vip: true
+  - mtu: 1350
+    name: InternalApi
+    nameLower: internal_api
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 172.17.0.250
+        allocationStart: 172.17.0.10
+        cidr: 172.17.0.0/24
+        gateway: ""
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: internal_api
+      vlan: 20
+    vip: true
+  - mtu: 1500
+    name: External
+    nameLower: external
+    subnets:
+    - attachConfiguration: br-ex
+      ipv4:
+        allocationEnd: 10.0.0.250
+        allocationStart: 10.0.0.10
+        cidr: 10.0.0.0/24
+        gateway: 10.0.0.1
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: external
+      vlan: 0
+    vip: true
+  - mtu: 1350
+    name: Storage
+    nameLower: storage
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 172.18.0.250
+        allocationStart: 172.18.0.10
+        cidr: 172.18.0.0/24
+        gateway: ""
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: storage
+      vlan: 30
+    vip: true
+    vip: true
+  - mtu: 1350
+    name: StorageMgmt
+    nameLower: storage_mgmt
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 172.19.0.250
+        allocationStart: 172.19.0.10
+        cidr: 172.19.0.0/24
+        gateway: ""
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: storage_mgmt
+      vlan: 40
+    vip: true
+  - mtu: 1350
+    name: Tenant
+    nameLower: tenant
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 172.20.0.250
+        allocationStart: 172.20.0.10
+        cidr: 172.20.0.0/24
+        gateway: ""
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+      name: tenant
+      vlan: 50
+    vip: false
+status:
+  provisioningStatus:
+    attachDesiredCount: 2
+    attachReadyCount: 2
+    netDesiredCount: 6
+    netReadyCount: 6
+    reason: OpenStackNetConfig openstacknetconfig has successfully configured OpenStackNet tenant
+    state: Configured
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetAttachment
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    bridge: br-ex
+    ooo-attach-reference: br-ex
+    ooo-attach-type: bridge
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: br-ex-bridge
+  namespace: openstack
+spec:
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp6s0
+          description: Linux bridge with enp6s0 as a port
+          mtu: 1500
+          name: br-ex
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+    nodeSriovConfigurationPolicy:
+      desiredState:
+        deviceType: vfio-pci
+        mtu: 9000
+        numVfs: 0
+        port: ""
+        spoofCheck: "on"
+        trust: "off"
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetAttachment
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    bridge: br-osp
+    ooo-attach-reference: br-osp
+    ooo-attach-type: bridge
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp-bridge
+  namespace: openstack
+spec:
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          mtu: 1500
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+    nodeSriovConfigurationPolicy:
+      desiredState:
+        deviceType: vfio-pci
+        mtu: 9000
+        numVfs: 0
+        port: ""
+        spoofCheck: "on"
+        trust: "off"
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    ooo-bridge: br-ex
+    osp-director.openstack.org/controller: osp-openstacknetattach
+    osp-director.openstack.org/name: br-ex-bridge
+    osp-director.openstack.org/namespace: openstack
+  name: br-ex
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp6s0
+      description: Linux bridge with enp6s0 as a port
+      name: br-ex
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    ooo-bridge: br-osp
+    osp-director.openstack.org/controller: osp-openstacknetattach
+    osp-director.openstack.org/name: br-osp-bridge
+    osp-director.openstack.org/namespace: openstack
+  name: br-osp
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp7s0
+      description: Linux bridge with enp7s0 as a port
+      name: br-osp
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Control
+    ooo-netname-lower: ctlplane
+    ooo-subnetname: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 192.168.25.250
+  allocationStart: 192.168.25.100
+  attachConfiguration: br-osp
+  cidr: 192.168.25.0/24
+  gateway: 192.168.25.1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
+  vip: true
+  vlan: 0
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: External
+    ooo-netname-lower: external
+    ooo-subnetname: external
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: external
+  namespace: openstack
+spec:
+  allocationEnd: 10.0.0.250
+  allocationStart: 10.0.0.10
+  attachConfiguration: br-ex
+  cidr: 10.0.0.0/24
+  gateway: 10.0.0.1
+  mtu: 1500
+  name: External
+  nameLower: external
+  vip: true
+  vlan: 0
+status:
+  conditions:
+  - message: OpenStackNet external has been successfully configured on targeted node(s)
+    reason: OpenStackNet external has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: InternalApi
+    ooo-netname-lower: internal_api
+    ooo-subnetname: internal_api
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: internalapi
+  namespace: openstack
+spec:
+  allocationEnd: 172.17.0.250
+  allocationStart: 172.17.0.10
+  attachConfiguration: br-osp
+  cidr: 172.17.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: InternalApi
+  nameLower: internal_api
+  vip: true
+  vlan: 20
+status:
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Storage
+    ooo-netname-lower: storage
+    ooo-subnetname: storage
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: storage
+  namespace: openstack
+spec:
+  allocationEnd: 172.18.0.250
+  allocationStart: 172.18.0.10
+  attachConfiguration: br-osp
+  cidr: 172.18.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: Storage
+  nameLower: storage
+  vip: true
+  vlan: 30
+status:
+  conditions:
+  - message: OpenStackNet storage has been successfully configured on targeted node(s)
+    reason: OpenStackNet storage has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: StorageMgmt
+    ooo-netname-lower: storage_mgmt
+    ooo-subnetname: storage_mgmt
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: storagemgmt
+  namespace: openstack
+spec:
+  allocationEnd: 172.19.0.250
+  allocationStart: 172.19.0.10
+  attachConfiguration: br-osp
+  cidr: 172.19.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: StorageMgmt
+  nameLower: storage_mgmt
+  vip: true
+  vlan: 40
+status:
+  conditions:
+  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-netname: Tenant
+    ooo-netname-lower: tenant
+    ooo-subnetname: tenant
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: tenant
+  namespace: openstack
+spec:
+  allocationEnd: 172.20.0.250
+  allocationStart: 172.20.0.10
+  attachConfiguration: br-osp
+  cidr: 172.20.0.0/24
+  gateway: ""
+  mtu: 1350
+  name: Tenant
+  nameLower: tenant
+  vip: false
+  vlan: 50
+status:
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
