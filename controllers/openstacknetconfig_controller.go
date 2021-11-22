@@ -340,7 +340,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 	//
 	attachType := ospdirectorv1beta1.AttachTypeBridge
 	if nodeConfPolicy.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
-		attachType = ospdirectorv1beta1.AttachTypeSrIOV
+		attachType = ospdirectorv1beta1.AttachTypeSriov
 	}
 
 	attachConfig.Name = fmt.Sprintf("%s-%s", nodeConfName, strings.ToLower(string(attachType)))
@@ -359,7 +359,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 		switch attachType {
 		case ospdirectorv1beta1.AttachTypeBridge:
 			attachConfig.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy = nodeConfPolicy.NodeNetworkConfigurationPolicy
-		case ospdirectorv1beta1.AttachTypeSrIOV:
+		case ospdirectorv1beta1.AttachTypeSriov:
 			attachConfig.Spec.AttachConfiguration.NodeSriovConfigurationPolicy = nodeConfPolicy.NodeSriovConfigurationPolicy
 		}
 
@@ -435,7 +435,7 @@ func (r *OpenStackNetConfigReconciler) attachCleanup(
 	// default attach type is AttachTypeBridge
 	attachType := ospdirectorv1beta1.AttachTypeBridge
 	if nodeConfPolicy.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
-		attachType = ospdirectorv1beta1.AttachTypeSrIOV
+		attachType = ospdirectorv1beta1.AttachTypeSriov
 	}
 
 	attachConfig.Name = fmt.Sprintf("%s-%s", nodeConfName, strings.ToLower(string(attachType)))

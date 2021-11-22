@@ -35,7 +35,7 @@ func Network(networkName string, attachType ospdirectorv1beta1.AttachType) NetSe
 		net.Name = networkName
 		actualNetworkName := networkName
 
-		if attachType == ospdirectorv1beta1.AttachTypeSrIOV {
+		if attachType == ospdirectorv1beta1.AttachTypeSriov {
 			// SRIOV networks use "<network>-sriov-network" format for the actual network name
 			// FIXME?: We could just change the OpenStackNet controller so that it uses the instance
 			//         name without the "-sriov-network" suffix, but it is currently doing this
@@ -91,7 +91,7 @@ func Interface(ifName string, attachType ospdirectorv1beta1.AttachType) Interfac
 			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
 				Bridge: &virtv1.InterfaceBridge{},
 			}
-		case ospdirectorv1beta1.AttachTypeSrIOV:
+		case ospdirectorv1beta1.AttachTypeSriov:
 			model = ""
 			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
 				SRIOV: &virtv1.InterfaceSRIOV{},

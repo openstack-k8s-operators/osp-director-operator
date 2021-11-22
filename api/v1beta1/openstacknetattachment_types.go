@@ -27,8 +27,8 @@ type AttachType string
 const (
 	// AttachTypeBridge -
 	AttachTypeBridge AttachType = "bridge"
-	// AttachTypeSrIOV -
-	AttachTypeSrIOV AttachType = "sriov"
+	// AttachTypeSriov -
+	AttachTypeSriov AttachType = "sriov"
 )
 
 // NodeConfigurationPolicy - policy definition to create NodeNetworkConfigurationPolicy or NodeSriovConfigurationPolicy

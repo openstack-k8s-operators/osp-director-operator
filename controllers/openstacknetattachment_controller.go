@@ -203,7 +203,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 
-		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeSrIOV
+		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeSriov
 	} else {
 		//
 		// Create/update Bridge

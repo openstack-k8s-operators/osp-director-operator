@@ -302,7 +302,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if _, ok := nadMap[network.Name]; !ok {
 				msg = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
 			}
-		case ospdirectorv1beta1.AttachTypeSrIOV:
+		case ospdirectorv1beta1.AttachTypeSriov:
 			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
 			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", network.Spec.NameLower)]; !ok {
 				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
