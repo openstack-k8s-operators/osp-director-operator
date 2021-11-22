@@ -10,11 +10,11 @@ metadata:
   name: goodprov
   namespace: openstack
 spec:
-  apacheImageUrl: registry.redhat.io/rhel8/httpd-24:latest
+  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:162cc35b2edb9054d29293ed3f0f98f195cf16647e89c3b8c7a4e911606ef4fd
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader@sha256:1a1caa9c2841f6aa66e385c3a21b9d084fd039c02b85e0a78722ededbed0bc22
   port: 8081
-  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
+  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent@sha256:22db35fb3fb4bb2d67a29f6db46ca8cbd8a903cc4f3437cfaec11f2b6b6d3b6b
 status:
   conditions:
   - message: ProvisionServer goodprov has been provisioned
