@@ -83,6 +83,9 @@ spec:
                 description: GitSecret used to pull playbooks into the openstackclient
                   pod
                 type: string
+              idmSecret:
+                description: Idm secret used to register openstack client in IPA
+                type: string
               openStackClientImageURL:
                 description: OpenstackClient image. If missing will be set to the
                   configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the

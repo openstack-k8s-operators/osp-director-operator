@@ -1,0 +1,12 @@
+{
+    "command": "/usr/local/bin/init.sh",
+    "config_files": [
+        {
+            "source": "/var/lib/kolla/src/*",
+            "dest": "/",
+            "merge": true,
+            "preserve_properties": true,
+            "optional": true
+        }
+    ]
+}

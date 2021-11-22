@@ -213,6 +213,25 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
 	}
 
+	if instance.Spec.IdmSecret != "" {
+		_, _, err = common.GetSecret(r, instance.Spec.IdmSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				err2 := fmt.Errorf("IdmSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.IdmSecret)
+				newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
+				newProvStatus.Reason = err2.Error()
+				_ = r.setProvisioningStatus(instance, newProvStatus)
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
+			}
+			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
+			newProvStatus.Reason = err.Error()
+			_ = r.setProvisioningStatus(instance, newProvStatus)
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("IdmSecret %s exists", instance.Spec.IdmSecret))
+	}
+
 	if instance.Status.VIPStatus == nil {
 		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
@@ -402,6 +421,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		osc.Spec.DNSServers = instance.Spec.DNSServers
 		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
+		if instance.Spec.IdmSecret != "" {
+			osc.Spec.IdmSecret = instance.Spec.IdmSecret
+		}
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
 			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks

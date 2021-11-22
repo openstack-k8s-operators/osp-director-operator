@@ -34,6 +34,8 @@ const (
 	HostsPersistentStorageSize = "1G"
 	// CloudAdminPersistentStorageSize - size in GB
 	CloudAdminPersistentStorageSize = "4G"
+	// KollaSrcPersistentStorageSize - size in GB
+	KollaSrcPersistentStorageSize = "1G"
 	// Count - openstackclient count is atm fixed to 1
 	Count = 1
 	// Role - openstackclient has not tripleo role, set it as const

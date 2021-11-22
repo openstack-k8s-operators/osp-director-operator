@@ -103,6 +103,14 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 	}
+	if instance.Spec.IdmSecret != "" {
+		_, _, err = common.GetSecret(r, instance.Spec.IdmSecret, instance.Namespace)
+		if err != nil && k8s_errors.IsNotFound(err) {
+			return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("IdmSecret secret does not exist: %v", err)
+		} else if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	if instance.Status.OpenStackClientNetStatus == nil {
 		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
@@ -261,6 +269,25 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.Log.Info(fmt.Sprintf("Openstackclient PVC /home/cloud-admin %s Updated", pvc.Name))
 	}
 
+	pvcDetails = common.Pvc{
+		Name:         fmt.Sprintf("%s-kolla-src", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.KollaSrcPersistentStorageSize,
+		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
+		StorageClass: instance.Spec.StorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Openstackclient kolla-src PVC %s Updated", pvc.Name))
+	}
+
 	// Create or update the pod object
 	op, err = r.podCreateOrUpdate(instance, &hostnameDetails, envVars)
 	if err != nil {
@@ -316,12 +343,15 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
 	volumes := openstackclient.GetVolumes(instance)
 
+	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
+
 	if instance.Spec.CloudName != "" {
 		envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}
 
 	if instance.Spec.DomainName != "" {
 		envVars["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
+
 	}
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
@@ -375,13 +405,8 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 				Name:            "openstackclient",
 				Image:           instance.Spec.ImageURL,
 				ImagePullPolicy: corev1.PullAlways,
-				Command: []string{
-					"/bin/bash",
-					"-c",
-					"/bin/sleep infinity",
-				},
-				Env:          env,
-				VolumeMounts: volumeMounts,
+				Env:             env,
+				VolumeMounts:    volumeMounts,
 			},
 		},
 	}
@@ -396,17 +421,67 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 		}
 	}
 
+	initEnv := env
+	if instance.Spec.IdmSecret != "" {
+		idmEnv := []corev1.EnvVar{
+			{
+				Name: "IPA_SERVER",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.IdmSecret,
+						},
+						Key: "IdMServer",
+					},
+				},
+			},
+			{
+				Name: "IPA_SERVER_USER",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.IdmSecret,
+						},
+						Key: "IdMAdminUser",
+					},
+				},
+			},
+			{
+				Name: "IPA_SERVER_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.IdmSecret,
+						},
+						Key: "IdMAdminPassword",
+					},
+				},
+			},
+			{
+				Name: "IPA_REALM",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Spec.IdmSecret,
+						},
+						Key: "IdMRealm",
+					},
+				},
+			},
+			{
+				Name:  "IPA_DOMAIN",
+				Value: instance.Spec.DomainName,
+			},
+		}
+		initEnv = append(initEnv, idmEnv...)
+	}
+
 	initContainerDetails := []openstackclient.InitContainer{
 		{
 			ContainerImage: instance.Spec.ImageURL,
-			Commands: []string{
-				"/bin/bash",
-				"-c",
-				"/usr/local/bin/init.sh",
-			},
-			Env:          env,
-			Privileged:   false,
-			VolumeMounts: initVolumeMounts,
+			Env:            initEnv,
+			Privileged:     false,
+			VolumeMounts:   initVolumeMounts,
 		},
 	}
 

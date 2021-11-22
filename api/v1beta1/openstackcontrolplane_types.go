@@ -76,6 +76,9 @@ type OpenStackControlPlaneSpec struct {
 	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
 	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image
 	OpenStackRelease string `json:"openStackRelease"`
+
+	// Idm secret used to register openstack client in IPA
+	IdmSecret string `json:"idmSecret,omitempty"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs
