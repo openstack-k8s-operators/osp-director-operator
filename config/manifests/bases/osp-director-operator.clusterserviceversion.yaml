@@ -7,7 +7,7 @@ metadata:
     operatorframework.io/suggested-namespace: openstack
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/internal-objects: '["openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org","openstackephemeralheats.osp-director.openstack.org"]'
+    operators.operatorframework.io/internal-objects: '["openstacknetattachments.osp-director.openstack.org","openstacknets.osp-director.openstack.org","openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org","openstackephemeralheats.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: osp-director-operator.v0.0.0
   namespace: placeholder
