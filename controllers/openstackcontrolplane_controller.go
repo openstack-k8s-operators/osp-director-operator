@@ -40,6 +40,7 @@ import (
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -269,32 +270,18 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	currentStatus := instance.Status.DeepCopy()
 	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
 
+	//
 	// Create VIPs for networks where VIP parameter is true
-	// 1) Create network list of all VM role networks
-	uniqNetworksList := r.createUniqNetworkList(instance)
-	// 2) get list of networks
-	overcloudNetList := &ospdirectorv1beta1.OpenStackNetList{}
-	overcloudNetListOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-		client.Limit(1000),
-	}
-	err = r.Client.List(context.TODO(), overcloudNetList, overcloudNetListOpts...)
+	//
+
+	// create list of networks where Spec.VIP == True
+	vipNetworksList, err := r.createVIPNetworkList(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	// 3) remove all networks from uniqNetworksList where VIP == false
-	for _, osNet := range overcloudNetList.Items {
-		if !osNet.Spec.VIP {
-			for index, name := range uniqNetworksList {
-				if osNet.Name == name {
-					common.RemoveIndex(uniqNetworksList, index)
-				}
-			}
-		}
-	}
 
 	ipsetDetails := common.IPSet{
-		Networks:            uniqNetworksList,
+		Networks:            vipNetworksList,
 		Role:                controlplane.Role,
 		HostCount:           controlplane.Count,
 		VIP:                 true,
@@ -321,7 +308,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// update VIP network status
-	for _, netName := range uniqNetworksList {
+	for _, netName := range vipNetworksList {
 		// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
 		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
 	}
@@ -600,22 +587,40 @@ func (r *OpenStackControlPlaneReconciler) setProvisioningStatus(instance *ospdir
 	return nil
 }
 
-func (r *OpenStackControlPlaneReconciler) createUniqNetworkList(instance *ospdirectorv1beta1.OpenStackControlPlane) []string {
+func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(instance *ospdirectorv1beta1.OpenStackControlPlane) ([]string, error) {
 
 	// create uniq list networls of all VirtualMachineRoles
-	networkList := make(map[string]int)
+	networkList := make(map[string]bool)
+	uniqNetworksList := []string{}
+
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
-		for _, network := range vmRole.Networks {
-			networkList[network] = 1
+		for _, networkNameLower := range vmRole.Networks {
+
+			// get network with name_lower label to verify if VIP needs to be requested from Spec
+			network, err := openstacknet.GetOpenStackNetWithLabel(
+				r,
+				instance.Namespace,
+				map[string]string{
+					openstacknet.SubNetNameLabelSelector: networkNameLower,
+				},
+			)
+			if err != nil {
+				if k8s_errors.IsNotFound(err) {
+					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", networkNameLower))
+					continue
+				}
+				// Error reading the object - requeue the request.
+				return uniqNetworksList, err
+			}
+
+			if _, value := networkList[networkNameLower]; !value && network.Spec.VIP {
+				networkList[networkNameLower] = true
+				uniqNetworksList = append(uniqNetworksList, networkNameLower)
+			}
 		}
 	}
 
-	uniqNetworksList := make([]string, 0)
-	for network := range networkList {
-		uniqNetworksList = append(uniqNetworksList, network)
-	}
-
-	return uniqNetworksList
+	return uniqNetworksList, nil
 }
 
 func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(instance *ospdirectorv1beta1.OpenStackControlPlane, newProvStatus ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus) error {
