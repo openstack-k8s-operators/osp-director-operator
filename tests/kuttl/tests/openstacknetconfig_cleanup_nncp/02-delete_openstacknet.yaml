@@ -1,0 +1,10 @@
+#
+# Delete the OpenStackNetConfig
+#
+# NOTE: (mschuppert) TODO delete single network when implemented in osnetconfig
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc delete -f ../../../../config/samples/osp-director_v1beta1_openstacknetconfig.yaml
+    namespaced: true

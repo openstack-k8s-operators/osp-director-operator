@@ -12,6 +12,8 @@ The OSP Director Operator creates a set of Custom Resource Definitions on top of
 
 Hardware Provisioning CRDs
 --------------------------
+- openstacknetattachment: manages NodeNetworkConfigurationPolicy and NodeSriovConfigurationPolicy used to attach networks to virtual machines
+- openstacknetconfig: high level CRD to specify openstacknetattachments and openstacknets to describe the full network configuration. 
 - openstackbaremetalset: create sets of baremetal hosts for a specific TripleO role (Compute, Storage, etc.)
 - openstackcontrolplane: A CRD used to create the OpenStack control plane and manage associated openstackvmsets
 - openstackipset: Contains a set of IPs for a given network and role. Used internally to manage IP addresses.
@@ -121,68 +123,158 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     ```
 ## Deploying OpenStack once you have the OSP Director Operator installed
 
-1) Define your OpenStackNet custom resource. At least 1 network is required for the ctlplane. Optionally you may define multiple networks to be used with TripleO's network isolation architecture. In addition to IP address assignment the OpenStackNet includes information that is used to define the network configuration policy used to attach any VM's to this network via OpenShift Virtualization. The following is an example of a simple IPv4 ctlplane network which uses linux bridge for its host configuration.
+1) Define your OpenStackNetConfig custom resource. At least one network is required for the ctlplane. Optionally you may define multiple networks in the CR to be used with TripleO's network isolation architecture. In addition to the network definiition the OpenStackNet includes information that is used to define the network configuration policy used to attach any VM's to this network via OpenShift Virtualization. The following is an example of a simple IPv4 ctlplane network which uses linux bridge for its host configuration.
     ```yaml
     apiVersion: osp-director.openstack.org/v1beta1
-    kind: OpenStackNet
+    kind: OpenStackNetConfig
     metadata:
-      name: ctlplane
+      name: openstacknetconfig
     spec:
-      cidr: 192.168.25.0/24
-      allocationStart: 192.168.25.100
-      allocationEnd: 192.168.25.250
-      gateway: 192.168.25.1
-      attachConfiguration:
-        nodeNetworkConfigurationPolicy:
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
+      attachConfigurations:
+        br-osp:
+          nodeNetworkConfigurationPolicy:
+            nodeSelector:
+              node-role.kubernetes.io/worker: ""
+            desiredState:
+              interfaces:
+              - bridge:
+                  options:
+                    stp:
+                      enabled: false
+                  port:
+                  - name: enp7s0
+                description: Linux bridge with enp7s0 as a port
+                name: br-osp
+                state: up
+                type: linux-bridge
+                mtu: 1500
+      networks:
+      - name: Control
+        nameLower: ctlplane
+        subnets:
+        - name: ctlplane
+          ipv4:
+            allocationEnd: 192.168.25.250
+            allocationStart: 192.168.25.100
+            cidr: 192.168.25.0/24
+            gateway: 192.168.25.1
+          attachConfiguration: br-osp
     ```
 
-    If you write the above YAML into a file called ctlplane-network.yaml you can create the OpenStackNet via this command:
+    If you write the above YAML into a file called networkconfig.yaml you can create the OpenStackNetConfig via this command:
 
     ```bash
-    oc create -n openstack -f ctlplane-network.yaml
+    oc create -n openstack -f networkconfig.yaml
     ```
 
     To use network isolation using VLAN add the vlan ID to the spec of the network definition
     ```yaml
     apiVersion: osp-director.openstack.org/v1beta1
-    kind: OpenStackNet
+    kind: OpenStackNetConfig
     metadata:
-      name: internalapi
+      name: openstacknetconfig
     spec:
-      cidr: 172.16.2.0/24
-      vlan: 20
-      allocationStart: 172.16.2.4
-      allocationEnd: 172.16.2.250
-      attachConfiguration:
-        nodeNetworkConfigurationPolicy:
-          nodeSelector:
-            node-role.kubernetes.io/worker: ""
-          desiredState:
-            interfaces:
-            - bridge:
-                options:
-                  stp:
-                    enabled: false
-                port:
-                - name: enp7s0
-              description: Linux bridge with enp7s0 as a port
-              name: br-osp
-              state: up
-              type: linux-bridge
+      attachConfigurations:
+        br-osp:
+          nodeNetworkConfigurationPolicy:
+            nodeSelector:
+              node-role.kubernetes.io/worker: ""
+            desiredState:
+              interfaces:
+              - bridge:
+                  options:
+                    stp:
+                      enabled: false
+                  port:
+                  - name: enp7s0
+                description: Linux bridge with enp7s0 as a port
+                name: br-osp
+                state: up
+                type: linux-bridge
+                mtu: 1500
+        br-ex:
+          nodeNetworkConfigurationPolicy:
+            nodeSelector:
+              node-role.kubernetes.io/worker: ""
+            desiredState:
+              interfaces:
+              - bridge:
+                  options:
+                    stp:
+                      enabled: false
+                  port:
+                  - name: enp6s0
+                description: Linux bridge with enp6s0 as a port
+                name: br-ex
+                state: up
+                type: linux-bridge
+                mtu: 1500
+      networks:
+      - name: Control
+        nameLower: ctlplane
+        subnets:
+        - name: ctlplane
+          ipv4:
+            allocationEnd: 192.168.25.250
+            allocationStart: 192.168.25.100
+            cidr: 192.168.25.0/24
+            gateway: 192.168.25.1
+          attachConfiguration: br-osp
+      - name: InternalApi
+        nameLower: internal_api
+        mtu: 1350
+        subnets:
+        - name: internal_api
+          attachConfiguration: br-osp
+          vlan: 20
+          ipv4:
+            allocationEnd: 172.17.0.250
+            allocationStart: 172.17.0.10
+            cidr: 172.17.0.0/24
+      - name: External
+        nameLower: external
+        subnets:
+        - name: external
+          ipv6:
+            allocationEnd: 2001:db8:fd00:1000:ffff:ffff:ffff:fffe
+            allocationStart: 2001:db8:fd00:1000::10
+            cidr: 2001:db8:fd00:1000::/64
+            gateway: 2001:db8:fd00:1000::1
+          attachConfiguration: br-ex
+      - name: Storage
+        nameLower: storage
+        mtu: 1350
+        subnets:
+        - name: storage
+          ipv4:
+            allocationEnd: 172.18.0.250
+            allocationStart: 172.18.0.10
+            cidr: 172.18.0.0/24
+          vlan: 30
+          attachConfiguration: br-osp
+      - name: StorageMgmt
+        nameLower: storage_mgmt
+        mtu: 1350
+        subnets:
+        - name: storage_mgmt
+          ipv4:
+            allocationEnd: 172.19.0.250
+            allocationStart: 172.19.0.10
+            cidr: 172.19.0.0/24
+          vlan: 40
+          attachConfiguration: br-osp
+      - name: Tenant
+        nameLower: tenant
+        vip: False
+        mtu: 1350
+        subnets:
+        - name: tenant
+          ipv4:
+            allocationEnd: 172.20.0.250
+            allocationStart: 172.20.0.10
+            cidr: 172.20.0.0/24
+          vlan: 50
+          attachConfiguration: br-osp
     ```
 
     When using VLAN for network isolation with linux-bridge
@@ -202,6 +294,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     - [Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/templates/osp/tripleo_deploy/vlan/network-environment.yaml.j2)
 
+        **NOTE**: Net-Config files for the virtual machines get created by the operator, but can be overwritten using the "Tarball Config Map". To overwrite a pre-rendered Net-Config use the `<role lowercase>-nic-template.yaml` file name.
         **NOTE**: network interface names for the VMs created by the OpenStackVMSet controller are alphabetically ordered by the network names assigned to the VM role. An exception is the `default` network interface of the VM pod which will always is the first interface. The resulting inteface section of the virtual machine definition will look like this:
 
         ```yaml
@@ -231,7 +324,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
         With this the ctlplane interface is nic2, external nic3, ... and so on.
 
-        **NOTE**: FIP traffic does not pass to a VLAN tenant network with ML2/OVN and DVR. DVR is enabled by default. If you need VLAN tenant networks with OVN, you can disable DVR. To disable DVR, inlcude the following lines in an environment file:
+        **NOTE**: FIP traffic does not pass to a VLAN tenant network with ML2/OVN and DVR. DVR is enabled by default. If you need VLAN tenant networks with OVN, you can disable DVR. To disable DVR, include the following lines in an environment file:
 
         ```yaml
         parameter_defaults:
@@ -389,7 +482,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     oc cp openstackclient:/home/cloud-admin/roles_data.yaml roles_data.yaml
     ```
 
-    Update the `tarballConfigMap` configmap to add the `roles_data.yaml` file to the tarball and update the configmap. 
+    Update the `tarballConfigMap` configmap to add the `roles_data.yaml` file to the tarball and update the configmap.
 
     **NOTE**: Make sure to use `roles_data.yaml` as the file name.
 
@@ -447,9 +540,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     b) register the overcloud systems to required channels
 
-    The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.1/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
-
-    TODO: update link to 16.2 release when available
+    The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
 
     ```bash
     oc rsh openstackclient
@@ -593,9 +684,7 @@ cd /home/cloud-admin
 
 b) register the overcloud systems to required channels
 
-The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.1/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
-
-**NOTE**: update link to 16.2 release when available
+The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
 
 ```bash
 oc rsh openstackclient
@@ -776,3 +865,477 @@ This results in the following behavior
 ## (optional) Cleanup OpenStack resources
 
 If the VM did host any OSP service which should be removed, delete the service using the corresponding openstack command.
+
+Deploy nodes using multiple subnets (spine/leaf)
+------------------------------------------------
+
+It is possible to deploy tripleo's routed networks ([Spine/Leaf Networking](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/spine_leaf_networking/index)) architecture to configure overcloud leaf networks. Use the subnets parameter to define the additional Leaf subnets with a base network.
+
+A limitation right now is that there can only be one provision network for metal3.
+
+The workflow to install an overcloud using multiple subnets would be:
+
+## Create/Update the OpenStackNetConfig CR to define all subnets
+
+Define your OpenStackNetConfig custom resource and specify all the subnets for the overcloud networks. The operator will render the tripleo network_data.yaml for the used OSP release.
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: openstacknetconfig
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            name: br-osp
+            state: up
+            type: linux-bridge
+            mtu: 1500
+    br-ex:
+      nodeNetworkConfigurationPolicy:
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp6s0
+            description: Linux bridge with enp6s0 as a port
+            name: br-ex
+            state: up
+            type: linux-bridge
+            mtu: 1500
+  networks:
+  - name: Control
+    nameLower: ctlplane
+    subnets:
+    - name: ctlplane
+      ipv4:
+        allocationEnd: 192.168.25.250
+        allocationStart: 192.168.25.100
+        cidr: 192.168.25.0/24
+        gateway: 192.168.25.1
+      attachConfiguration: br-osp
+  - name: InternalApi
+    nameLower: internal_api
+    mtu: 1350
+    subnets:
+    - name: internal_api
+      ipv4:
+        allocationEnd: 172.17.0.250
+        allocationStart: 172.17.0.10
+        cidr: 172.17.0.0/24
+        routes:
+        - destination: 172.17.1.0/24
+          nexthop: 172.17.0.1
+        - destination: 172.17.2.0/24
+          nexthop: 172.17.0.1
+      vlan: 20
+      attachConfiguration: br-osp
+    - name: internal_api_leaf1
+      ipv4:
+        allocationEnd: 172.17.1.250
+        allocationStart: 172.17.1.10
+        cidr: 172.17.1.0/24
+        routes:
+        - destination: 172.17.0.0/24
+          nexthop: 172.17.1.1
+        - destination: 172.17.2.0/24
+          nexthop: 172.17.1.1
+      vlan: 21
+      attachConfiguration: br-osp
+    - name: internal_api_leaf2
+      ipv4:
+        allocationEnd: 172.17.2.250
+        allocationStart: 172.17.2.10
+        cidr: 172.17.2.0/24
+        routes:
+        - destination: 172.17.1.0/24
+          nexthop: 172.17.2.1
+        - destination: 172.17.0.0/24
+          nexthop: 172.17.2.1
+      vlan: 22
+      attachConfiguration: br-osp
+  - name: External
+    nameLower: external
+    subnets:
+    - name: external
+      ipv4:
+        allocationEnd: 10.0.0.250
+        allocationStart: 10.0.0.10
+        cidr: 10.0.0.0/24
+        gateway: 10.0.0.1
+      attachConfiguration: br-ex
+  - name: Storage
+    nameLower: storage
+    mtu: 1350
+    subnets:
+    - name: storage
+      ipv4:
+        allocationEnd: 172.18.0.250
+        allocationStart: 172.18.0.10
+        cidr: 172.18.0.0/24
+        routes:
+        - destination: 172.18.1.0/24
+          nexthop: 172.18.0.1
+        - destination: 172.18.2.0/24
+          nexthop: 172.18.0.1
+      vlan: 30
+      attachConfiguration: br-osp
+    - name: storage_leaf1
+      ipv4:
+        allocationEnd: 172.18.1.250
+        allocationStart: 172.18.1.10
+        cidr: 172.18.1.0/24
+        routes:
+        - destination: 172.18.0.0/24
+          nexthop: 172.18.1.1
+        - destination: 172.18.2.0/24
+          nexthop: 172.18.1.1
+      vlan: 31
+      attachConfiguration: br-osp
+    - name: storage_leaf2
+      ipv4:
+        allocationEnd: 172.18.2.250
+        allocationStart: 172.18.2.10
+        cidr: 172.18.2.0/24
+        routes:
+        - destination: 172.18.0.0/24
+          nexthop: 172.18.2.1
+        - destination: 172.18.1.0/24
+          nexthop: 172.18.2.1
+      vlan: 32
+      attachConfiguration: br-osp
+  - name: StorageMgmt
+    nameLower: storage_mgmt
+    mtu: 1350
+    subnets:
+    - name: storage_mgmt
+      ipv4:
+        allocationEnd: 172.19.0.250
+        allocationStart: 172.19.0.10
+        cidr: 172.19.0.0/24
+        routes:
+        - destination: 172.19.1.0/24
+          nexthop: 172.19.0.1
+        - destination: 172.19.2.0/24
+          nexthop: 172.19.0.1
+      vlan: 40
+      attachConfiguration: br-osp
+    - name: storage_mgmt_leaf1
+      ipv4:
+        allocationEnd: 172.19.1.250
+        allocationStart: 172.19.1.10
+        cidr: 172.19.1.0/24
+        routes:
+        - destination: 172.19.0.0/24
+          nexthop: 172.19.1.1
+        - destination: 172.19.2.0/24
+          nexthop: 172.19.1.1
+      vlan: 41
+      attachConfiguration: br-osp
+    - name: storage_mgmt_leaf2
+      ipv4:
+        allocationEnd: 172.19.2.250
+        allocationStart: 172.19.2.10
+        cidr: 172.19.2.0/24
+        routes:
+        - destination: 172.19.0.0/24
+          nexthop: 172.19.2.1
+        - destination: 172.19.1.0/24
+          nexthop: 172.19.2.1
+      vlan: 42
+      attachConfiguration: br-osp
+  - name: Tenant
+    nameLower: tenant
+    vip: False
+    mtu: 1350
+    subnets:
+    - name: tenant
+      ipv4:
+        allocationEnd: 172.20.0.250
+        allocationStart: 172.20.0.10
+        cidr: 172.20.0.0/24
+        routes:
+        - destination: 172.20.1.0/24
+          nexthop: 172.20.0.1
+        - destination: 172.20.2.0/24
+          nexthop: 172.20.0.1
+      vlan: 50
+      attachConfiguration: br-osp
+    - name: tenant_leaf1
+      ipv4:
+        allocationEnd: 172.20.1.250
+        allocationStart: 172.20.1.10
+        cidr: 172.20.1.0/24
+        routes:
+        - destination: 172.20.0.0/24
+          nexthop: 172.20.1.1
+        - destination: 172.20.2.0/24
+          nexthop: 172.20.1.1
+      vlan: 51
+      attachConfiguration: br-osp
+    - name: tenant_leaf2
+      ipv4:
+        allocationEnd: 172.20.2.250
+        allocationStart: 172.20.2.10
+        cidr: 172.20.2.0/24
+        routes:
+        - destination: 172.20.0.0/24
+          nexthop: 172.20.2.1
+        - destination: 172.20.1.0/24
+          nexthop: 172.20.2.1
+      vlan: 52
+      attachConfiguration: br-osp
+```
+
+If you write the above YAML into a file called networkconfig.yaml you can create the OpenStackNetConfig via this command:
+
+```bash
+oc create -n openstack -f networkconfig.yaml
+```
+
+## Add roles to the roles_data.yaml and reference the subnets
+
+```yaml
+...
+###############################################################################
+# Role: ComputeLeaf1                                                          #
+###############################################################################
+- name: ComputeLeaf1
+  description: |
+    Basic ComputeLeaf1 Node role
+  # Create external Neutron bridge (unset if using ML2/OVS without DVR)
+  tags:
+    - external_bridge
+  networks:
+    InternalApi:
+      subnet: internal_api_leaf1
+    Tenant:
+      subnet: tenant_leaf1
+    Storage:
+      subnet: storage_leaf1
+  HostnameFormatDefault: '%stackname%-novacompute-leaf1-%index%'
+...
+###############################################################################
+# Role: ComputeLeaf2                                                          #
+###############################################################################
+- name: ComputeLeaf2
+  description: |
+    Basic ComputeLeaf1 Node role
+  # Create external Neutron bridge (unset if using ML2/OVS without DVR)
+  tags:
+    - external_bridge
+  networks:
+    InternalApi:
+      subnet: internal_api_leaf2
+    Tenant:
+      subnet: tenant_leaf2
+    Storage:
+      subnet: storage_leaf2
+  HostnameFormatDefault: '%stackname%-novacompute-leaf2-%index%'
+...
+```
+
+Update the `tarballConfigMap` configmap to add the `roles_data.yaml` file to the tarball and update the configmap.
+
+**NOTE**: Make sure to use `roles_data.yaml` as the file name.
+
+## Create NIC templates for the new roles
+
+Routes subnet information gets auto rendered to the tripleo environment file `environments/network-environment.yaml` which is used in the script rendering the ansible playbooks. In the NIC templates therefore use <NetName>Routes_<subnet_name>, e.g. StorageRoutes_storage_leaf1 to set the correct routing on the host.
+
+### OSP16.2/train NIC templates modification
+
+For a the ComputeLeaf1 compute role the NIC template needs to be modified to use those:
+
+```yaml
+...
+  StorageRoutes_storage_leaf1:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+...
+  InternalApiRoutes_internal_api_leaf1:
+    default: []
+    description: >
+      Routes for the internal_api network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+...
+  TenantRoutes_tenant_leaf1:
+    default: []
+    description: >
+      Routes for the internal_api network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+...
+                       get_param: StorageIpSubnet
+                   routes:
+                     list_concat_unique:
+                      - get_param: StorageRoutes_storage_leaf1
+                 - type: vlan
+...
+                       get_param: InternalApiIpSubnet
+                   routes:
+                     list_concat_unique:
+                      - get_param: InternalApiRoutes_internal_api_leaf1
+...
+                       get_param: TenantIpSubnet
+                   routes:
+                     list_concat_unique:
+                      - get_param: TenantRoutes_tenant_leaf1
+               - type: ovs_bridge
+...
+```
+
+Update the `tarballConfigMap` configmap to add the NIC templates `roles_data.yaml` file to the tarball and update the configmap.
+
+**NOTE**: Make sure to use `roles_data.yaml` as the file name.
+
+### OSP17.0/wallaby ansible NIC template modification
+
+So far only OSP16.2 was tested with multiple subnet deployment and is compatible with OSP17.0 single subnet.
+
+TBD
+
+### Create/Update an environment file to register the NIC templates
+
+Make sure to add the new created NIC templates to the environment file to the `resource_registry`
+for the new node roles:
+
+```yaml
+resource_registry:
+  OS::TripleO::Compute::Net::SoftwareConfig: net-config-two-nic-vlan-compute.yaml
+  OS::TripleO::ComputeLeaf1::Net::SoftwareConfig: net-config-two-nic-vlan-compute_leaf1.yaml
+  OS::TripleO::ComputeLeaf2::Net::SoftwareConfig: net-config-two-nic-vlan-compute_leaf2.yaml
+```
+
+## Deploy the overcloud using multiple subnets
+
+At this point we can provision the overcloud.
+
+### Create the Control Plane
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  gitSecret: git-secret
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  openStackClientNetworks:
+    - ctlplane
+    - external
+    - internal_api
+    - internal_api_leaf1 # optionally the openstackclient can also be connected to subnets
+  openStackClientStorageClass: host-nfs-storageclass
+  passwordSecret: userpassword
+  domainName: ostest.test.metalkube.org
+  virtualMachineRoles:
+    Controller:
+      roleName: Controller
+      roleCount: 1
+      networks:
+        - ctlplane
+        - internal_api
+        - external
+        - tenant
+        - storage
+        - storage_mgmt
+      cores: 6
+      memory: 20
+      diskSize: 40
+      baseImageVolumeName: controller-base-img
+      storageClass: host-nfs-storageclass
+  enableFencing: False
+```
+
+### Create the computes for the leafs
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: computeleaf1
+  namespace: openstack
+spec:
+  # How many nodes to provision
+  count: 1
+  # The image to install on the provisioned nodes
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  provisionServerName: openstack
+  # The secret containing the SSH pub key to place on the provisioned nodes
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  # The interface on the nodes that will be assigned an IP from the mgmtCidr
+  ctlplaneInterface: enp7s0
+  # Networks to associate with this host
+  networks:
+        - ctlplane
+        - internal_api_leaf1
+        - external
+        - tenant_leaf1
+        - storage_leaf1
+  roleName: ComputeLeaf1
+  passwordSecret: userpassword
+```
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: computeleaf2
+  namespace: openstack
+spec:
+  # How many nodes to provision
+  count: 1
+  # The image to install on the provisioned nodes
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  provisionServerName: openstack
+  # The secret containing the SSH pub key to place on the provisioned nodes
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  # The interface on the nodes that will be assigned an IP from the mgmtCidr
+  ctlplaneInterface: enp7s0
+  # Networks to associate with this host
+  networks:
+        - ctlplane
+        - internal_api_leaf2
+        - external
+        - tenant_leaf2
+        - storage_leaf2
+  roleName: ComputeLeaf2
+  passwordSecret: userpassword
+```
+
+### Render playbooks and apply them
+
+Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
+
+### Run the software deployment
+
+As described before in `Run the software deployment` check, apply, register the overcloud nodes to required repositories  and run the sofware deployment from inside the openstackclient pod.

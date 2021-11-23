@@ -22,10 +22,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	"github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,14 +46,9 @@ var _ webhook.Defaulter = &OpenStackNet{}
 func (r *OpenStackNet) Default() {
 	openstacknetlog.Info("default", "name", r.Name)
 
-	// To avoid validation errors, we need to set the DesiredState to {} if it is nil.
-	// This is the error that occurs otherwise...
-	//
-	// spec.attachConfiguration.nodeNetworkConfigurationPolicy.desiredState:
-	// Invalid value: "null": spec.attachConfiguration.nodeNetworkConfigurationPolicy.desiredState in body must be of type object: "null"
-	//
-	if r.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw == nil {
-		r.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState = shared.NewState("{}")
+	// The OpenStackNet "XYZ" is invalid: spec.routes: Invalid value: "null": spec.routes in body must be of type array: "null"
+	if r.Spec.Routes == nil {
+		r.Spec.Routes = []Route{}
 	}
 }
 
@@ -76,41 +67,12 @@ func (r *OpenStackNet) ValidateCreate() error {
 func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 	openstacknetlog.Info("validate update", "name", r.Name)
 
-	return r.checkBridgeName(old)
+	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackNet) ValidateDelete() error {
 	openstacknetlog.Info("validate delete", "name", r.Name)
-
-	return nil
-}
-
-func (r *OpenStackNet) checkBridgeName(old runtime.Object) error {
-	// Get the current (potentially new) bridge name, if any
-	curBridge, err := nmstate.GetDesiredStatedBridgeName(r.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
-
-	if err != nil {
-		return err
-	}
-
-	// Get the old bridge name, if any
-	var ok bool
-	var oldInstance *OpenStackNet
-
-	if oldInstance, ok = old.(*OpenStackNet); !ok {
-		return fmt.Errorf("Runtime object is not an OpenStackNet")
-	}
-
-	oldBridge, err := nmstate.GetDesiredStatedBridgeName(oldInstance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
-
-	if err != nil {
-		return err
-	}
-
-	if curBridge != oldBridge {
-		return fmt.Errorf("Bridge names may not be changed")
-	}
 
 	return nil
 }

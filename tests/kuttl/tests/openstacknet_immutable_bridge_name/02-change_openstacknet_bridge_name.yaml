@@ -1,9 +1,0 @@
-#
-# Try to change the bridge name of the OpenStackNet
-#
-
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: |
-      oc patch osnet -n openstack ctlplane --type='json' -p='[{"op": "replace", "path": "/spec/attachConfiguration/nodeNetworkConfigurationPolicy/desiredState", "value": {"interfaces":[{"name":"blah"}]}}]' || true

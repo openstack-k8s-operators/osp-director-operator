@@ -1,0 +1,9 @@
+#
+# Try to change the bridge name of a OpenStackNetConfig attachment
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      oc patch osnetconfig -n openstack openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/attachConfigurations/br-osp/nodeNetworkConfigurationPolicy/desiredState", "value": {"interfaces":[{"name":"blah"}]}}]'

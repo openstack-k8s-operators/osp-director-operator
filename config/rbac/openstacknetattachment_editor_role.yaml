@@ -1,0 +1,24 @@
+# permissions for end users to edit openstacknetattachments.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstacknetattachment-editor-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstacknetattachments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstacknetattachments/status
+  verbs:
+  - get

@@ -47,8 +47,8 @@ func IsSet(m map[string]interface{}, key string) interface{} {
 	return val
 }
 
-// check if string is json format
-func isJSON(s string) error {
+// IsJSON check if string is json format
+func IsJSON(s string) error {
 	var js map[string]interface{}
 	return json.Unmarshal([]byte(s), &js)
 }

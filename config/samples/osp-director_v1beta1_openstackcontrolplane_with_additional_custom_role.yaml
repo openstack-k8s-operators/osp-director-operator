@@ -18,15 +18,15 @@ spec:
       memory: 20
       diskSize: 50
       storageClass: host-nfs-storageclass
-      baseImageVolumeName: openstack-base-img
+      baseImageVolumeName: controller-base-img
       ctlplaneInterface: enp2s0 #defaults to enp2s0
       networks:
       - ctlplane
       - external
-      - internalapi
+      - internal_api
       - tenant
       - storage
-      - storagemgmt
+      - storage_mgmt
     somecustomrole:
       roleName: SomeCustomRole
       isTripleoRole: false
@@ -40,4 +40,4 @@ spec:
       networks:
       - ctlplane
       - external
-      - internalapi
+      - internal_api

@@ -19,8 +19,6 @@ package v1beta1
 import (
 	"time"
 
-	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,14 +29,6 @@ type Hash struct {
 	Name string `json:"name,omitempty"`
 	// Hash
 	Hash string `json:"hash,omitempty"`
-}
-
-// Network - OSP network to create NodeNetworkConfigurationPolicy and NetworkAttachmentDefinition
-// TODO: that might change depending on our outcome of network config
-type Network struct {
-	Name                           string                                        `json:"name"`
-	BridgeName                     string                                        `json:"bridgeName,omitempty"`
-	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
 }
 
 // HostStatus represents the hostname and IP info for a specific host
@@ -137,4 +127,41 @@ func (conditions ConditionList) Find(conditionType ConditionType) *Condition {
 		}
 	}
 	return nil
+}
+
+// GetCurrentCondition - Get current condition with status == corev1.ConditionTrue
+func (conditions ConditionList) GetCurrentCondition() *Condition {
+	for i, cond := range conditions {
+		if cond.Status == corev1.ConditionTrue {
+			return &conditions[i]
+		}
+	}
+
+	return nil
+}
+
+// UpdateCurrentCondition - update current state condition, and sets previous condition to corev1.ConditionFalse
+func (conditions *ConditionList) UpdateCurrentCondition(conditionType ConditionType, reason ConditionReason, message string) {
+	//
+	// get current condition and update to corev1.ConditionFalse
+	//
+	currentCondition := conditions.GetCurrentCondition()
+	if currentCondition != nil {
+		conditions.Set(
+			ConditionType(currentCondition.Type),
+			corev1.ConditionFalse,
+			currentCondition.Reason,
+			currentCondition.Message,
+		)
+	}
+
+	//
+	// set new corev1.ConditionTrue condition
+	//
+	conditions.Set(
+		conditionType,
+		corev1.ConditionTrue,
+		reason,
+		message,
+	)
 }

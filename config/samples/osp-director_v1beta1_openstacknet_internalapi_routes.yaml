@@ -1,0 +1,20 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: internalapi
+spec:
+  allocationEnd: 172.17.0.250
+  allocationStart: 172.17.0.10
+  attachConfiguration: br-osp
+  cidr: 172.17.0.0/24
+  gateway: 172.17.0.1
+  mtu: 1350
+  name: InternalApi
+  nameLower: internal_api
+  routes:
+  - destination: 172.17.1.0/24
+    nexthop: 172.17.0.1
+  - destination: 172.17.2.0/24
+    nexthop: 172.17.0.1
+  vip: true
+  vlan: 20

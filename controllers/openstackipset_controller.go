@@ -38,6 +38,8 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // OpenStackIPSetReconciler reconciles a OpenStackIPSet object
@@ -139,13 +141,32 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
+	// Verify all requested osNets exist
+	//
+	for _, net := range instance.Spec.Networks {
+		osNet := &ospdirectorv1beta1.OpenStackNet{}
+		osNetName := strings.ToLower(strings.Replace(net, "_", "", -1))
+
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: osNetName, Namespace: instance.Namespace}, osNet)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 20 * time.Second}, fmt.Errorf("underlying OSNet for network %s requested in IPSet %s is missing. Reconcile in 20s", net, instance.Name)
+			}
+			return ctrl.Result{}, err
+		}
+	}
+
+	//
 	// Get OSPVersion from OSControlPlane status
 	//
 	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
 	if err != nil {
 		return ctrlResult, err
 	}
-	OSPVersion = controlPlane.Status.OSPVersion
+	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	if err != nil {
+		return ctrlResult, err
+	}
 
 	// get a copy of the current CR status
 	currentStatus := instance.Status.DeepCopy()
@@ -333,6 +354,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackIPSet{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 
@@ -355,11 +377,17 @@ func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.O
 
 	// mark entry in OSNet status as deleted
 	for _, netName := range instance.Spec.Networks {
-		network := &ospdirectorv1beta1.OpenStackNet{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netName,
+			},
+		)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				r.Log.Info(fmt.Sprintf("OpenStackNet named %s not found!", netName))
+				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
 				continue
 			}
 			// Error reading the object - requeue the request.
@@ -401,12 +429,18 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 
 		// iterate over the requested Networks
 		for _, netName := range instance.Spec.Networks {
-
-			network := &ospdirectorv1beta1.OpenStackNet{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
+			// get network with name_lower label
+			network, err := openstacknet.GetOpenStackNetWithLabel(
+				r,
+				instance.Namespace,
+				map[string]string{
+					openstacknet.SubNetNameLabelSelector: netName,
+				},
+			)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					r.Log.Info(fmt.Sprintf("OpenStackNet named %s not found!", netName))
+					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
+					continue
 				}
 				// Error reading the object - requeue the request.
 				return err
@@ -510,11 +544,17 @@ func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1bet
 
 	// mark entry in OSNet status as deleted
 	for _, netName := range instance.Spec.Networks {
-		network := &ospdirectorv1beta1.OpenStackNet{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: netName, Namespace: instance.Namespace}, network)
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netName,
+			},
+		)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				r.Log.Info(fmt.Sprintf("OpenStackNet named %s not found!", netName))
+				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
 				continue
 			}
 			// Error reading the object - requeue the request.

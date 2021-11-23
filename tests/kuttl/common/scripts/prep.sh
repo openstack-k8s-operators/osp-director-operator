@@ -9,7 +9,7 @@ oc delete openstackvmset --all -n openstack
 oc delete openstackclient --all -n openstack
 oc delete openstackbaremetalset --all -n openstack
 oc delete openstackprovisionserver --all -n openstack
-oc delete openstacknet --all -n openstack
+oc delete openstacknetconfig --all -n openstack
 oc delete osplaybookgenerator --all -n openstack
 oc delete nncp -n openstack --all
 oc delete secret -n openstack userpassword --ignore-not-found

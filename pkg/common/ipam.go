@@ -166,7 +166,7 @@ func GetIPRange(ip net.IP, ipnet net.IPNet) (net.IP, net.IP, error) {
 
 	// Error when the mask isn't large enough.
 	if masklen < 2 {
-		return nil, nil, fmt.Errorf("Net mask is too short, must be 2 or more: %v", masklen)
+		return nil, nil, fmt.Errorf("net mask is too short, must be 2 or more: %v", masklen)
 	}
 
 	// Get a long from the current IP address
@@ -216,17 +216,17 @@ func GetIPRange(ip net.IP, ipnet net.IPNet) (net.IP, net.IP, error) {
 }
 
 // IsIPv4 checks if an IP is v4.
-func IsIPv4(checkip net.IP) bool {
-	return checkip.To4() != nil
+func IsIPv4(ip net.IP) bool {
+	return ip.To4() != nil
 }
 
 // IsIPv6 checks if an IP is v6.
-func IsIPv6(checkip net.IP) bool {
-	if IsIPv4(checkip) {
+func IsIPv6(ip net.IP) bool {
+	if IsIPv4(ip) {
 		return false
 	}
 
-	return checkip.To16() != nil
+	return ip.To16() != nil
 }
 
 func isIntIPv4(checkipint *big.Int) bool {

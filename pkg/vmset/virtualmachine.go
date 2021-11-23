@@ -19,6 +19,7 @@ package vmset
 import (
 	"fmt"
 
+	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	virtv1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -29,12 +30,12 @@ type NetSetter func(*virtv1.Network)
 type NetSetterMap map[string]NetSetter
 
 // Network - create additional multus virtv1.Network
-func Network(networkName string, bindingMethod string) NetSetter {
+func Network(networkName string, attachType ospdirectorv1beta1.AttachType) NetSetter {
 	return func(net *virtv1.Network) {
 		net.Name = networkName
 		actualNetworkName := networkName
 
-		if bindingMethod == "sriov" {
+		if attachType == ospdirectorv1beta1.AttachTypeSriov {
 			// SRIOV networks use "<network>-sriov-network" format for the actual network name
 			// FIXME?: We could just change the OpenStackNet controller so that it uses the instance
 			//         name without the "-sriov-network" suffix, but it is currently doing this
@@ -78,21 +79,22 @@ type InterfaceSetter func(*virtv1.Interface)
 type InterfaceSetterMap map[string]InterfaceSetter
 
 // Interface - create additional Intercface, ATM only bridge
-func Interface(ifName string, bindingMethod string) InterfaceSetter {
+func Interface(ifName string, attachType ospdirectorv1beta1.AttachType) InterfaceSetter {
 	return func(iface *virtv1.Interface) {
 		iface.Name = ifName
 
 		model := "virtio"
 
 		// We currently support SRIOV and bridge interfaces, with anything other than "sriov" indicating a bridge
-		if bindingMethod == "sriov" {
+		switch attachType {
+		case ospdirectorv1beta1.AttachTypeBridge:
+			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
+				Bridge: &virtv1.InterfaceBridge{},
+			}
+		case ospdirectorv1beta1.AttachTypeSriov:
 			model = ""
 			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
 				SRIOV: &virtv1.InterfaceSRIOV{},
-			}
-		} else {
-			iface.InterfaceBindingMethod = virtv1.InterfaceBindingMethod{
-				Bridge: &virtv1.InterfaceBridge{},
 			}
 		}
 

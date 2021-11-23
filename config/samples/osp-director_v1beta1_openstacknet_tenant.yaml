@@ -3,23 +3,12 @@ kind: OpenStackNet
 metadata:
   name: tenant
 spec:
-  cidr: 172.16.0.0/24
+  allocationEnd: 172.20.0.250
+  allocationStart: 172.20.0.10
+  attachConfiguration: br-osp
+  cidr: 172.20.0.0/24
+  mtu: 1350
+  name: Tenant
+  nameLower: tenant
+  vip: false
   vlan: 50
-  allocationStart: 172.16.0.4
-  allocationEnd: 172.16.0.250
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge

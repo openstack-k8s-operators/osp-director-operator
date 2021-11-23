@@ -1,0 +1,51 @@
+#
+# Check for:
+#
+# - 1 OpenStackNetAttachment (with bridge name unchanged)
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetAttachment
+metadata:
+  finalizers:
+  - openstacknetattachment
+  name: br-osp-bridge
+  namespace: openstack
+  labels:
+    bridge: br-osp
+    ooo-attach-reference: br-osp
+    ooo-attach-type: bridge
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+spec:
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp7s0
+          description: Linux bridge with enp7s0 as a port
+          mtu: 1500
+          name: br-osp
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+status:
+  attachType: bridge
+  bridgeName: br-osp
+  conditions:
+  - message: OpenStackNetAttachment br-osp-bridge is configuring targeted node(s)
+    reason: OpenStackNetAttachment br-osp-bridge is configuring targeted node(s)
+    status: "False"
+    type: Configuring
+  - message: OpenStackNetAttach br-osp configured targeted node(s)
+    reason: OpenStackNetAttach br-osp configured targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
