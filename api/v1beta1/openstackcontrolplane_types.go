@@ -26,6 +26,9 @@ import (
 type OSPVersion string
 
 const (
+	//
+	// OSPVersion
+	//
 	// TemplateVersionTrain - upstream train template version
 	TemplateVersionTrain OSPVersion = "train"
 	// TemplateVersion16_2 - OSP 16.2 template version
@@ -136,6 +139,9 @@ type OpenStackControlPlaneProvisioningStatus struct {
 // ControlPlaneProvisioningState - the overall state of this OpenStackControlPlane
 type ControlPlaneProvisioningState string
 
+// ControlPlaneProvisioningReason - the reason of the condition for this openstack ctlplane
+type ControlPlaneProvisioningReason string
+
 const (
 	// ControlPlaneEmpty - special state for 0 requested VMs and 0 already provisioned
 	ControlPlaneEmpty ControlPlaneProvisioningState = "Empty"
@@ -149,6 +155,14 @@ const (
 	ControlPlaneDeprovisioning ControlPlaneProvisioningState = "Deprovisioning"
 	// ControlPlaneError - general catch-all for actual errors
 	ControlPlaneError ControlPlaneProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+	// ControlPlaneReasonNetNotFound - osctlplane not found
+	ControlPlaneReasonNetNotFound ControlPlaneProvisioningReason = "CtlPlaneNotFound"
+	// ControlPlaneReasonNotSupportedVersion - osctlplane not found
+	ControlPlaneReasonNotSupportedVersion ControlPlaneProvisioningReason = "CtlPlaneNotSupportedVersion"
 )
 
 // +kubebuilder:object:root=true

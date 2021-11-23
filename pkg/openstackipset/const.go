@@ -32,4 +32,10 @@ const (
 	InternalAPIName = "internal_api"
 	// StorageMgmtName -
 	StorageMgmtName = "storage_mgmt"
+
+	// NicTemplateTrain - nic template file for train/16.2
+	NicTemplateTrain = "net-config-multi-nic.yaml"
+
+	// NicTemplateWallaby - nic template file for wallaby/17.0 and later
+	NicTemplateWallaby = "multiple_nics_dvr.j2"
 )

@@ -117,17 +117,47 @@ type networkType struct {
 func CreateConfigMapParams(
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackIPSet,
-	osNetList *ospdirectorv1beta1.OpenStackNetList,
-	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
+	cond *ospdirectorv1beta1.Condition,
 ) (map[string]interface{}, map[string]*RoleType, error) {
 
 	templateParameters := make(map[string]interface{})
 	rolesMap := map[string]*RoleType{}
 
-	// DeployedServerPortMap:
-	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
-	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
-	// https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
+	//
+	// get list of all osNets
+	//
+	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
+	osNetListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err := r.GetClient().List(context.TODO(), osNetList, osNetListOpts...)
+	if err != nil {
+		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSNets", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetsNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return templateParameters, rolesMap, err
+	}
+
+	//
+	// get list of all osMACs
+	//
+	osMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
+	osMACListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.GetClient().List(context.TODO(), osMACList, osMACListOpts...)
+	if err != nil {
+		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSMACs", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonMACsNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return templateParameters, rolesMap, err
+	}
 
 	//
 	// get OSPVersion from ControlPlane CR

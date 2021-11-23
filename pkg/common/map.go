@@ -16,6 +16,8 @@ limitations under the License.
 
 package common
 
+import "sort"
+
 // InitMap - Inititialise a map to an empty map if it is nil.
 func InitMap(m *map[string]string) {
 	if *m == nil {
@@ -32,4 +34,33 @@ func MergeMaps(baseMap map[string]interface{}, extraMaps ...map[string]interface
 	}
 
 	return baseMap
+}
+
+// Pair -
+type Pair struct {
+	Key   string
+	Value string
+}
+
+// List -
+type List []Pair
+
+func (p List) Len() int           { return len(p) }
+func (p List) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p List) Less(i, j int) bool { return p[i].Key < p[j].Key }
+
+// SortMapByValue -
+func SortMapByValue(in map[string]string) List {
+
+	sorted := make(List, len(in))
+
+	i := 0
+	for k, v := range in {
+		sorted[i] = Pair{k, v}
+		i++
+	}
+
+	sort.Sort(sorted)
+
+	return sorted
 }
