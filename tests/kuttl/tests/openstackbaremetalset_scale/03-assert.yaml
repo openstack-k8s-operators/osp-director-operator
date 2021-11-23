@@ -51,8 +51,6 @@ status:
     reason: ProvisionServer compute-provisionserver has been provisioned
     status: "True"
     type: Provisioned
-  localImageUrl: http://172.22.0.220:6190/images/rhel-guest-image-8.4-1168.x86_64.qcow2/compressed-rhel-guest-image-8.4-1168.x86_64.qcow2                                
-  provisionIp: 172.22.0.220
   provisioningStatus:
     reason: ProvisionServer compute-provisionserver has been provisioned
     state: Provisioned
