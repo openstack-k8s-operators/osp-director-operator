@@ -113,6 +113,19 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
 
+	// get unified OSPVersion from ControlPlane CR
+	// which means also get either 16.2 or 17.0 for upstream versions
+	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrlResult, err
+	}
+	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	if err != nil {
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		return ctrlResult, err
+	}
+
 	// check if heat-env-config (customizations provided by administrator) exist
 	// if it does not exist, requeue
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
@@ -158,6 +171,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	// Also add fencing.yaml to the tripleoDeployFiles (just need the file name)
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
 	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+	templateParameters["OSPVersion"] = OSPVersion
 
 	var tripleoTarballCM *corev1.ConfigMap
 
@@ -200,19 +214,6 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	// Reuse templateParameters, but reinitialize it (envVars and cmLabels are also reused, but do not require
 	// reinitialization)
 	templateParameters = make(map[string]interface{})
-
-	// get unified OSPVersion from ControlPlane CR
-	// which means also get either 16.2 or 17.0 for upstream versions
-	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
-	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrlResult, err
-	}
-	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
-	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
-		return ctrlResult, err
-	}
 
 	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
 		msg := fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)

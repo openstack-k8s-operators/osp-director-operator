@@ -109,7 +109,7 @@ time openstack stack create --wait \
 
 mkdir -p $HOME/ansible
 
-if [ "$OSPVersion" == "16.2" ]; then
+{{- if eq .OSPVersion "16.2" }}
 # FIXME: there is no local 'config-download' command in OSP 16.2 (use tripleoclient config-download in OSP 17)
 /usr/bin/python3 - <<"EOF_PYTHON"
 from tripleoclient import utils as oooutils
@@ -163,7 +163,7 @@ EOF_PYTHON
 output_dir=$(ls -dtr $HOME/ansible/tripleo-ansible-* | tail -1)
 ln -sf ${output_dir} $HOME/ansible/overcloud
 
-else
+{{- else }}
 
 TMP_DIR_ANSIBLE=$(mktemp -d)
 pushd $TMP_DIR_ANSIBLE
@@ -183,7 +183,7 @@ popd
 # remove the .git directory as it conflicts with the repo below
 rm -Rf $HOME/ansible/overcloud/.git
 
-fi
+{{- end }}
 
 TMP_DIR=$(mktemp -d)
 git clone $GIT_URL $TMP_DIR
