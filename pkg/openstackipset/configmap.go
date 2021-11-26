@@ -43,7 +43,8 @@ type roleNetworkType struct {
 	Gateway         string
 	VIP             bool // allocate VIP on network, defaut true
 	Vlan            int
-	NetType         string // ipv4/v6?
+	IPv6            bool // ipv4/v6?
+	IsControlPlane  bool
 }
 
 // information to build NodePortMap entry:
@@ -53,6 +54,7 @@ type roleNetworkType struct {
 //   IPv6addr:        2001:DB8:24::9
 //   IPv6AddrSubnet : 2001:DB8:24::9/64
 //   IPv6AddrURI:     [2001:DB8:24::9]
+//   Network:         flattened network details
 type roleIPType struct {
 	IPaddr         string
 	IPAddrURI      string
@@ -73,22 +75,13 @@ type roleNodeType struct {
 
 // RoleType - details of the tripleo role
 type RoleType struct {
-	Name          string
-	NameLower     string
-	Networks      map[string]*roleNetworkType
-	Nodes         map[string]*roleNodeType
-	IsVMType      bool
-	IsTripleoRole bool
-}
-
-func getCidrParts(cidr string) (string, int, error) {
-	cidrPieces := strings.Split(cidr, "/")
-	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
-	if err != nil {
-		return "", cidrSuffix, err
-	}
-
-	return cidrPieces[0], cidrSuffix, nil
+	Name           string
+	NameLower      string
+	Networks       map[string]*roleNetworkType
+	Nodes          map[string]*roleNodeType
+	IsVMType       bool
+	IsTripleoRole  bool
+	IsControlPlane bool
 }
 
 type netDetailsType struct {
@@ -108,27 +101,33 @@ type subnetType struct {
 }
 
 type networkType struct {
-	Name          string     // ooo network name
-	NameLower     string     // ooo network name lower
-	VIP           bool       // allocate VIP on network, defaut true
-	MTU           int        // default 1500
-	DefaultSubnet subnetType //only required/used for Train/16.2
-	Subnets       map[string]subnetType
+	Name           string     // ooo network name
+	NameLower      string     // ooo network name lower
+	VIP            bool       // allocate VIP on network, defaut true
+	MTU            int        // default 1500
+	DefaultSubnet  subnetType //only required/used for Train/16.2
+	Subnets        map[string]subnetType
+	IPv6           bool
+	IsControlPlane bool
+	DomainName     string
+	DNSServers     []string
 }
 
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
-func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta1.OpenStackIPSet, osNetList ospdirectorv1beta1.OpenStackNetList, osMACList ospdirectorv1beta1.OpenStackMACAddressList) (map[string]interface{}, map[string]*RoleType, error) {
+func CreateConfigMapParams(
+	r common.ReconcilerCommon,
+	instance *ospdirectorv1beta1.OpenStackIPSet,
+	osNetList *ospdirectorv1beta1.OpenStackNetList,
+	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
+) (map[string]interface{}, map[string]*RoleType, error) {
 
 	templateParameters := make(map[string]interface{})
+	rolesMap := map[string]*RoleType{}
 
 	// DeployedServerPortMap:
 	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
 	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
 	// https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
-
-	// map with details for all networks
-	networksMap := map[string]*networkType{}
-	rolesMap := map[string]*RoleType{}
 
 	//
 	// get OSPVersion from ControlPlane CR
@@ -142,128 +141,197 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 		return templateParameters, rolesMap, err
 	}
 
-	// map of subnet -> network_lower name used when creating the rolesMap
-	// to get the network name from the subnet name
-	networkMappingList := map[string]string{}
-
 	//
 	// create networksMap map from OpenStackNetConfig
 	//
 	// TODO add label to osNetCFG that we can filter the one corresponding to the ipset
 	netConfigList := &ospdirectorv1beta1.OpenStackNetConfigList{}
-
 	labelSelector := map[string]string{}
-
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labelSelector),
 	}
-
 	if err := r.GetClient().List(context.Background(), netConfigList, listOpts...); err != nil {
 		return templateParameters, rolesMap, err
 	}
 
-	//
-	// Create networksMap
-	//
+	netcfg := ospdirectorv1beta1.OpenStackNetConfig{}
 	if len(netConfigList.Items) > 0 {
 		// for now expect there is only one osnetcfg object
-		netcfg := netConfigList.Items[0]
+		netcfg = netConfigList.Items[0]
+	}
 
-		//
-		// create map of all network,  used to create network_data.yaml
-		//
-		for _, n := range netcfg.Spec.Networks {
-			network := &networkType{}
+	//
+	// Create networksMap, networkMappingList
+	//
+	// networksMap: all networks except ctlplane
+	// networkMappingList: map of subnet -> network_lower name used when creating the rolesMap
+	//                     to get the network name from the subnet name
 
-			//
-			// global ooo network parameters
-			//
-			network.Name = n.Name
-			network.NameLower = n.NameLower
-			network.VIP = n.VIP
-			network.MTU = n.MTU
-			network.Subnets = map[string]subnetType{}
+	networksMap, networkMappingList, err := createNetworksMap(
+		OSPVersion,
+		&netcfg,
+	)
 
-			//
-			// per subnet parameters
-			//
-			for _, s := range n.Subnets {
-
-				// add mapping reference to networkMappingList
-				networkMappingList[s.Name] = network.NameLower
-
-				//
-				// IPv4 subnet details
-				//
-				subnetDetailsV4 := netDetailsType{}
-				if s.IPv4.Cidr != "" {
-					var err error
-					ip, cidrSuffix, err := getCidrParts(s.IPv4.Cidr)
-					if err != nil {
-						return templateParameters, rolesMap, err
-					}
-
-					if common.IsIPv4(net.ParseIP(ip)) {
-						subnetDetailsV4 = netDetailsType{
-							AllocationEnd:   s.IPv4.AllocationEnd,
-							AllocationStart: s.IPv4.AllocationStart,
-							Cidr:            s.IPv4.Cidr,
-							CidrSuffix:      cidrSuffix,
-							Gateway:         s.IPv4.Gateway,
-							Routes:          s.IPv4.Routes,
-						}
-					}
-				}
-
-				//
-				// IPv6 subnet details
-				//
-				subnetDetailsV6 := netDetailsType{}
-				if s.IPv6.Cidr != "" {
-					var err error
-					ip, cidrSuffix, err := getCidrParts(s.IPv6.Cidr)
-					if err != nil {
-						return templateParameters, rolesMap, err
-					}
-
-					if common.IsIPv6(net.ParseIP(ip)) {
-						subnetDetailsV6 = netDetailsType{
-							AllocationEnd:   s.IPv6.AllocationEnd,
-							AllocationStart: s.IPv6.AllocationStart,
-							Cidr:            s.IPv6.Cidr,
-							CidrSuffix:      cidrSuffix,
-							Gateway:         s.IPv6.Gateway,
-							Routes:          s.IPv6.Routes,
-						}
-					}
-				}
-
-				subnet := subnetType{
-					Name: s.Name,
-					Vlan: s.Vlan,
-					IPv4: subnetDetailsV4,
-					IPv6: subnetDetailsV6,
-				}
-
-				//
-				// In train, there is a top level default subnet, while with networkv2 there are only subnets.
-				// For default subnet in Train, the network NameLower and subnet Name must match
-				//
-				if OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) &&
-					n.NameLower == s.Name {
-					network.DefaultSubnet = subnet
-				} else {
-					network.Subnets[s.Name] = subnet
-				}
-			}
-			networksMap[n.NameLower] = network
-		}
+	if err != nil {
+		return templateParameters, rolesMap, err
 	}
 
 	//
 	// Create rolesMap
 	//
+	err = createRolesMap(
+		r,
+		instance,
+		osNetList,
+		osMACList,
+		networksMap,
+		networkMappingList,
+		rolesMap,
+	)
+	if err != nil {
+		return templateParameters, rolesMap, err
+	}
+
+	templateParameters["RolesMap"] = rolesMap
+	templateParameters["NetworksMap"] = networksMap
+
+	return templateParameters, rolesMap, nil
+
+}
+
+//
+// createNetworksMap - create map with network details and map of subnet -> network_lower name used when creating the rolesMap
+//	               to get the network name from the subnet name
+//
+func createNetworksMap(
+	ospVersion ospdirectorv1beta1.OSPVersion,
+	netConfig *ospdirectorv1beta1.OpenStackNetConfig,
+) (
+	map[string]*networkType,
+	map[string]string,
+	error,
+) {
+	networksMap := map[string]*networkType{}
+	networkMappingList := map[string]string{}
+
+	//
+	// Create networksMap, all networks except ctlplane  used to create network_data.yaml
+	//
+	for _, n := range netConfig.Spec.Networks {
+		network := &networkType{}
+
+		//
+		// global ooo network parameters
+		//
+		network.Name = n.Name
+		network.NameLower = n.NameLower
+		network.VIP = n.VIP
+		network.MTU = n.MTU
+		network.Subnets = map[string]subnetType{}
+		network.IsControlPlane = n.IsControlPlane
+
+		if network.IsControlPlane {
+			network.DomainName = fmt.Sprintf("%s.%s", ospdirectorv1beta1.ControlPlaneNameLower, netConfig.Spec.DomainName)
+		} else {
+			network.DomainName = fmt.Sprintf("%s.%s", strings.ToLower(n.Name), netConfig.Spec.DomainName)
+		}
+
+		network.DNSServers = netConfig.Spec.DNSServers
+
+		//
+		// per subnet parameters
+		//
+		for _, s := range n.Subnets {
+
+			// add mapping reference to networkMappingList
+			networkMappingList[s.Name] = network.NameLower
+
+			//
+			// IPv4 subnet details
+			//
+			subnetDetailsV4 := netDetailsType{}
+			if s.IPv4.Cidr != "" {
+				var err error
+				ip, cidrSuffix, err := getCidrParts(s.IPv4.Cidr)
+				if err != nil {
+					return networksMap, networkMappingList, err
+				}
+
+				if common.IsIPv4(net.ParseIP(ip)) {
+					network.IPv6 = false
+					subnetDetailsV4 = netDetailsType{
+						AllocationEnd:   s.IPv4.AllocationEnd,
+						AllocationStart: s.IPv4.AllocationStart,
+						Cidr:            s.IPv4.Cidr,
+						CidrSuffix:      cidrSuffix,
+						Gateway:         s.IPv4.Gateway,
+						Routes:          s.IPv4.Routes,
+					}
+				}
+			}
+
+			//
+			// IPv6 subnet details
+			//
+			subnetDetailsV6 := netDetailsType{}
+			if s.IPv6.Cidr != "" {
+				var err error
+				ip, cidrSuffix, err := getCidrParts(s.IPv6.Cidr)
+				if err != nil {
+					return networksMap, networkMappingList, err
+				}
+
+				if common.IsIPv6(net.ParseIP(ip)) {
+					network.IPv6 = true
+					subnetDetailsV6 = netDetailsType{
+						AllocationEnd:   s.IPv6.AllocationEnd,
+						AllocationStart: s.IPv6.AllocationStart,
+						Cidr:            s.IPv6.Cidr,
+						CidrSuffix:      cidrSuffix,
+						Gateway:         s.IPv6.Gateway,
+						Routes:          s.IPv6.Routes,
+					}
+				}
+			}
+
+			subnet := subnetType{
+				Name: s.Name,
+				Vlan: s.Vlan,
+				IPv4: subnetDetailsV4,
+				IPv6: subnetDetailsV6,
+			}
+
+			//
+			// In train, there is a top level default subnet, while with networkv2 there are only subnets.
+			// For default subnet in Train, the network NameLower and subnet Name must match
+			//
+			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) &&
+				n.NameLower == s.Name {
+				network.DefaultSubnet = subnet
+			} else {
+				network.Subnets[s.Name] = subnet
+			}
+		}
+		networksMap[n.NameLower] = network
+	}
+
+	return networksMap, networkMappingList, nil
+}
+
+//
+// createRolesMap - create map with all roles
+//
+func createRolesMap(
+	r common.ReconcilerCommon,
+	instance *ospdirectorv1beta1.OpenStackIPSet,
+	osNetList *ospdirectorv1beta1.OpenStackNetList,
+	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
+	networksMap map[string]*networkType,
+	networkMappingList map[string]string,
+	rolesMap map[string]*RoleType,
+) error {
+
 	for _, osnet := range osNetList.Items {
 		for roleName, roleReservation := range osnet.Status.RoleReservations {
 			//
@@ -271,7 +339,7 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 			//
 			isVMType, isTripleoRole, err := isVMRole(r, strings.ToLower(roleName), instance.Namespace)
 			if err != nil {
-				return templateParameters, rolesMap, err
+				return err
 			}
 
 			if !roleReservation.AddToPredictableIPs {
@@ -283,12 +351,13 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 			//
 			if rolesMap[roleName] == nil {
 				rolesMap[roleName] = &RoleType{
-					Name:          roleName,
-					NameLower:     strings.ToLower(roleName),
-					Networks:      map[string]*roleNetworkType{},
-					Nodes:         map[string]*roleNodeType{},
-					IsVMType:      isVMType,
-					IsTripleoRole: isTripleoRole,
+					Name:           roleName,
+					NameLower:      strings.ToLower(roleName),
+					Networks:       map[string]*roleNetworkType{},
+					Nodes:          map[string]*roleNodeType{},
+					IsVMType:       isVMType,
+					IsTripleoRole:  isTripleoRole,
+					IsControlPlane: osnet.Spec.VIP,
 				}
 			}
 
@@ -297,13 +366,12 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 			//
 			netAddr, cidrSuffix, err := getCidrParts(osnet.Spec.Cidr)
 			if err != nil {
-				return templateParameters, rolesMap, err
+				return err
 			}
 
-			// TODO ipv4/ipv6 dual network
-			netType := "ipv4"
+			isIPv6 := false
 			if common.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
-				netType = "ipv6"
+				isIPv6 = true
 			}
 
 			nameLower := networkMappingList[osnet.Spec.NameLower]
@@ -320,7 +388,8 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 				AllocationEnd:   osnet.Spec.AllocationEnd,
 				Gateway:         osnet.Spec.Gateway,
 				VIP:             osnet.Spec.VIP,
-				NetType:         netType,
+				IPv6:            isIPv6,
+				IsControlPlane:  networksMap[nameLower].IsControlPlane,
 			}
 
 			hostnameMapIndex := 0
@@ -367,17 +436,32 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 							Network:      rolesMap[roleName].Networks[osnet.Spec.NameLower],
 						}
 					}
+
+					//
+					// There reservation.VIP is only true for controplane VIPs, so ther role is the
+					// operator internal ControlPlane role which is used to do the VIP reservations.
+					//
+					rolesMap[roleName].IsControlPlane = reservation.VIP
 					hostnameMapIndex++
 				}
 			}
 		}
 	}
 
-	templateParameters["RolesMap"] = rolesMap
-	templateParameters["NetworksMap"] = networksMap
+	return nil
+}
 
-	return templateParameters, rolesMap, nil
+//
+// getCidrParts - returns net addr and cidr suffix
+//
+func getCidrParts(cidr string) (string, int, error) {
+	cidrPieces := strings.Split(cidr, "/")
+	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
+	if err != nil {
+		return "", cidrSuffix, err
+	}
 
+	return cidrPieces[0], cidrSuffix, nil
 }
 
 //
