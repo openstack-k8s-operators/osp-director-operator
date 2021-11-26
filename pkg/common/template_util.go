@@ -110,12 +110,20 @@ func add(x, y int) int {
 	return x + y
 }
 
+// template function to lower a string
+func lower(s string) string {
+	return strings.ToLower(s)
+}
+
 // ExecuteTemplateData creates a template from string and
 // execute it with the specified data
 func ExecuteTemplateData(templateData string, data interface{}) string {
 
 	var buff bytes.Buffer
-	funcs := template.FuncMap{"add": add}
+	funcs := template.FuncMap{
+		"add":   add,
+		"lower": lower,
+	}
 	tmpl, err := template.New("tmp").Funcs(funcs).Parse(templateData)
 	if err != nil {
 		panic(err)
@@ -150,7 +158,10 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 	}
 	file := string(b)
 	var buff bytes.Buffer
-	funcs := template.FuncMap{"add": add}
+	funcs := template.FuncMap{
+		"add":   add,
+		"lower": lower,
+	}
 	tmpl, err := template.New("tmp").Funcs(funcs).Parse(file)
 	if err != nil {
 		panic(err)
