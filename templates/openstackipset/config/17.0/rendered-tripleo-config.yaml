@@ -10,9 +10,9 @@ resource_registry:
   OS::TripleO::Network::Ports::StorageMgmtVipPort: network/ports/deployed_vip_storage_mgmt.yaml
   OS::TripleO::Network::Ports::StorageVipPort: network/ports/deployed_vip_storage.yaml
 {{- range $roleid, $role := .RolesMap }}
-{{- if ne $role.Name "ControlPlane" }}
+{{- if not $role.IsControlPlane }}
 {{- range $netid, $net := $role.Networks }}
-{{- if ne $net.NameLower "ctlplane" }}
+{{- if not $net.IsControlPlane }}
   OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/deployed_{{ $net.NameLower }}.yaml
 {{- end}}
 {{- end }}
@@ -29,7 +29,7 @@ parameter_defaults:
   NeutronPublicInterface: nic3
 {{- /* HostnameFormat and RoleCount */ -}}
 {{- range $roleid, $role := .RolesMap }}
-{{- if ne $role.Name "ControlPlane" }}
+{{- if not $role.IsControlPlane }}
   {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
   {{- $roleCount := len $role.Nodes }}
   {{ $role.Name }}Count: {{ $roleCount }}
@@ -90,7 +90,7 @@ parameter_defaults:
   # VipPortMap
   VipPortMap:
 {{- range $netname, $ip := $node.IPaddr }}
-{{- if and (ne $netname "ctlplane") (ne $netname "tenant") }}
+{{- if not $ip.Network.IsControlPlane }}
     {{ $netname }}:
       ip_address: {{ $ip.IPaddr }}
       ip_address_uri: '{{ $ip.IPAddrURI }}'
@@ -104,10 +104,10 @@ parameter_defaults:
   # ControlPlaneVipData
   ControlPlaneVipData:
 {{- range $roleid, $role := .RolesMap }}
-{{- if eq $role.Name "ControlPlane" }}
+{{- if $role.IsControlPlane }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
-{{- if and ($node.VIP) (eq $netname "ctlplane") }}
+{{- if and ($node.VIP) ($ip.Network.IsControlPlane) }}
     fixed_ips:
     - ip_address: {{ $ip.IPaddr }}
     name: control_virtual_ip
@@ -134,10 +134,133 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
+  #
+  # DeployedNetworkEnvironment
+  DeployedNetworkEnvironment:
+    {{- /* net_attributes_map start */}}
+    net_attributes_map:
+      {{- $net_idx := 0 }}
+      {{- range $netname, $net := .NetworksMap }}
+      {{- $netname_lower := lower $net.Name }}
+      {{- if not $net.IsControlPlane }}
+      {{ $net.NameLower }}:
+        network:
+          dns_domain: {{ $net.DomainName }}.
+          mtu: {{ $net.MTU }}
+          name: {{ $net.NameLower }}
+          tags:
+          - tripleo_network_name={{$net.Name }}
+          - tripleo_net_idx={{ $net_idx }}
+          {{- $net_idx = add $net_idx 1 }}
+          - tripleo_vip={{ $net.VIP }}
+        {{- /* subnets start */}}
+        subnets:
+        {{- range $subnetname, $subnet := $net.Subnets }}
+          {{ $subnetname }}_subnet:
+          {{- /* IPv4 subnet start */ -}}
+          {{- if ne $subnet.IPv4.Cidr "" }}
+            cidr: '{{ $subnet.IPv4.Cidr }}'
+            dns_nameservers: []
+            gateway_ip: {{ $subnet.IPv4.Gateway }}
+            host_routes: {{ if eq (len $subnet.IPv4.Routes) 0 }}[]{{ else }}
+              {{- range $netname, $route := $subnet.IPv4.Routes }}
+              - destination: '{{ $route.Destination }}'
+                nexthop: '{{ $route.Nexthop }}'
+              {{- end }}
+              {{- end }}
+            ip_version: 4
+            name: {{ $subnetname }}
+            tags: {{ if eq $subnet.Vlan 0 }}[]{{ else }}
+              - tripleo_vlan_id={{ $subnet.Vlan }}
+            {{- end }}
+          {{- end }}
+          {{- /* IPv4 subnet end */}}
+          {{- /* IPv6 subnet start */ -}}
+          {{- if ne $subnet.IPv6.Cidr "" }}
+            cidr: '{{ $subnet.IPv6.Cidr }}'
+            dns_nameservers: []
+            gateway_ip: {{ $subnet.IPv6.Gateway }}
+            host_routes: {{ if eq (len $subnet.IPv6.Routes) 0 }}[]{{ else }}
+              {{- range $netname, $route := $subnet.IPv6.Routes }}
+              - destination: '{{ $route.Destination }}'
+                nexthop: '{{ $route.Nexthop }}'
+              {{- end }}
+              {{- end }}
+            ip_version: 6
+            name: {{ $subnetname }}
+            tags: {{ if eq $subnet.Vlan 0 }}[]{{ else }}
+              - tripleo_vlan_id={{ $subnet.Vlan }}
+            {{- end }}
+          {{- end }}
+          {{- /* IPv6 subnet end */ -}}
+        {{- end }}
+        {{- /* subnets end */ -}}
+      {{- end }}
+      {{- end }}
+    {{- /* net_attributes_map end */ -}}
+    {{- /* net_cidr_map start */}}
+    net_cidr_map:
+      {{- range $netname, $net := .NetworksMap }}
+      {{- if not $net.IsControlPlane }}
+      {{ $net.NameLower }}:
+      {{- range $subnetname, $subnet := $net.Subnets }}
+      {{- if $net.IPv6 }}
+      - '{{ $subnet.IPv6.Cidr }}'
+      {{-  else }}
+      - '{{ $subnet.IPv4.Cidr }}'
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+    {{- /* net_cidr_map end */ -}}
+    {{- /* net_ip_version_map start */}}
+    net_ip_version_map:
+      {{- range $netname, $net := .NetworksMap }}
+      {{- if not $net.IsControlPlane }}
+      {{ $net.NameLower }}: {{ if $net.IPv6 }}6{{ else }}4{{ end }}
+      {{- end }}
+      {{- end }}
+    {{- /* net_ip_version_map end */}}
+  #
+  # CtlplaneNetworkAttributes
+  CtlplaneNetworkAttributes:
+    {{- range $netname, $net := .NetworksMap }}
+    {{- $netname_lower := lower $net.Name }}
+    {{- if $net.IsControlPlane }}
+    network:
+      dns_domain: {{ $net.DomainName }}.
+      mtu: {{ $net.MTU }}
+      name: {{ $net.NameLower }}
+      tags:
+      {{- range $subnetname, $subnet := $net.Subnets }}
+      - {{ $subnet.IPv4.Cidr }}
+      {{- end }}
+    {{- /* subnets start */}}
+    subnets:
+    {{- range $subnetname, $subnet := $net.Subnets }}
+      {{ $subnetname }}-subnet:
+        cidr: {{ $subnet.IPv4.Cidr }}
+        dns_nameservers: {{ if eq (len $net.DNSServers) 0 }}[]{{ else }}
+          {{- range $idx, $dnsServer := $net.DNSServers }}
+          - {{ $dnsServer }}
+          {{- end }}
+          {{- end }}
+        gateway_ip: {{ $subnet.IPv4.Gateway }}
+        host_routes: {{ if eq (len $subnet.IPv4.Routes) 0 }}[]{{ else }}
+          {{- range $netname, $route := $subnet.IPv4.Routes }}
+          - destination: '{{ $route.Destination }}'
+            nexthop: '{{ $route.Nexthop }}'
+          {{- end }}
+          {{- end }}
+        ip_version: 4
+        name: {{ $subnetname }}-subnet
+    {{- end }}
+    {{- end }}
+    {{- end }}
 {{/*
 # Set VIP's for redis and OVN
 {{- range $roleid, $role := .RolesMap }}
-{{- if eq $role.Name "ControlPlane" }}
+{{- if $role.IsControlPlane }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
 {{- if and ($node.VIP) (eq $netname "internal_api") }}
