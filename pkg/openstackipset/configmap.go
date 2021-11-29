@@ -137,8 +137,7 @@ func CreateConfigMapParams(r common.ReconcilerCommon, instance ospdirectorv1beta
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
-
-	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}

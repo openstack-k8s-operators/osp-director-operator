@@ -163,7 +163,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		return ctrlResult, err
 	}
-	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		return ctrlResult, err
 	}

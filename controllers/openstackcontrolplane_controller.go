@@ -110,13 +110,14 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
 
 	//
-	// Get the version of the OpenStackClientImageURL from image tags and set the OSPVersion in the CR status
+	// Set the OSP version, the version is usually set in the ctlplane webhook,
+	// so this is mostly for when running local with no webhooks and no OpenStackRelease is provided
 	//
 	var OSPVersion ospdirectorv1beta1.OSPVersion
 	if instance.Spec.OpenStackRelease != "" {
-		OSPVersion, err = common.GetOSPVersion(instance.Spec.OpenStackRelease)
+		OSPVersion, err = ospdirectorv1beta1.GetOSPVersion(instance.Spec.OpenStackRelease)
 	} else {
-		OSPVersion, err = common.GetOSPVersionFromImageURL(r, instance.Spec.OpenStackClientImageURL)
+		OSPVersion = ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2)
 	}
 	if err != nil {
 		return ctrl.Result{}, err

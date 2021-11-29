@@ -120,7 +120,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrlResult, err
 	}
-	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
 		return ctrlResult, err
