@@ -143,10 +143,10 @@ spec:
     name: openstack-rabbitmq
   - image: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
     name: openstackclient
-  - image: quay.io/openstack-k8s-operators/rhel-downloader:0.0.1
+  - image: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader:1.0
     name: osp-director-operator-downloader
-  - image: quay.io/openstack-k8s-operators/provision-ip-discovery-agent:0.0.1
-    name: osp-director-operator-provision-ip-discovery-agent
+  - image: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner:1.0
+    name: osp-director-operator-provisioner
   - image: controller:latest
     name: osp-director-operator
   - image: registry.redhat.io/rhel8/httpd-24:latest
