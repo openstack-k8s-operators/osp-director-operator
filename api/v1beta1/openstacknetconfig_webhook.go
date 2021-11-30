@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"fmt"
 
+	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -111,6 +112,14 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	openstacknetconfiglog.Info("validate update", "name", r.Name)
 
+	//
+	// validate that the bridge names won't change on CR update
+	//
+	err := r.validateBridgeNameChanged(old)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -133,6 +142,38 @@ func (r *OpenStackNetConfig) validateControlPlaneNetworkNames() error {
 			if net.NameLower != ControlPlaneNameLower {
 				return fmt.Errorf(fmt.Sprintf("control plane network name_lower  %s does not match %s", net.NameLower, ControlPlaneNameLower))
 			}
+		}
+	}
+
+	return nil
+}
+
+// validateBridgeNameChanged - validate that the bridge names won't change on CR update
+func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error {
+	for attachRef, attachCfg := range r.Spec.AttachConfigurations {
+		// Get the current (potentially new) bridge name, if any
+		curBridge, err := nmstate.GetDesiredStatedBridgeName(attachCfg.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+
+		if err != nil {
+			return err
+		}
+
+		// Get the old bridge name, if any
+		var ok bool
+		var oldInstance *OpenStackNetConfig
+
+		if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
+			return fmt.Errorf("runtime object is not an OpenStackNetConfig")
+		}
+
+		oldBridge, err := nmstate.GetDesiredStatedBridgeName(oldInstance.Spec.AttachConfigurations[attachRef].NodeNetworkConfigurationPolicy.DesiredState.Raw)
+
+		if err != nil {
+			return err
+		}
+
+		if curBridge != oldBridge {
+			return fmt.Errorf("bridge names may not be changed")
 		}
 	}
 
