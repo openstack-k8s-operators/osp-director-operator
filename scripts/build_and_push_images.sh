@@ -7,6 +7,11 @@ set -ex
 # NOTE: Requires make, podman, opm and operator-sdk to be installed!
 #
 
+if ! podman login --get-login registry.redhat.io &> /dev/null; then
+  echo "Please run podman login registry.redhat.io before running this script."
+  exit 1
+fi
+
 VERSION=${1:-"17.0.1"}
 REPO=${2:-"quay.io/openstack-k8s-operators"}
 OP_NAME=${3:-"osp-director-operator"}
@@ -38,7 +43,7 @@ sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controll
 for csv_image in $(cat bundle/manifests/osp-director-operator.clusterserviceversion.yaml | grep "image:" | sed -e "s|.*image:||" | sort -u); do
   base_image=$(echo $csv_image | cut -f 1 -d':')
   tag_image=$(echo $csv_image | cut -f 2 -d':')
-  if ["$base_image:$tag_image" -eq "controller:latest"]; then
+  if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
     sed -e "s|$base_image:$tag_image|$IMG|g" -i bundle/manifests/osp-director-operator.clusterserviceversion.yaml
   else
     digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
