@@ -254,7 +254,12 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
+
+		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
+			OpenStackClientImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
 			os.Exit(1)
 		}
@@ -285,6 +290,15 @@ func main() {
 		}
 		if err = (&ospdirectorv1beta1.OpenStackProvisionServer{}).SetupWebhookWithManager(mgr, provisionServerDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackProvisionServer")
+			os.Exit(1)
+		}
+
+		openstackPlaybookGeneratorDefaults := ospdirectorv1beta1.OpenStackPlaybookGeneratorDefaults{
+			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).SetupWebhookWithManager(mgr, openstackPlaybookGeneratorDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackPlaybookGenerator")
 			os.Exit(1)
 		}
 	}

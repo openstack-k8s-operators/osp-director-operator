@@ -32,11 +32,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// OpenStackControlPlaneDefaults -
+type OpenStackControlPlaneDefaults struct {
+	OpenStackClientImageURL string
+}
+
+var openstackControlPlaneDefaults OpenStackControlPlaneDefaults
+
 // log is for logging in this package.
 var controlplanelog = logf.Log.WithName("controlplane-resource")
 
 // SetupWebhookWithManager - register this webhook with the controller manager
-func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager, defaults OpenStackControlPlaneDefaults) error {
+
+	openstackControlPlaneDefaults = defaults
+
 	if webhookClient == nil {
 		webhookClient = mgr.GetClient()
 	}
@@ -95,4 +105,16 @@ func (r *OpenStackControlPlane) ValidateDelete() error {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
 	return nil
+}
+
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplane.kb.io,admissionReviewVersions={v1,v1beta1}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *OpenStackControlPlane) Default() {
+	openstackephemeralheatlog.Info("default", "name", r.Name)
+
+	if r.Spec.OpenStackClientImageURL == "" {
+		r.Spec.OpenStackClientImageURL = openstackControlPlaneDefaults.OpenStackClientImageURL
+	}
+
 }

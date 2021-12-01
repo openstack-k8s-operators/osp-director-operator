@@ -22,8 +22,8 @@ import (
 
 // OpenStackPlaybookGeneratorSpec defines the desired state of OpenStackPlaybookGenerator
 type OpenStackPlaybookGeneratorSpec struct {
-	// Name of the image used to generate playbooks
-	ImageURL string `json:"imageURL"`
+	// Name of the image used to generate playbooks. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
+	ImageURL string `json:"imageURL,omitempty"`
 	// Required. the name of the config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
 	// Optional. the name of the config map containing custom Heat template tarball which will be extracted prior to playbook generation
