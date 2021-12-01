@@ -91,6 +91,10 @@ type OpenStackNetSpec struct {
 	// +kubebuilder:validation:Required
 	// DomainName the name of the domain for this network, usually lower(Name)."OSNetConfig.Spec.DomainName"
 	DomainName string `json:"domainName"`
+
+	// +kubebuilder:validation:Optional
+	// Reservations, IP address reservations per role
+	RoleReservations map[string]OpenStackNetRoleStatus `json:"roleReservations"`
 }
 
 // OpenStackNetRoleStatus defines the observed state of the Role Net status
@@ -121,6 +125,10 @@ type OpenStackNetStatus struct {
 type NetState string
 
 const (
+	//
+	// condition types
+	//
+
 	// NetWaiting - the network configuration is blocked by prerequisite objects
 	NetWaiting NetState = "Waiting"
 	// NetInitializing - we are waiting for underlying OCP network resource(s) to appear

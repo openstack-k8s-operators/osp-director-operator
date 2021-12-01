@@ -103,6 +103,40 @@ spec:
                 description: NameLower the name of the subnet, name_lower name of
                   the tripleo subnet, e.g. ctlplane, external, internal_api, internal_api_leaf1
                 type: string
+              roleReservations:
+                additionalProperties:
+                  description: OpenStackNetRoleStatus defines the observed state of
+                    the Role Net status
+                  properties:
+                    addToPredictableIPs:
+                      type: boolean
+                    reservations:
+                      description: Reservations IP address reservations
+                      items:
+                        description: IPReservation contains an IP, Hostname, and a
+                          VIP flag
+                        properties:
+                          deleted:
+                            type: boolean
+                          hostname:
+                            type: string
+                          ip:
+                            type: string
+                          vip:
+                            type: boolean
+                        required:
+                        - deleted
+                        - hostname
+                        - ip
+                        - vip
+                        type: object
+                      type: array
+                  required:
+                  - addToPredictableIPs
+                  - reservations
+                  type: object
+                description: Reservations, IP address reservations per role
+                type: object
               routes:
                 description: Routes, list of networks that should be routed via network
                   gateway.

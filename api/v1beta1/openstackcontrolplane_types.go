@@ -29,6 +29,7 @@ const (
 	//
 	// OSPVersion
 	//
+
 	// TemplateVersionTrain - upstream train template version
 	TemplateVersionTrain OSPVersion = "train"
 	// TemplateVersion16_2 - OSP 16.2 template version
@@ -159,6 +160,7 @@ const (
 	//
 	// condition reasones
 	//
+
 	// ControlPlaneReasonNetNotFound - osctlplane not found
 	ControlPlaneReasonNetNotFound ControlPlaneProvisioningReason = "CtlPlaneNotFound"
 	// ControlPlaneReasonNotSupportedVersion - osctlplane not found

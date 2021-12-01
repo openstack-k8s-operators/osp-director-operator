@@ -363,7 +363,7 @@ func createRolesMap(
 ) error {
 
 	for _, osnet := range osNetList.Items {
-		for roleName, roleReservation := range osnet.Status.RoleReservations {
+		for roleName, roleReservation := range osnet.Spec.RoleReservations {
 			//
 			// check if role is VM
 			//

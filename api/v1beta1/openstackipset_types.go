@@ -30,6 +30,7 @@ const (
 	//
 	// condition types
 	//
+
 	// IPSetCondTypeInitializing - we are waiting for underlying OCP network resource(s) to appear
 	IPSetCondTypeInitializing IPSetState = "Initializing"
 	// IPSetCondTypeConfiguring - the underlying network resources are configuring the nodes
@@ -44,6 +45,7 @@ const (
 	//
 	// condition reasones
 	//
+
 	// IPSetCondReasonRemovedIPs - the ipset removed IP reservations
 	IPSetCondReasonRemovedIPs IPSetReason = "RemovedIPs"
 	// IPSetCondReasonNewHosts - new host to register
