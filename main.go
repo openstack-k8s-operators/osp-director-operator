@@ -271,27 +271,12 @@ func main() {
 	}
 
 	if enableWebhooks {
-		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")
-			os.Exit(1)
-		}
-
+		//
+		// DEFAULTS
+		//
 		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
 			OpenStackClientImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
 			OpenStackRelease:        os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
-		}
-
-		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
-			os.Exit(1)
-		}
-		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
-			os.Exit(1)
-		}
-		if err = (&ospdirectorv1beta1.OpenStackNet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
-			os.Exit(1)
 		}
 
 		ephemeralHeatDefaults := ospdirectorv1beta1.OpenStackEphemeralHeatDefaults{
@@ -300,23 +285,43 @@ func main() {
 			MariaDBImageURL:    os.Getenv("MARIADB_IMAGE_URL_DEFAULT"),
 			RabbitImageURL:     os.Getenv("RABBITMQ_IMAGE_URL_DEFAULT"),
 		}
-		if err = (&ospdirectorv1beta1.OpenStackEphemeralHeat{}).SetupWebhookWithManager(mgr, ephemeralHeatDefaults); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackEphemeralHeat")
-			os.Exit(1)
-		}
 
 		provisionServerDefaults := ospdirectorv1beta1.OpenStackProvisionServerDefaults{
 			DownloaderImageURL:        os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
 			ProvisioningAgentImageURL: os.Getenv("PROVISIONING_AGENT_IMAGE_URL_DEFAULT"),
 			ApacheImageURL:            os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
 		}
+
+		//
+		// Register webhooks
+		//
+		openstackPlaybookGeneratorDefaults := ospdirectorv1beta1.OpenStackPlaybookGeneratorDefaults{
+			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackEphemeralHeat{}).SetupWebhookWithManager(mgr, ephemeralHeatDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackEphemeralHeat")
+			os.Exit(1)
+		}
+
 		if err = (&ospdirectorv1beta1.OpenStackProvisionServer{}).SetupWebhookWithManager(mgr, provisionServerDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackProvisionServer")
 			os.Exit(1)
 		}
 
-		openstackPlaybookGeneratorDefaults := ospdirectorv1beta1.OpenStackPlaybookGeneratorDefaults{
-			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
+			os.Exit(1)
 		}
 
 		if err = (&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).SetupWebhookWithManager(mgr, openstackPlaybookGeneratorDefaults); err != nil {
@@ -324,8 +329,18 @@ func main() {
 			os.Exit(1)
 		}
 
+		if err = (&ospdirectorv1beta1.OpenStackNetConfig{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNetConfig")
+			os.Exit(1)
+		}
+
 		if err = (&ospdirectorv1beta1.OpenStackNetAttachment{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNetAttachment")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackNet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
 			os.Exit(1)
 		}
 	}

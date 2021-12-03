@@ -43,11 +43,11 @@ type Route struct {
 type OpenStackNetSpec struct {
 
 	// +kubebuilder:validation:Required
-	// Name of the tripleo network this network belongs to, e.g. External, InternalApi, ...
+	// Name of the tripleo network this network belongs to, e.g. Control, External, InternalApi, ...
 	Name string `json:"name"`
 
 	// +kubebuilder:validation:Required
-	// NameLower the name of the subnet, name_lower name of the tripleo subnet, e.g. external, internal_api, internal_api_leaf1
+	// NameLower the name of the subnet, name_lower name of the tripleo subnet, e.g. ctlplane, external, internal_api, internal_api_leaf1
 	NameLower string `json:"nameLower"`
 
 	// +kubebuilder:validation:Required
@@ -87,6 +87,10 @@ type OpenStackNetSpec struct {
 	// +kubebuilder:validation:Required
 	// AttachConfiguration, used for virtual machines to attach to this network
 	AttachConfiguration string `json:"attachConfiguration"`
+
+	// +kubebuilder:validation:Required
+	// DomainName the name of the domain for this network, usually lower(Name)."OSNetConfig.Spec.DomainName"
+	DomainName string `json:"domainName"`
 }
 
 // OpenStackNetRoleStatus defines the observed state of the Role Net status
@@ -134,6 +138,7 @@ const (
 // +kubebuilder:resource:shortName=osnet;osnets
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Net"
 // +kubebuilder:printcolumn:name="CIDR",type=string,JSONPath=`.spec.cidr`
+// +kubebuilder:printcolumn:name="DOMAIN",type=string,JSONPath=`.spec.domainName`
 // +kubebuilder:printcolumn:name="MTU",type=string,JSONPath=`.spec.mtu`
 // +kubebuilder:printcolumn:name="VLAN",type=string,JSONPath=`.spec.vlan`
 // +kubebuilder:printcolumn:name="VIP",type=boolean,JSONPath=`.spec.vip`

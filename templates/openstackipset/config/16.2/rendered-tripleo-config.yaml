@@ -19,9 +19,9 @@ resource_registry:
 {{- if and $role.IsVMType $role.IsTripleoRole }}
   OS::TripleO::{{ $role.Name }}::Net::SoftwareConfig: {{ $role.NameLower }}-nic-template.yaml
 {{- end }}
-{{- if ne $role.Name "ControlPlane" }}
+{{- if not $role.IsControlPlane }}
 {{- range $netid, $net := $role.Networks }}
-{{- if ne $net.NameLower "ctlplane" }}
+{{- if not $net.IsControlPlane }}
   OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/{{ $net.NameLower }}_from_pool.yaml
 {{- end }}
 {{- end }}
@@ -44,7 +44,7 @@ parameter_defaults:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
-{{- if eq $netname "ctlplane" }}
+{{- if $ip.Network.IsControlPlane }}
 {{- if $node.VIP }}
     control_virtual_ip:
 {{- else }}
@@ -64,7 +64,7 @@ parameter_defaults:
   #
   # Per ctlplane details
 {{- range $netid, $net := .NetworksMap }}
-{{- if eq $net.Name "Control" }}
+{{- if $net.IsControlPlane }}
 {{- if ne $net.DefaultSubnet.IPv4.Cidr "" }}
   ControlPlaneDefaultRoute: {{ $net.DefaultSubnet.IPv4.Gateway }}
   ControlPlaneSubnetCidr: {{ $net.DefaultSubnet.IPv4.CidrSuffix }}
@@ -77,7 +77,7 @@ parameter_defaults:
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
 {{- if $node.VIP }}
-{{- if eq $netname "ctlplane" }}
+{{- if $ip.Network.IsControlPlane }}
   ControlPlaneIP: {{ $ip.IPaddr }}
 {{- else }}
   {{ with (index $.NetworksMap $netname) }}{{ .Name }}{{ end }}NetworkVip: {{ $ip.IPaddr }}
@@ -89,7 +89,7 @@ parameter_defaults:
   #
   # HostnameFormat and RoleCount
 {{- range $roleid, $role := .RolesMap }}
-{{- if ne $role.Name "ControlPlane" }}
+{{- if not $role.IsControlPlane }}
   {{ $role.Name }}HostnameFormat: "{{ $role.NameLower }}-%index%"
   {{- $roleCount := len $role.Nodes }}
   {{ $role.Name }}Count: {{ $roleCount }}
@@ -100,7 +100,7 @@ parameter_defaults:
   HostnameMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
-{{- if and (not $node.VIP) }}
+{{- if not $node.VIP }}
     {{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
 {{- end }}
 {{- end }}
@@ -108,14 +108,14 @@ parameter_defaults:
   #
   # ips-from-pool
 {{- range $roleid, $role := .RolesMap }}
-{{- if ne $role.Name "ControlPlane" }}
+{{- if not $role.IsControlPlane }}
   {{ $role.Name }}IPs:
-{{- range $networkid, $network := $role.Networks }}
-{{- if ne $network.NameLower "ctlplane" }}
-      {{ $network.NameLower }}:
+{{- range $netid, $net := $role.Networks }}
+{{- if not $net.IsControlPlane }}
+      {{ $net.NameLower }}:
 {{- range $nodeid, $node := $role.Nodes }}
 {{- range $netname, $ip := $node.IPaddr }}
-{{- if eq $ip.Network.Cidr $network.Cidr }}
+{{- if eq $ip.Network.Cidr $net.Cidr }}
         - {{ $ip.IPaddr }}
 {{- end }}
 {{- end }}

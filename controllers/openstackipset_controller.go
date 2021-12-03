@@ -163,7 +163,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		return ctrlResult, err
 	}
-	OSPVersion, err := common.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		return ctrlResult, err
 	}
@@ -253,24 +253,11 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	// get all VMset which are tripleo role
-	osVMsetList := &ospdirectorv1beta1.OpenStackVMSetList{}
-	osVMsetListOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-		client.MatchingFields{
-			"spec.isTripleoRole": "true",
-		},
-	}
-	err = r.Client.List(context.TODO(), osVMsetList, osVMsetListOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// write it all to a configmap
 	envVars := make(map[string]common.EnvSetter)
 	cmLabels := common.GetLabels(instance, openstackipset.AppLabel, map[string]string{})
 
-	templateParameters, rolesMap, err := openstackipset.CreateConfigMapParams(r, *instance, *osNetList, *osMACList)
+	templateParameters, rolesMap, err := openstackipset.CreateConfigMapParams(r, instance, osNetList, osMACList)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

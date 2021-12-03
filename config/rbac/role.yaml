@@ -479,7 +479,13 @@ rules:
   resources:
   - openstacknetconfigs/finalizers
   verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
   - update
+  - watch
 - apiGroups:
   - osp-director.openstack.org
   resources:

@@ -1,6 +1,6 @@
 {{- /* golang template - https://pkg.go.dev/text/template */ -}}
 {{- range $netname, $net := .NetworksMap }}
-{{- if ne $net.Name "Control" }}
+{{- if not $net.IsControlPlane }}
 - name: {{ $net.Name }}
   name_lower: {{ $net.NameLower }}
   vip: {{ $net.VIP }}

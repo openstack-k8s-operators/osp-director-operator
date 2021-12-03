@@ -148,6 +148,15 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
                 state: up
                 type: linux-bridge
                 mtu: 1500
+      # optional DnsServers list
+      dnsServers:
+      - 192.168.25.1
+      # optional DnsSearchDomains list
+      dnsSearchDomains:
+      - osptest.test.metalkube.org
+      - some.other.domain
+      # DomainName of the OSP environment
+      domainName: osptest.test.metalkube.org
       networks:
       - name: Control
         nameLower: ctlplane
@@ -209,6 +218,15 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
                 state: up
                 type: linux-bridge
                 mtu: 1500
+      # optional DnsServers list
+      dnsServers:
+      - 192.168.25.1
+      # optional DnsSearchDomains list
+      dnsSearchDomains:
+      - osptest.test.metalkube.org
+      - some.other.domain
+      # DomainName of the OSP environment
+      domainName: osptest.test.metalkube.org
       networks:
       - name: Control
         nameLower: ctlplane
@@ -920,6 +938,15 @@ spec:
             state: up
             type: linux-bridge
             mtu: 1500
+  # optional DnsServers list
+  dnsServers:
+  - 192.168.25.1
+  # optional DnsSearchDomains list
+  dnsSearchDomains:
+  - osptest.test.metalkube.org
+  - some.other.domain
+  # DomainName of the OSP environment
+  domainName: osptest.test.metalkube.org
   networks:
   - name: Control
     nameLower: ctlplane

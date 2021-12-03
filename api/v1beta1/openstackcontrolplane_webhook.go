@@ -24,6 +24,8 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
+	"github.com/pkg/errors"
 )
 
 // OpenStackControlPlaneDefaults -
@@ -126,17 +128,60 @@ func (r *OpenStackControlPlane) Default() {
 	if len(r.Spec.PhysNetworks) == 0 {
 		r.Spec.PhysNetworks = []Physnet{
 			{
-				Name:      controlplane.DefaultOVNChassisPhysNetName,
-				MACPrefix: controlplane.DefaultOVNChassisPhysNetMACPrefix,
+				Name:      DefaultOVNChassisPhysNetName,
+				MACPrefix: DefaultOVNChassisPhysNetMACPrefix,
 			},
 		}
 	}
 
 	//
-	// set default OpenStackRelease
+	// set OpenStackRelease if non provided
 	//
 	if r.Spec.OpenStackRelease == "" {
-		r.Spec.OpenStackRelease = openstackControlPlaneDefaults.OpenStackRelease
+
+		var ospVersion OSPVersion
+		var err error
+
+		ospVersion, err = GetOSPVersionFromImageURL(r.Spec.OpenStackClientImageURL)
+		if err != nil {
+			openstackephemeralheatlog.Info("default", "name", r.Name)
+			ospVersion = OSPVersion(openstackControlPlaneDefaults.OpenStackRelease)
+		}
+
+		r.Spec.OpenStackRelease = string(ospVersion)
+	}
+}
+
+// GetOSPVersionFromImageURL -
+func GetOSPVersionFromImageURL(imageURL string) (OSPVersion, error) {
+
+	parts := strings.SplitN(imageURL, ":", 2)
+	if len(parts) != 2 {
+		return "", errors.Errorf(`Invalid image name URL "%s", expected url:tag`, imageURL)
 	}
 
+	url := parts[0]
+	tag := parts[1]
+
+	// check for downstream version in image URL tags
+	// get the first major.minor version string
+	re := regexp.MustCompile(`(\d+\.\d+)?`)
+	match := re.FindStringSubmatch(tag)
+
+	// if no match in checking image tag, check for upstream image version in URL
+	if match == nil || match[1] == "" {
+		// Until all patches backported to upstream wallaby there are two possibilities:
+		// -quay.io/tripleowallaby/openstack-tripleoclient:current-tripleo
+		// -quay.io/openstack-k8s-operators/tripleowallaby-openstack-tripleoclient:current-tripleo_patched
+		re = regexp.MustCompile(`.*\/tripleo(.*)[-\/](openstack-tripleoclient).*`)
+		match = re.FindStringSubmatch(url)
+	}
+
+	if len(match) > 0 && match[1] != "" {
+		// verify parsed OSP version
+		ospVersion, err := GetOSPVersion(match[1])
+		return ospVersion, err
+	}
+
+	return "", fmt.Errorf("no OSP version detected from imageURL: %s", imageURL)
 }

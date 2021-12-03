@@ -20,6 +20,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// ControlPlaneName -
+	ControlPlaneName string = "Control"
+	// ControlPlaneNameLower -
+	ControlPlaneNameLower string = "ctlplane"
+	// DefaultDomainName -
+	DefaultDomainName string = "localdomain"
+)
+
 // NetDetails of a subnet
 type NetDetails struct {
 	// +kubebuilder:validation:Required
@@ -78,6 +87,11 @@ type Network struct {
 	NameLower string `json:"nameLower"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// IsControlPlane indicates if this network is the overcloud control plane network
+	IsControlPlane bool `json:"isControlPlane"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1500
 	// MTU of the network
 	MTU int `json:"mtu"`
@@ -99,17 +113,26 @@ type OpenStackNetConfigSpec struct {
 	// AttachConfigurations used for NodeNetworkConfigurationPolicy or NodeSriovConfigurationPolicy
 	AttachConfigurations map[string]NodeConfigurationPolicy `json:"attachConfigurations"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=localdomain
+	// DomainName the name of the dns domain for the OSP environment
+	DomainName string `json:"domainName"`
+
+	// +kubebuilder:validation:Optional
+	// DNSServers, list of dns servers
+	DNSServers []string `json:"dnsServers"`
+
+	// +kubebuilder:validation:Optional
+	// DNSSearchDomains, list of DNS search domains
+	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
+
+	// +kubebuilder:validation:Required
 	// Networks, list of all tripleo networks of the deployment
 	Networks []Network `json:"networks"`
 }
 
 // OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig
 type OpenStackNetConfigStatus struct {
-	// CurrentState - the overall state of this network
-	//CurrentState NetConfigState `json:"currentState"`
-
-	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
-	// but we are using the same approach in other CRDs for now anyhow
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions         ConditionList                        `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackNetConfigProvisioningStatus `json:"provisioningStatus,omitempty"`

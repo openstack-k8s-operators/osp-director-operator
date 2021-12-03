@@ -20,6 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// DefaultOVNChassisPhysNetName - default physnet netname used for OVNStaticBridgeMacMappings
+	DefaultOVNChassisPhysNetName = "datacentre"
+
+	// DefaultOVNChassisPhysNetMACPrefix - default prefix used to create MAC addresses for OVNStaticBridgeMacMappings
+	DefaultOVNChassisPhysNetMACPrefix = "fa:16:3a"
+)
+
 // Physnet - name and prefix to be used for the physnet
 type Physnet struct {
 	// +kubebuilder:default="datacentre"

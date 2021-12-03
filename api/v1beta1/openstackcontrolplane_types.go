@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -188,4 +190,27 @@ func (vips OpenStackControlPlane) GetHostnames() map[string]string {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret
+}
+
+// GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
+//  - TemplateVersion16_2 for eitner 16.2 or upstream train
+//  - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
+func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
+	switch parsedVersion {
+	case string(TemplateVersionTrain):
+		return TemplateVersion16_2, nil
+
+	case string(TemplateVersion16_2):
+		return TemplateVersion16_2, nil
+
+	case string(TemplateVersionWallaby):
+		return TemplateVersion17_0, nil
+
+	case string(TemplateVersion17_0):
+		return TemplateVersion17_0, nil
+	default:
+		err := fmt.Errorf("not a supported OSP version: %v", parsedVersion)
+		return "", err
+
+	}
 }

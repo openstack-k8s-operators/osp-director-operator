@@ -22,6 +22,9 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,9 +49,18 @@ var _ webhook.Defaulter = &OpenStackNet{}
 func (r *OpenStackNet) Default() {
 	openstacknetlog.Info("default", "name", r.Name)
 
+	//
 	// The OpenStackNet "XYZ" is invalid: spec.routes: Invalid value: "null": spec.routes in body must be of type array: "null"
+	//
 	if r.Spec.Routes == nil {
 		r.Spec.Routes = []Route{}
+	}
+
+	//
+	// The default domain name if non specified
+	//
+	if r.Spec.DomainName == "" {
+		r.Spec.DomainName = fmt.Sprintf("%s.%s", strings.ToLower(r.Spec.Name), DefaultDomainName)
 	}
 }
 

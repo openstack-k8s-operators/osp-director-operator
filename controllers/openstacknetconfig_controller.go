@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,7 +71,7 @@ func (r *OpenStackNetConfigReconciler) GetScheme() *runtime.Scheme {
 
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknetconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknetconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknetconfigs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknetconfigs/finalizers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknetattachments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch;create;update;patch;delete
 
@@ -478,11 +479,17 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 		osNet.Labels[openstacknet.NetworkNameLabelSelector] = net.Name
 		osNet.Labels[openstacknet.NetworkNameLowerLabelSelector] = net.NameLower
 		osNet.Labels[openstacknet.SubNetNameLabelSelector] = subnet.Name
+		osNet.Labels[openstacknet.ControlPlaneNetworkLabelSelector] = strconv.FormatBool(net.IsControlPlane)
 
 		osNet.Spec.AttachConfiguration = subnet.AttachConfiguration
 		osNet.Spec.MTU = net.MTU
 		osNet.Spec.Name = net.Name
 		osNet.Spec.NameLower = subnet.Name
+		if net.IsControlPlane {
+			osNet.Spec.DomainName = fmt.Sprintf("%s.%s", ospdirectorv1beta1.ControlPlaneNameLower, instance.Spec.DomainName)
+		} else {
+			osNet.Spec.DomainName = fmt.Sprintf("%s.%s", strings.ToLower(net.Name), instance.Spec.DomainName)
+		}
 		osNet.Spec.VIP = net.VIP
 		osNet.Spec.Vlan = subnet.Vlan
 
