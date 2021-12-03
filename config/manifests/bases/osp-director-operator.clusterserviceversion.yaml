@@ -39,6 +39,13 @@ spec:
       kind: OpenStackClient
       name: openstackclients.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackConfigGenerator Used to configure Heat environments and
+        template customizations to generate Ansible playbooks for OpenStack Overcloud
+        deployment
+      displayName: OpenStack Config Generator
+      kind: OpenStackConfigGenerator
+      name: openstackconfiggenerators.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackConfigVersion is the Schema for the openstackconfigversions
         API
       displayName: OpenStack Config Version
@@ -85,13 +92,6 @@ spec:
       displayName: OpenStack Net
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
-      version: v1beta1
-    - description: OpenStackConfigGenerator Used to configure Heat environments
-        and template customizations to generate Ansible playbooks, etc. for the OpenStack Overcloud
-        deployment
-      displayName: OpenStack Config Generator
-      kind: OpenStackConfigGenerator
-      name: openstackconfiggenerators.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
         API
