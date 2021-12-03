@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+1.1.1
+-----
+- add OpenStackClientImageURL to relatedImages and makes it an optional parameter
+- use downstream defaults for provisioner and downloader images
+
 1.1.0
 -----
 - IPv6 support/testing
