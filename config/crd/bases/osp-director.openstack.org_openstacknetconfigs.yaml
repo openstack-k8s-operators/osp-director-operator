@@ -136,11 +136,30 @@ spec:
                 description: AttachConfigurations used for NodeNetworkConfigurationPolicy
                   or NodeSriovConfigurationPolicy
                 type: object
+              dnsSearchDomains:
+                description: DNSSearchDomains, list of DNS search domains
+                items:
+                  type: string
+                type: array
+              dnsServers:
+                description: DNSServers, list of dns servers
+                items:
+                  type: string
+                type: array
+              domainName:
+                default: localdomain
+                description: DomainName the name of the dns domain for the OSP environment
+                type: string
               networks:
                 description: Networks, list of all tripleo networks of the deployment
                 items:
                   description: Network describes a tripleo network
                   properties:
+                    isControlPlane:
+                      default: false
+                      description: IsControlPlane indicates if this network is the
+                        overcloud control plane network
+                      type: boolean
                     mtu:
                       default: 1500
                       description: MTU of the network
@@ -270,10 +289,8 @@ spec:
             description: OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig
             properties:
               conditions:
-                description: 'TODO: It would be simpler, perhaps, to just have Conditions
-                  and get rid of CurrentState, but we are using the same approach
-                  in other CRDs for now anyhow Conditions - conditions to display
-                  in the OpenShift GUI, which reflect CurrentState'
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
                 items:
                   description: Condition - A particular overall condition of a certain
                     resource

@@ -57,8 +57,8 @@ resources:
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
   webhooks:
-    validation: true
     defaulting: true
+    validation: true
     webhookVersion: v1
 - controller: true
   domain: openstack.org
@@ -117,6 +117,10 @@ resources:
   kind: OpenStackNetConfig
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true

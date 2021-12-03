@@ -1,15 +1,11 @@
 {{- /* golang template - https://pkg.go.dev/text/template */ -}}
 {{- range $netname, $net := .NetworksMap }}
-{{- if ne $net.Name "Control" }}
+{{- if not $net.IsControlPlane }}
 - name: {{ $net.Name }}
   name_lower: {{ $net.NameLower }}
   vip: {{ $net.VIP }}
   mtu: {{ $net.MTU }}
-{{- /* TODO: ipv6 only
-{{- if eq $net.NetType "ipv6" }}
-  ipv6: true
-{{- end }}
-*/ -}}
+  ipv6: {{ if $net.IPv6 }}true{{ else }}false{{ end }}
 {{- /* subnets start */ -}}
 {{- if not (eq (len $net.Subnets) 0) }}
   subnets:

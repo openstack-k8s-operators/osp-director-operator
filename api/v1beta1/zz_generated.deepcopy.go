@@ -1476,6 +1476,16 @@ func (in *OpenStackNetConfigSpec) DeepCopyInto(out *OpenStackNetConfigSpec) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
+	if in.DNSServers != nil {
+		in, out := &in.DNSServers, &out.DNSServers
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.DNSSearchDomains != nil {
+		in, out := &in.DNSSearchDomains, &out.DNSSearchDomains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Networks != nil {
 		in, out := &in.Networks, &out.Networks
 		*out = make([]Network, len(*in))

@@ -23,6 +23,9 @@ spec:
     - jsonPath: .spec.cidr
       name: CIDR
       type: string
+    - jsonPath: .spec.domainName
+      name: DOMAIN
+      type: string
     - jsonPath: .spec.mtu
       name: MTU
       type: string
@@ -81,6 +84,10 @@ spec:
               cidr:
                 description: Cidr the cidr to use for this network
                 type: string
+              domainName:
+                description: DomainName the name of the domain for this network, usually
+                  lower(Name)."OSNetConfig.Spec.DomainName"
+                type: string
               gateway:
                 description: Gateway optional gateway for the network
                 type: string
@@ -90,11 +97,11 @@ spec:
                 type: integer
               name:
                 description: Name of the tripleo network this network belongs to,
-                  e.g. External, InternalApi, ...
+                  e.g. Control, External, InternalApi, ...
                 type: string
               nameLower:
                 description: NameLower the name of the subnet, name_lower name of
-                  the tripleo subnet, e.g. external, internal_api, internal_api_leaf1
+                  the tripleo subnet, e.g. ctlplane, external, internal_api, internal_api_leaf1
                 type: string
               routes:
                 description: Routes, list of networks that should be routed via network
@@ -125,6 +132,7 @@ spec:
             - allocationStart
             - attachConfiguration
             - cidr
+            - domainName
             - name
             - nameLower
             type: object
