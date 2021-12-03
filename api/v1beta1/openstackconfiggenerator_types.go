@@ -20,8 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OpenStackPlaybookGeneratorSpec defines the desired state of OpenStackPlaybookGenerator
-type OpenStackPlaybookGeneratorSpec struct {
+// OpenStackConfigGeneratorSpec defines the desired state of OpenStackConfigGenerator
+type OpenStackConfigGeneratorSpec struct {
 	// Name of the image used to generate playbooks. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
 	ImageURL string `json:"imageURL,omitempty"`
 	// Required. the name of the config map containing Heat env file customizations
@@ -37,58 +37,58 @@ type OpenStackPlaybookGeneratorSpec struct {
 	GitSecret string `json:"gitSecret"`
 }
 
-// OpenStackPlaybookGeneratorStatus defines the observed state of OpenStackPlaybookGenerator
-type OpenStackPlaybookGeneratorStatus struct {
-	// PlaybookHash hash
-	PlaybookHash string `json:"playbookHash"`
+// OpenStackConfigGeneratorStatus defines the observed state of OpenStackConfigGenerator
+type OpenStackConfigGeneratorStatus struct {
+	// ConfigHash hash
+	ConfigHash string `json:"playbookHash"`
 
 	// CurrentState
-	CurrentState PlaybookGeneratorState `json:"currentState"`
+	CurrentState ConfigGeneratorState `json:"currentState"`
 
 	// Conditions
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
-// PlaybookGeneratorState - the state of the execution of this playbook generator
-type PlaybookGeneratorState string
+// ConfigGeneratorState - the state of the execution of this playbook generator
+type ConfigGeneratorState string
 
 const (
-	// PlaybookGeneratorWaiting - the playbook generator is blocked by prerequisite objects
-	PlaybookGeneratorWaiting PlaybookGeneratorState = "Waiting"
-	// PlaybookGeneratorInitializing - the playbook generator is preparing to execute
-	PlaybookGeneratorInitializing PlaybookGeneratorState = "Initializing"
-	// PlaybookGeneratorGenerating - the playbook generator is executing
-	PlaybookGeneratorGenerating PlaybookGeneratorState = "Generating"
-	// PlaybookGeneratorFinished - the playbook generation has finished executing
-	PlaybookGeneratorFinished PlaybookGeneratorState = "Finished"
-	// PlaybookGeneratorError - the playbook generation hit a generic error
-	PlaybookGeneratorError PlaybookGeneratorState = "Error"
+	// ConfigGeneratorWaiting - the playbook generator is blocked by prerequisite objects
+	ConfigGeneratorWaiting ConfigGeneratorState = "Waiting"
+	// ConfigGeneratorInitializing - the playbook generator is preparing to execute
+	ConfigGeneratorInitializing ConfigGeneratorState = "Initializing"
+	// ConfigGeneratorGenerating - the playbook generator is executing
+	ConfigGeneratorGenerating ConfigGeneratorState = "Generating"
+	// ConfigGeneratorFinished - the playbook generation has finished executing
+	ConfigGeneratorFinished ConfigGeneratorState = "Finished"
+	// ConfigGeneratorError - the playbook generation hit a generic error
+	ConfigGeneratorError ConfigGeneratorState = "Error"
 )
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=osplaybookgenerator;osplaybookgenerators
-// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Playbook Generator"
+// +kubebuilder:resource:shortName=osconfiggenerator;osconfiggenerators
+// +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Generator"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
-// OpenStackPlaybookGenerator Used to configure Heat environments and template customizations to generate Ansible playbooks for OpenStack Overcloud deployment
-type OpenStackPlaybookGenerator struct {
+// OpenStackConfigGenerator Used to configure Heat environments and template customizations to generate Ansible playbooks for OpenStack Overcloud deployment
+type OpenStackConfigGenerator struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OpenStackPlaybookGeneratorSpec   `json:"spec,omitempty"`
-	Status OpenStackPlaybookGeneratorStatus `json:"status,omitempty"`
+	Spec   OpenStackConfigGeneratorSpec   `json:"spec,omitempty"`
+	Status OpenStackConfigGeneratorStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// OpenStackPlaybookGeneratorList contains a list of OpenStackPlaybookGenerator
-type OpenStackPlaybookGeneratorList struct {
+// OpenStackConfigGeneratorList contains a list of OpenStackConfigGenerator
+type OpenStackConfigGeneratorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OpenStackPlaybookGenerator `json:"items"`
+	Items           []OpenStackConfigGenerator `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OpenStackPlaybookGenerator{}, &OpenStackPlaybookGeneratorList{})
+	SchemeBuilder.Register(&OpenStackConfigGenerator{}, &OpenStackConfigGeneratorList{})
 }

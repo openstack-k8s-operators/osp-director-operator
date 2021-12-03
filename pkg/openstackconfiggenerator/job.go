@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package openstackplaybookgenerator
+package openstackconfiggenerator
 
 import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -24,15 +24,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PlaybookJob -
-func PlaybookJob(cr *ospdirectorv1beta1.OpenStackPlaybookGenerator, configHash string, ospVersion ospdirectorv1beta1.OSPVersion) *batchv1.Job {
+// ConfigJob -
+func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash string, ospVersion ospdirectorv1beta1.OSPVersion) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "generate-playbooks-" + cr.Name,
+			Name:      "generate-config-" + cr.Name,
 			Namespace: cr.Namespace,
 		},
 	}

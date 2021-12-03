@@ -86,12 +86,12 @@ spec:
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackPlaybookGenerator Used to configure Heat environments
-        and template customizations to generate Ansible playbooks for OpenStack Overcloud
+    - description: OpenStackConfigGenerator Used to configure Heat environments
+        and template customizations to generate Ansible playbooks, etc. for the OpenStack Overcloud
         deployment
-      displayName: OpenStack Playbook Generator
-      kind: OpenStackPlaybookGenerator
-      name: openstackplaybookgenerators.osp-director.openstack.org
+      displayName: OpenStack Config Generator
+      kind: OpenStackConfigGenerator
+      name: openstackconfiggenerators.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
         API

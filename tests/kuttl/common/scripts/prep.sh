@@ -10,7 +10,7 @@ oc delete openstackclient --all -n openstack
 oc delete openstackbaremetalset --all -n openstack
 oc delete openstackprovisionserver --all -n openstack
 oc delete openstacknetconfig --all -n openstack
-oc delete osplaybookgenerator --all -n openstack
+oc delete osconfiggenerator --all -n openstack
 oc delete nncp -n openstack --all
 oc delete secret -n openstack userpassword --ignore-not-found
 oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found

@@ -1,20 +1,24 @@
-# permissions for end users to view openstackplaybookgenerators.
+# permissions for end users to edit openstackconfiggenerators.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: openstackplaybookgenerator-viewer-role
+  name: openstackconfiggenerator-editor-role
 rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - openstackplaybookgenerators
+  - openstackconfiggenerators
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - openstackplaybookgenerators/status
+  - openstackconfiggenerators/status
   verbs:
   - get

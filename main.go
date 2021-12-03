@@ -211,13 +211,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackIPSet")
 		os.Exit(1)
 	}
-	if err = (&controllers.OpenStackPlaybookGeneratorReconciler{
+	if err = (&controllers.OpenStackConfigGeneratorReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackPlaybookGenerator"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackConfigGenerator"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "OpenStackPlaybookGenerator")
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackConfigGenerator")
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackEphemeralHeatReconciler{
@@ -295,7 +295,7 @@ func main() {
 		//
 		// Register webhooks
 		//
-		openstackPlaybookGeneratorDefaults := ospdirectorv1beta1.OpenStackPlaybookGeneratorDefaults{
+		openstackConfigGeneratorDefaults := ospdirectorv1beta1.OpenStackConfigGeneratorDefaults{
 			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
 		}
 
@@ -324,8 +324,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).SetupWebhookWithManager(mgr, openstackPlaybookGeneratorDefaults); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackPlaybookGenerator")
+		if err = (&ospdirectorv1beta1.OpenStackConfigGenerator{}).SetupWebhookWithManager(mgr, openstackConfigGeneratorDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackConfigGenerator")
 			os.Exit(1)
 		}
 
