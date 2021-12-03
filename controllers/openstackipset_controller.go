@@ -38,9 +38,7 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -76,7 +74,6 @@ func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch
 
 // Reconcile - reconcile OpenStackIPSet objects
 func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -190,28 +187,6 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	// Get OSPVersion from OSControlPlane status
-	//
-	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNetNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return ctrlResult, err
-	}
-	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNotSupportedVersion)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return ctrlResult, err
-	}
-
-	//
 	// Remove existing IPSet entries if nodes got removed from instance.Spec.HostNameRefs
 	//
 	r.removeIP(instance, cond)
@@ -234,75 +209,6 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		// TODO: sync with spec
 		err = common.WrapErrorForObject("Failed to sync deleted OpenStackIPSet with OpenStackNet spec", instance, err)
-
-		return ctrl.Result{}, err
-	}
-
-	//
-	// generate OOO environment file with predictible IPs
-	//
-	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance, openstackipset.AppLabel, map[string]string{})
-
-	templateParameters, rolesMap, err := openstackipset.CreateConfigMapParams(r, instance, cond)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
-	// get clusterServiceIP for fencing routing in the nic templates
-	//
-	clusterServiceIP, err := r.getClusterServiceEndpoint(
-		instance,
-		cond,
-		"default",
-		map[string]string{
-			"component": "apiserver",
-			"provider":  "kubernetes",
-		},
-	)
-	if err != nil {
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return ctrl.Result{}, err
-	}
-
-	//
-	// Render VM role nic templates, but only for tripleo roles
-	//
-	roleNicTemplates := r.createVMRoleNicTemplates(
-		instance,
-		OSPVersion,
-		rolesMap,
-		clusterServiceIP,
-		cmLabels,
-	)
-
-	//
-	// create tripleo-deploy-config configmap with rendered data
-	//
-	cm := []common.Template{
-		{
-			Name:               "tripleo-deploy-config",
-			Namespace:          instance.Namespace,
-			Type:               common.TemplateTypeConfig,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: map[string]string{},
-			CustomData:         roleNicTemplates,
-			Labels:             cmLabels,
-			//Labels:        map[string]string{},
-			ConfigOptions: templateParameters,
-			SkipSetOwner:  true,
-			Version:       OSPVersion,
-		},
-	}
-
-	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonConfigMap)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
 	}
@@ -634,34 +540,6 @@ func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1bet
 	return nil
 }
 
-func (r *OpenStackIPSetReconciler) getClusterServiceEndpoint(
-	instance *ospdirectorv1beta1.OpenStackIPSet,
-	cond *ospdirectorv1beta1.Condition,
-	namespace string,
-	labelSelector map[string]string,
-) (string, error) {
-
-	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
-
-		return "", err
-	}
-
-	// for now assume there is always only one
-	if len(serviceList.Items) > 0 {
-		return serviceList.Items[0].Spec.ClusterIP, nil
-	}
-
-	cond.Message = fmt.Sprintf("failed to get Cluster ServiceEndpoint - %s", fmt.Sprint(labelSelector))
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
-
-	return "", k8s_errors.NewNotFound(appsv1.Resource("service"), fmt.Sprint(labelSelector))
-}
-
 //
 // Verify if all required networks for the OSIPset exist
 //
@@ -687,58 +565,4 @@ func (r *OpenStackIPSetReconciler) verifyNetworksExist(
 		}
 	}
 	return ctrl.Result{}, nil
-}
-
-//
-// Render VM role nic templates, but only for tripleo roles
-//
-func (r *OpenStackIPSetReconciler) createVMRoleNicTemplates(
-	instance *ospdirectorv1beta1.OpenStackIPSet,
-	ospVersion ospdirectorv1beta1.OSPVersion,
-	rolesMap map[string]*openstackipset.RoleType,
-	clusterServiceIP string,
-	cmLabels map[string]string,
-) map[string]string {
-	roleNicTemplates := map[string]string{}
-
-	for _, role := range rolesMap {
-		// render nic template for VM role which, but only for tripleo roles
-		if role.IsVMType && role.IsTripleoRole {
-			roleTemplateParameters := make(map[string]interface{})
-			roleTemplateParameters["ClusterServiceIP"] = clusterServiceIP
-			roleTemplateParameters["Role"] = role
-
-			file := ""
-			nicTemplate := ""
-			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) {
-				file = fmt.Sprintf("%s-nic-template.yaml", role.NameLower)
-				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/%s", ospVersion, openstackipset.NicTemplateTrain)
-			}
-			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
-				file = fmt.Sprintf("%s-nic-template.j2", role.NameLower)
-				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/%s", ospVersion, openstackipset.NicTemplateWallaby)
-			}
-
-			r.Log.Info(fmt.Sprintf("NIC template %s added to tripleo-deploy-config CM for role %s. Add a custom %s NIC template to the tarballConfigMap to overwrite.", file, role.Name, file))
-
-			roleTemplate := common.Template{
-				Name:         "tripleo-nic-template",
-				Namespace:    instance.Namespace,
-				Type:         common.TemplateTypeNone,
-				InstanceType: instance.Kind,
-				AdditionalTemplate: map[string]string{
-					file: nicTemplate,
-				},
-				Labels:        cmLabels,
-				ConfigOptions: roleTemplateParameters,
-				SkipSetOwner:  true,
-				Version:       ospVersion,
-			}
-			for k, v := range common.GetTemplateData(roleTemplate) {
-				roleNicTemplates[k] = v
-			}
-		}
-	}
-
-	return roleNicTemplates
 }

@@ -145,11 +145,15 @@ spec:
               configHash:
                 description: ConfigHash hash
                 type: string
+              currentReason:
+                description: CurrentReason
+                type: string
               currentState:
                 description: CurrentState
                 type: string
             required:
             - configHash
+            - currentReason
             - currentState
             type: object
         type: object

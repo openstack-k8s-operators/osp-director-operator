@@ -58,7 +58,6 @@ func WaitOnJob(job *batchv1.Job, client client.Client, log logr.Logger) (bool, e
 		log.Info("WaitOnJob err")
 		return true, err
 	} else if foundJob != nil {
-		log.Info("WaitOnJob foundJob")
 		if foundJob.Status.Active > 0 {
 			log.Info("Job Status Active... requeuing")
 			return true, err

@@ -13,14 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package openstackipset
+package openstackconfiggenerator
 
 import (
 	"context"
 	"fmt"
 	"net"
 
-	"strconv"
 	"strings"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -116,7 +115,7 @@ type networkType struct {
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
 func CreateConfigMapParams(
 	r common.ReconcilerCommon,
-	instance *ospdirectorv1beta1.OpenStackIPSet,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
 ) (map[string]interface{}, map[string]*RoleType, error) {
 
@@ -283,7 +282,7 @@ func createNetworksMap(
 			subnetDetailsV4 := netDetailsType{}
 			if s.IPv4.Cidr != "" {
 				var err error
-				ip, cidrSuffix, err := getCidrParts(s.IPv4.Cidr)
+				ip, cidrSuffix, err := common.GetCidrParts(s.IPv4.Cidr)
 				if err != nil {
 					return networksMap, networkMappingList, err
 				}
@@ -307,7 +306,7 @@ func createNetworksMap(
 			subnetDetailsV6 := netDetailsType{}
 			if s.IPv6.Cidr != "" {
 				var err error
-				ip, cidrSuffix, err := getCidrParts(s.IPv6.Cidr)
+				ip, cidrSuffix, err := common.GetCidrParts(s.IPv6.Cidr)
 				if err != nil {
 					return networksMap, networkMappingList, err
 				}
@@ -354,7 +353,7 @@ func createNetworksMap(
 //
 func createRolesMap(
 	r common.ReconcilerCommon,
-	instance *ospdirectorv1beta1.OpenStackIPSet,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	osNetList *ospdirectorv1beta1.OpenStackNetList,
 	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
 	networksMap map[string]*networkType,
@@ -394,7 +393,7 @@ func createRolesMap(
 			//
 			// add network details to role
 			//
-			netAddr, cidrSuffix, err := getCidrParts(osnet.Spec.Cidr)
+			netAddr, cidrSuffix, err := common.GetCidrParts(osnet.Spec.Cidr)
 			if err != nil {
 				return err
 			}
@@ -479,19 +478,6 @@ func createRolesMap(
 	}
 
 	return nil
-}
-
-//
-// getCidrParts - returns net addr and cidr suffix
-//
-func getCidrParts(cidr string) (string, int, error) {
-	cidrPieces := strings.Split(cidr, "/")
-	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
-	if err != nil {
-		return "", cidrSuffix, err
-	}
-
-	return cidrPieces[0], cidrSuffix, nil
 }
 
 //

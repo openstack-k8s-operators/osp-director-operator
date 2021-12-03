@@ -23,12 +23,14 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -125,6 +127,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		// Update object conditions
 		//
 		instance.Status.CurrentState = ospdirectorv1beta1.ConfigGeneratorState(cond.Type)
+		instance.Status.CurrentReason = ospdirectorv1beta1.ConfigGeneratorReason(cond.Message)
+
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
 			cond.Reason,
@@ -175,6 +179,22 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	templateParameters["OSPVersion"] = OSPVersion
 
 	//
+	//  wait for the controlplane VMs to be provisioned
+	//
+	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
+		cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
+		common.LogForObject(
+			r,
+			cond.Message,
+			instance,
+		)
+
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
+	//
 	// check if heat-env-config (customizations provided by administrator) exist if it does not exist, requeue
 	//
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
@@ -191,44 +211,14 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 
-	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
-	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
-
-	//
-	// Read the tripleo-deploy-config CM
-	//
-	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
+	// add ConfigGeneratorInputLabel if required
+	err = r.addConfigGeneratorInputLabel(instance, cond, tripleoCustomDeployCM)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			cond.Message = "The tripleo-deploy-config map doesn't yet exist. Requeing..."
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-		}
-		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
 
-	tripleoDeployFiles := tripleoDeployCM.Data
-
-	//
-	// Delete network_data.yaml from tripleoDeployFiles as it is not an ooo parameter env file
-	//
-	delete(tripleoDeployFiles, "network_data.yaml")
-
-	//
-	// Delete all role nic templates from tripleoDeployFiles as it is not an ooo parameter env file
-	//
-	for k := range tripleoDeployFiles {
-		if strings.HasSuffix(k, "nic-template.yaml") || strings.HasSuffix(k, "nic-template.j2") {
-			delete(tripleoDeployFiles, k)
-		}
-	}
-
-	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
-	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
+	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
 	//
 	// Tarball configmap - extra stuff if custom tarballs are provided
@@ -252,6 +242,43 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		templateParameters["TripleoTarballFiles"] = tripleoTarballFiles
 	}
 
+	// add ConfigGeneratorInputLabel if required
+	err = r.addConfigGeneratorInputLabel(instance, cond, tripleoTarballCM)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// render OOO environment, create TripleoDeployCM and read the tripleo-deploy-config CM
+	//
+	tripleoDeployCM, err := r.createTripleoDeployCM(
+		instance,
+		cond,
+		envVars,
+		cmLabels,
+		OSPVersion,
+		&controlPlane,
+		tripleoTarballCM,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	tripleoDeployFiles := tripleoDeployCM.Data
+
+	//
+	// Delete network_data.yaml and all role nic templates from tripleoDeployFiles as it is not an ooo parameter env file
+	//
+	for k := range tripleoDeployFiles {
+		if strings.HasSuffix(k, openstackconfiggenerator.RenderedNicFileTrain) ||
+			strings.HasSuffix(k, openstackconfiggenerator.RenderedNicFileWallaby) ||
+			strings.HasSuffix(k, openstackconfiggenerator.NetworkDataFile) {
+			delete(tripleoDeployFiles, k)
+		}
+	}
+
+	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
+	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+
 	//
 	// openstackconfig-script CM
 	//
@@ -268,7 +295,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
 	if err != nil {
-		cond.Message = "Tarball config map not found, requeuing and waiting. Requeing..."
+		cond.Message = fmt.Sprintf("%s config map not found, requeuing and waiting. Requeing...", "openstackconfig-script-"+instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
@@ -277,27 +304,11 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	//
-	// Fencing considerations
-	//
-	fencingCM, ctrlResult, err := r.createFencingEnvironmentFiles(
-		instance,
-		cond,
-		envVars,
-		&controlPlane,
-		tripleoTarballCM,
-		cmLabels,
-	)
-	if (err != nil) || (ctrlResult != reconcile.Result{}) {
-		return ctrlResult, err
-	}
-
-	//
 	// Calc config map hash
 	//
 	hashList := []interface{}{
 		tripleoCustomDeployCM.Data,
 		tripleoDeployCM.Data,
-		fencingCM.Data,
 	}
 
 	if tripleoTarballCM != nil {
@@ -473,7 +484,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorGenerating)
 			common.LogForObject(r, cond.Message, instance)
 
-			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
 
@@ -566,39 +577,32 @@ func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdir
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	// watch for objects in the same namespace as the controller CR
-	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
-		result := []reconcile.Request{}
+	//
+	// Schedule reconcile on openstackconfiggenerator if any of the objects change where
+	// owner label openstackconfiggenerator.ConfigGeneratorInputLabel
+	//
+	ConfigGeneratorInputLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+		labels := o.GetLabels()
+		//
+		// verify object has ConfigGeneratorInputLabel
+		//
+		owner, ok := labels[openstackconfiggenerator.ConfigGeneratorInputLabel]
+		if !ok {
+			return []reconcile.Request{}
+		}
 
-		// get all CRs from the same namespace (there should only be one)
-		crs := &ospdirectorv1beta1.OpenStackConfigGeneratorList{}
-		listOpts := []client.ListOption{
-			client.InNamespace(o.GetNamespace()),
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{
+				Name:      owner,
+				Namespace: o.GetNamespace(),
+			}},
 		}
-		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to retrieve CRs %v")
-			return nil
-		}
-
-		for _, cr := range crs.Items {
-			if o.GetNamespace() == cr.Namespace {
-				// return namespace and Name of CR
-				name := client.ObjectKey{
-					Namespace: cr.Namespace,
-					Name:      cr.Name,
-				}
-				result = append(result, reconcile.Request{NamespacedName: name})
-			}
-		}
-		if len(result) > 0 {
-			return result
-		}
-		return nil
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackConfigGenerator{}).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, namespacedFn).
+		// TODO: watch ctlplane, osbms for Count change
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, ConfigGeneratorInputLabelWatcher).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
 		Owns(&batchv1.Job{}).
@@ -654,31 +658,17 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
-	envVars map[string]common.EnvSetter,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
 	tripleoTarballCM *corev1.ConfigMap,
 	cmLabels map[string]string,
 
-) (*corev1.ConfigMap, ctrl.Result, error) {
+) (map[string]string, error) {
 	templateParameters := make(map[string]interface{})
 
 	//
 	//  default to fencing disabled
 	//
 	templateParameters["EnableFencing"] = false
-
-	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
-		cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
-		common.LogForObject(
-			r,
-			cond.Message,
-			instance,
-		)
-
-		return nil, ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
 
 	if controlPlane.Spec.EnableFencing {
 		fencingRoles := common.GetFencingRoles()
@@ -692,7 +682,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
-				return nil, ctrl.Result{}, err
+				return nil, err
 			}
 
 			fencingRoles = append(fencingRoles, customFencingRoles...)
@@ -713,7 +703,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
 					err = common.WrapErrorForObject(cond.Message, instance, err)
 
-					return nil, ctrl.Result{}, err
+					return nil, err
 				}
 
 				virtualMachineInstanceLists = append(virtualMachineInstanceLists, virtualMachineInstanceList)
@@ -730,48 +720,266 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
-				return nil, ctrl.Result{}, err
+				return nil, err
 			}
 
 			templateParameters = common.MergeMaps(templateParameters, fencingTemplateParameters)
 		}
 	}
 
+	fencingTemplate := common.Template{
+		Name:         "fencing-config",
+		Namespace:    instance.Namespace,
+		Type:         common.TemplateTypeNone,
+		InstanceType: instance.Kind,
+		AdditionalTemplate: map[string]string{
+			"fencing.yaml": "/openstackconfiggenerator/config/common/fencing.yaml",
+		},
+		Labels:        cmLabels,
+		ConfigOptions: templateParameters,
+	}
+
+	common.GetTemplateData(fencingTemplate)
+
+	return common.GetTemplateData(fencingTemplate), nil
+}
+
+//
+// generate TripleoDeploy configmap with environment file containing predictible IPs
+//
+func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	cond *ospdirectorv1beta1.Condition,
+	envVars map[string]common.EnvSetter,
+	cmLabels map[string]string,
+	ospVersion ospdirectorv1beta1.OSPVersion,
+	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	tripleoTarballCM *corev1.ConfigMap,
+) (*corev1.ConfigMap, error) {
+	//
+	// generate OOO environment file with predictible IPs
+	//
+	templateParameters, rolesMap, err := openstackconfiggenerator.CreateConfigMapParams(r, instance, cond)
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonRenderEnvFilesError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return nil, err
+	}
+
+	//
+	// get clusterServiceIP for fencing routing in the nic templates
+	//
+	clusterServiceIP, err := r.getClusterServiceEndpoint(
+		instance,
+		cond,
+		"default",
+		map[string]string{
+			"component": "apiserver",
+			"provider":  "kubernetes",
+		},
+	)
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonClusterServiceIPError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return nil, err
+	}
+
+	//
+	// Render VM role nic templates, but only for tripleo roles
+	//
+	roleNicTemplates := r.createVMRoleNicTemplates(
+		instance,
+		ospVersion,
+		rolesMap,
+		clusterServiceIP,
+		cmLabels,
+	)
+
+	//
+	// Render fencing template
+	//
+	fencingTemplate, err := r.createFencingEnvironmentFiles(
+		instance,
+		cond,
+		controlPlane,
+		tripleoTarballCM,
+		cmLabels,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	common.MergeStringMaps(roleNicTemplates, fencingTemplate)
+
+	//
+	// create tripleo-deploy-config configmap with rendered data
+	//
 	cm := []common.Template{
 		{
-			Name:               "fencing-config",
+			Name:               "tripleo-deploy-config",
 			Namespace:          instance.Namespace,
 			Type:               common.TemplateTypeConfig,
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{},
-			Labels:             cmLabels,
-			ConfigOptions:      templateParameters,
+			CustomData: common.MergeStringMaps(
+				roleNicTemplates,
+				fencingTemplate,
+			),
+			Labels:        cmLabels,
+			ConfigOptions: templateParameters,
+			Version:       ospVersion,
 		},
 	}
 
-	err := common.EnsureConfigMaps(r, instance, cm, &envVars)
+	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-		return nil, ctrl.Result{}, err
+		return nil, err
 	}
 
-	fencingCM, _, err := common.GetConfigMapAndHashWithName(r, "fencing-config", instance.Namespace)
+	//
+	// Read the tripleo-deploy-config CM
+	//
+	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			// This should really never happen, but putting the check here anyhow
-			cond.Message = "The fencing-config map doesn't yet exist. Requeing..."
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return nil, err
+	}
+
+	return tripleoDeployCM, nil
+}
+
+func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	cond *ospdirectorv1beta1.Condition,
+	namespace string,
+	labelSelector map[string]string,
+) (string, error) {
+
+	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+
+		return "", err
+	}
+
+	// for now assume there is always only one
+	if len(serviceList.Items) > 0 {
+		return serviceList.Items[0].Spec.ClusterIP, nil
+	}
+
+	cond.Message = fmt.Sprintf("failed to get Cluster ServiceEndpoint - %s", fmt.Sprint(labelSelector))
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+
+	return "", k8s_errors.NewNotFound(appsv1.Resource("service"), fmt.Sprint(labelSelector))
+}
+
+//
+// Render VM role nic templates, but only for tripleo roles
+//
+func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	ospVersion ospdirectorv1beta1.OSPVersion,
+	rolesMap map[string]*openstackconfiggenerator.RoleType,
+	clusterServiceIP string,
+	cmLabels map[string]string,
+) map[string]string {
+	roleNicTemplates := map[string]string{}
+
+	for _, role := range rolesMap {
+		// render nic template for VM role which, but only for tripleo roles
+		if role.IsVMType && role.IsTripleoRole {
+			roleTemplateParameters := make(map[string]interface{})
+			roleTemplateParameters["ClusterServiceIP"] = clusterServiceIP
+			roleTemplateParameters["Role"] = role
+
+			file := ""
+			nicTemplate := ""
+			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) {
+				file = fmt.Sprintf("%s-%s", role.NameLower, openstackconfiggenerator.RenderedNicFileTrain)
+				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateTrain)
+			}
+			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
+				file = fmt.Sprintf("%s-%s", role.NameLower, openstackconfiggenerator.RenderedNicFileWallaby)
+				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateWallaby)
+			}
+
+			r.Log.Info(fmt.Sprintf("NIC template %s added to tripleo-deploy-config CM for role %s. Add a custom %s NIC template to the tarballConfigMap to overwrite.", file, role.Name, file))
+
+			roleTemplate := common.Template{
+				Name:         "tripleo-nic-template",
+				Namespace:    instance.Namespace,
+				Type:         common.TemplateTypeNone,
+				InstanceType: instance.Kind,
+				AdditionalTemplate: map[string]string{
+					file: nicTemplate,
+				},
+				Labels:        cmLabels,
+				ConfigOptions: roleTemplateParameters,
+				Version:       ospVersion,
+			}
+
+			for k, v := range common.GetTemplateData(roleTemplate) {
+				roleNicTemplates[k] = v
+			}
+		}
+	}
+
+	return roleNicTemplates
+}
+
+//
+// Verify if ConfigGeneratorInputLabel label is set on the CM which is used to limit
+// the CMs to watch
+//
+func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	cond *ospdirectorv1beta1.Condition,
+	cm *corev1.ConfigMap,
+) error {
+
+	labelSelector := map[string]string{
+		openstackconfiggenerator.ConfigGeneratorInputLabel: "true",
+	}
+
+	if _, ok := cm.Labels[openstackconfiggenerator.ConfigGeneratorInputLabel]; !ok {
+		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), cm, func() error {
+			cm.SetLabels(labels.Merge(cm.GetLabels(), labelSelector))
+
+			return nil
+		})
+		if err != nil {
+			cond.Message = err.Error()
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonInputLabelError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return fencingCM, ctrl.Result{RequeueAfter: time.Second * 10}, err
+			return err
 		}
-		return nil, ctrl.Result{}, err
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s updated with %s label: %s", cm.Name, openstackconfiggenerator.ConfigGeneratorInputLabel, op),
+			instance,
+		)
 	}
 
-	return fencingCM, ctrl.Result{}, nil
+	return nil
+
 }

@@ -41,11 +41,6 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []co
 			ReadOnly:  true,
 		},
 		{
-			Name:      "fencing-config",
-			MountPath: "/home/cloud-admin/config-fencing",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "openstackplaybook-scripts",
 			MountPath: "/home/cloud-admin/create-playbooks.sh",
 			SubPath:   "create-playbooks.sh",
@@ -96,17 +91,6 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.
 					DefaultMode: &config0644AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: instance.Spec.HeatEnvConfigMap,
-					},
-				},
-			},
-		},
-		{
-			Name: "fencing-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "fencing-config",
 					},
 				},
 			},

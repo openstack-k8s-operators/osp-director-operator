@@ -19,4 +19,23 @@ package openstackconfiggenerator
 const (
 	// AppLabel -
 	AppLabel = "osp-openstackconfiggenerator"
+
+	// NicTemplateTrain - nic template file for train/16.2
+	NicTemplateTrain = "net-config-multi-nic.yaml"
+
+	// RenderedNicFileTrain - suffix of the renered train/16.2 file
+	RenderedNicFileTrain = "nic-template.yaml"
+
+	// NicTemplateWallaby - nic template file for wallaby/17.0 and later
+	NicTemplateWallaby = "multiple_nics_dvr.j2"
+
+	// RenderedNicFileWallaby - suffix of the renered wallaby/17.0 file
+	RenderedNicFileWallaby = "nic-template.j2"
+
+	// NetworkDataFile - tripleo network data file name
+	NetworkDataFile = "network_data.yaml"
+
+	// ConfigGeneratorInputLabel - label set on objects which are input for the configgenerator
+	// but not owned by the configgenerator
+	ConfigGeneratorInputLabel = "playbook-generator-input"
 )

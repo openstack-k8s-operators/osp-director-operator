@@ -45,6 +45,9 @@ type OpenStackConfigGeneratorStatus struct {
 	// CurrentState
 	CurrentState ConfigGeneratorState `json:"currentState"`
 
+	// CurrentReason
+	CurrentReason ConfigGeneratorReason `json:"currentReason"`
+
 	// Conditions
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
@@ -109,6 +112,12 @@ const (
 	ConfigGeneratorCondReasonConfigCreate ConfigGeneratorReason = "ConfigCreate"
 	// ConfigGeneratorCondReasonWaitingNodesProvisioned - waiting on nodes be provisioned
 	ConfigGeneratorCondReasonWaitingNodesProvisioned ConfigGeneratorReason = "WaitingNodesProvisioned"
+	// ConfigGeneratorCondReasonInputLabelError - error adding/update ConfigGeneratorInputLabel
+	ConfigGeneratorCondReasonInputLabelError ConfigGeneratorReason = "ConfigGeneratorInputLabelError"
+	// ConfigGeneratorCondReasonRenderEnvFilesError - error rendering environmane file
+	ConfigGeneratorCondReasonRenderEnvFilesError ConfigGeneratorReason = "RenderEnvFilesError"
+	// ConfigGeneratorCondReasonClusterServiceIPError - error rendering environmane file
+	ConfigGeneratorCondReasonClusterServiceIPError ConfigGeneratorReason = "ClusterServiceIPError"
 )
 
 // +kubebuilder:object:root=true

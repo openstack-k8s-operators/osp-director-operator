@@ -1,0 +1,18 @@
+parameter_defaults:
+  EnableFencing: {{ .EnableFencing }}
+{{- if .EnableFencing }}
+  FencingConfig:
+    devices:
+      level1:
+{{- range $index, $fencingConfig := .FencingConfigs }}
+      - agent: fence_kubevirt
+        host_mac: {{ $fencingConfig.HostMac }}
+        params:
+          plug: {{ $fencingConfig.VMName }}
+          apiversion: kubevirt.io/v1alpha3
+          namespace: {{ $fencingConfig.Namespace }}
+          ssl_insecure: true
+          power_timeout: 30
+          kubeconfig: /root/kubeconfig/kubeconfig
+{{- end }}
+{{- end }}
