@@ -26,11 +26,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	//networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
@@ -118,6 +118,56 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	//
+	// initialize condition
+	//
+	cond := &ospdirectorv1beta1.Condition{}
+
+	// If VmSet status map is nil, create it
+	if instance.Status.VMHosts == nil {
+		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	//
+	// Used in comparisons below to determine whether a status update is actually needed
+	//
+	currentStatus := instance.Status.DeepCopy()
+	statusChanged := func() bool {
+		return !equality.Semantic.DeepEqual(
+			r.getNormalizedStatus(&instance.Status),
+			r.getNormalizedStatus(currentStatus),
+		)
+	}
+
+	defer func(cond *ospdirectorv1beta1.Condition) {
+		//
+		// Update object conditions
+		//
+		instance.Status.Conditions.UpdateCurrentCondition(
+			cond.Type,
+			cond.Reason,
+			cond.Message,
+		)
+
+		instance.Status.ProvisioningStatus.Reason = cond.Message
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetProvisioningState(cond.Type)
+
+		if statusChanged() {
+			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+				if err == nil {
+					err = common.WrapErrorForObject(
+						"Update Status", instance, updateErr)
+				} else {
+					common.LogErrorForObject(r, updateErr, "Update status", instance)
+				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
+			}
+		}
+
+	}(cond)
+
 	// What VMs do we currently have for this OpenStackVMSet?
 	virtualMachineList, err := common.GetVirtualMachines(r, instance.Namespace, map[string]string{
 		common.OwnerNameLabelSelector: instance.Name,
@@ -164,7 +214,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetProvisioned)
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetCondTypeProvisioned)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -175,545 +225,200 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
+	envVars := make(map[string]common.EnvSetter)
+	templateParameters := make(map[string]interface{})
+	secretLabels := common.GetLabels(instance, vmset.AppLabel, map[string]string{})
+
+	//
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
-	err = r.generateNamespaceFencingData(instance)
+	//
+	err = r.generateNamespaceFencingData(
+		instance,
+		cond,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Initialize conditions list if not already set
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
+	//
+	// check for DeploymentSSHSecret and add AuthorizedKeys from DeploymentSSHSecret
+	//
+	var ctrlResult ctrl.Result
+	templateParameters["AuthorizedKeys"], ctrlResult, err = r.getDeploymentSSHSecret(
+		instance,
+		cond,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
-	envVars := make(map[string]common.EnvSetter)
-
-	// get a copy if the CR ProvisioningStatus
-	actualProvisioningState := instance.Status.DeepCopy().ProvisioningStatus
-
-	// check for required secrets
-	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		timeout := 20
-		msg := fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err)
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-		actualProvisioningState.Reason = msg
-
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
-	} else if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Create/update secrets from templates
-	secretLabels := common.GetLabels(instance, vmset.AppLabel, map[string]string{})
-
-	templateParameters := make(map[string]interface{})
-	templateParameters["AuthorizedKeys"] = strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n")
-
+	//
+	// add DomainName
+	//
+	// Todo: get from netcfg
 	if instance.Spec.DomainName != "" {
 		templateParameters["DomainName"] = instance.Spec.DomainName
 	}
 
+	//
+	// check if PasswordSecret got specified and if it exists before creating the controlplane
+	//
 	if instance.Spec.PasswordSecret != "" {
-		// check if specified password secret exists before creating the controlplane
-		passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				timeout := 30
-				msg := fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
-
-				actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-				actualProvisioningState.Reason = msg
-
-				err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-				return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
-			}
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-		// use same NodeRootPassword paremater as tripleo have
-		if len(passwordSecret.Data["NodeRootPassword"]) > 0 {
-			templateParameters["NodeRootPassword"] = string(passwordSecret.Data["NodeRootPassword"])
+		templateParameters["NodeRootPassword"], ctrlResult, err = r.getPasswordSecret(
+			instance,
+			cond,
+		)
+		if (err != nil) || (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, err
 		}
 	}
+
+	//
+	// add IsTripleoRole
+	//
 	templateParameters["IsTripleoRole"] = instance.Spec.IsTripleoRole
 
-	cloudinit := []common.Template{
-		// CloudInitSecret
-		{
-			Name:               fmt.Sprintf("%s-cloudinit", instance.Name),
-			Namespace:          instance.Namespace,
-			Type:               common.TemplateTypeNone,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: map[string]string{"userdata": "/vmset/cloudinit/userdata"},
-			Labels:             secretLabels,
-			ConfigOptions:      templateParameters,
-		},
-	}
-
-	err = common.EnsureSecrets(r, instance, cloudinit, &envVars)
+	//
+	// Create CloudInitSecret secret for the vmset
+	//
+	err = r.createCloudInitSecret(
+		instance,
+		cond,
+		envVars,
+		secretLabels,
+		templateParameters,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	//
 	// Get mapping of all OSNets with their binding type for this namespace
+	//
 	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(r, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Verify that NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
-	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// ...verify that SriovNetwork and SriovNetworkNodePolicy exists for each SRIOV-configured network
-	sriovLabelSelectorMap := map[string]string{
-		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
-		common.OwnerNameSpaceLabelSelector:      instance.Namespace,
-	}
-	snMap, err := openstacknet.GetSriovNetworksWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	snnpMap, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	for _, netNameLower := range instance.Spec.Networks {
-		timeout := 10
-		var msg string
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-
-		// get network with name_lower label
-		network, err := openstacknet.GetOpenStackNetWithLabel(
-			r,
-			instance.Namespace,
-			map[string]string{
-				openstacknet.SubNetNameLabelSelector: netNameLower,
-			},
-		)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
-				continue
-			}
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-
-		// We currently support SRIOV and bridge interfaces, with anything other than "sriov" indicating a bridge
-		switch osNetBindings[network.Spec.NameLower] {
-		case ospdirectorv1beta1.AttachTypeBridge:
-			// Non-SRIOV networks should have a NetworkAttachmentDefinition
-			if _, ok := nadMap[network.Name]; !ok {
-				msg = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
-			}
-		case ospdirectorv1beta1.AttachTypeSriov:
-			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
-			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", network.Spec.NameLower)]; !ok {
-				msg = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
-			} else if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", network.Spec.NameLower)]; !ok {
-				msg = fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
-			}
-		}
-
-		if msg != "" {
-			actualProvisioningState.Reason = msg
-
-			err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
-		}
+	//
+	// NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
+	//
+	nadMap, ctrlResult, err := r.verifyNetworkAttachments(
+		instance,
+		cond,
+		osNetBindings,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
 	// create hostnames for the requested number of systems
 	//
-	//   create new host allocations count
-	//
-	newCount := instance.Spec.VMCount - len(instance.Status.VMHosts)
-	newVMs := []string{}
-
-	//
-	//   create hostnames for the newHostnameCount
-	//
-
-	// If VmSet status map is nil, create it
-	if instance.Status.VMHosts == nil {
-		instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
+	newVMs, err := r.createNewHostnames(
+		instance,
+		cond,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
-
-	currentVMHostsStatus := instance.Status.DeepCopy().VMHosts
-	for i := 0; i < newCount; i++ {
-		hostnameDetails := common.Hostname{
-			Basename: instance.Spec.RoleName,
-			VIP:      false,
-		}
-
-		err := common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if hostnameDetails.Hostname != "" {
-			if _, ok := instance.Status.VMHosts[hostnameDetails.Hostname]; !ok {
-				instance.Status.VMHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-					Hostname:             hostnameDetails.Hostname,
-					HostRef:              hostnameDetails.HostRef,
-					AnnotatedForDeletion: false,
-					IPAddresses:          map[string]string{},
-				}
-				newVMs = append(newVMs, hostnameDetails.Hostname)
-			}
-			r.Log.Info(fmt.Sprintf("VMSet hostname created: %s", hostnameDetails.Hostname))
-		}
-	}
-	actualStatus := instance.Status.VMHosts
-	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
-		r.Log.Info(fmt.Sprintf("Updating CR status with new hostname information, %d new VMs - %s", len(newVMs), diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return ctrl.Result{}, err
-		}
-	}
-
-	hostnameRefs := instance.GetHostnames()
 
 	//
 	//   check/update instance status for annotated for deletion marged VMs
 	//
 
-	// check for deletion marked VMs
-	currentVMHostsStatus = instance.Status.VMHosts
-	deletionAnnotatedVMs, err := r.getDeletedVMOSPHostnames(instance)
+	err = r.checkVMsAnnotatedForDeletion(
+		instance,
+		cond,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-
-	for hostname, vmStatus := range instance.Status.VMHosts {
-
-		if len(deletionAnnotatedVMs) > 0 && common.StringInSlice(hostname, deletionAnnotatedVMs) {
-			// set annotatedForDeletion status of the VM to true, if not already
-			if !vmStatus.AnnotatedForDeletion {
-				vmStatus.AnnotatedForDeletion = true
-				r.Log.Info(fmt.Sprintf("Host deletion annotation set on VM %s", hostname))
-			}
-		} else {
-			// check if the vm was previously flagged as annotated and revert it
-			if vmStatus.AnnotatedForDeletion {
-				vmStatus.AnnotatedForDeletion = false
-				r.Log.Info(fmt.Sprintf("Host deletion annotation removed on VM %s", hostname))
-			}
-		}
-		actualStatus := instance.Status.VMHosts[hostname]
-		if !reflect.DeepEqual(&actualStatus, vmStatus) {
-			instance.Status.VMHosts[hostname] = vmStatus
-		}
-	}
-	actualStatus = instance.Status.VMHosts
-	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
-		r.Log.Info(fmt.Sprintf("Updating CR status with deletion annotation information - %s", diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	//
 	//   Create/Update IPSet for the VMSet CR
 	//
-
-	ipsetDetails := common.IPSet{
-		Networks:            instance.Spec.Networks,
-		Role:                instance.Spec.RoleName,
-		HostCount:           instance.Spec.VMCount,
-		AddToPredictableIPs: instance.Spec.IsTripleoRole,
-		HostNameRefs:        hostnameRefs,
-	}
-	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
-
-	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
-		timeout := 10
-		msg := fmt.Sprintf("OpenStackIPSet has not yet reached the required count %d", instance.Spec.VMCount)
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-		actualProvisioningState.Reason = msg
-
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+	ipset, ctrlResult, err := r.createIPset(
+		instance,
+		cond,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
 	//   Create BaseImage for the VMSet
 	//
-
-	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
-	if instance.Spec.BaseImageVolumeName != "" {
-		baseImageName = instance.Spec.BaseImageVolumeName
+	baseImageName, ctrlResult, err := r.createBaseImage(
+		instance,
+		cond,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
-
-	// wait for the base image conversion job to be finished before we create the VMs
-	// we check the pvc for the base image:
-	// - import in progress
-	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Running
-	// - when import done
-	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
-	pvc := &corev1.PersistentVolumeClaim{}
-
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		timeout := 10
-		msg := fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName)
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-		actualProvisioningState.Reason = msg
-
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
-	} else if err != nil {
-		return ctrl.Result{}, err
-	}
-	// mschuppert - do we need to consider any other status
-	switch pvc.Annotations["cdi.kubevirt.io/storage.pod.phase"] {
-	case "Running":
-		instance.Status.BaseImageDVReady = false
-		timeout := 2
-		msg := fmt.Sprintf("VM base image %s creation still in running state, reconcile in 2min", baseImageName)
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-		actualProvisioningState.Reason = msg
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-
-		return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Minute}, err
-	case "Succeeded":
-		instance.Status.BaseImageDVReady = true
-	}
-
-	// store current VMHosts status to verify updated NetworkData change
-	currentVMHostsStatus = instance.Status.DeepCopy().VMHosts
 
 	//
 	//   Handle VM removal from VMSet
 	//
-
-	existingVirtualMachines := map[string]string{}
-	removalAnnotatedVirtualMachines := []virtv1.VirtualMachine{}
-
-	// Generate a map of existing VMs and also store those annotated for potential removal
-	for _, virtualMachine := range virtualMachineList.Items {
-		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
-
-		if val, ok := virtualMachine.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
-			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)
-		}
-	}
-
-	// How many VirtualMachine de-allocations do we need (if any)?
-	oldVmsToRemoveCount := len(existingVirtualMachines) - instance.Spec.VMCount
-
-	if oldVmsToRemoveCount > 0 {
-		if len(removalAnnotatedVirtualMachines) > 0 && len(removalAnnotatedVirtualMachines) == oldVmsToRemoveCount {
-			for i := 0; i < oldVmsToRemoveCount; i++ {
-				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
-				// that have the common.HostRemovalAnnotation annotation
-				err := r.virtualMachineDeprovision(instance, &removalAnnotatedVirtualMachines[0])
-
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-
-				// Remove the removal-annotated VirtualMachine from the existingVirtualMachines map
-				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0].Name)
-
-				// Remove the removal-annotated VirtualMachine from the removalAnnotatedVirtualMachines list
-				if len(removalAnnotatedVirtualMachines) > 1 {
-					removalAnnotatedVirtualMachines = removalAnnotatedVirtualMachines[1:]
-				} else {
-					removalAnnotatedVirtualMachines = []virtv1.VirtualMachine{}
-				}
-			}
-		} else {
-			msg := fmt.Sprintf("Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)", len(removalAnnotatedVirtualMachines), oldVmsToRemoveCount)
-
-			actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-			actualProvisioningState.Reason = msg
-
-			err := r.setProvisioningStatus(instance, actualProvisioningState)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
+	err = r.doVMDelete(
+		instance,
+		cond,
+		virtualMachineList,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	//
 	//   Create/Update NetworkData
 	//
-
-	// We will fill this map with newly-added hosts as well as existing ones
-	vmDetails := map[string]ospdirectorv1beta1.Host{}
-
-	// Flag the network data secret as safe to collect with must-gather
-	secretLabelsWithMustGather := common.GetLabels(instance, vmset.AppLabel, map[string]string{
-		common.MustGatherSecret: "yes",
-	})
-
-	// Func to help increase DRY below in NetworkData loops
-	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, vm *ospdirectorv1beta1.HostStatus) error {
-		// TODO: multi nic support with bindata template
-		netName := "ctlplane"
-
-		vmDetails[vm.Hostname] = ospdirectorv1beta1.Host{
-			Hostname:          vm.Hostname,
-			HostRef:           vm.Hostname,
-			DomainName:        vm.Hostname,
-			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
-			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
-			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
-			Labels:            secretLabelsWithMustGather,
-			NAD:               nadMap,
-		}
-
-		err = r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, vmDetails[vm.Hostname])
-		if err != nil {
-			return err
-		}
-
-		// update VMSet network status
-		for _, netName := range instance.Spec.Networks {
-			vm.HostRef = vm.Hostname
-			vm.IPAddresses[netName] = ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName]
-		}
-
-		return nil
-	}
-
-	// Generate new host NetworkData first, if necessary
-	for _, hostname := range newVMs {
-		actualStatus := instance.Status.DeepCopy().VMHosts[hostname]
-
-		if hostname != "" {
-			if err := generateNetworkData(instance, &actualStatus); err != nil {
-				return ctrl.Result{}, err
-			}
-			currentStatus := instance.Status.VMHosts[hostname]
-			if !reflect.DeepEqual(currentStatus, actualStatus) {
-				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, actualStatus, diff.ObjectReflectDiff(currentStatus, actualStatus)))
-				instance.Status.VMHosts[hostname] = actualStatus
-			}
-		}
-
-	}
-
-	// Generate existing host NetworkData next
-	for hostname, actualStatus := range instance.Status.DeepCopy().VMHosts {
-
-		if !common.StringInSlice(hostname, newVMs) && hostname != "" {
-			if err := generateNetworkData(instance, &actualStatus); err != nil {
-				return ctrl.Result{}, err
-			}
-			currentStatus := instance.Status.VMHosts[hostname]
-			if !reflect.DeepEqual(currentStatus, actualStatus) {
-				r.Log.Info(fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v", hostname, actualStatus, diff.ObjectReflectDiff(currentStatus, actualStatus)))
-				instance.Status.VMHosts[hostname] = actualStatus
-			}
-		}
-	}
-	actualStatus = instance.Status.VMHosts
-	if !reflect.DeepEqual(currentVMHostsStatus, actualStatus) {
-		r.Log.Info(fmt.Sprintf("Updating CR status information - %s", diff.ObjectReflectDiff(currentVMHostsStatus, actualStatus)))
-
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
+	vmDetails, err := r.createNetworkData(
+		instance,
+		cond,
+		newVMs,
+		nadMap,
+		ipset,
+		envVars,
+		templateParameters,
+	)
 
 	//
 	//   Create the VM objects
 	//
-	if instance.Status.BaseImageDVReady {
-		for _, ctl := range vmDetails {
-			// Add chosen baseImageName to controller details, then create the VM instance
-			ctl.BaseImageName = baseImageName
-			err = r.vmCreateInstance(instance, envVars, &ctl, osNetBindings)
-			if err != nil {
-				if strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
-					return ctrl.Result{RequeueAfter: time.Second * 1}, nil
-				}
-
-				msg := err.Error()
-				actualProvisioningState.State = ospdirectorv1beta1.VMSetError
-				actualProvisioningState.Reason = msg
-
-				_ = r.setProvisioningStatus(instance, actualProvisioningState)
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Calculate provisioning status
-		var msg string
-		var readyCount int
-
-		for _, host := range instance.Status.VMHosts {
-			if host.ProvisioningState == ospdirectorv1beta1.VMSetProvisioned {
-				readyCount++
-			}
-		}
-
-		actualProvisioningState.ReadyCount = readyCount
-
-		if readyCount == instance.Spec.VMCount {
-			if readyCount == 0 {
-				actualProvisioningState.State = ospdirectorv1beta1.VMSetEmpty
-				msg = "No VirtualMachines have been requested"
-			} else {
-				actualProvisioningState.State = ospdirectorv1beta1.VMSetProvisioned
-				msg = "All requested VirtualMachines have been provisioned"
-			}
-		} else if readyCount < instance.Spec.VMCount {
-			actualProvisioningState.State = ospdirectorv1beta1.VMSetProvisioning
-			msg = "Provisioning of VirtualMachines in progress"
-		} else {
-			actualProvisioningState.State = ospdirectorv1beta1.VMSetDeprovisioning
-			msg = "Deprovisioning of VirtualMachines in progress"
-		}
-
-		actualProvisioningState.Reason = msg
-
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	} else {
-		msg := fmt.Sprintf("BaseImageDV is not ready for OpenStackVMSet %s", instance.Name)
-		actualProvisioningState.Reason = msg
-		actualProvisioningState.State = ospdirectorv1beta1.VMSetWaiting
-
-		err := r.setProvisioningStatus(instance, actualProvisioningState)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
+	ctrlResult, err = r.createVMs(
+		instance,
+		cond,
+		envVars,
+		osNetBindings,
+		baseImageName,
+		vmDetails,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdirectorv1beta1.OpenStackVMSet) error {
+func (r *OpenStackVMSetReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackVMSetStatus) *ospdirectorv1beta1.OpenStackVMSetStatus {
+
+	//
+	// set LastHeartbeatTime and LastTransitionTime to a default value as those
+	// need to be ignored to compare if conditions changed.
+	//
+	s := status.DeepCopy()
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
+	}
+
+	return s
+}
+
+func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) error {
 	// Ensure that a namespace-scoped kubevirt fencing agent service account token secret has been
 	// created for any OSVMSet instances in this instance's namespace (all OSVMSets in this namespace
 	// will share this same secret)
@@ -740,6 +445,11 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 	}
 
 	if err := common.EnsureSecrets(r, instance, saSecretTemplate, nil); err != nil {
+		cond.Message = "Error creating Kubevirt Fencing ServiceAccount Secret"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonKubevirtFencingServiceAccountError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
 
@@ -749,8 +459,12 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 
 	// Get the kubeconfig used by the operator to acquire the cluster's API address
 	kubeconfig, err := config.GetConfig()
-
 	if err != nil {
+		cond.Message = "Error getting kubeconfig used by the operator"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonKubeConfigError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
 
@@ -760,8 +474,12 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 
 	// Read-back the secret for the kubevirt agent service account token
 	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), vmset.KubevirtFencingServiceAccountSecret, metav1.GetOptions{})
-
 	if err != nil {
+		cond.Message = "Error getting the Kubevirt Fencing ServiceAccount Secret"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonKubevirtFencingServiceAccountError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
 
@@ -781,8 +499,16 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(instance *ospdir
 	}
 
 	err = common.EnsureSecrets(r, instance, kubeconfigTemplate, nil)
+	if err != nil {
+		cond.Message = "Error creating secret holding the kubeconfig used by the pacemaker fencing agent"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonNamespaceFencingDataError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-	return err
+		return err
+	}
+
+	return nil
 }
 
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
@@ -815,45 +541,6 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *o
 	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(instance *ospdirectorv1beta1.OpenStackVMSet, virtualMachine *virtv1.VirtualMachine) error {
-	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
-
-	// First check if the finalizer is still there and remove it if so
-	if controllerutil.ContainsFinalizer(virtualMachine, vmset.FinalizerName) {
-		err := r.virtualMachineFinalizerCleanup(virtualMachine)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	// Delete the VirtualMachine
-	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
-	if err != nil {
-		return err
-	}
-	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", virtualMachine.Name))
-
-	// Also remove networkdata secret
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name),
-			Namespace: instance.Namespace,
-		},
-	}
-
-	err = r.Client.Delete(context.TODO(), secret, &client.DeleteOptions{})
-	if err != nil {
-		return err
-	}
-	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
-
-	// Set status (remove this VMHost entry)
-	delete(instance.Status.VMHosts, virtualMachine.Name)
 
 	return nil
 }
@@ -911,6 +598,7 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
 	envVars map[string]common.EnvSetter,
 	ctl *ospdirectorv1beta1.Host,
 	osNetBindings map[string]ospdirectorv1beta1.AttachType,
@@ -925,7 +613,15 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
 	secret, _, err := common.GetSecret(r, userdataSecret, instance.Namespace)
 	if err != nil {
-		r.Log.Info("CloudInit userdata secret not found!!")
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("CloudInit userdata %s secret not found!!", userdataSecret)
+		} else {
+			cond.Message = fmt.Sprintf("Error CloudInit userdata %s secret", userdataSecret)
+		}
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCloudInitSecretError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
 
@@ -1104,24 +800,40 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		for _, netNameLower := range networks {
 
 			// get network with name_lower label
+			labelSelector := map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			}
 			network, err := openstacknet.GetOpenStackNetWithLabel(
 				r,
 				instance.Namespace,
-				map[string]string{
-					openstacknet.SubNetNameLabelSelector: netNameLower,
-				},
+				labelSelector,
 			)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
+					common.LogForObject(
+						r,
+						fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower),
+						instance,
+					)
 					continue
 				}
 				// Error reading the object - requeue the request.
+				cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonOSNetError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
 				return err
 			}
 
 			if _, ok := osNetBindings[netNameLower]; !ok {
-				return fmt.Errorf("OpenStackVMSet vmCreateInstance: No binding type found %s - available bindings: %v", network.Name, osNetBindings)
+				cond.Message = fmt.Sprintf("OpenStackVMSet vmCreateInstance: No binding type found %s - available bindings: %v",
+					network.Name,
+					osNetBindings)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonOSNetError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+
+				return fmt.Errorf(cond.Message)
 			}
 
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
@@ -1140,28 +852,35 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		}
 
 		err := controllerutil.SetControllerReference(instance, vm, r.Scheme)
-
 		if err != nil {
+			cond.Message = fmt.Sprintf("Error set controller reference for %s", vm.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonControllerReferenceError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return err
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
 
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("VirtualMachine %s successfully reconciled - operation: %s", vm.Name, string(op)))
+		common.LogForObject(
+			r,
+			fmt.Sprintf("VirtualMachine %s successfully reconciled - operation: %s", vm.Name, string(op)),
+			instance,
+		)
 	}
 
 	hostStatus := instance.Status.VMHosts[ctl.Hostname]
 
 	if vm.Status.Ready {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetProvisioned
+		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioned
 	} else if vm.Status.Created {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetProvisioning
+		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioning
 	}
 
 	instance.Status.VMHosts[ctl.Hostname] = hostStatus
@@ -1169,7 +888,336 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	return nil
 }
 
-func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(instance *ospdirectorv1beta1.OpenStackVMSet) ([]string, error) {
+//
+// check for DeploymentSSHSecret
+//
+func (r *OpenStackVMSetReconciler) getDeploymentSSHSecret(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) (string, ctrl.Result, error) {
+
+	sshSecret, _, err := common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("DeploymentSSHSecret secret does not exist: %v", err)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonDeploymentSecretMissing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+			common.LogForObject(r, cond.Message, instance)
+
+			return "", ctrl.Result{RequeueAfter: 20 * time.Second}, nil
+		}
+		cond.Message = fmt.Sprintf("Error getting DeploymentSSHSecret: %v", err)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonDeploymentSecretError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return "", ctrl.Result{}, err
+	}
+
+	return strings.TrimSuffix(string(sshSecret.Data["authorized_keys"]), "\n"), ctrl.Result{}, nil
+}
+
+//
+// check if specified password secret exists
+//
+func (r *OpenStackVMSetReconciler) getPasswordSecret(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) (string, ctrl.Result, error) {
+
+	passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			timeout := 30
+			cond.Message = fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPasswordSecretMissing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+			common.LogForObject(r, cond.Message, instance)
+
+			return "", ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+		}
+		// Error reading the object - requeue the request.
+		cond.Message = fmt.Sprintf("Error reading PasswordSecret: %s", instance.Spec.PasswordSecret)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPasswordSecretError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return "", ctrl.Result{}, err
+	}
+
+	if len(passwordSecret.Data["NodeRootPassword"]) == 0 {
+		return "", ctrl.Result{}, k8s_errors.NewNotFound(corev1.Resource("NodeRootPassword"), "not found")
+	}
+
+	// use same NodeRootPassword paremater as tripleo have
+	return string(passwordSecret.Data["NodeRootPassword"]), ctrl.Result{}, nil
+}
+
+//
+// Create CloudInitSecret secret for the vmset
+//
+func (r *OpenStackVMSetReconciler) createCloudInitSecret(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	envVars map[string]common.EnvSetter,
+	secretLabels map[string]string,
+	templateParameters map[string]interface{},
+) error {
+
+	cloudinit := []common.Template{
+		{
+			Name:               fmt.Sprintf("%s-cloudinit", instance.Name),
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeNone,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{"userdata": "/vmset/cloudinit/userdata"},
+			Labels:             secretLabels,
+			ConfigOptions:      templateParameters,
+		},
+	}
+
+	err := common.EnsureSecrets(r, instance, cloudinit, &envVars)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Error creating CloudInitSecret secret for the vmset %s", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCloudInitSecretError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+	return nil
+}
+
+//
+// NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
+//
+func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	osNetBindings map[string]ospdirectorv1beta1.AttachType,
+) (map[string]networkv1.NetworkAttachmentDefinition, ctrl.Result, error) {
+	// Verify that NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	if err != nil {
+		return nadMap, ctrl.Result{}, err
+	}
+
+	// ...verify that SriovNetwork and SriovNetworkNodePolicy exists for each SRIOV-configured network
+	sriovLabelSelectorMap := map[string]string{
+		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
+		common.OwnerNameSpaceLabelSelector:      instance.Namespace,
+	}
+	snMap, err := openstacknet.GetSriovNetworksWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	if err != nil {
+		return nadMap, ctrl.Result{}, err
+	}
+	snnpMap, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	if err != nil {
+		return nadMap, ctrl.Result{}, err
+	}
+
+	for _, netNameLower := range instance.Spec.Networks {
+		timeout := 10
+
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonOSNetNotFound)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+				common.LogForObject(r, cond.Message, instance)
+
+				continue
+			}
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error reading OpenStackNet with NameLower %s not found!", netNameLower)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonOSNetError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return nadMap, ctrl.Result{}, err
+		}
+
+		// We currently support SRIOV and bridge interfaces, with anything other than "sriov" indicating a bridge
+		switch osNetBindings[network.Spec.NameLower] {
+		case ospdirectorv1beta1.AttachTypeBridge:
+			// Non-SRIOV networks should have a NetworkAttachmentDefinition
+			if _, ok := nadMap[network.Name]; !ok {
+				cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
+				return nadMap, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+			}
+		case ospdirectorv1beta1.AttachTypeSriov:
+			// SRIOV networks should have a SriovNetwork and a SriovNetworkNodePolicy
+			if _, ok := snMap[fmt.Sprintf("%s-sriov-network", network.Spec.NameLower)]; !ok {
+				cond.Message = fmt.Sprintf("SriovNetwork for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
+				return nadMap, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+			} else if _, ok := snnpMap[fmt.Sprintf("%s-sriov-policy", network.Spec.NameLower)]; !ok {
+				cond.Message = fmt.Sprintf("SriovNetworkNodePolicy for network %s does not yet exist.  Reconciling again in %d seconds", network.Spec.NameLower, timeout)
+				return nadMap, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+			}
+		}
+	}
+
+	return nadMap, ctrl.Result{}, nil
+}
+
+//
+// create hostnames for the requested number of systems
+//
+func (r *OpenStackVMSetReconciler) createNewHostnames(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) ([]string, error) {
+	//
+	//   create new host allocations count
+	//
+	newCount := instance.Spec.VMCount - len(instance.Status.VMHosts)
+	newVMs := []string{}
+
+	//
+	//   create hostnames for the newHostnameCount
+	//
+	currentVMHostsStatus := instance.Status.DeepCopy().VMHosts
+	for i := 0; i < newCount; i++ {
+		hostnameDetails := common.Hostname{
+			Basename: instance.Spec.RoleName,
+			VIP:      false,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonNewHostnameError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+
+		if hostnameDetails.Hostname != "" {
+			if _, ok := instance.Status.VMHosts[hostnameDetails.Hostname]; !ok {
+				instance.Status.VMHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+					Hostname:             hostnameDetails.Hostname,
+					HostRef:              hostnameDetails.HostRef,
+					AnnotatedForDeletion: false,
+					IPAddresses:          map[string]string{},
+				}
+				newVMs = append(newVMs, hostnameDetails.Hostname)
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("VMSet hostname created: %s", hostnameDetails.Hostname),
+				instance,
+			)
+		}
+	}
+
+	if !reflect.DeepEqual(currentVMHostsStatus, instance.Status.VMHosts) {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Updating CR status with new hostname information, %d new VMs - %s",
+				len(newVMs),
+				diff.ObjectReflectDiff(currentVMHostsStatus, instance.Status.VMHosts),
+			),
+			instance,
+		)
+
+		err := r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = "Failed to update CR status for new hostnames"
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCRStatusUpdateError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+	}
+
+	return newVMs, nil
+}
+
+//
+//   check/update instance status for annotated for deletion marked VMs
+//
+func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) error {
+	// check for deletion marked VMs
+	currentVMHostsStatus := instance.Status.DeepCopy().VMHosts
+	deletionAnnotatedVMs, err := r.getDeletedVMOSPHostnames(instance, cond)
+	if err != nil {
+		return err
+	}
+
+	for hostname, vmStatus := range instance.Status.VMHosts {
+
+		if len(deletionAnnotatedVMs) > 0 && common.StringInSlice(hostname, deletionAnnotatedVMs) {
+			// set annotatedForDeletion status of the VM to true, if not already
+			if !vmStatus.AnnotatedForDeletion {
+				vmStatus.AnnotatedForDeletion = true
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Host deletion annotation set on VM %s", hostname),
+					instance,
+				)
+			}
+		} else {
+			// check if the vm was previously flagged as annotated and revert it
+			if vmStatus.AnnotatedForDeletion {
+				vmStatus.AnnotatedForDeletion = false
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Host deletion annotation removed on VM %s", hostname),
+					instance,
+				)
+			}
+		}
+		actualStatus := instance.Status.VMHosts[hostname]
+		if !reflect.DeepEqual(&actualStatus, vmStatus) {
+			instance.Status.VMHosts[hostname] = vmStatus
+		}
+	}
+
+	if !reflect.DeepEqual(currentVMHostsStatus, instance.Status.VMHosts) {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Updating CR status with deletion annotation information - %s",
+				diff.ObjectReflectDiff(currentVMHostsStatus, instance.Status.VMHosts)),
+			instance,
+		)
+
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = "Failed to update CR status for annotated for deletion marked VMs"
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCRStatusUpdateError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) ([]string, error) {
 
 	var annotatedVMs []string
 
@@ -1181,42 +1229,393 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(instance *ospdirecto
 
 	vmHostList, err := common.GetVirtualMachines(r, instance.Namespace, labelSelector)
 	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get virtual machines with labelSelector %v ", labelSelector)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineGetError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return annotatedVMs, err
 	}
 
 	// Get list of OSP hostnames from HostRemovalAnnotation annotated VMs
 	for _, vm := range vmHostList.Items {
 
-		if val, ok := vm.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+		if val, ok := vm.Annotations[common.HostRemovalAnnotation]; ok &&
+			(strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 			ospHostname := vm.Spec.Template.Spec.Hostname
-			r.Log.Info(fmt.Sprintf("VM %s/%s annotated for deletion", vm.Name, ospHostname))
 			annotatedVMs = append(annotatedVMs, ospHostname)
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("VM %s/%s annotated for deletion", vm.Name, ospHostname),
+				instance,
+			)
 		}
 	}
 
 	return annotatedVMs, nil
 }
 
-func (r *OpenStackVMSetReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackVMSet, actualState ospdirectorv1beta1.OpenStackVMSetProvisioningStatus) error {
-	// get current ProvisioningStatus
-	currentState := instance.Status.ProvisioningStatus
+//
+//   Create/Update IPSet for the VMSet CR
+//
+func (r *OpenStackVMSetReconciler) createIPset(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) (*ospdirectorv1beta1.OpenStackIPSet, ctrl.Result, error) {
+	ipsetDetails := common.IPSet{
+		Networks:            instance.Spec.Networks,
+		Role:                instance.Spec.RoleName,
+		HostCount:           instance.Spec.VMCount,
+		AddToPredictableIPs: instance.Spec.IsTripleoRole,
+		HostNameRefs:        instance.GetHostnames(),
+	}
+	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update ipset %v ", ipsetDetails)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonIPsetCreateOrUpdateError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-	// if the current ProvisioningStatus is different from the actual, store the update
-	// otherwise, just log the status again
-	if !reflect.DeepEqual(currentState, actualState) {
-		r.Log.Info(fmt.Sprintf("%s - diff %s", actualState.Reason, diff.ObjectReflectDiff(currentState, actualState)))
-		instance.Status.ProvisioningStatus = actualState
+		return ipset, ctrl.Result{}, err
+	}
 
-		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
-		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(actualState.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(actualState.Reason), actualState.Reason)
+	if op != controllerutil.OperationResultNone {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)),
+			instance,
+		)
 
-		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return err
+	}
+
+	if len(ipset.Status.HostIPs) < instance.Spec.VMCount {
+		cond.Message = fmt.Sprintf("OpenStackIPSet has not yet reached the required count %d", instance.Spec.VMCount)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonIPsetWaitCount)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+		return ipset, ctrl.Result{RequeueAfter: 10 * time.Second}, err
+	}
+
+	return ipset, ctrl.Result{}, nil
+}
+
+//
+//   Create BaseImage for the VMSet
+//
+func (r *OpenStackVMSetReconciler) createBaseImage(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+) (string, ctrl.Result, error) {
+	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
+	if instance.Spec.BaseImageVolumeName != "" {
+		baseImageName = instance.Spec.BaseImageVolumeName
+	}
+
+	// wait for the base image conversion job to be finished before we create the VMs
+	// we check the pvc for the base image:
+	// - import in progress
+	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Running
+	// - when import done
+	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
+	pvc := &corev1.PersistentVolumeClaim{}
+
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		cond.Message = fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPersitentVolumeClaimNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+		common.LogForObject(r, cond.Message, instance)
+
+		return baseImageName, ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	} else if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get persitent volume claim %s ", baseImageName)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPersitentVolumeClaimError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return baseImageName, ctrl.Result{}, err
+	}
+	// mschuppert - do we need to consider any other status
+	switch pvc.Annotations["cdi.kubevirt.io/storage.pod.phase"] {
+	case "Running":
+		instance.Status.BaseImageDVReady = false
+
+		cond.Message = fmt.Sprintf("VM base image %s creation still in running state, reconcile in 2min", baseImageName)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPersitentVolumeClaimCreating)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+		common.LogForObject(r, cond.Message, instance)
+
+		return baseImageName, ctrl.Result{RequeueAfter: time.Duration(2) * time.Minute}, nil
+	case "Succeeded":
+		instance.Status.BaseImageDVReady = true
+	}
+
+	return baseImageName, ctrl.Result{}, nil
+}
+
+func (r *OpenStackVMSetReconciler) doVMDelete(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	virtualMachineList *virtv1.VirtualMachineList,
+) error {
+	existingVirtualMachines := map[string]string{}
+	removalAnnotatedVirtualMachines := []virtv1.VirtualMachine{}
+
+	// Generate a map of existing VMs and also store those annotated for potential removal
+	for _, virtualMachine := range virtualMachineList.Items {
+		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
+
+		if val, ok := virtualMachine.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)
 		}
-	} else if actualState.Reason != "" {
-		r.Log.Info(actualState.Reason)
+	}
+
+	// How many VirtualMachine de-allocations do we need (if any)?
+	oldVmsToRemoveCount := len(existingVirtualMachines) - instance.Spec.VMCount
+
+	if oldVmsToRemoveCount > 0 {
+		if len(removalAnnotatedVirtualMachines) > 0 && len(removalAnnotatedVirtualMachines) == oldVmsToRemoveCount {
+			for i := 0; i < oldVmsToRemoveCount; i++ {
+				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
+				// that have the common.HostRemovalAnnotation annotation
+				err := r.virtualMachineDeprovision(
+					instance,
+					cond,
+					&removalAnnotatedVirtualMachines[0],
+				)
+
+				if err != nil {
+					return err
+				}
+
+				// Remove the removal-annotated VirtualMachine from the existingVirtualMachines map
+				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0].Name)
+
+				// Remove the removal-annotated VirtualMachine from the removalAnnotatedVirtualMachines list
+				if len(removalAnnotatedVirtualMachines) > 1 {
+					removalAnnotatedVirtualMachines = removalAnnotatedVirtualMachines[1:]
+				} else {
+					removalAnnotatedVirtualMachines = []virtv1.VirtualMachine{}
+				}
+			}
+		} else {
+			cond.Message = fmt.Sprintf("Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down (%d found, %d requested)",
+				len(removalAnnotatedVirtualMachines),
+				oldVmsToRemoveCount)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineAnnotationMissmatch)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+			common.LogForObject(r, cond.Message, instance)
+		}
 	}
 
 	return nil
+}
+
+func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	virtualMachine *virtv1.VirtualMachine,
+) error {
+	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
+
+	// First check if the finalizer is still there and remove it if so
+	if controllerutil.ContainsFinalizer(virtualMachine, vmset.FinalizerName) {
+		err := r.virtualMachineFinalizerCleanup(virtualMachine)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete the VirtualMachine
+	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", virtualMachine.Name))
+
+	// Also remove networkdata secret
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	err = r.Client.Delete(context.TODO(), secret, &client.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
+
+	// Set status (remove this VMHost entry)
+	delete(instance.Status.VMHosts, virtualMachine.Name)
+
+	return nil
+}
+
+//
+//   Create/Update NetworkData
+//
+func (r *OpenStackVMSetReconciler) createNetworkData(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	newVMs []string,
+	nadMap map[string]networkv1.NetworkAttachmentDefinition,
+	ipset *ospdirectorv1beta1.OpenStackIPSet,
+	envVars map[string]common.EnvSetter,
+	templateParameters map[string]interface{},
+) (map[string]ospdirectorv1beta1.Host, error) {
+	// We will fill this map with newly-added hosts as well as existing ones
+	vmDetails := map[string]ospdirectorv1beta1.Host{}
+
+	// Flag the network data secret as safe to collect with must-gather
+	secretLabelsWithMustGather := common.GetLabels(instance, vmset.AppLabel, map[string]string{
+		common.MustGatherSecret: "yes",
+	})
+
+	// Func to help increase DRY below in NetworkData loops
+	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, vm *ospdirectorv1beta1.HostStatus) error {
+		// TODO: multi nic support with bindata template
+		netName := "ctlplane"
+
+		vmDetails[vm.Hostname] = ospdirectorv1beta1.Host{
+			Hostname:          vm.Hostname,
+			HostRef:           vm.Hostname,
+			DomainName:        vm.Hostname,
+			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
+			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
+			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
+			Labels:            secretLabelsWithMustGather,
+			NAD:               nadMap,
+		}
+
+		err := r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, vmDetails[vm.Hostname])
+		if err != nil {
+			cond.Message = fmt.Sprintf("Error creating VM NetworkData for %s ", vm.Hostname)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineNetworkDataError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+
+		// update VMSet network status
+		for _, netName := range instance.Spec.Networks {
+			vm.HostRef = vm.Hostname
+			vm.IPAddresses[netName] = ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName]
+		}
+
+		return nil
+	}
+
+	// Generate new host NetworkData first, if necessary
+	for _, hostname := range newVMs {
+		actualStatus := instance.Status.DeepCopy().VMHosts[hostname]
+
+		if hostname != "" {
+			if err := generateNetworkData(instance, &actualStatus); err != nil {
+				return vmDetails, err
+			}
+			currentStatus := instance.Status.VMHosts[hostname]
+			if !reflect.DeepEqual(currentStatus, actualStatus) {
+				instance.Status.VMHosts[hostname] = actualStatus
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v",
+						hostname,
+						actualStatus,
+						diff.ObjectReflectDiff(currentStatus, actualStatus)),
+					instance,
+				)
+
+			}
+		}
+
+	}
+
+	// Generate existing host NetworkData next
+	for hostname, actualStatus := range instance.Status.DeepCopy().VMHosts {
+
+		if !common.StringInSlice(hostname, newVMs) && hostname != "" {
+			if err := generateNetworkData(instance, &actualStatus); err != nil {
+				return vmDetails, err
+			}
+			currentStatus := instance.Status.VMHosts[hostname]
+			if !reflect.DeepEqual(currentStatus, actualStatus) {
+				instance.Status.VMHosts[hostname] = actualStatus
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v",
+						hostname,
+						actualStatus,
+						diff.ObjectReflectDiff(currentStatus, actualStatus)),
+					instance,
+				)
+			}
+		}
+	}
+
+	return vmDetails, nil
+}
+
+//
+//   Create the VM objects
+//
+func (r *OpenStackVMSetReconciler) createVMs(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	envVars map[string]common.EnvSetter,
+	osNetBindings map[string]ospdirectorv1beta1.AttachType,
+	baseImageName string,
+	vmDetails map[string]ospdirectorv1beta1.Host,
+) (ctrl.Result, error) {
+	if instance.Status.BaseImageDVReady {
+		for _, ctl := range vmDetails {
+			// Add chosen baseImageName to controller details, then create the VM instance
+			ctl.BaseImageName = baseImageName
+			err := r.vmCreateInstance(instance, cond, envVars, &ctl, osNetBindings)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		// Calculate provisioning status
+		readyCount := 0
+		for _, host := range instance.Status.VMHosts {
+			if host.ProvisioningState == ospdirectorv1beta1.VMSetCondTypeProvisioned {
+				readyCount++
+			}
+		}
+		instance.Status.ProvisioningStatus.ReadyCount = readyCount
+
+		switch readyCount := instance.Status.ProvisioningStatus.ReadyCount; {
+		case readyCount == instance.Spec.VMCount && readyCount == 0:
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeEmpty)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineCountZero)
+			cond.Message = "No VirtualMachines have been requested"
+		case readyCount == instance.Spec.VMCount:
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeProvisioned)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineProvisioned)
+			cond.Message = "All requested VirtualMachines have been provisioned"
+		case readyCount < instance.Spec.VMCount:
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeProvisioning)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineProvisioning)
+			cond.Message = "Provisioning of VirtualMachines in progress"
+		default:
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeDeprovisioning)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineDeprovisioning)
+			cond.Message = "Deprovisioning of VirtualMachines in progress"
+		}
+
+	} else {
+		cond.Message = fmt.Sprintf("BaseImageDV is not ready for OpenStackVMSet %s", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonBaseImageNotReady)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+
+		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
+	}
+
+	return ctrl.Result{}, nil
 }

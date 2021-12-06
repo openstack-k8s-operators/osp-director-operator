@@ -638,7 +638,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 	}
 
 	for _, vmset := range vmsetList.Items {
-		if vmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetProvisioned {
+		if vmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned {
 			msg := fmt.Sprintf("Waiting on OpenStackVMset %s to be provisioned...", vmset.Name)
 			return msg, false, nil
 		}
