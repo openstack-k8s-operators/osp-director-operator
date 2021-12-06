@@ -63,16 +63,16 @@ const (
 	// condition types
 	//
 
-	// ConfigGeneratorWaiting - the config generator is blocked by prerequisite objects
-	ConfigGeneratorWaiting ConfigGeneratorState = "Waiting"
-	// ConfigGeneratorInitializing - the config generator is preparing to execute
-	ConfigGeneratorInitializing ConfigGeneratorState = "Initializing"
-	// ConfigGeneratorGenerating - the config generator is executing
-	ConfigGeneratorGenerating ConfigGeneratorState = "Generating"
-	// ConfigGeneratorFinished - the config generation has finished executing
-	ConfigGeneratorFinished ConfigGeneratorState = "Finished"
-	// ConfigGeneratorError - the config generation hit a generic error
-	ConfigGeneratorError ConfigGeneratorState = "Error"
+	// ConfigGeneratorCondTypeWaiting - the config generator is blocked by prerequisite objects
+	ConfigGeneratorCondTypeWaiting ConfigGeneratorState = "Waiting"
+	// ConfigGeneratorCondTypeInitializing - the config generator is preparing to execute
+	ConfigGeneratorCondTypeInitializing ConfigGeneratorState = "Initializing"
+	// ConfigGeneratorCondTypeGenerating - the config generator is executing
+	ConfigGeneratorCondTypeGenerating ConfigGeneratorState = "Generating"
+	// ConfigGeneratorCondTypeFinished - the config generation has finished executing
+	ConfigGeneratorCondTypeFinished ConfigGeneratorState = "Finished"
+	// ConfigGeneratorCondTypeError - the config generation hit a generic error
+	ConfigGeneratorCondTypeError ConfigGeneratorState = "Error"
 
 	//
 	// condition reasones

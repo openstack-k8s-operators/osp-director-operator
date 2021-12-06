@@ -176,7 +176,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNetNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrlResult, err
@@ -185,7 +185,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNotSupportedVersion)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrlResult, err
@@ -199,7 +199,12 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
 		cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeWaiting)
+		common.LogForObject(
+			r,
+			cond.Message,
+			instance,
+		)
 
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
@@ -212,7 +217,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		if k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeWaiting)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
@@ -240,7 +245,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			if errors.IsNotFound(err) {
 				cond.Message = "Tarball config map not found, requeuing and waiting. Requeing..."
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeWaiting)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
@@ -307,7 +312,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s config map not found, requeuing and waiting. Requeing...", "openstackconfig-script-"+instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeWaiting)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -329,7 +334,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil {
 		cond.Message = "Error calculating configmap hash"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMHashError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -372,7 +377,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		if op != controllerutil.OperationResultNone {
 			cond.Message = fmt.Sprintf("OpenStackEphemeralHeat successfully created/updated - operation: %s", string(op))
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatUpdated)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -380,7 +386,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		if !heat.Status.Active {
 			cond.Message = "Waiting on Ephemeral Heat instance to launch..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatLaunch)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -391,7 +398,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMHashChanged)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return ctrl.Result{}, err
@@ -399,7 +406,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 			cond.Message = "ConfigMap has changed. Requeing to start again..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMUpdated)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -412,7 +420,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		if !deployed {
 			cond.Message = msg
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonWaitingNodesProvisioned)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 20}, err
 		}
@@ -431,7 +440,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		if op != controllerutil.OperationResultNone {
 			cond.Message = fmt.Sprintf("Job successfully created/updated - operation: %s", string(op))
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobCreated)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -445,7 +455,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			if err != nil {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobDelete)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return ctrl.Result{}, err
@@ -457,7 +467,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return ctrl.Result{}, err
@@ -465,7 +475,8 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 			cond.Message = "ConfigMap has changed. Requeing to start again..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMUpdated)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeInitializing)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 
@@ -478,14 +489,15 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			// the job failed in error
 			cond.Message = "Job failed... Please check job/pod logs."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobFailed)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return ctrl.Result{}, err
 		} else if requeue {
 			cond.Message = "Waiting on Config Generation..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonConfigCreate)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorGenerating)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeGenerating)
+			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
@@ -497,7 +509,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobDelete)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -508,7 +520,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -527,7 +539,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 	cond.Message = "The OpenStackConfigGenerator job has completed"
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobFinished)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorFinished)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeFinished)
 
 	return ctrl.Result{}, nil
 }
@@ -682,7 +694,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 			if err != nil {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCustomRolesNotFound)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return nil, err
@@ -703,7 +715,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 				if err != nil {
 					cond.Message = err.Error()
 					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonVMInstanceList)
-					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 					err = common.WrapErrorForObject(cond.Message, instance, err)
 
 					return nil, err
@@ -720,7 +732,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 			if err != nil {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonFencingTemplateError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return nil, err
@@ -766,7 +778,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonRenderEnvFilesError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return nil, err
@@ -787,7 +799,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonClusterServiceIPError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return nil, err
@@ -842,7 +854,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return nil, err
@@ -855,7 +867,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return nil, err
@@ -969,7 +981,7 @@ func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
 		if err != nil {
 			cond.Message = err.Error()
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonInputLabelError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return err

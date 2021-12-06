@@ -334,7 +334,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the creation status of all OpenStackMACAddresses
 	for _, cr := range crLists.OpenStackMACAddresses.Items {
-		if cr.Status.CurrentState != ospdirectorv1beta1.MACConfigured {
+		if cr.Status.CurrentState != ospdirectorv1beta1.MACCondTypeConfigured {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -446,7 +446,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.CurrentState != ospdirectorv1beta1.MACConfigured {
+		if found == nil || found.Status.CurrentState != ospdirectorv1beta1.MACCondTypeConfigured {
 			badCrs = append(badCrs, found)
 		}
 	}
