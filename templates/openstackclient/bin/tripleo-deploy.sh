@@ -50,7 +50,7 @@ init() {
   # exclude any '-> HEAD'... lines if they exist in the supplied git repo
   export LATEST_BRANCH=$(git branch --sort=-committerdate -lr | grep -v ' -> ' | head -n1 |  sed -e 's|^ *||g')
   if [ -z "$LATEST_BRANCH" ]; then
-    echo "The Git repo is empty, try again once the OpenStackPlaybookGenerator finishes and pushes a commit."
+    echo "The Git repo is empty, try again once the OpenStackConfigGenerator finishes and pushes a commit."
     exit 1
   fi
   if ! git tag | grep ^latest$ &>/dev/null; then

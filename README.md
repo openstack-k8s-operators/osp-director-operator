@@ -23,7 +23,7 @@ Hardware Provisioning CRDs
 
 Software Configuration CRDs
 ---------------------------
-- openstackplaybookgenerator: automatically generate Ansible playbooks for deployment when you scale up or make changes to custom ConfigMaps for deployment
+- openstackconfiggenerator: automatically generate Ansible playbooks for deployment when you scale up or make changes to custom ConfigMaps for deployment
 - openstackclient: creates a pod used to run TripleO deployment commands
 
 Installation
@@ -504,10 +504,10 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     **NOTE**: Make sure to use `roles_data.yaml` as the file name.
 
-7) Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment.
+7) Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP cluster deployment.
     ```yaml
     apiVersion: osp-director.openstack.org/v1beta1
-    kind: OpenStackPlaybookGenerator
+    kind: OpenStackConfigGenerator
     metadata:
       name: default
       namespace: openstack
@@ -527,13 +527,13 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       #  rabbitImageURL: quay.io/tripleotraincentos8/centos-binary-rabbitmq:current-tripleo
     ```
 
-    If you write the above YAML into a file called generator.yaml you can create the OpenStackPlaybookGenerator via this command:
+    If you write the above YAML into a file called generator.yaml you can create the OpenStackConfigGenerator via this command:
 
     ```bash
     oc create -f generator.yaml
     ```
 
-    The osplaybookgenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osplaybookgenerator's status condition for it to finish.
+    The osconfiggenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osconfiggenerator's status condition for it to finish.
 
 8) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
 
@@ -676,13 +676,13 @@ Once you customize the above template/examples for your environment, create/upda
 
 ## Render playbooks and apply them
 
-* Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
+* Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
 
-**NOTE**: Make sure to use `quay.io/openstack-k8s-operators/rhosp16-openstack-tripleoclient:16.2_20210521.1` or later for the osplaybookgenerator `imageURL`.
+**NOTE**: Make sure to use `quay.io/openstack-k8s-operators/rhosp16-openstack-tripleoclient:16.2_20210521.1` or later for the osconfiggenerator `imageURL`.
 
 ## Run the software deployment
 
-* Wait for the OpenStackPlaybookGenerator to finish the playbook rendering job
+* Wait for the OpenStackConfigGenerator to finish the playbook rendering job
 
 * In the openstackclient pod
 
@@ -1361,7 +1361,7 @@ spec:
 
 ### Render playbooks and apply them
 
-Define an OpenStackPlaybookGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
+Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP cluster deployment as in `Deploying OpenStack once you have the OSP Director Operator installed` and specify the roles generated roles file.
 
 ### Run the software deployment
 

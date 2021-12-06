@@ -6,17 +6,17 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
-  name: openstackplaybookgenerators.osp-director.openstack.org
+  name: openstackconfiggenerators.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
   names:
-    kind: OpenStackPlaybookGenerator
-    listKind: OpenStackPlaybookGeneratorList
-    plural: openstackplaybookgenerators
+    kind: OpenStackConfigGenerator
+    listKind: OpenStackConfigGeneratorList
+    plural: openstackconfiggenerators
     shortNames:
-    - osplaybookgenerator
-    - osplaybookgenerators
-    singular: openstackplaybookgenerator
+    - osconfiggenerator
+    - osconfiggenerators
+    singular: openstackconfiggenerator
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -27,7 +27,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackPlaybookGenerator Used to configure Heat environments
+        description: OpenStackConfigGenerator Used to configure Heat environments
           and template customizations to generate Ansible playbooks for OpenStack
           Overcloud deployment
         properties:
@@ -44,8 +44,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: OpenStackPlaybookGeneratorSpec defines the desired state
-              of OpenStackPlaybookGenerator
+            description: OpenStackConfigGeneratorSpec defines the desired state of
+              OpenStackConfigGenerator
             properties:
               ephemeralHeatSettings:
                 description: Advanced Heat Settings can be used to increase the Heat
@@ -111,8 +111,8 @@ spec:
             - heatEnvConfigMap
             type: object
           status:
-            description: OpenStackPlaybookGeneratorStatus defines the observed state
-              of OpenStackPlaybookGenerator
+            description: OpenStackConfigGeneratorStatus defines the observed state
+              of OpenStackConfigGenerator
             properties:
               conditions:
                 description: Conditions
@@ -147,7 +147,7 @@ spec:
                 description: CurrentState
                 type: string
               playbookHash:
-                description: PlaybookHash hash
+                description: ConfigHash hash
                 type: string
             required:
             - currentState

@@ -4,7 +4,7 @@ const (
 	// AppLabel -
 	AppLabel = "openstackephemeralheat"
 	// ServiceAccount -
-	ServiceAccount = "osp-director-operator-openstackplaybookgenerator"
+	ServiceAccount = "osp-director-operator-openstackconfiggenerator"
 	// HeatUID -
 	HeatUID = 42418
 	// MySQLUID -

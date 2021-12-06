@@ -1,5 +1,5 @@
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackPlaybookGenerator
+kind: OpenStackConfigGenerator
 metadata:
   name: default
 spec:

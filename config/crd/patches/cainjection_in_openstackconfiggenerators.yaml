@@ -4,4 +4,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: openstackplaybookgenerators.osp-director.openstack.org
+  name: openstackconfiggenerators.osp-director.openstack.org

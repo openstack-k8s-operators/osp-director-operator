@@ -43,12 +43,12 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
+	openstackconfiggenerator "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackconfiggenerator"
 	openstackconfigversion "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackconfigversion"
-	openstackplaybookgenerator "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackplaybookgenerator"
 )
 
-// OpenStackPlaybookGeneratorReconciler reconciles a OpenStackPlaybookGenerator object
-type OpenStackPlaybookGeneratorReconciler struct {
+// OpenStackConfigGeneratorReconciler reconciles a OpenStackConfigGenerator object
+type OpenStackConfigGeneratorReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
 	Log     logr.Logger
@@ -56,28 +56,28 @@ type OpenStackPlaybookGeneratorReconciler struct {
 }
 
 // GetClient -
-func (r *OpenStackPlaybookGeneratorReconciler) GetClient() client.Client {
+func (r *OpenStackConfigGeneratorReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *OpenStackPlaybookGeneratorReconciler) GetKClient() kubernetes.Interface {
+func (r *OpenStackConfigGeneratorReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *OpenStackPlaybookGeneratorReconciler) GetLogger() logr.Logger {
+func (r *OpenStackConfigGeneratorReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
+func (r *OpenStackConfigGeneratorReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackplaybookgenerators/finalizers,verbs=update
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfiggenerators,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfiggenerators/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfiggenerators/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;watch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackvmsets,verbs=get;list
@@ -86,12 +86,12 @@ func (r *OpenStackPlaybookGeneratorReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=get;list;watch
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachineinstances,verbs=get;list;watch
 
-// Reconcile - PlaybookGenerator
-func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("openstackplaybookgenerator", req.NamespacedName)
+// Reconcile - ConfigGenerator
+func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("openstackconfiggenerator", req.NamespacedName)
 
 	// Fetch the instance
-	instance := &ospdirectorv1beta1.OpenStackPlaybookGenerator{}
+	instance := &ospdirectorv1beta1.OpenStackConfigGenerator{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -111,18 +111,18 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
-	cmLabels := common.GetLabels(instance, openstackplaybookgenerator.AppLabel, map[string]string{})
+	cmLabels := common.GetLabels(instance, openstackconfiggenerator.AppLabel, map[string]string{})
 
 	// get unified OSPVersion from ControlPlane CR
 	// which means also get either 16.2 or 17.0 for upstream versions
 	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrlResult, err
 	}
 	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrlResult, err
 	}
 
@@ -133,28 +133,28 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if k8s_errors.IsNotFound(err) {
 			msg := fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
 		// Ignore any potential error from "setCurrentState"; focus on previous error
 		// NOTE: This pattern will be repeated a lot below, but the comment will not be copied
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
 	tripleoCustomDeployFiles := tripleoCustomDeployCM.Data
 	templateParameters["TripleoCustomDeployFiles"] = tripleoCustomDeployFiles
 
-	// Now read the tripleo-deploy-config and the fencing-config CMs for use in the PlaybookGenerator
+	// Now read the tripleo-deploy-config and the fencing-config CMs for use in the ConfigGenerator
 	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			msg := "The tripleo-deploy-config map doesn't yet exist. Requeing..."
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -180,10 +180,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		tripleoTarballCM, _, err = common.GetConfigMapAndHashWithName(r, instance.Spec.TarballConfigMap, instance.Namespace)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, "Tarball config map not found, requeuing and waiting")
+				err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, "Tarball config map not found, requeuing and waiting")
 				return ctrl.Result{RequeueAfter: time.Second * 10}, err
 			}
-			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+			_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 			return ctrl.Result{}, err
 		}
 		tripleoTarballFiles := tripleoTarballCM.BinaryData
@@ -203,7 +203,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -218,7 +218,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	if controlPlane.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
 		msg := fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
 		r.Log.Info(msg)
-		err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+		err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, msg)
 		return ctrl.Result{RequeueAfter: time.Second * 10}, err
 	}
 
@@ -232,7 +232,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			customFencingRoles, err := common.GetCustomFencingRoles(tripleoTarballCM.BinaryData)
 
 			if err != nil {
-				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
 
@@ -250,7 +250,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 				})
 
 				if err != nil {
-					_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+					_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 					return ctrl.Result{}, err
 				}
 
@@ -264,7 +264,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			fencingTemplateParameters, err := controlplane.CreateFencingConfigMapParams(virtualMachineInstanceLists)
 
 			if err != nil {
-				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
 
@@ -286,7 +286,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -296,10 +296,10 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			// This should really never happen, but putting the check here anyhow
 			msg := "The fencing-config map doesn't yet exist. Requeing..."
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -320,7 +320,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	configMapHash, err := common.ObjectHash(hashList)
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, fmt.Errorf("error calculating configmap hash: %v", err)
 	}
 
@@ -341,9 +341,9 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 	}
 
 	// Define a new Job object
-	job := openstackplaybookgenerator.PlaybookJob(instance, configMapHash, OSPVersion)
+	job := openstackconfiggenerator.ConfigJob(instance, configMapHash, OSPVersion)
 
-	if instance.Status.PlaybookHash != configMapHash {
+	if instance.Status.ConfigHash != configMapHash {
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
 			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
 			if err != nil {
@@ -359,7 +359,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if op != controllerutil.OperationResultNone {
 			msg := fmt.Sprintf("OpenStackEphemeralHeat successfully created/updated - operation: %s", string(op))
 			r.Log.Info(msg)
-			if err := r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorInitializing, msg); err != nil {
+			if err := r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorInitializing, msg); err != nil {
 				return ctrl.Result{}, err
 			}
 			r.Log.Info("Requeuing...")
@@ -369,7 +369,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if !heat.Status.Active {
 			msg := "Waiting on Ephemeral Heat instance to launch..."
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorInitializing, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorInitializing, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 		}
 
@@ -377,13 +377,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if heat.Spec.ConfigHash != configMapHash {
 			err = r.Client.Delete(context.TODO(), heat)
 			if err != nil && !k8s_errors.IsNotFound(err) {
-				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
 
 			msg := "ConfigMap has changed. Requeing to start again..."
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorInitializing, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorInitializing, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 		}
 
@@ -395,7 +395,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if !deployed {
 			timeout := 20
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorWaiting, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorWaiting, msg)
 			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		}
 
@@ -423,7 +423,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		if configMapHash != job.Spec.Template.Spec.Containers[0].Env[0].Value {
 			_, err = common.DeleteJob(job, r.Kclient, r.Log)
 			if err != nil {
-				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
 
@@ -431,12 +431,12 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 			r.Log.Info("Deleting Ephemeral Heat...")
 			err = r.Client.Delete(context.TODO(), heat)
 			if err != nil && !k8s_errors.IsNotFound(err) {
-				_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+				_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 				return ctrl.Result{}, err
 			}
 			msg := "ConfigMap has changed. Requeing to start again..."
 			r.Log.Info(msg)
-			err = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorInitializing, msg)
+			err = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorInitializing, msg)
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err
 
 		}
@@ -445,13 +445,13 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		r.Log.Info("Generating Playbooks...")
 		if err != nil {
 			// the job failed in error
-			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+			_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 			r.Log.Info("Job failed... Please check job/pod logs.")
 			return ctrl.Result{}, err
 		} else if requeue {
 			msg := "Waiting on Playbook Generation..."
 			r.Log.Info(msg)
-			if err := r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorGenerating, msg); err != nil {
+			if err := r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorGenerating, msg); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
@@ -460,20 +460,20 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 
 	if err := r.setPlaybookHash(instance, configMapHash); err != nil {
 		if !strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
-			_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+			_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		}
 		return ctrl.Result{}, err
 	}
 	_, err = common.DeleteJob(job, r.Kclient, r.Log)
 	if err != nil {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
 	// cleanup the ephemeral Heat
 	err = r.Client.Delete(context.TODO(), heat)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		_ = r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorError, err.Error())
+		_ = r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -488,17 +488,17 @@ func (r *OpenStackPlaybookGeneratorReconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
-	if err := r.setCurrentState(instance, ospdirectorv1beta1.PlaybookGeneratorFinished, "The OpenStackPlaybookGenerator job has completed"); err != nil {
+	if err := r.setCurrentState(instance, ospdirectorv1beta1.ConfigGeneratorFinished, "The OpenStackConfigGenerator job has completed"); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *OpenStackPlaybookGeneratorReconciler) setPlaybookHash(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator, hashStr string) error {
+func (r *OpenStackConfigGeneratorReconciler) setPlaybookHash(instance *ospdirectorv1beta1.OpenStackConfigGenerator, hashStr string) error {
 
-	if hashStr != instance.Status.PlaybookHash {
-		instance.Status.PlaybookHash = hashStr
+	if hashStr != instance.Status.ConfigHash {
+		instance.Status.ConfigHash = hashStr
 		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
 			return err
 		}
@@ -507,7 +507,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) setPlaybookHash(instance *ospdire
 
 }
 
-func (r *OpenStackPlaybookGeneratorReconciler) setCurrentState(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator, currentState ospdirectorv1beta1.PlaybookGeneratorState, msg string) error {
+func (r *OpenStackConfigGeneratorReconciler) setCurrentState(instance *ospdirectorv1beta1.OpenStackConfigGenerator, currentState ospdirectorv1beta1.ConfigGeneratorState, msg string) error {
 
 	if currentState != instance.Status.CurrentState {
 		instance.Status.CurrentState = currentState
@@ -515,7 +515,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) setCurrentState(instance *ospdire
 		// TODO: Using msg as reason and message for now
 		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(currentState), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
 		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
-			r.Log.Error(err, "OpenStackPlaybookGenerator update status error: %v")
+			r.Log.Error(err, "OpenStackConfigGenerator update status error: %v")
 			return err
 		}
 	}
@@ -523,7 +523,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) setCurrentState(instance *ospdire
 
 }
 
-func (r *OpenStackPlaybookGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion) error {
+func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackConfigGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion) error {
 
 	for _, version := range configVersions {
 
@@ -547,14 +547,14 @@ func (r *OpenStackPlaybookGeneratorReconciler) syncConfigVersions(instance *ospd
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
 	namespacedFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all CRs from the same namespace (there should only be one)
-		crs := &ospdirectorv1beta1.OpenStackPlaybookGeneratorList{}
+		crs := &ospdirectorv1beta1.OpenStackConfigGeneratorList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
@@ -580,7 +580,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.OpenStackPlaybookGenerator{}).
+		For(&ospdirectorv1beta1.OpenStackConfigGenerator{}).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, namespacedFn).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
@@ -588,7 +588,7 @@ func (r *OpenStackPlaybookGeneratorReconciler) SetupWithManager(mgr ctrl.Manager
 		Complete(r)
 }
 
-func (r *OpenStackPlaybookGeneratorReconciler) verifyNodeResourceStatus(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) (string, bool, error) {
+func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *ospdirectorv1beta1.OpenStackConfigGenerator) (string, bool, error) {
 
 	msg := ""
 

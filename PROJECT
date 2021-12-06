@@ -72,7 +72,7 @@ resources:
   controller: true
   domain: openstack.org
   group: osp-director
-  kind: OpenStackPlaybookGenerator
+  kind: OpenStackConfigGenerator
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
   webhooks:

@@ -9,7 +9,7 @@ resources:
 - bases/osp-director.openstack.org_openstackclients.yaml
 - bases/osp-director.openstack.org_openstacknets.yaml
 - bases/osp-director.openstack.org_openstackipsets.yaml
-- bases/osp-director.openstack.org_openstackplaybookgenerators.yaml
+- bases/osp-director.openstack.org_openstackconfiggenerators.yaml
 - bases/osp-director.openstack.org_openstackephemeralheats.yaml
 - bases/osp-director.openstack.org_openstackmacaddresses.yaml
 - bases/osp-director.openstack.org_openstackconfigversions.yaml
@@ -28,7 +28,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_openstacknets.yaml
 #- patches/webhook_in_openstackipsets.yaml
 #- patches/webhook_in_openstackpredictableips.yaml
-#- patches/webhook_in_openstackplaybookgenerators.yaml
+#- patches/webhook_in_openstackconfiggenerators.yaml
 #- patches/webhook_in_openstackephemeralheats.yaml
 #- patches/webhook_in_openstackmacaddresses.yaml
 #- patches/webhook_in_openstackconfigversions.yaml
@@ -46,7 +46,7 @@ patchesStrategicMerge:
 - patches/cainjection_in_openstacknets.yaml
 #- patches/cainjection_in_openstackipsets.yaml
 #- patches/cainjection_in_openstackpredictableips.yaml
-#- patches/cainjection_in_openstackplaybookgenerators.yaml
+#- patches/cainjection_in_openstackconfiggenerators.yaml
 - patches/cainjection_in_openstackephemeralheats.yaml
 #- patches/cainjection_in_openstackmacaddresses.yaml
 #- patches/cainjection_in_openstackconfigversions.yaml

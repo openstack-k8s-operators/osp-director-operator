@@ -295,6 +295,32 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackconfiggenerators
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackconfiggenerators/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackconfiggenerators/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackconfigversions
   verbs:
   - create
@@ -516,32 +542,6 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstacknets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackplaybookgenerators
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackplaybookgenerators/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackplaybookgenerators/status
   verbs:
   - get
   - patch

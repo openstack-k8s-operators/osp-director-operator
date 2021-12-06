@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package openstackplaybookgenerator
+package openstackconfiggenerator
 
 import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -23,7 +23,7 @@ import (
 )
 
 // GetVolumeMounts -
-func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.VolumeMount {
+func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.VolumeMount {
 	retVolMounts := []corev1.VolumeMount{
 		{
 			Name:      "tripleo-deploy-config",
@@ -72,7 +72,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []
 }
 
 // GetVolumes -
-func GetVolumes(instance *ospdirectorv1beta1.OpenStackPlaybookGenerator) []corev1.Volume {
+func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.Volume {
 	var config0600AccessMode int32 = 0600
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755

@@ -109,7 +109,7 @@ func filterPatches(filePatches []diff.FilePatch) []diff.FilePatch {
 }
 
 // SyncGit func
-func SyncGit(inst *ospdirectorv1beta1.OpenStackPlaybookGenerator, client client.Client, log logr.Logger) (map[string]ospdirectorv1beta1.OpenStackConfigVersion, error) {
+func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Client, log logr.Logger) (map[string]ospdirectorv1beta1.OpenStackConfigVersion, error) {
 
 	configVersions := make(map[string]ospdirectorv1beta1.OpenStackConfigVersion)
 
