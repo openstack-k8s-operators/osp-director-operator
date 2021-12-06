@@ -62,15 +62,35 @@ type OpenStackMACNodeStatus struct {
 // MACState - the state of this openstack mac reservation
 type MACState string
 
+// MACReason - the reason of the condition for this openstack ipset
+type MACReason string
+
 const (
-	// MACWaiting - the mac creation is blocked by prerequisite objects
-	MACWaiting MACState = "Waiting"
-	// MACCreating - we are waiting for mac addresses to be created
-	MACCreating MACState = "Creating"
-	// MACConfigured - the MAC addresses have been created
-	MACConfigured MACState = "Created"
-	// MACError - the mac creation hit a error
-	MACError MACState = "Error"
+	//
+	// condition types
+	//
+
+	// MACCondTypeWaiting - the mac creation is blocked by prerequisite objects
+	MACCondTypeWaiting MACState = "Waiting"
+	// MACCondTypeCreating - we are waiting for mac addresses to be created
+	MACCondTypeCreating MACState = "Creating"
+	// MACCondTypeConfigured - the MAC addresses have been created
+	MACCondTypeConfigured MACState = "Created"
+	// MACCondTypeError - the mac creation hit a error
+	MACCondTypeError MACState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// MACCondReasonRemovedIPs - the removed MAC reservations
+	MACCondReasonRemovedIPs MACReason = "RemovedIPs"
+	// MACCondReasonNetNotFound - osnet not found
+	MACCondReasonNetNotFound MACReason = "NetNotFound"
+	// MACCondReasonCreateMACError - error creating MAC address
+	MACCondReasonCreateMACError MACReason = "CreateMACError"
+	// MACCondReasonAllMACAddressesCreated - all MAC addresses created
+	MACCondReasonAllMACAddressesCreated MACReason = "MACAddressesCreated"
 )
 
 // OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress

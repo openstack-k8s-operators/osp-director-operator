@@ -19,12 +19,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
 )
 
@@ -91,6 +92,49 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
+	//
+	// initialize condition
+	//
+	cond := &ospdirectorv1beta1.Condition{}
+
+	if instance.Status.MACReservations == nil {
+		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeStatus{}
+	}
+
+	//
+	// Used in comparisons below to determine whether a status update is actually needed
+	//
+	currentStatus := instance.Status.DeepCopy()
+	statusChanged := func() bool {
+		return !equality.Semantic.DeepEqual(
+			r.getNormalizedStatus(&instance.Status),
+			r.getNormalizedStatus(currentStatus),
+		)
+	}
+
+	defer func(cond *ospdirectorv1beta1.Condition) {
+		//
+		// Update object conditions
+		//
+		instance.Status.Conditions.UpdateCurrentCondition(
+			cond.Type,
+			cond.Reason,
+			cond.Message,
+		)
+
+		if statusChanged() {
+			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+				if err == nil {
+					err = common.WrapErrorForObject(
+						"Update Status", instance, updateErr)
+				} else {
+					common.LogErrorForObject(r, updateErr, "Update status", instance)
+				}
+			}
+		}
+
+	}(cond)
+
 	// examine DeletionTimestamp to determine if object is under deletion
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
@@ -121,7 +165,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.CurrentState == ospdirectorv1beta1.MACConfigured)
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.CurrentState == ospdirectorv1beta1.MACCondTypeConfigured)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -132,34 +176,24 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
-	// initilize MACReservations
-	if instance.Status.MACReservations == nil {
-		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeStatus{}
-	}
-
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
-	}
-
-	// get a copy if the CR MAC Reservations
-	actualStatus := instance.DeepCopy().Status
-
 	// get ctlplane osnet as every vm/bm host is connected to it
 	ctlplaneNet := &ospdirectorv1beta1.OpenStackNet{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: "ctlplane", Namespace: instance.Namespace}, ctlplaneNet)
 	if err != nil {
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonNetNotFound)
+
 		// if ctlplaneNet does not exist, wait for it and set Condition to waiting
 		if k8s_errors.IsNotFound(err) {
-			msg := "Waiting for ctlplane network to be created"
-			actualStatus.CurrentState = ospdirectorv1beta1.MACWaiting
-			actualStatus.Conditions.Set(ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACWaiting), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
-			_ = r.setStatus(instance, actualStatus)
-			return ctrl.Result{Requeue: true}, nil
+			cond.Message = "Waiting for ctlplane network to be created"
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeWaiting)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 		}
-		msg := "Error fetching the ctlplane network"
-		actualStatus.CurrentState = ospdirectorv1beta1.MACError
-		actualStatus.Conditions.Set(ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACError), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
-		_ = r.setStatus(instance, actualStatus)
+		cond.Message = "Error fetching the ctlplane network"
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return ctrl.Result{}, err
 	}
 
@@ -173,14 +207,14 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 				// do not create MAC reservation for VIP
 				if !reservation.VIP {
 					// if node does not yet have a reservation, create the entry and set deleted -> false
-					if _, ok := actualStatus.MACReservations[reservation.Hostname]; !ok {
-						actualStatus.MACReservations[reservation.Hostname] = ospdirectorv1beta1.OpenStackMACNodeStatus{
+					if _, ok := instance.Status.MACReservations[reservation.Hostname]; !ok {
+						instance.Status.MACReservations[reservation.Hostname] = ospdirectorv1beta1.OpenStackMACNodeStatus{
 							Deleted:      false,
 							Reservations: map[string]string{},
 						}
 					}
 
-					macNodeStatus := actualStatus.MACReservations[reservation.Hostname]
+					macNodeStatus := instance.Status.MACReservations[reservation.Hostname]
 
 					// ignore deleted nodes
 					if !reservation.Deleted {
@@ -194,14 +228,20 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 								for ok := true; ok; ok = !macaddress.IsUniqMAC(instance.Status.MACReservations, newMAC) {
 									newMAC, err = macaddress.CreateMACWithPrefix(physnet.MACPrefix)
 									if err != nil {
-										msg := "Waiting for all MAC addresses to get created"
-										actualStatus.CurrentState = ospdirectorv1beta1.MACCreating
-										actualStatus.Conditions.Set(ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCreating), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
-										_ = r.setStatus(instance, actualStatus)
+										cond.Message = "Waiting for all MAC addresses to get created"
+										cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
+										cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeCreating)
+										err = common.WrapErrorForObject(cond.Message, instance, err)
+
 										return ctrl.Result{}, err
 									}
-									actualStatus.ReservedMACCount++
-									r.Log.Info(fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", reservation.Hostname, physnet, newMAC))
+									instance.Status.ReservedMACCount++
+
+									common.LogForObject(
+										r,
+										fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", reservation.Hostname, physnet, newMAC),
+										instance,
+									)
 								}
 
 								macNodeStatus.Reservations[physnet.Name] = newMAC
@@ -215,7 +255,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 						macNodeStatus.Deleted = true
 					}
 
-					actualStatus.MACReservations[reservation.Hostname] = macNodeStatus
+					instance.Status.MACReservations[reservation.Hostname] = macNodeStatus
 				}
 			}
 		}
@@ -225,7 +265,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	// Verify if any node got removed from network status and remove
 	// the MAC reservation.
 	var remove bool
-	for node, reservation := range actualStatus.MACReservations {
+	for node, reservation := range instance.Status.MACReservations {
 		remove = true
 		for _, roleStatus := range ctlplaneNet.Spec.RoleReservations {
 			for _, netReservation := range roleStatus.Reservations {
@@ -237,17 +277,15 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		if remove {
 			r.Log.Info(fmt.Sprintf("Delete MAC reservation - node %s, %s", node, reservation.Reservations))
-			delete(actualStatus.MACReservations, node)
+			delete(instance.Status.MACReservations, node)
 		}
 	}
 
-	msg := "All MAC addresses created"
-	actualStatus.CurrentState = ospdirectorv1beta1.MACConfigured
-	actualStatus.Conditions.Set(ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACConfigured), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(msg), msg)
-	err = r.setStatus(instance, actualStatus)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	cond.Message = "All MAC addresses created"
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeConfigured)
+
+	instance.Status.CurrentState = ospdirectorv1beta1.MACCondTypeConfigured
 
 	return ctrl.Result{}, nil
 }
@@ -291,14 +329,17 @@ func (r *OpenStackMACAddressReconciler) SetupWithManager(mgr ctrl.Manager) error
 		Complete(r)
 }
 
-func (r *OpenStackMACAddressReconciler) setStatus(instance *ospdirectorv1beta1.OpenStackMACAddress, actualState ospdirectorv1beta1.OpenStackMACAddressStatus) error {
+func (r *OpenStackMACAddressReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackMACAddressStatus) *ospdirectorv1beta1.OpenStackMACAddressStatus {
 
-	if !reflect.DeepEqual(instance.Status, actualState) {
-		instance.Status = actualState
-		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
-			r.Log.Error(err, "OpenStackMACAddress update status error: %v")
-			return err
-		}
+	//
+	// set LastHeartbeatTime and LastTransitionTime to a default value as those
+	// need to be ignored to compare if conditions changed.
+	//
+	s := status.DeepCopy()
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
-	return nil
+
+	return s
 }

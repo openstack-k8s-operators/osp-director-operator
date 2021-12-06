@@ -398,7 +398,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.MACWaiting
+		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeConfigured
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
