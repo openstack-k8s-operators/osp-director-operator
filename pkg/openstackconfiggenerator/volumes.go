@@ -41,7 +41,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []co
 			ReadOnly:  true,
 		},
 		{
-			Name:      "openstackplaybook-scripts",
+			Name:      "openstackconfig-scripts",
 			MountPath: "/home/cloud-admin/create-playbooks.sh",
 			SubPath:   "create-playbooks.sh",
 			ReadOnly:  true,
@@ -105,12 +105,12 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.
 			},
 		},
 		{
-			Name: "openstackplaybook-scripts",
+			Name: "openstackconfig-scripts",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0755AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "openstackplaybook-script-" + instance.Name,
+						Name: "openstackconfig-script-" + instance.Name,
 					},
 					Items: []corev1.KeyToPath{
 						{
