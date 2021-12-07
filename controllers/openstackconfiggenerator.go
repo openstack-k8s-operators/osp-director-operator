@@ -815,8 +815,6 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 		return nil, err
 	}
 
-	common.MergeStringMaps(roleNicTemplates, fencingTemplate)
-
 	//
 	// create tripleo-deploy-config configmap with rendered data
 	//
