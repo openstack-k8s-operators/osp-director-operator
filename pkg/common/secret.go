@@ -20,14 +20,18 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
 
 const (
@@ -281,4 +285,56 @@ func DeleteSecretsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelector
 	}
 
 	return nil
+}
+
+//
+// GetDataFromSecret - Get data from Secret
+//
+// if the secret or data is not found, requeue after requeueTimeout in seconds
+func GetDataFromSecret(
+	r ReconcilerCommon,
+	object client.Object,
+	cond *ospdirectorv1beta1.Condition,
+	conditionDetails ospdirectorv1beta1.ConditionDetails,
+	secretName string,
+	requeueTimeout int,
+	key string,
+) (string, ctrl.Result, error) {
+
+	data := ""
+
+	secret, _, err := GetSecret(r, secretName, object.GetNamespace())
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("%s secret does not exist: %v", secretName, err)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionNotFoundReason)
+			cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionNotFoundType)
+
+			LogForObject(r, cond.Message, object)
+
+			return data, ctrl.Result{RequeueAfter: time.Duration(requeueTimeout) * time.Second}, nil
+		}
+		cond.Message = fmt.Sprintf("Error getting %s Secret: %v", secretName, err)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionErrordReason)
+		cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionErrorType)
+		err = WrapErrorForObject(cond.Message, object, err)
+
+		return data, ctrl.Result{}, err
+	}
+
+	if key != "" {
+		if val, ok := secret.Data[key]; !ok {
+			cond.Message = fmt.Sprintf("%s not found in secret %s",
+				key,
+				secretName)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionNotFoundReason)
+			cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionErrorType)
+
+			return data, ctrl.Result{}, fmt.Errorf(cond.Message)
+		} else {
+			data = strings.TrimSuffix(string(val), "\n")
+		}
+	}
+
+	return data, ctrl.Result{}, nil
 }

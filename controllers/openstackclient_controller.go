@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -93,6 +93,52 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	//
+	// initialize condition
+	//
+	cond := &ospdirectorv1beta1.Condition{}
+
+	if instance.Status.OpenStackClientNetStatus == nil {
+		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
+	//
+	// Used in comparisons below to determine whether a status update is actually needed
+	//
+	currentStatus := instance.Status.DeepCopy()
+	statusChanged := func() bool {
+		return !equality.Semantic.DeepEqual(
+			r.getNormalizedStatus(&instance.Status),
+			r.getNormalizedStatus(currentStatus),
+		)
+	}
+
+	defer func(cond *ospdirectorv1beta1.Condition) {
+		//
+		// Update object conditions
+		//
+		instance.Status.Conditions.UpdateCurrentCondition(
+			cond.Type,
+			cond.Reason,
+			cond.Message,
+		)
+
+		if statusChanged() {
+			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+				if err == nil {
+					err = common.WrapErrorForObject(
+						"Update Status", instance, updateErr)
+				} else {
+					common.LogErrorForObject(r, updateErr, "Update status", instance)
+				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
+			}
+		}
+
+	}(cond)
+
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
 	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, true)
 
@@ -106,142 +152,133 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	envVars := make(map[string]common.EnvSetter)
+	labels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
 
-	// check for required secrets
+	//
+	// check for DeploymentSSHSecret is there
+	//
+	var ctrlResult ctrl.Result
 	if instance.Spec.DeploymentSSHSecret != "" {
-		_, _, err = common.GetSecret(r, instance.Spec.DeploymentSSHSecret, instance.Namespace)
-		if err != nil && k8s_errors.IsNotFound(err) {
-			return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("DeploymentSSHSecret secret does not exist: %v", err)
-		} else if err != nil {
-			return ctrl.Result{}, err
+		_, ctrlResult, err = common.GetDataFromSecret(
+			r,
+			instance,
+			cond,
+			ospdirectorv1beta1.ConditionDetails{
+				ConditionNotFoundType:   ospdirectorv1beta1.CommonCondTypeWaiting,
+				ConditionNotFoundReason: ospdirectorv1beta1.CommonCondReasonDeploymentSecretMissing,
+				ConditionErrorType:      ospdirectorv1beta1.CommonCondTypeError,
+				ConditionErrordReason:   ospdirectorv1beta1.CommonCondReasonDeploymentSecretError,
+			},
+			instance.Spec.DeploymentSSHSecret,
+			20,
+			"",
+		)
+		if (err != nil) || (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, err
 		}
 	}
+
+	//
+	// check for IdmSecret is there
+	//
 	if instance.Spec.IdmSecret != "" {
-		_, _, err = common.GetSecret(r, instance.Spec.IdmSecret, instance.Namespace)
-		if err != nil && k8s_errors.IsNotFound(err) {
-			return ctrl.Result{RequeueAfter: time.Second * 20}, fmt.Errorf("IdmSecret secret does not exist: %v", err)
-		} else if err != nil {
-			return ctrl.Result{}, err
+		_, ctrlResult, err = common.GetDataFromSecret(
+			r,
+			instance,
+			cond,
+			ospdirectorv1beta1.ConditionDetails{
+				ConditionNotFoundType:   ospdirectorv1beta1.CommonCondTypeWaiting,
+				ConditionNotFoundReason: ospdirectorv1beta1.CommonCondReasonIdmSecretMissing,
+				ConditionErrorType:      ospdirectorv1beta1.CommonCondTypeError,
+				ConditionErrordReason:   ospdirectorv1beta1.CommonCondReasonIdmSecretError,
+			},
+			instance.Spec.IdmSecret,
+			20,
+			"",
+		)
+		if (err != nil) || (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, err
 		}
-	}
-	if instance.Status.OpenStackClientNetStatus == nil {
-		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
 
 	//
-	// create hostname for the openstackclient
+	// create hostnames for the requested number of systems
 	//
-	hostnameRef := instance.GetHostnames()
-	hostnameDetails := common.Hostname{}
-	if len(hostnameRef) == 0 {
-		hostnameDetails = common.Hostname{
-			Basename: instance.Name,
-			Hostname: "",
-			VIP:      false,
-		}
-
-		err = common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	} else {
-		for hostname := range hostnameRef {
-
-			hostnameDetails = common.Hostname{
-				Basename: instance.Name,
-				Hostname: hostname,
-				VIP:      false,
-			}
-		}
-	}
-
-	if _, ok := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]; !ok {
-		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			HostRef:  strings.ToLower(instance.Name),
-		}
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return ctrl.Result{}, err
-		}
-	}
-
-	hostnameRefs := instance.GetHostnames()
-
-	ipsetDetails := common.IPSet{
-		Networks:            instance.Spec.Networks,
-		Role:                fmt.Sprintf("%s%s", openstackclient.Role, instance.Name),
-		HostCount:           openstackclient.Count,
-		AddToPredictableIPs: false,
-		HostNameRefs:        hostnameRefs,
-	}
-	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
+	_, err = r.createNewHostnames(
+		instance,
+		cond,
+		// right now there can only be one
+		1-len(instance.Status.OpenStackClientNetStatus),
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	// right now there can only be one
+	hostnameValue := reflect.ValueOf(instance.GetHostnames()).MapKeys()[0]
+	hostname := hostnameValue.String()
+
+	//
+	// create/update IPSet for the openstackclient
+	//
+	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
+		r,
+		instance,
+		cond,
+		common.IPSet{
+			Networks:            instance.Spec.Networks,
+			Role:                fmt.Sprintf("%s%s", openstackclient.Role, instance.Name),
+			HostCount:           openstackclient.Count,
+			AddToPredictableIPs: false,
+			HostNameRefs:        instance.GetHostnames(),
+		},
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
-	if len(ipset.Status.HostIPs) != openstackclient.Count {
-		r.Log.Info(fmt.Sprintf("IPSet has not yet reached the required replicas %d", openstackclient.Count))
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-	}
-
-	// get a copy of the current CR status
-	currentStatus := instance.Status.DeepCopy()
-
+	//
 	// update network status
+	//
 	for _, netName := range instance.Spec.Networks {
-		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
+		r.setNetStatus(
+			instance,
+			hostname,
+			netName,
+			ipset.Status.HostIPs[hostname].IPAddresses[netName],
+		)
 	}
 
 	// update the IPs for IPSet if status got updated
-	actualStatus := instance.Status
-	if !reflect.DeepEqual(currentStatus, &actualStatus) {
-		r.Log.Info(fmt.Sprintf("OpenStackClient network status for Hostname: %s - %s", instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].Hostname, diff.ObjectReflectDiff(currentStatus, &actualStatus)))
-
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return ctrl.Result{}, err
-		}
-	}
-	// verify that NetworkAttachmentDefinition for each configured network exist
-	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	for _, netNameLower := range instance.Spec.Networks {
-		// get network with name_lower label
-		network, err := openstacknet.GetOpenStackNetWithLabel(
+	if !reflect.DeepEqual(currentStatus.OpenStackClientNetStatus, instance.Status.OpenStackClientNetStatus) {
+		common.LogForObject(
 			r,
-			instance.Namespace,
-			map[string]string{
-				openstacknet.SubNetNameLabelSelector: netNameLower,
-			},
+			fmt.Sprintf("%s network status for Hostname: %s - %s",
+				instance.Kind,
+				instance.Status.OpenStackClientNetStatus[hostname].Hostname,
+				diff.ObjectReflectDiff(
+					currentStatus.OpenStackClientNetStatus,
+					instance.Status.OpenStackClientNetStatus,
+				),
+			),
+			instance,
 		)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
-				continue
-			}
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-
-		if _, ok := nadMap[network.Name]; !ok {
-			r.Log.Error(err, fmt.Sprintf("NetworkAttachmentDefinition for network %s does not yet exist.  Reconciling again in 10 seconds", netNameLower))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 	}
 
-	cmLabels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
+	//
+	// NetworkAttachmentDefinition
+	//
+	ctrlResult, err = r.verifyNetworkAttachments(
+		instance,
+		cond,
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
 
+	//
 	// create cm holding deployment script and render deployment script.
+	//
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{
@@ -251,7 +288,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{},
 			ConfigOptions:      make(map[string]interface{}),
-			Labels:             cmLabels,
+			Labels:             labels,
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
@@ -259,73 +296,30 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	//
 	// PVCs
-	// volume to presistent store /etc/hosts where entries get added by tripleo deploy
-	pvcDetails := common.Pvc{
-		Name:         fmt.Sprintf("%s-hosts", instance.Name),
-		Namespace:    instance.Namespace,
-		Size:         openstackclient.HostsPersistentStorageSize,
-		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
-		StorageClass: instance.Spec.StorageClass,
-		AccessMode: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteOnce,
-		},
-	}
-
-	pvc, op, err := common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	//
+	err = r.createPVCs(
+		instance,
+		cond,
+		labels,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Openstackclient /etc/hosts PVC %s Updated", pvc.Name))
-	}
-
-	pvcDetails = common.Pvc{
-		Name:         fmt.Sprintf("%s-cloud-admin", instance.Name),
-		Namespace:    instance.Namespace,
-		Size:         openstackclient.CloudAdminPersistentStorageSize,
-		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
-		StorageClass: instance.Spec.StorageClass,
-		AccessMode: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteOnce,
-		},
-	}
-
-	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Openstackclient PVC /home/cloud-admin %s Updated", pvc.Name))
-	}
-
-	pvcDetails = common.Pvc{
-		Name:         fmt.Sprintf("%s-kolla-src", instance.Name),
-		Namespace:    instance.Namespace,
-		Size:         openstackclient.KollaSrcPersistentStorageSize,
-		Labels:       common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}),
-		StorageClass: instance.Spec.StorageClass,
-		AccessMode: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteOnce,
-		},
-	}
-
-	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Openstackclient kolla-src PVC %s Updated", pvc.Name))
-	}
-
+	//
 	// Create or update the pod object
-	op, err = r.podCreateOrUpdate(instance, &hostnameDetails, envVars)
+	//
+	err = r.podCreateOrUpdate(
+		instance,
+		cond,
+		hostname,
+		envVars,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Pod %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -338,31 +332,51 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackClientReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackClient, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+func (r *OpenStackClientReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackClientStatus) *ospdirectorv1beta1.OpenStackClientStatus {
 
-	// If OpenStackClient status map is nil, create it
-	if instance.Status.OpenStackClientNetStatus == nil {
-		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	//
+	// set LastHeartbeatTime and LastTransitionTime to a default value as those
+	// need to be ignored to compare if conditions changed.
+	//
+	s := status.DeepCopy()
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
 
+	return s
+}
+
+func (r *OpenStackClientReconciler) setNetStatus(
+	instance *ospdirectorv1beta1.OpenStackClient,
+	hostname string,
+	netName string,
+	ipaddress string,
+) {
+
 	// Set network information status
-	if instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses == nil {
-		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			HostRef:  strings.ToLower(instance.Name),
+	if instance.Status.OpenStackClientNetStatus[hostname].IPAddresses == nil {
+		instance.Status.OpenStackClientNetStatus[hostname] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostname,
+			HostRef:  hostname,
 			IPAddresses: map[string]string{
 				netName: ipaddress,
 			},
 		}
 	} else {
-		status := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]
-		status.HostRef = strings.ToLower(instance.Name)
+		status := instance.Status.OpenStackClientNetStatus[hostname]
+		status.HostRef = hostname
 		status.IPAddresses[netName] = ipaddress
-		instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = status
+		instance.Status.OpenStackClientNetStatus[hostname] = status
 	}
 }
 
-func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1beta1.OpenStackClient, hostnameDetails *common.Hostname, envVars map[string]common.EnvSetter) (controllerutil.OperationResult, error) {
+func (r *OpenStackClientReconciler) podCreateOrUpdate(
+	instance *ospdirectorv1beta1.OpenStackClient,
+	cond *ospdirectorv1beta1.Condition,
+	hostname string,
+	envVars map[string]common.EnvSetter,
+) error {
 	var terminationGracePeriodSeconds int64 = 0
 
 	runAsUser := int64(instance.Spec.RunUID)
@@ -385,32 +399,48 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 	}
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
-	annotation := "["
-	for id, netName := range instance.Spec.Networks {
+	annotations := ""
+	for id, netNameLower := range instance.Spec.Networks {
+		// get network with name_lower label
+		labelSelector := map[string]string{
+			openstacknet.SubNetNameLabelSelector: netNameLower,
+		}
+
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
 			r,
 			instance.Namespace,
-			map[string]string{
-				openstacknet.SubNetNameLabelSelector: netName,
-			},
+			labelSelector,
 		)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
+				common.LogForObject(
+					r,
+					fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower),
+					instance,
+				)
 				continue
 			}
 			// Error reading the object - requeue the request.
-			return "", err
+			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
 		}
 
 		nad := fmt.Sprintf("%s-static", network.Name)
-		annotation += fmt.Sprintf("{\"name\": \"%s\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}", nad, instance.Namespace, instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname].IPAddresses[netName])
+		annotations += fmt.Sprintf("{\"name\": \"%s\", \"namespace\": \"%s\", \"ips\": [\"%s\"]}",
+			nad,
+			instance.Namespace,
+			instance.Status.OpenStackClientNetStatus[hostname].IPAddresses[netNameLower],
+		)
 		if id < len(instance.Spec.Networks)-1 {
-			annotation += ", "
+			annotations += ", "
 		}
 	}
-	annotation += "]"
+	annotation := fmt.Sprintf("[%s]", annotations)
 
 	env := common.MergeEnvs([]corev1.EnvVar{}, envVars)
 
@@ -546,22 +576,272 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(instance *ospdirectorv1bet
 
 		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Error set controller reference for %s", pod.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return err
 		}
 
 		return nil
 	})
-	if err != nil && k8s_errors.IsInvalid(err) {
-		// Delete pod when an unsupported change was requested, like
-		// e.g. additional controller VM got up. We just re-create the
-		// openstackclient pod
-		r.Log.Info(fmt.Sprintf("openstackclient pod deleted due to spec change %v", err))
-		if err := r.Client.Delete(context.TODO(), pod); err != nil {
-			return op, err
+	if err != nil {
+		if k8s_errors.IsInvalid(err) {
+			// Delete pod when an unsupported change was requested, like
+			// e.g. additional controller VM got up. We just re-create the
+			// openstackclient pod
+			common.LogForObject(
+				r,
+				fmt.Sprintf("openstackclient pod deleted due to spec change %v", err),
+				instance,
+			)
+			if err := r.Client.Delete(context.TODO(), pod); err != nil {
+
+				return err
+			}
+
+			r.Log.Info("openstackclient pod deleted due to spec change")
+			return nil
 		}
 
-		r.Log.Info("openstackclient pod deleted due to spec change")
-		return controllerutil.OperationResultUpdated, nil
+		cond.Message = fmt.Sprintf("Failed to create or update pod %s ", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
 	}
-	return op, err
+
+	if op != controllerutil.OperationResultNone {
+		cond.Message = fmt.Sprintf("%s %s created", instance.Kind, instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+	}
+
+	return nil
+}
+
+//
+// NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
+//
+func (r *OpenStackClientReconciler) verifyNetworkAttachments(
+	instance *ospdirectorv1beta1.OpenStackClient,
+	cond *ospdirectorv1beta1.Condition,
+) (ctrl.Result, error) {
+	// verify that NetworkAttachmentDefinition for each configured network exist
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, netNameLower := range instance.Spec.Networks {
+		timeout := 10
+
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+		// get network with name_lower label
+		network, err := openstacknet.GetOpenStackNetWithLabel(
+			r,
+			instance.Namespace,
+			map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+				common.LogForObject(r, cond.Message, instance)
+
+				continue
+			}
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error reading OpenStackNet with NameLower %s not found!", netNameLower)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
+
+		if _, ok := nadMap[network.Name]; !ok {
+			cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
+			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
+		}
+
+	}
+
+	return ctrl.Result{}, nil
+}
+
+//
+// create hostnames for the requested number of systems
+//
+func (r *OpenStackClientReconciler) createNewHostnames(
+	instance *ospdirectorv1beta1.OpenStackClient,
+	cond *ospdirectorv1beta1.Condition,
+	newCount int,
+) ([]string, error) {
+	newVMs := []string{}
+
+	//
+	//   create hostnames for the newCount
+	//
+	currentNetStatus := instance.Status.DeepCopy().OpenStackClientNetStatus
+	for i := 0; i < newCount; i++ {
+		hostnameDetails := common.Hostname{
+			Basename: instance.Name,
+			VIP:      false,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+
+		if hostnameDetails.Hostname != "" {
+			if _, ok := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]; !ok {
+				instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+					Hostname:             hostnameDetails.Hostname,
+					HostRef:              hostnameDetails.HostRef,
+					AnnotatedForDeletion: false,
+					IPAddresses:          map[string]string{},
+				}
+				newVMs = append(newVMs, hostnameDetails.Hostname)
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("%s hostname created: %s", instance.Kind, hostnameDetails.Hostname),
+				instance,
+			)
+		}
+	}
+
+	if !reflect.DeepEqual(currentNetStatus, instance.Status.OpenStackClientNetStatus) {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
+				len(newVMs),
+				diff.ObjectReflectDiff(currentNetStatus, instance.Status.OpenStackClientNetStatus),
+			),
+			instance,
+		)
+
+		err := r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = "Failed to update CR status for new hostnames"
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+	}
+
+	return newVMs, nil
+}
+
+//
+// PVCs
+//
+func (r *OpenStackClientReconciler) createPVCs(
+	instance *ospdirectorv1beta1.OpenStackClient,
+	cond *ospdirectorv1beta1.Condition,
+	labels map[string]string,
+) error {
+	// volume to presistent store /etc/hosts where entries get added by tripleo deploy
+	pvcDetails := common.Pvc{
+		Name:         fmt.Sprintf("%s-hosts", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.HostsPersistentStorageSize,
+		Labels:       labels,
+		StorageClass: instance.Spec.StorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err := common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s %s /etc/hosts PVC %s - operation: %s", instance.Kind, instance.Name, pvc.Name, string(op)),
+			instance,
+		)
+	}
+
+	pvcDetails = common.Pvc{
+		Name:         fmt.Sprintf("%s-cloud-admin", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.CloudAdminPersistentStorageSize,
+		Labels:       labels,
+		StorageClass: instance.Spec.StorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s %s  /home/cloud-admin PVC %s - operation: %s", instance.Kind, instance.Name, pvc.Name, string(op)),
+			instance,
+		)
+	}
+
+	pvcDetails = common.Pvc{
+		Name:         fmt.Sprintf("%s-kolla-src", instance.Name),
+		Namespace:    instance.Namespace,
+		Size:         openstackclient.KollaSrcPersistentStorageSize,
+		Labels:       labels,
+		StorageClass: instance.Spec.StorageClass,
+		AccessMode: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		},
+	}
+
+	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s %s kolla-src PVC %s - operation: %s", instance.Kind, instance.Name, pvc.Name, string(op)),
+			instance,
+		)
+	}
+
+	return nil
 }

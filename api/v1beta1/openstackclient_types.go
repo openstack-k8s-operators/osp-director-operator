@@ -63,9 +63,25 @@ type OpenStackClientSpec struct {
 	IdmSecret string `json:"idmSecret,omitempty"`
 }
 
+const (
+	//
+	// condition reasones
+	//
+
+	// OsClientCondReasonPVCError - error creating pvc
+	OsClientCondReasonPVCError ConditionReason = "PVCError"
+	// OsClientCondReasonPodError - error creating pod
+	OsClientCondReasonPodError ConditionReason = "PodError"
+	// OsClientCondReasonPodProvisioned - pod created
+	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientProvisioned"
+)
+
 // OpenStackClientStatus defines the observed state of OpenStackClient
 type OpenStackClientStatus struct {
 	OpenStackClientNetStatus map[string]HostStatus `json:"netStatus,omitempty"`
+
+	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 // +kubebuilder:object:root=true
@@ -103,14 +119,4 @@ func (openstackclient OpenStackClient) GetHostnames() map[string]string {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret
-
-	/*
-		ret := make(map[string]string)
-		if openstackclient.Status.Hostname != "" {
-			// for now there is only support for a single openstackclient container per cr
-			hostKey := fmt.Sprintf("%s-%d", openstackclient.Name, 0)
-			ret[hostKey] = openstackclient.Status.Hostname
-		}
-		return ret
-	*/
 }
