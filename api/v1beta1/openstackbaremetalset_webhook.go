@@ -44,13 +44,17 @@ func (r *OpenStackBaremetalSet) SetupWebhookWithManager(mgr ctrl.Manager) error 
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,versions=v1beta1,name=vopenstackbaremetalset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,versions=v1beta1,name=vopenstackbaremetalset.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackBaremetalSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	baremetalsetlog.Info("validate create", "name", r.Name)
+
+	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+		return err
+	}
 
 	return r.validateCr()
 }
@@ -61,6 +65,13 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 
 	return r.validateCr()
 
+}
+
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+func (r *OpenStackBaremetalSet) ValidateDelete() error {
+	baremetalsetlog.Info("validate delete", "name", r.Name)
+
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }
 
 func (r *OpenStackBaremetalSet) validateCr() error {
@@ -79,13 +90,5 @@ func (r *OpenStackBaremetalSet) checkBaseImageReqs() error {
 		return fmt.Errorf("Either \"baseImageUrl\" or \"provisionServerName\" must be provided")
 	}
 
-	return nil
-}
-
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBaremetalSet) ValidateDelete() error {
-	baremetalsetlog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }

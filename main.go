@@ -270,6 +270,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.OpenStackBackupReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackBackup"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackBackup")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.OpenStackBackupRequestReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackBackupRequest"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackBackupRequest")
+		os.Exit(1)
+	}
+
 	if enableWebhooks {
 		//
 		// DEFAULTS
@@ -341,6 +361,14 @@ func main() {
 
 		if err = (&ospdirectorv1beta1.OpenStackNet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
+			os.Exit(1)
+		}
+		if err = (&ospdirectorv1beta1.OpenStackBackup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBackup")
+			os.Exit(1)
+		}
+		if err = (&ospdirectorv1beta1.OpenStackBackupRequest{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBackupRequest")
 			os.Exit(1)
 		}
 	}

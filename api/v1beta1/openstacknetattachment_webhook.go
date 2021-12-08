@@ -66,7 +66,7 @@ var _ webhook.Validator = &OpenStackNetAttachment{}
 func (r *OpenStackNetAttachment) ValidateCreate() error {
 	openstacknetattachmentlog.Info("validate create", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -80,7 +80,7 @@ func (r *OpenStackNetAttachment) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackNetAttachment) ValidateDelete() error {
 	openstacknetattachmentlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }
 
 func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {

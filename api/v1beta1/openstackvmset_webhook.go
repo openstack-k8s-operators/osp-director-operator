@@ -42,13 +42,17 @@ func (r *OpenStackVMSet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackVMSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackVMSet) ValidateCreate() error {
 	vmsetlog.Info("validate create", "name", r.Name)
+
+	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+		return err
+	}
 
 	return r.validateCr()
 }
@@ -64,7 +68,7 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackVMSet) ValidateDelete() error {
 	vmsetlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }
 
 func (r *OpenStackVMSet) validateCr() error {
