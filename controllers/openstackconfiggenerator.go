@@ -143,6 +143,9 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 
@@ -185,11 +188,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorWaiting)
-		common.LogForObject(
-			r,
-			cond.Message,
-			instance,
-		)
 
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
@@ -363,7 +361,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = fmt.Sprintf("OpenStackEphemeralHeat successfully created/updated - operation: %s", string(op))
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatUpdated)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -372,7 +369,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = "Waiting on Ephemeral Heat instance to launch..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatLaunch)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -392,7 +388,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = "ConfigMap has changed. Requeing to start again..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMUpdated)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -406,7 +401,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = msg
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonWaitingNodesProvisioned)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 20}, err
 		}
@@ -426,7 +420,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = fmt.Sprintf("Job successfully created/updated - operation: %s", string(op))
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobCreated)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -461,7 +454,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = "ConfigMap has changed. Requeing to start again..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMUpdated)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorInitializing)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 
@@ -482,7 +474,6 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			cond.Message = "Waiting on Config Generation..."
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonConfigCreate)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorGenerating)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}

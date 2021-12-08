@@ -137,6 +137,9 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 	}(cond)
@@ -326,15 +329,12 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	}
 
 	if op != controllerutil.OperationResultNone {
-		common.LogForObject(r, string(op), networkConfigurationPolicy)
-
 		cond.Message = fmt.Sprintf("NodeNetworkConfigurationPolicy %s is %s", networkConfigurationPolicy.Name, string(op))
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfiguring)
-	} else {
-		cond.Message = fmt.Sprintf("NodeNetworkConfigurationPolicy %s configured targeted node(s)", networkConfigurationPolicy.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured)
+
+		common.LogForObject(r, string(op), networkConfigurationPolicy)
+		common.LogForObject(r, cond.Message, instance)
 	}
-	common.LogForObject(r, cond.Message, instance)
 
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName) {
@@ -383,7 +383,6 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 			}
 		}
 	}
-	common.LogForObject(r, cond.Message, instance)
 
 	return nil
 }

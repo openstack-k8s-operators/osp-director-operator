@@ -129,6 +129,9 @@ func EnsureConfigMaps(r ReconcilerCommon, obj metav1.Object, cms []Template, env
 			hash, op, err = createOrUpdateConfigMap(r, obj, cm)
 		} else {
 			hash, err = createOrGetCustomConfigMap(r, obj, cm)
+			// set op to OperationResultNone because createOrGetCustomConfigMap does not return an op
+			// and it will add log entries bellow with none operation
+			op = controllerutil.OperationResult(controllerutil.OperationResultNone)
 		}
 		if err != nil {
 			return err
