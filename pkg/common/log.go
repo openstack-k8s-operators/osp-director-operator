@@ -34,7 +34,7 @@ func logObjectParams(object metav1.Object) []interface{} {
 func LogForObject(r ReconcilerCommon,
 	msg string, object metav1.Object, params ...interface{}) {
 
-	//params = append(params, logObjectParams(object)...)
+	params = append(params, logObjectParams(object)...)
 
 	r.GetLogger().Info(msg, params...)
 }

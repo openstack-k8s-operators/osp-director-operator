@@ -150,8 +150,8 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// create DHCP reservation for physnet and each node
-	for _, roleStatus := range ctlplaneNet.Status.RoleReservations {
+	// create reservation for physnet and each node
+	for _, roleStatus := range ctlplaneNet.Spec.RoleReservations {
 
 		// if addToPredictableIPs == false the role can be ignored for creating MAC
 		// this is e.g. the openstackclient pod
@@ -214,7 +214,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	var remove bool
 	for node, reservation := range actualStatus.MACReservations {
 		remove = true
-		for _, roleStatus := range ctlplaneNet.Status.RoleReservations {
+		for _, roleStatus := range ctlplaneNet.Spec.RoleReservations {
 			for _, netReservation := range roleStatus.Reservations {
 				if node == netReservation.Hostname {
 					remove = false

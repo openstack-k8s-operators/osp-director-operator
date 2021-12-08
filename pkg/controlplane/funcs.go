@@ -15,7 +15,6 @@ func GetFencingRoles() []string {
 		"Controller",
 		"Database",
 		"Messaging",
-		"Standalone",
 		"Telemetry",
 	}
 }

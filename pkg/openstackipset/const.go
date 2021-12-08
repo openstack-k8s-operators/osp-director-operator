@@ -25,11 +25,4 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstackipset.osp-director.openstack.org"
-
-	// CR names won't allow '_', need to change tripleo nets using those
-
-	// InternalAPIName -
-	InternalAPIName = "internal_api"
-	// StorageMgmtName -
-	StorageMgmtName = "storage_mgmt"
 )

@@ -20,6 +20,56 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// IPSetState - the state of this openstack ipset
+type IPSetState string
+
+// IPSetReason - the reason of the condition for this openstack ipset
+type IPSetReason string
+
+const (
+	//
+	// condition types
+	//
+
+	// IPSetCondTypeInitializing - we are waiting for underlying OCP network resource(s) to appear
+	IPSetCondTypeInitializing IPSetState = "Initializing"
+	// IPSetCondTypeConfiguring - the underlying network resources are configuring the nodes
+	IPSetCondTypeConfiguring IPSetState = "Configuring"
+	// IPSetCondTypeConfigured - the nodes have been configured by the underlying network resources
+	IPSetCondTypeConfigured IPSetState = "Configured"
+	// IPSetCondTypeError - the network configuration hit a generic error
+	IPSetCondTypeError IPSetState = "Error"
+	// IPSetCondTypeWaiting - something else is causing the OpenStackIPSet to wait
+	IPSetCondTypeWaiting IPSetState = "Waiting"
+
+	//
+	// condition reasones
+	//
+
+	// IPSetCondReasonRemovedIPs - the ipset removed IP reservations
+	IPSetCondReasonRemovedIPs IPSetReason = "RemovedIPs"
+	// IPSetCondReasonNewHosts - new host to register
+	IPSetCondReasonNewHosts IPSetReason = "NewHosts"
+	// IPSetCondReasonAddIPs - adding IPs for new hosts
+	IPSetCondReasonAddIPs IPSetReason = "AddingIPs"
+	// IPSetCondReasonNetNotFound - osnet not found
+	IPSetCondReasonNetNotFound IPSetReason = "NetNotFound"
+	// IPSetCondReasonNetsNotFound - osnets not found
+	IPSetCondReasonNetsNotFound IPSetReason = "NetsNotFound"
+	// IPSetCondReasonMACsNotFound - osmacs not found
+	IPSetCondReasonMACsNotFound IPSetReason = "MACsNotFound"
+	// IPSetCondReasonServiceNotFound - service not found
+	IPSetCondReasonServiceNotFound IPSetReason = "ServiceNotFound"
+	// IPSetCondReasonConfigMap - configmap reason
+	IPSetCondReasonConfigMap IPSetReason = "ConfigMap"
+	// IPSetCondReasonParseCIDR - parsing cidr
+	IPSetCondReasonParseCIDR IPSetReason = "ParseCIDR"
+	// IPSetCondReasonIPReservation - parsing cidr
+	IPSetCondReasonIPReservation IPSetReason = "IPReservation"
+	// IPSetCondReasonSuccessfullyConfigured - parsing cidr
+	IPSetCondReasonSuccessfullyConfigured IPSetReason = "SuccessfullyConfigured"
+)
+
 // OpenStackIPSetSpec defines the desired state of OpenStackIPSet
 type OpenStackIPSetSpec struct {
 
@@ -46,6 +96,9 @@ type OpenStackIPSetSpec struct {
 type OpenStackIPSetStatus struct {
 	HostIPs  map[string]OpenStackIPHostsStatus `json:"hosts"`
 	Networks map[string]NetworkStatus          `json:"networks"`
+
+	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 // OpenStackIPHostsStatus per host IP set

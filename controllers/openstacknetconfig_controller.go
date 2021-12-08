@@ -311,9 +311,9 @@ func (r *OpenStackNetConfigReconciler) getNormalizedStatus(status *ospdirectorv1
 	// need to be ignored to compare if conditions changed.
 	//
 	s := status.DeepCopy()
-	for _, cond := range s.Conditions {
-		cond.LastHeartbeatTime = metav1.Time{}
-		cond.LastTransitionTime = metav1.Time{}
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
 
 	return s

@@ -49,7 +49,7 @@ spec:
             properties:
               ephemeralHeatSettings:
                 description: Advanced Heat Settings can be used to increase the Heat
-                  Engine replicas or customize container images used during playbook
+                  Engine replicas or customize container images used during config
                   generation.
                 properties:
                   configHash:
@@ -90,21 +90,20 @@ spec:
                   env file customizations
                 type: string
               imageURL:
-                description: Name of the image used to generate playbooks. If missing
+                description: Name of the image used to generate configs. If missing
                   will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT
                   in the CSV for the OSP Director Operator.
                 type: string
               interactive:
                 default: false
-                description: Interactive enables the user to rsh into the playbook
-                  generator pod for interactive debugging with the ephemeral heat
-                  instance. If enabled manual execution of the script to generate
-                  playbooks will be required.
+                description: Interactive enables the user to rsh into the config generator
+                  pod for interactive debugging with the ephemeral heat instance.
+                  If enabled manual execution of the script to generate playbooks
+                  will be required.
                 type: boolean
               tarballConfigMap:
                 description: Optional. the name of the config map containing custom
-                  Heat template tarball which will be extracted prior to playbook
-                  generation
+                  Heat template tarball which will be extracted prior to config generation
                 type: string
             required:
             - gitSecret
@@ -143,15 +142,19 @@ spec:
                   - type
                   type: object
                 type: array
+              configHash:
+                description: ConfigHash hash
+                type: string
+              currentReason:
+                description: CurrentReason
+                type: string
               currentState:
                 description: CurrentState
                 type: string
-              playbookHash:
-                description: ConfigHash hash
-                type: string
             required:
+            - configHash
+            - currentReason
             - currentState
-            - playbookHash
             type: object
         type: object
     served: true

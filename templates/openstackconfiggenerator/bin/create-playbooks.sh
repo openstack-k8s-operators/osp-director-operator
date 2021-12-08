@@ -55,7 +55,6 @@ tar -xvf $HOME/tht-tars/{{ $key }}
 {{- end }}
 cp $HOME/config/* $HOME/config-tmp
 cp $HOME/config-custom/* $HOME/config-tmp
-cp $HOME/config-fencing/* $HOME/config-tmp
 # remove all references to the default tht dir
 sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tmp/*.yaml
 # copy to our temp t-h-t dir
@@ -98,7 +97,6 @@ time openstack stack create --wait \
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/network-environment.yaml \
     -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
-    -e $TEMPLATES_DIR/fencing.yaml \
 {{- range $key, $value := .TripleoDeployFiles }}
     -e {{ $key }} \
 {{- end }}

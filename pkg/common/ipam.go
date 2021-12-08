@@ -257,3 +257,17 @@ func IPToBigInt(IPv6Addr net.IP) *big.Int {
 	IPv6Int.SetBytes(IPv6Addr)
 	return IPv6Int
 }
+
+//
+// GetCidrParts - returns addr and cidr suffix
+//
+func GetCidrParts(cidr string) (string, int, error) {
+	ipAddr, net, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return "", 0, err
+	}
+
+	cidrSuffix, _ := net.Mask.Size()
+
+	return ipAddr.String(), cidrSuffix, nil
+}

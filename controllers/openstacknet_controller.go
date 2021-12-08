@@ -203,7 +203,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	totalIps := 0
 
-	for _, roleIps := range instance.Status.RoleReservations {
+	for _, roleIps := range instance.Spec.RoleReservations {
 		totalIps += len(roleIps.Reservations)
 	}
 
@@ -224,9 +224,9 @@ func (r *OpenStackNetReconciler) getNormalizedStatus(status *ospdirectorv1beta1.
 	// need to be ignored to compare if conditions changed.
 	//
 	s := status.DeepCopy()
-	for _, cond := range s.Conditions {
-		cond.LastHeartbeatTime = metav1.Time{}
-		cond.LastTransitionTime = metav1.Time{}
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
 
 	return s

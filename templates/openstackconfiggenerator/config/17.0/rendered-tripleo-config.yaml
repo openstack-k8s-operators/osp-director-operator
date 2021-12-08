@@ -54,6 +54,9 @@ parameter_defaults:
 {{- end }}
   #
   # DeployedServerPortMap
+  # https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
+  # https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
+  # https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
   DeployedServerPortMap:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}

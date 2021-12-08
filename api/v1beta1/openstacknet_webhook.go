@@ -57,6 +57,13 @@ func (r *OpenStackNet) Default() {
 	}
 
 	//
+	// The OpenStackNet "XYZ" is invalid: spec.roleReservations: Invalid value: "null": spec.roleReservations in body must be of type object: "null"
+	//
+	if r.Spec.RoleReservations == nil {
+		r.Spec.RoleReservations = map[string]OpenStackNetRoleStatus{}
+	}
+
+	//
 	// The default domain name if non specified
 	//
 	if r.Spec.DomainName == "" {

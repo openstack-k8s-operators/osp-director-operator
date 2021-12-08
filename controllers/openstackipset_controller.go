@@ -26,18 +26,18 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -74,7 +74,6 @@ func (r *OpenStackIPSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch
 
 // Reconcile - reconcile OpenStackIPSet objects
 func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -94,6 +93,11 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	//
+	// initialize condition
+	//
+	cond := &ospdirectorv1beta1.Condition{}
+
 	if instance.Status.HostIPs == nil {
 		instance.Status.HostIPs = make(map[string]ospdirectorv1beta1.OpenStackIPHostsStatus)
 	}
@@ -101,6 +105,40 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if instance.Status.Networks == nil {
 		instance.Status.Networks = make(map[string]ospdirectorv1beta1.NetworkStatus)
 	}
+
+	//
+	// Used in comparisons below to determine whether a status update is actually needed
+	//
+	currentStatus := instance.Status.DeepCopy()
+	statusChanged := func() bool {
+		return !equality.Semantic.DeepEqual(
+			r.getNormalizedStatus(&instance.Status),
+			r.getNormalizedStatus(currentStatus),
+		)
+	}
+
+	defer func(cond *ospdirectorv1beta1.Condition) {
+		//
+		// Update object conditions
+		//
+		instance.Status.Conditions.UpdateCurrentCondition(
+			cond.Type,
+			cond.Reason,
+			cond.Message,
+		)
+
+		if statusChanged() {
+			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+				if err == nil {
+					err = common.WrapErrorForObject(
+						"Update Status", instance, updateErr)
+				} else {
+					common.LogErrorForObject(r, updateErr, "Update status", instance)
+				}
+			}
+		}
+
+	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -141,198 +179,43 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	// Verify all requested osNets exist
+	// Verify if all required networks for the OSIPset exist
 	//
-	for _, net := range instance.Spec.Networks {
-		osNet := &ospdirectorv1beta1.OpenStackNet{}
-		osNetName := strings.ToLower(strings.Replace(net, "_", "", -1))
-
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: osNetName, Namespace: instance.Namespace}, osNet)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				return ctrl.Result{RequeueAfter: 20 * time.Second}, fmt.Errorf("underlying OSNet for network %s requested in IPSet %s is missing. Reconcile in 20s", net, instance.Name)
-			}
-			return ctrl.Result{}, err
-		}
-	}
-
-	//
-	// Get OSPVersion from OSControlPlane status
-	//
-	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
-	if err != nil {
-		return ctrlResult, err
-	}
-	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	ctrlResult, err := r.verifyNetworksExist(instance, cond)
 	if err != nil {
 		return ctrlResult, err
 	}
 
-	// get a copy of the current CR status
-	currentStatus := instance.Status.DeepCopy()
+	//
+	// Remove existing IPSet entries if nodes got removed from instance.Spec.HostNameRefs
+	//
+	r.removeIP(instance, cond)
 
 	//
-	// Remove existing IPSet entry
+	// Add new IPSet entries if nodes got added to instance.Spec.HostNameRefs
 	//
-	// Are there any remove nodes ?
-	removedHosts := []string{}
-	// create list of removed hosts from the requesting CR
-	for hostname := range instance.Status.HostIPs {
-		if _, ok := instance.Spec.HostNameRefs[hostname]; !ok {
-			removedHosts = append(removedHosts, hostname)
-		}
-	}
-	// if there are removed nodes, remove them from OSIPSet and OSNet
-	if len(removedHosts) > 0 {
-		// make sure removedHosts slice is sorted
-		sort.Strings(removedHosts)
-
-		r.removeIP(instance, removedHosts)
-	}
-
-	//
-	// Add new IPSet entry
-	//
-	// Are there any new nodes ?
-	newHosts := map[string]string{}
-	// create list of new hosts from the requesting CR
-	for hostname, hostref := range instance.Spec.HostNameRefs {
-		if _, ok := instance.Status.HostIPs[hostname]; !ok {
-			newHosts[hostname] = hostref
-		}
-	}
-	// if there are new nodes, create OSIPSet entry and update OSNet
-	if len(newHosts) > 0 {
-		newHostsSorted := common.SortMapByValue(newHosts)
-
-		err := r.addIP(instance, newHostsSorted)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("IPSet failed adding IPs for hosts %v due to object not found. Reconcile in 10s", newHostsSorted)
-			}
-			return ctrl.Result{}, err
-		}
-	}
-
-	// update the IPs for IPSet if status got updated
-	actualStatus := instance.Status
-	if !reflect.DeepEqual(currentStatus, &actualStatus) {
-		r.Log.Info(fmt.Sprintf("Updating IPSet status CR: %s - %s", instance.Name, diff.ObjectReflectDiff(currentStatus, &actualStatus)))
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update OpenStackIPSet status %v")
-			return ctrl.Result{}, err
-		}
-	}
-
-	// sync deleted IPSet with OSNet
-	err = r.syncDeletedIPs(instance)
-	if err != nil {
-		r.Log.Error(err, "Failed to sync deleted OpenStackIPSet with OpenStackNet status %v")
-		return ctrl.Result{}, err
-	}
-
-	// generate pre assigned IPs environment file for Heat
-	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
-	osNetListOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-		client.Limit(1000),
-	}
-	err = r.Client.List(context.TODO(), osNetList, osNetListOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	osMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
-	osMACListOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-		client.Limit(1000),
-	}
-	err = r.Client.List(context.TODO(), osMACList, osMACListOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// write it all to a configmap
-	envVars := make(map[string]common.EnvSetter)
-	cmLabels := common.GetLabels(instance, openstackipset.AppLabel, map[string]string{})
-
-	templateParameters, rolesMap, err := openstackipset.CreateConfigMapParams(r, instance, osNetList, osMACList)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// get clusterServiceIP for fencing routing in the nic templates
-	clusterServiceIP, err := r.getClusterServiceEndpoint(
-		"default",
-		map[string]string{
-			"component": "apiserver",
-			"provider":  "kubernetes",
-		},
+	ctrlResult, err = r.addIP(
+		instance,
+		cond,
 	)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrlResult, err
 	}
 
-	roleNicTemplates := map[string]string{}
-	for _, role := range rolesMap {
-		// render nic template for VM role which, but only for tripleo roles
-		if role.IsVMType && role.IsTripleoRole {
-			roleTemplateParameters := make(map[string]interface{})
-			roleTemplateParameters["ClusterServiceIP"] = clusterServiceIP
-			roleTemplateParameters["Role"] = role
-
-			file := ""
-			nicTemplate := ""
-			if OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) {
-				file = fmt.Sprintf("%s-nic-template.yaml", role.NameLower)
-				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/net-config-multi-nic.yaml", OSPVersion)
-			}
-			if OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
-				file = fmt.Sprintf("%s-nic-template.j2", role.NameLower)
-				nicTemplate = fmt.Sprintf("/openstackipset/config/%s/nic/multiple_nics_dvr.j2", OSPVersion)
-			}
-
-			r.Log.Info(fmt.Sprintf("NIC template %s added to tripleo-deploy-config CM for role %s. Add a custom %s NIC template to the tarballConfigMap to overwrite.", file, role.Name, file))
-
-			roleTemplate := common.Template{
-				Name:         "tripleo-nic-template",
-				Namespace:    instance.Namespace,
-				Type:         common.TemplateTypeNone,
-				InstanceType: instance.Kind,
-				AdditionalTemplate: map[string]string{
-					file: nicTemplate,
-				},
-				Labels:        cmLabels,
-				ConfigOptions: roleTemplateParameters,
-				SkipSetOwner:  true,
-				Version:       OSPVersion,
-			}
-			for k, v := range common.GetTemplateData(roleTemplate) {
-				roleNicTemplates[k] = v
-			}
-		}
-	}
-
-	cm := []common.Template{
-		{
-			Name:               "tripleo-deploy-config",
-			Namespace:          instance.Namespace,
-			Type:               common.TemplateTypeConfig,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: map[string]string{},
-			CustomData:         roleNicTemplates,
-			Labels:             cmLabels,
-			ConfigOptions:      templateParameters,
-			SkipSetOwner:       true,
-			Version:            OSPVersion,
-		},
-	}
-
-	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	//
+	// sync deleted IPSet with OSNet
+	//
+	err = r.syncDeletedIPs(instance)
 	if err != nil {
+		// TODO: sync with spec
+		err = common.WrapErrorForObject("Failed to sync deleted OpenStackIPSet with OpenStackNet spec", instance, err)
+
 		return ctrl.Result{}, err
 	}
+
+	cond.Message = fmt.Sprintf("OpenStackIPSet %s has successfully configured all IPs for %v host(s)", instance.Name, instance.Spec.HostCount)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonSuccessfullyConfigured)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeConfigured)
 
 	return ctrl.Result{}, nil
 }
@@ -345,14 +228,52 @@ func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OpenStackIPSetReconciler) removeIP(instance *ospdirectorv1beta1.OpenStackIPSet, removedHosts []string) {
+func (r *OpenStackIPSetReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackIPSetStatus) *ospdirectorv1beta1.OpenStackIPSetStatus {
 
-	// remove entry from OSIPSet status
-	for _, hostname := range removedHosts {
-		delete(instance.Status.HostIPs, hostname)
-		r.Log.Info(fmt.Sprintf("OSP Hostname %s removed from OSIPSet %s, new status %v", hostname, instance.Name, instance.Status.HostIPs))
+	//
+	// set LastHeartbeatTime and LastTransitionTime to a default value as those
+	// need to be ignored to compare if conditions changed.
+	//
+	s := status.DeepCopy()
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
 
+	return s
+}
+
+func (r *OpenStackIPSetReconciler) removeIP(
+	instance *ospdirectorv1beta1.OpenStackIPSet,
+	cond *ospdirectorv1beta1.Condition,
+) {
+	removedHosts := []string{}
+	// create list of removed hosts from the requesting CR
+	for hostname := range instance.Status.HostIPs {
+		if _, ok := instance.Spec.HostNameRefs[hostname]; !ok {
+			removedHosts = append(removedHosts, hostname)
+		}
+	}
+
+	// if there are removed nodes, remove them from OSIPSet and OSNet
+	if len(removedHosts) > 0 {
+		// make sure removedHosts slice is sorted
+		sort.Strings(removedHosts)
+
+		// remove entry from OSIPSet status
+		for _, hostname := range removedHosts {
+			delete(instance.Status.HostIPs, hostname)
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Hostname %s removed, new host list %v", hostname, reflect.ValueOf(instance.Status.HostIPs).MapKeys()),
+				instance,
+			)
+		}
+
+		cond.Message = fmt.Sprintf("Removed hosts: %s", removedHosts)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonRemovedIPs)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeConfigured)
+	}
 }
 
 func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.OpenStackIPSet) error {
@@ -382,22 +303,23 @@ func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.O
 		}
 
 		// mark the reservation for the hosts as deleted
-		for index, reservation := range network.Status.RoleReservations[instance.Spec.RoleName].Reservations {
+		for index, reservation := range network.Spec.RoleReservations[instance.Spec.RoleName].Reservations {
 
 			// set OSNet deleted flag for non exiting nodes in the ipset
 			reservationDeleted := !common.StringInSlice(reservation.Hostname, allActiveIPSetHosts)
 
 			// mark OSNet host entry as deleted
-			if network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted != reservationDeleted {
-				network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted = reservationDeleted
-				r.Log.Info(fmt.Sprintf("Update network status of host %s - net %s - %v", reservation.Hostname, network.Name, network.Status.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted))
+			if network.Spec.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted != reservationDeleted {
+				network.Spec.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted = reservationDeleted
+				r.Log.Info(fmt.Sprintf("Update network status of host %s - net %s - %v", reservation.Hostname, network.Name, network.Spec.RoleReservations[instance.Spec.RoleName].Reservations[index].Deleted))
 			}
 		}
 
 		// update status of OSNet
-		err = r.Client.Status().Update(context.TODO(), network)
+		// TODO: just patch?
+		err = r.Client.Update(context.TODO(), network)
 		if err != nil {
-			r.Log.Error(err, "Failed to update OpenStackNet status %v")
+			r.Log.Error(err, "Failed to update OpenStackNet spec %v")
 			return err
 		}
 
@@ -406,11 +328,37 @@ func (r *OpenStackIPSetReconciler) syncDeletedIPs(instance *ospdirectorv1beta1.O
 	return nil
 }
 
-func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackIPSet, newHosts common.HostnameList) error {
+func (r *OpenStackIPSetReconciler) addIP(
+	instance *ospdirectorv1beta1.OpenStackIPSet,
+	cond *ospdirectorv1beta1.Condition,
+) (ctrl.Result, error) {
+	// Are there any new nodes ?
+	newHosts := map[string]string{}
+	// create list of new hosts from the requesting CR
+	for hostname, hostref := range instance.Spec.HostNameRefs {
+		if _, ok := instance.Status.HostIPs[hostname]; !ok {
+			newHosts[hostname] = hostref
+		}
+	}
 
-	for _, k := range newHosts {
-		//hostRef := k.HostRef
-		hostname := k.Hostname
+	// if there are new nodes, create OSIPSet entry and update OSNet
+	if len(newHosts) > 0 {
+		newHostsSorted := common.SortMapByValue(newHosts)
+
+		common.LogForObject(
+			r,
+			fmt.Sprintf("New hosts: %s", newHostsSorted),
+			instance,
+		)
+
+		cond.Message = fmt.Sprintf("New hosts: %s", newHostsSorted)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNewHosts)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeConfiguring)
+	}
+
+	// TODO: change order to loop over networks and then nested over the hostlist to limit osnet updates to full list of new reservations added
+	for _, host := range common.SortMapByValue(newHosts) {
+		hostname := host.Key
 
 		hostNetworkIPs := map[string]string{}
 
@@ -426,11 +374,15 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 			)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName))
-					continue
+					cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netName)
+					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetNotFound)
+					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+					err = common.WrapErrorForObject(cond.Message, instance, err)
+
+					return ctrl.Result{RequeueAfter: 20 * time.Second}, err
 				}
 				// Error reading the object - requeue the request.
-				return err
+				return ctrl.Result{}, err
 			}
 
 			// set ipset NetworkStatus
@@ -444,38 +396,50 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 
 			_, cidr, err := net.ParseCIDR(network.Spec.Cidr)
 			if err != nil {
-				return fmt.Errorf(fmt.Sprintf("Failed to parse CIDR %s: %v", network.Spec.Cidr, err))
+				cond.Message = fmt.Sprintf("Failed to parse CIDR %s", network.Spec.Cidr)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetNotFound)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return ctrl.Result{}, err
 			}
 
 			start := net.ParseIP(network.Spec.AllocationStart)
 			end := net.ParseIP(network.Spec.AllocationEnd)
 
-			// If network RoleReservations status map is nil, create it
-			if network.Status.RoleReservations == nil {
-				network.Status.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleStatus{}
+			// If network RoleReservations spec map is nil, create it
+			if network.Spec.RoleReservations == nil {
+				network.Spec.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleStatus{}
+
 			}
-			// If network RoleReservations[instance.Spec.RoleName] status map is nil, create it
-			if _, ok := network.Status.RoleReservations[instance.Spec.RoleName]; !ok {
-				network.Status.RoleReservations[instance.Spec.RoleName] = ospdirectorv1beta1.OpenStackNetRoleStatus{}
+			// If network RoleReservations[instance.Spec.RoleName] Spec map is nil, create it
+			if _, ok := network.Spec.RoleReservations[instance.Spec.RoleName]; !ok {
+				network.Spec.RoleReservations[instance.Spec.RoleName] = ospdirectorv1beta1.OpenStackNetRoleStatus{}
 			}
 
 			reservationIP := ""
 
 			// Do we already have a reservation for this hostname on the network?
-			for _, reservation := range network.Status.RoleReservations[instance.Spec.RoleName].Reservations {
+			for _, reservation := range network.Spec.RoleReservations[instance.Spec.RoleName].Reservations {
 				if reservation.Hostname == hostname {
-					// We also need the netmask (which is not stored in the OpenStackNet status),
+					// We also need the netmask (which is not stored in the OpenStackNet spec),
 					// so we acquire it from the OpenStackIPSet spec
 					cidrPieces := strings.Split(network.Spec.Cidr, "/")
 					reservationIP = fmt.Sprintf("%s/%s", reservation.IP, cidrPieces[len(cidrPieces)-1])
-					r.Log.Info(fmt.Sprintf("Re-use existing reservation for host %s in network %s with IP %s", hostname, netName, reservationIP))
+
+					common.LogForObject(
+						r,
+						fmt.Sprintf("Re-use existing reservation for host %s in network %s with IP %s", hostname, netName, reservationIP),
+						instance,
+					)
+
 					break
 				}
 			}
 
 			// get list of all reservations
 			reservationList := []ospdirectorv1beta1.IPReservation{}
-			for _, roleReservations := range network.Status.RoleReservations {
+			for _, roleReservations := range network.Spec.RoleReservations {
 				reservationList = append(reservationList, roleReservations.Reservations...)
 			}
 
@@ -485,7 +449,7 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 					IPnet:           *cidr,
 					RangeStart:      start,
 					RangeEnd:        end,
-					RoleReservelist: network.Status.RoleReservations[instance.Spec.RoleName].Reservations,
+					RoleReservelist: network.Spec.RoleReservations[instance.Spec.RoleName].Reservations,
 					Reservelist:     reservationList,
 					ExcludeRanges:   []string{},
 					Hostname:        hostname,
@@ -493,29 +457,39 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 					Deleted:         false,
 				})
 				if err != nil {
-					return fmt.Errorf(fmt.Sprintf("Failed to do ip reservation: %v", err))
+					cond.Message = fmt.Sprintf("Failed to do ip reservation: %s", hostname)
+					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonIPReservation)
+					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+					err = common.WrapErrorForObject(cond.Message, instance, err)
+
+					return ctrl.Result{}, err
 				}
 
 				reservationIP = ip.String()
 
 				// record the reservation on the OpenStackNet
-				network.Status.RoleReservations[instance.Spec.RoleName] = ospdirectorv1beta1.OpenStackNetRoleStatus{
+				network.Spec.RoleReservations[instance.Spec.RoleName] = ospdirectorv1beta1.OpenStackNetRoleStatus{
 					AddToPredictableIPs: instance.Spec.AddToPredictableIPs,
 					Reservations:        reservation,
 				}
 
-				r.Log.Info(fmt.Sprintf("Created new reservation for host %s in network %s with IP %s", hostname, netName, reservationIP))
-
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Created new reservation for host %s in network %s with IP %s", hostname, netName, reservationIP),
+					instance,
+				)
 			}
 
 			// add netName -> reservationIP to hostIPs map
 			hostNetworkIPs[netName] = reservationIP
 
-			err = r.Client.Status().Update(context.TODO(), network)
+			// update status of OSNet
+			// TODO: just patch?
+			err = r.Client.Update(context.TODO(), network)
 			if err != nil {
-				return fmt.Errorf(fmt.Sprintf("Failed to update OpenStackNet status: %v", err))
+				r.Log.Error(err, fmt.Sprintf("Failed to update OpenStackNet %s", network.Name))
+				return ctrl.Result{}, err
 			}
-
 		}
 
 		// set/update ipset host status
@@ -524,7 +498,11 @@ func (r *OpenStackIPSetReconciler) addIP(instance *ospdirectorv1beta1.OpenStackI
 		}
 	}
 
-	return nil
+	cond.Message = fmt.Sprintf("Created new reservations for %s", newHosts)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonIPReservation)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeConfigured)
+
+	return ctrl.Result{}, nil
 }
 
 func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1beta1.OpenStackIPSet) error {
@@ -549,28 +527,42 @@ func (r *OpenStackIPSetReconciler) cleanupOSNetStatus(instance *ospdirectorv1bet
 		}
 
 		// delete all reservation entries from RoleName
-		delete(network.Status.RoleReservations, instance.Spec.RoleName)
+		delete(network.Spec.RoleReservations, instance.Spec.RoleName)
 
 		// update status of OSNet
-		err = r.Client.Status().Update(context.TODO(), network)
+		// TODO: just patch?
+		err = r.Client.Update(context.TODO(), network)
 		if err != nil {
-			return fmt.Errorf(fmt.Sprintf("Failed to update OpenStackNet status: %v", err))
+			return fmt.Errorf(fmt.Sprintf("Failed to update OpenStackNet spec: %v", err))
 		}
 	}
 
 	return nil
 }
 
-func (r *OpenStackIPSetReconciler) getClusterServiceEndpoint(namespace string, labelSelector map[string]string) (string, error) {
+//
+// Verify if all required networks for the OSIPset exist
+//
+func (r *OpenStackIPSetReconciler) verifyNetworksExist(
+	instance *ospdirectorv1beta1.OpenStackIPSet,
+	cond *ospdirectorv1beta1.Condition,
+) (ctrl.Result, error) {
+	for _, net := range instance.Spec.Networks {
+		osNet := &ospdirectorv1beta1.OpenStackNet{}
+		osNetName := strings.ToLower(strings.Replace(net, "_", "", -1))
 
-	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
-	if err != nil {
-		return "", err
-	}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: osNetName, Namespace: instance.Namespace}, osNet)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				cond.Message = fmt.Sprintf("Underlying OSNet for network %s requested in IPSet is missing", net)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetNotFound)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeWaiting)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
 
-	// for now assume there is always only one
-	if len(serviceList.Items) > 0 {
-		return serviceList.Items[0].Spec.ClusterIP, nil
+				return ctrl.Result{RequeueAfter: 20 * time.Second}, err
+			}
+			return ctrl.Result{}, err
+		}
 	}
-	return "", fmt.Errorf("failed to get Cluster ServiceEndpoint")
+	return ctrl.Result{}, nil
 }

@@ -78,6 +78,36 @@ spec:
           status:
             description: OpenStackIPSetStatus set of hosts with IP information
             properties:
+              conditions:
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               hosts:
                 additionalProperties:
                   description: OpenStackIPHostsStatus per host IP set

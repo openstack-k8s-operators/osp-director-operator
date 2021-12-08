@@ -13,14 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package openstackipset
+package openstackconfiggenerator
 
 import (
 	"context"
 	"fmt"
 	"net"
 
-	"strconv"
 	"strings"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -116,18 +115,48 @@ type networkType struct {
 // CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
 func CreateConfigMapParams(
 	r common.ReconcilerCommon,
-	instance *ospdirectorv1beta1.OpenStackIPSet,
-	osNetList *ospdirectorv1beta1.OpenStackNetList,
-	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	cond *ospdirectorv1beta1.Condition,
 ) (map[string]interface{}, map[string]*RoleType, error) {
 
 	templateParameters := make(map[string]interface{})
 	rolesMap := map[string]*RoleType{}
 
-	// DeployedServerPortMap:
-	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
-	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
-	// https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
+	//
+	// get list of all osNets
+	//
+	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
+	osNetListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err := r.GetClient().List(context.TODO(), osNetList, osNetListOpts...)
+	if err != nil {
+		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSNets", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetsNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return templateParameters, rolesMap, err
+	}
+
+	//
+	// get list of all osMACs
+	//
+	osMACList := &ospdirectorv1beta1.OpenStackMACAddressList{}
+	osMACListOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.Limit(1000),
+	}
+	err = r.GetClient().List(context.TODO(), osMACList, osMACListOpts...)
+	if err != nil {
+		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSMACs", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonMACsNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return templateParameters, rolesMap, err
+	}
 
 	//
 	// get OSPVersion from ControlPlane CR
@@ -253,7 +282,7 @@ func createNetworksMap(
 			subnetDetailsV4 := netDetailsType{}
 			if s.IPv4.Cidr != "" {
 				var err error
-				ip, cidrSuffix, err := getCidrParts(s.IPv4.Cidr)
+				ip, cidrSuffix, err := common.GetCidrParts(s.IPv4.Cidr)
 				if err != nil {
 					return networksMap, networkMappingList, err
 				}
@@ -277,7 +306,7 @@ func createNetworksMap(
 			subnetDetailsV6 := netDetailsType{}
 			if s.IPv6.Cidr != "" {
 				var err error
-				ip, cidrSuffix, err := getCidrParts(s.IPv6.Cidr)
+				ip, cidrSuffix, err := common.GetCidrParts(s.IPv6.Cidr)
 				if err != nil {
 					return networksMap, networkMappingList, err
 				}
@@ -324,7 +353,7 @@ func createNetworksMap(
 //
 func createRolesMap(
 	r common.ReconcilerCommon,
-	instance *ospdirectorv1beta1.OpenStackIPSet,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	osNetList *ospdirectorv1beta1.OpenStackNetList,
 	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
 	networksMap map[string]*networkType,
@@ -333,7 +362,7 @@ func createRolesMap(
 ) error {
 
 	for _, osnet := range osNetList.Items {
-		for roleName, roleReservation := range osnet.Status.RoleReservations {
+		for roleName, roleReservation := range osnet.Spec.RoleReservations {
 			//
 			// check if role is VM
 			//
@@ -364,7 +393,7 @@ func createRolesMap(
 			//
 			// add network details to role
 			//
-			netAddr, cidrSuffix, err := getCidrParts(osnet.Spec.Cidr)
+			netAddr, cidrSuffix, err := common.GetCidrParts(osnet.Spec.Cidr)
 			if err != nil {
 				return err
 			}
@@ -449,19 +478,6 @@ func createRolesMap(
 	}
 
 	return nil
-}
-
-//
-// getCidrParts - returns net addr and cidr suffix
-//
-func getCidrParts(cidr string) (string, int, error) {
-	cidrPieces := strings.Split(cidr, "/")
-	cidrSuffix, err := strconv.Atoi(cidrPieces[len(cidrPieces)-1])
-	if err != nil {
-		return "", cidrSuffix, err
-	}
-
-	return cidrPieces[0], cidrSuffix, nil
 }
 
 //

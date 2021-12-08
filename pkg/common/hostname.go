@@ -96,36 +96,3 @@ func CreateOrGetHostname(hostStore HostnameStore, host *Hostname) error {
 
 	return nil
 }
-
-//
-// use HostnameList/HostnamePair to generate sorted HostnameList
-//
-
-// HostnamePair -
-type HostnamePair struct {
-	Hostname string
-	HostRef  string
-}
-
-// HostnameList -
-type HostnameList []HostnamePair
-
-func (p HostnameList) Len() int           { return len(p) }
-func (p HostnameList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p HostnameList) Less(i, j int) bool { return p[i].Hostname < p[j].Hostname }
-
-// SortMapByValue -
-func SortMapByValue(inMap map[string]string) HostnameList {
-
-	sortedHostnames := make(HostnameList, len(inMap))
-
-	i := 0
-	for k, v := range inMap {
-		sortedHostnames[i] = HostnamePair{k, v}
-		i++
-	}
-
-	sort.Sort(sortedHostnames)
-
-	return sortedHostnames
-}
