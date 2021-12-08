@@ -1,0 +1,54 @@
+name: Release OSP Director Operator
+
+on:
+  release:
+    types:
+      - released
+      - prereleased
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Tag osp-director-operator image
+      uses: tinact/docker.image-retag@1.0.2
+      with:
+        image_name: openstack-k8s-operators/osp-director-operator
+        image_old_tag: ${{ github.sha }}
+        image_new_tag: ${{ github.event.release.tag_name }}
+        registry: quay.io
+        registry_username: ${{ secrets.QUAY_USERNAME }}
+        registry_password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Tag rhel-downloader image
+      uses: tinact/docker.image-retag@1.0.2
+      with:
+        image_name: openstack-k8s-operators/rhel-downloader
+        image_old_tag: ${{ github.sha }}
+        image_new_tag: ${{ github.event.release.tag_name }}
+        registry: quay.io
+        registry_username: ${{ secrets.QUAY_USERNAME }}
+        registry_password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Tag provision-ip-discovery-agent image
+      uses: tinact/docker.image-retag@1.0.2
+      with:
+        image_name: openstack-k8s-operators/provision-ip-discovery-agent
+        image_old_tag: ${{ github.sha }}
+        image_new_tag: ${{ github.event.release.tag_name }}
+        registry: quay.io
+        registry_username: ${{ secrets.QUAY_USERNAME }}
+        registry_password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Tag osp-director-operator-bundle image
+      uses: tinact/docker.image-retag@1.0.2
+      with:
+        image_name: openstack-k8s-operators/osp-director-operator-bundle
+        image_old_tag: ${{ github.sha }}
+        image_new_tag: ${{ github.event.release.tag_name }}
+        registry: quay.io
+        registry_username: ${{ secrets.QUAY_USERNAME }}
+        registry_password: ${{ secrets.QUAY_PASSWORD }}
