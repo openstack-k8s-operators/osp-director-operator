@@ -127,6 +127,9 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 	}(cond)
@@ -265,7 +268,6 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
 			cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworkAttachments to be configured", instance.Name)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
-			common.LogForObject(r, cond.Message, instance)
 
 			return ctrlResult, nil
 		}
@@ -304,7 +306,6 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
 				cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworks to be configured", instance.Name)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
-				common.LogForObject(r, cond.Message, instance)
 
 				return ctrlResult, nil
 			}
@@ -388,11 +389,9 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 	if op != controllerutil.OperationResultNone {
 		cond.Message = fmt.Sprintf("OpenStackNetworkAttachment %s is %s", attachConfig.Name, string(op))
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
-	} else {
-		cond.Message = fmt.Sprintf("OpenStackNetworkAttachment %s configured targeted node(s)", attachConfig.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
+
+		common.LogForObject(r, cond.Message, attachConfig)
 	}
-	common.LogForObject(r, cond.Message, attachConfig)
 
 	return attachConfig, nil
 }
@@ -575,7 +574,6 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 
 	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigState(cond.Type)
 	instance.Status.ProvisioningStatus.Reason = cond.Message
-	common.LogForObject(r, cond.Message, instance)
 
 	return ctrlResult, nil
 }

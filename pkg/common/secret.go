@@ -249,6 +249,9 @@ func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVar
 			hash, op, err = createOrUpdateSecret(r, obj, s)
 		} else {
 			hash, err = createOrGetCustomSecret(r, obj, s)
+			// set op to OperationResultNone because createOrGetCustomSecret does not return an op
+			// and it will add log entries bellow with none operation
+			op = controllerutil.OperationResult(controllerutil.OperationResultNone)
 		}
 		if err != nil {
 			return err
