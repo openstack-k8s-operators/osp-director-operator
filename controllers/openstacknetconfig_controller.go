@@ -223,6 +223,18 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
+	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if overrideReconcile {
+		r.Log.Info(fmt.Sprintf("OpenStackNetConfig %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
+	}
+
 	//
 	// 1) create all OpenStackNetworkAttachments
 	//

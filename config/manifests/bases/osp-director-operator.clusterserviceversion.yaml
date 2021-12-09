@@ -27,6 +27,18 @@ spec:
       kind: ProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackBackupRequest is the Schema for the openstackbackuprequests
+        API
+      displayName: OpenStack Backup Request
+      kind: OpenStackBackupRequest
+      name: openstackbackuprequests.osp-director.openstack.org
+      version: v1beta1
+    - description: OpenStackBackup is used to backup OpenShift resources representing
+        an OSP overcloud
+      displayName: OpenStack Backup
+      kind: OpenStackBackup
+      name: openstackbackups.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackBaremetalSet represent a set of baremetal hosts for a
         specific role within the Overcloud deployment
       displayName: OpenStack BaremetalSet

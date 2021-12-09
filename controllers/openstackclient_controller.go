@@ -93,6 +93,18 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, true)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if overrideReconcile {
+		r.Log.Info(fmt.Sprintf("OpenStackClient %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
+	}
+
 	envVars := make(map[string]common.EnvSetter)
 
 	// check for required secrets

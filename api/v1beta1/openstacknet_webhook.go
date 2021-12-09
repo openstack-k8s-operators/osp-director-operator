@@ -71,7 +71,7 @@ func (r *OpenStackNet) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknet,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update,versions=v1beta1,name=vopenstacknet.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknet,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknets,verbs=create;update;delete,versions=v1beta1,name=vopenstacknet.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackNet{}
 
@@ -79,7 +79,7 @@ var _ webhook.Validator = &OpenStackNet{}
 func (r *OpenStackNet) ValidateCreate() error {
 	openstacknetlog.Info("validate create", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -93,5 +93,5 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackNet) ValidateDelete() error {
 	openstacknetlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }

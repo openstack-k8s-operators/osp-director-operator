@@ -1,0 +1,6 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprequest-sample
+spec:
+  mode: save

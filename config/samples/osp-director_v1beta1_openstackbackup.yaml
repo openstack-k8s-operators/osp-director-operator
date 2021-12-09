@@ -1,0 +1,8 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackup
+metadata:
+  name: openstackbackup-sample
+spec:
+  crs: {}
+  configMaps: {}
+  secrets: {}

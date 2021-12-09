@@ -163,6 +163,18 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetProvisioned)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if overrideReconcile {
+		r.Log.Info(fmt.Sprintf("OpenStackVMSet %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
+	}
+
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
 	err = r.generateNamespaceFencingData(instance)
 	if err != nil {

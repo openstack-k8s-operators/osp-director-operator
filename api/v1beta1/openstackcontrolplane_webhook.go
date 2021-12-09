@@ -61,13 +61,17 @@ func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager, defaul
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplane.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplane.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &OpenStackControlPlane{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateCreate() error {
 	controlplanelog.Info("validate create", "name", r.Name)
+
+	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+		return err
+	}
 
 	controlPlaneList := &OpenStackControlPlaneList{}
 
@@ -109,7 +113,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackControlPlane) ValidateDelete() error {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplane.kb.io,admissionReviewVersions={v1,v1beta1}

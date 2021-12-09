@@ -237,10 +237,64 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackbackuprequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackuprequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackuprequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackups/status
+  verbs:
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackbaremetalsets
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -273,6 +327,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -351,6 +406,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -411,6 +467,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -443,6 +500,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -469,6 +527,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -495,6 +554,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -527,6 +587,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -549,10 +610,18 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackplaybookgenerators
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackprovisionservers
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -585,6 +654,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -654,6 +724,19 @@ rules:
   - cdi.kubevirt.io
   resources:
   - datavolumes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
   verbs:
   - create
   - delete

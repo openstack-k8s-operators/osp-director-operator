@@ -1,0 +1,24 @@
+# permissions for end users to edit openstackbackups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackbackup-editor-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackbackups/status
+  verbs:
+  - get

@@ -192,6 +192,18 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, nil
 	}
 
+	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.CurrentState == ospdirectorv1beta1.NetAttachConfigured)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if overrideReconcile {
+		r.Log.Info(fmt.Sprintf("OpenStackNetAttachment %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
+	}
+
 	// TODO: mschuppert not tested yet sriov with new CRDs
 	if instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.Port != "" {
 		//
