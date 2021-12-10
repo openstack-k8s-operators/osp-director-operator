@@ -31,7 +31,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	kubevirt.io/client-go v0.34.2
-	kubevirt.io/containerized-data-importer v1.23.5
+	kubevirt.io/containerized-data-importer v1.39.0
 	sigs.k8s.io/controller-runtime v0.9.7
 	sigs.k8s.io/yaml v1.2.0
 )
@@ -51,6 +51,9 @@ replace (
 
 	// CDI
 	github.com/operator-framework/operator-lifecycle-manager => github.com/operator-framework/operator-lifecycle-manager v0.0.0-20190128024246-5eb7ae5bdb7a
+
+	// CDI. Bump to avoid CVE with v0.5.7
+	github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.10
 
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
