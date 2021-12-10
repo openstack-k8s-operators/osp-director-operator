@@ -33,8 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/prometheus/common/log"
-
 	//cni "github.com/containernetworking/cni/pkg/types"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
@@ -115,7 +113,7 @@ func main() {
 	if strings.Contains(namespace, ",") {
 		options.Namespace = ""
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(namespace, ","))
-		log.Info(fmt.Sprintf("Namespaces added to the cache: %s", namespace))
+		setupLog.Info(fmt.Sprintf("Namespaces added to the cache: %s", namespace))
 	} else {
 		options.Namespace = namespace
 	}
@@ -128,12 +126,12 @@ func main() {
 
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "")
+		setupLog.Error(err, "")
 		os.Exit(1)
 	}
 	kclient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Error(err, "")
+		setupLog.Error(err, "")
 		os.Exit(1)
 	}
 

@@ -19,7 +19,6 @@ require (
 	github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668
 	github.com/openshift/sriov-network-operator v0.0.0-20201204053545-49045c36efb9
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/common v0.26.0
 	github.com/spf13/cobra v1.1.3
 	github.com/tidwall/gjson v1.9.3
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
