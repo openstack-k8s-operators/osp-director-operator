@@ -10,7 +10,7 @@ require (
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
 	github.com/metal3-io/baremetal-operator v0.0.0-20201116105209-c72e2e0d8803
 	github.com/nmstate/kubernetes-nmstate v0.33.0
@@ -37,6 +37,10 @@ require (
 )
 
 replace (
+	// required by Microsoft/hcsshim, containers/storage, sriov-network-operator
+	// Not used within this Operator.
+	// Bump to avoid CVE detection with v1.5.4. https://bugzilla.redhat.com/show_bug.cgi?id=1899487, https://bugzilla.redhat.com/show_bug.cgi?id=1982681
+	github.com/containerd/containerd => github.com/containerd/containerd v1.5.4
 	// dependabot fixes
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
@@ -69,6 +73,11 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.21.4
 	k8s.io/kubectl => k8s.io/kubectl v0.21.4
 	k8s.io/kubelet => k8s.io/kubelet v0.21.4
+
+	// required by kubernetes-csi/external-snapshotter, kubevirt.io/client-go. Bump to avoid CVE detection with v1.14.0: https://bugzilla.redhat.com/show_bug.cgi?id=1757701
+	// Not used within this Operator.
+	k8s.io/kubernetes => k8s.io/kubernetes v1.14.8
+
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.21.4
 	k8s.io/metrics => k8s.io/metrics v0.21.4
 	k8s.io/node-api => k8s.io/node-api v0.21.4
@@ -78,4 +87,5 @@ replace (
 
 	// pinned because no tag supports 1.18 yet
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
+
 )
