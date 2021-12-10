@@ -44,6 +44,10 @@ replace (
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
 
+	// required by client-go, prometheus-operator..
+	// Bump to avoid CVE detection with v1.1.22. https://bugzilla.redhat.com/show_bug.cgi?id=1786761
+	github.com/miekg/dns => github.com/miekg/dns v1.1.43
+
 	// controller runtime
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200331152225-585af27e34fd // release-4.5
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200326155132-2a6cd50aedd0 // release-4.5
