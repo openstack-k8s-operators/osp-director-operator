@@ -37,7 +37,7 @@ jobs:
       uses: tj-actions/branch-names@v5
 
     - name: Set latest tag for non master branch
-      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
@@ -71,7 +71,7 @@ jobs:
       uses: tj-actions/branch-names@v5
 
     - name: Set latest tag for non master branch
-      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
@@ -107,7 +107,7 @@ jobs:
       uses: tj-actions/branch-names@v5
 
     - name: Set latest tag for non master branch
-      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
@@ -166,7 +166,7 @@ jobs:
       uses: tj-actions/branch-names@v5
 
     - name: Set latest tag for non master branch
-      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
@@ -202,7 +202,7 @@ jobs:
       uses: tj-actions/branch-names@v5
 
     - name: Set latest tag for non master branch
-      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
