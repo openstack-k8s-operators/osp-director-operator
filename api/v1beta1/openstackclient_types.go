@@ -74,6 +74,8 @@ const (
 	OsClientCondReasonPodError ConditionReason = "PodError"
 	// OsClientCondReasonPodProvisioned - pod created
 	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientProvisioned"
+	// OsClientCondReasonPodDeleteError - pod delete error
+	OsClientCondReasonPodDeleteError ConditionReason = "PodDeleteError"
 )
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

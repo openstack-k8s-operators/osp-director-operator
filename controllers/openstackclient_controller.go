@@ -414,12 +414,12 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
-				common.LogForObject(
-					r,
-					fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower),
-					instance,
-				)
-				continue
+				cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return err
 			}
 			// Error reading the object - requeue the request.
 			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
@@ -593,10 +593,16 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 			// openstackclient pod
 			common.LogForObject(
 				r,
-				fmt.Sprintf("openstackclient pod deleted due to spec change %v", err),
+				fmt.Sprintf("OpenStackClient pod deleted due to spec change %v", err),
 				instance,
 			)
-			if err := r.Client.Delete(context.TODO(), pod); err != nil {
+			if err := r.Client.Delete(context.TODO(), pod); err != nil && !k8s_errors.IsNotFound(err) {
+
+				// Error deleting the object
+				cond.Message = fmt.Sprintf("Error deleting OpenStackClient pod %s", pod.Name)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodDeleteError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return err
 			}
@@ -654,9 +660,9 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
-				common.LogForObject(r, cond.Message, instance)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
 
-				continue
+				return ctrl.Result{}, err
 			}
 			// Error reading the object - requeue the request.
 			cond.Message = fmt.Sprintf("Error reading OpenStackNet with NameLower %s not found!", netNameLower)

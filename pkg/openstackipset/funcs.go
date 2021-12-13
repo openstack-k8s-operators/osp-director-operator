@@ -104,27 +104,26 @@ func CreateOrUpdateIPset(
 	})
 
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to create or update ipset %v ", ipsetDetails)
+		cond.Message = fmt.Sprintf("Failed to create or update OpenStackIPSet %v ", ipsetDetails)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonIPsetCreateOrUpdateError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, object, err)
 
 		return ipSet, ctrl.Result{}, err
 	}
 
 	if op != controllerutil.OperationResultNone {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", object.GetName(), string(op)),
-			object,
-		)
+		cond.Message = fmt.Sprintf("OpenStackIPSet for %s successfully reconciled - operation: %s", object.GetName(), string(op))
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonIPsetCreateOrUpdateError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
+		common.LogForObject(r, cond.Message, object)
 	}
 
 	if len(ipSet.Status.HostIPs) < ipsetDetails.HostCount {
 		cond.Message = fmt.Sprintf("OpenStackIPSet has not yet reached the required count %d", ipsetDetails.HostCount)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonIPsetWaitCount)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.VMSetCondTypeWaiting)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
 		return ipSet, ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}

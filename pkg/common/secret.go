@@ -323,7 +323,8 @@ func GetDataFromSecret(
 	}
 
 	if key != "" {
-		if val, ok := secret.Data[key]; !ok {
+		val, ok := secret.Data[key]
+		if !ok {
 			cond.Message = fmt.Sprintf("%s not found in secret %s",
 				key,
 				secretName)
@@ -331,9 +332,8 @@ func GetDataFromSecret(
 			cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionErrorType)
 
 			return data, ctrl.Result{}, fmt.Errorf(cond.Message)
-		} else {
-			data = strings.TrimSuffix(string(val), "\n")
 		}
+		data = strings.TrimSuffix(string(val), "\n")
 	}
 
 	return data, ctrl.Result{}, nil
