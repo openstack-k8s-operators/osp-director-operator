@@ -462,7 +462,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	vmSetStateCounts := map[ospdirectorv1beta1.VMSetProvisioningState]int{}
 
 	for _, vmSet := range vmSets {
-		if vmSet.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetError {
+		if vmSet.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetCondTypeError {
 			// An error overrides all aggregrate state considerations
 			ctlPlaneState = ospdirectorv1beta1.ControlPlaneError
 			reasonMsg = fmt.Sprintf("Underlying OSVMSet %s hit an error: %s", vmSet.Name, vmSet.Status.ProvisioningStatus.Reason)
@@ -474,13 +474,13 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	if ctlPlaneState == "" {
 		// No overrides were set, so calculate an appropriate aggregate status.
 		// TODO?: Currently considering states in an arbitrary order of priority here...
-		if vmSetStateCounts[ospdirectorv1beta1.VMSetProvisioning] > 0 {
+		if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioning] > 0 {
 			ctlPlaneState = ospdirectorv1beta1.ControlPlaneProvisioning
 			reasonMsg = "One or more OSVMSets are provisioning"
-		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetDeprovisioning] > 0 {
+		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeDeprovisioning] > 0 {
 			ctlPlaneState = ospdirectorv1beta1.ControlPlaneDeprovisioning
 			reasonMsg = "One or more OSVMSets are deprovisioning"
-		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetWaiting] > 0 || vmSetStateCounts[""] > 0 {
+		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeWaiting] > 0 || vmSetStateCounts[""] > 0 {
 			ctlPlaneState = ospdirectorv1beta1.ControlPlaneWaiting
 			reasonMsg = "Waiting on one or more OSVMSets to initialize or continue"
 		} else {
@@ -493,7 +493,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	newProvStatus.ClientReady = (clientPod != nil && clientPod.Status.Phase == corev1.PodRunning)
 	newProvStatus.DesiredCount = len(instance.Spec.VirtualMachineRoles)
-	newProvStatus.ReadyCount = vmSetStateCounts[ospdirectorv1beta1.VMSetProvisioned] + vmSetStateCounts[ospdirectorv1beta1.VMSetEmpty]
+	newProvStatus.ReadyCount = vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioned] + vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeEmpty]
 	newProvStatus.State = ctlPlaneState
 	newProvStatus.Reason = reasonMsg
 

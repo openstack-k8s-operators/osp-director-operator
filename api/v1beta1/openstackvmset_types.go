@@ -85,19 +85,87 @@ type OpenStackVMSetProvisioningStatus struct {
 // VMSetProvisioningState - the overall state of all VMs in this OpenStackVmSet
 type VMSetProvisioningState string
 
+// VMSetProvisioningReason - the reason of the condition for this openstack vmset
+type VMSetProvisioningReason string
+
 const (
-	// VMSetEmpty - special state for 0 requested VMs and 0 already provisioned
-	VMSetEmpty VMSetProvisioningState = "Empty"
-	// VMSetWaiting - something is causing the OpenStackVmSet to wait
-	VMSetWaiting VMSetProvisioningState = "Waiting"
-	// VMSetProvisioning - one or more VMs are provisioning
-	VMSetProvisioning VMSetProvisioningState = "Provisioning"
-	// VMSetProvisioned - the requested VM count has been satisfied
-	VMSetProvisioned VMSetProvisioningState = "Provisioned"
-	// VMSetDeprovisioning - one or more VMs are deprovisioning
-	VMSetDeprovisioning VMSetProvisioningState = "Deprovisioning"
-	// VMSetError - general catch-all for actual errors
-	VMSetError VMSetProvisioningState = "Error"
+	//
+	// condition types
+	//
+
+	// VMSetCondTypeEmpty - special state for 0 requested VMs and 0 already provisioned
+	VMSetCondTypeEmpty VMSetProvisioningState = "Empty"
+	// VMSetCondTypeWaiting - something is causing the OpenStackVmSet to wait
+	VMSetCondTypeWaiting VMSetProvisioningState = "Waiting"
+	// VMSetCondTypeProvisioning - one or more VMs are provisioning
+	VMSetCondTypeProvisioning VMSetProvisioningState = "Provisioning"
+	// VMSetCondTypeProvisioned - the requested VM count has been satisfied
+	VMSetCondTypeProvisioned VMSetProvisioningState = "Provisioned"
+	// VMSetCondTypeDeprovisioning - one or more VMs are deprovisioning
+	VMSetCondTypeDeprovisioning VMSetProvisioningState = "Deprovisioning"
+	// VMSetCondTypeError - general catch-all for actual errors
+	VMSetCondTypeError VMSetProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// VMSetCondReasonNamespaceFencingDataError - error creating the namespace fencing data
+	VMSetCondReasonNamespaceFencingDataError VMSetProvisioningReason = "NamespaceFencingDataError"
+	// VMSetCondReasonKubevirtFencingServiceAccountError - error creating/reading the KubevirtFencingServiceAccount secret
+	VMSetCondReasonKubevirtFencingServiceAccountError VMSetProvisioningReason = "KubevirtFencingServiceAccountError"
+	// VMSetCondReasonKubeConfigError - error getting the KubeConfig used by the operator
+	VMSetCondReasonKubeConfigError VMSetProvisioningReason = "KubeConfigError"
+	// VMSetCondReasonCloudInitSecretError - error creating the CloudInitSecret
+	VMSetCondReasonCloudInitSecretError VMSetProvisioningReason = "CloudInitSecretError"
+	// VMSetCondReasonDeploymentSecretMissing - deployment secret does not exist
+	VMSetCondReasonDeploymentSecretMissing VMSetProvisioningReason = "DeploymentSecretMissing"
+	// VMSetCondReasonDeploymentSecretError - deployment secret error
+	VMSetCondReasonDeploymentSecretError VMSetProvisioningReason = "DeploymentSecretError"
+	// VMSetCondReasonPasswordSecretMissing - password secret does not exist
+	VMSetCondReasonPasswordSecretMissing VMSetProvisioningReason = "PasswordSecretMissing"
+	// VMSetCondReasonPasswordSecretError - password secret error
+	VMSetCondReasonPasswordSecretError VMSetProvisioningReason = "PasswordSecretError"
+	// VMSetCondReasonOSNetNotFound - openstack network not found
+	VMSetCondReasonOSNetNotFound VMSetProvisioningReason = "OSNetNotFound"
+	// VMSetCondReasonOSNetError - openstack network error
+	VMSetCondReasonOSNetError VMSetProvisioningReason = "OSNetError"
+	// VMSetCondReasonControllerReferenceError - error set controller reference on object
+	VMSetCondReasonControllerReferenceError VMSetProvisioningReason = "ControllerReferenceError"
+
+	// VMSetCondReasonNewHostnameError - error creating new hostname
+	VMSetCondReasonNewHostnameError VMSetProvisioningReason = "NewHostnameError"
+	// VMSetCondReasonCRStatusUpdateError - error updating CR status
+	VMSetCondReasonCRStatusUpdateError VMSetProvisioningReason = "CRStatusUpdateError"
+
+	// VMSetCondReasonVirtualMachineGetError - failed to get virtual machine
+	VMSetCondReasonVirtualMachineGetError VMSetProvisioningReason = "VirtualMachineGetError"
+	// VMSetCondReasonVirtualMachineAnnotationMissmatch - Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down
+	VMSetCondReasonVirtualMachineAnnotationMissmatch VMSetProvisioningReason = "VirtualMachineAnnotationMissmatch"
+	// VMSetCondReasonVirtualMachineNetworkDataError - Error creating VM NetworkData
+	VMSetCondReasonVirtualMachineNetworkDataError VMSetProvisioningReason = "VMSetCondReasonVirtualMachineNetworkDataError"
+	// VMSetCondReasonVirtualMachineProvisioning - virtual machine provisioning in progress
+	VMSetCondReasonVirtualMachineProvisioning VMSetProvisioningReason = "VirtualMachineProvisioning"
+	// VMSetCondReasonVirtualMachineDeprovisioning - virtual machine deprovisioning in progress
+	VMSetCondReasonVirtualMachineDeprovisioning VMSetProvisioningReason = "VirtualMachineDeprovisioning"
+	// VMSetCondReasonVirtualMachineProvisioned - virtual machines provisioned
+	VMSetCondReasonVirtualMachineProvisioned VMSetProvisioningReason = "VirtualMachineProvisioed"
+	// VMSetCondReasonVirtualMachineCountZero - no virtual machines requested
+	VMSetCondReasonVirtualMachineCountZero VMSetProvisioningReason = "VirtualMachineCountZero"
+
+	// VMSetCondReasonIPsetCreateOrUpdateError - create or update ipset error
+	VMSetCondReasonIPsetCreateOrUpdateError VMSetProvisioningReason = "CreateOrUpdateIPsetError"
+	// VMSetCondReasonIPsetWaitCount - IPSet has not yet reached the required count
+	VMSetCondReasonIPsetWaitCount VMSetProvisioningReason = "CreateOrUpdateIPsetError"
+
+	// VMSetCondReasonPersitentVolumeClaimNotFound - Persitent Volume Claim Not Found
+	VMSetCondReasonPersitentVolumeClaimNotFound VMSetProvisioningReason = "PersitentVolumeClaimNotFound"
+	// VMSetCondReasonPersitentVolumeClaimError - Persitent Volume Claim error
+	VMSetCondReasonPersitentVolumeClaimError VMSetProvisioningReason = "PersitentVolumeClaimError"
+	// VMSetCondReasonPersitentVolumeClaimCreating - Persitent Volume Claim create in progress
+	VMSetCondReasonPersitentVolumeClaimCreating VMSetProvisioningReason = "PersitentVolumeClaimCreating"
+	// VMSetCondReasonBaseImageNotReady - VM base image not ready
+	VMSetCondReasonBaseImageNotReady VMSetProvisioningReason = "BaseImageNotReady"
 )
 
 // Host -
