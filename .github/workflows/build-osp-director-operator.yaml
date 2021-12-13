@@ -3,7 +3,7 @@ name: OSP Director Operator image builder
 on:
   push:
     branches:
-      - master
+      - '*'
     paths-ignore:
       - .gitignore
       - .pull_request_pipeline
@@ -19,6 +19,11 @@ on:
       - docs/
       - tests/
 
+env:
+  imageregistry: 'quay.io'
+  imagenamespace: 'openstack-k8s-operators'
+  latesttag: latest
+
 jobs:
   build-osp-director-operator:
     name: Build osp-director-operator image using buildah
@@ -27,21 +32,30 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Get branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set latest tag for non master branch
+      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      run: |
+        echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
+
     - name: Buildah Action
       id: build-osp-director-operator
       uses: redhat-actions/buildah-build@v2
       with:
         image: osp-director-operator
-        tags: latest ${{ github.sha }}
+        tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./Dockerfile
 
-    - name: Push osp-director-operator To Quay
+    - name: Push osp-director-operator To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-operator.outputs.image }}
         tags: ${{ steps.build-osp-director-operator.outputs.tags }}
-        registry: quay.io/openstack-k8s-operators
+        registry: ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
@@ -52,23 +66,32 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Get branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set latest tag for non master branch
+      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      run: |
+        echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
+
     - name: Buildah Action
       id: build-osp-director-downloader
       uses: redhat-actions/buildah-build@v2
       with:
         image: rhel-downloader
-        tags: latest ${{ github.sha }}
+        tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./containers/image_downloader/Dockerfile
         build-args: |
           REMOTE_SOURCE=containers/image_downloader
 
-    - name: Push rhel-downloader To Quay
+    - name: Push rhel-downloader To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-downloader.outputs.image }}
         tags: ${{ steps.build-osp-director-downloader.outputs.tags }}
-        registry: quay.io/openstack-k8s-operators
+        registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
@@ -79,21 +102,30 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Get branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set latest tag for non master branch
+      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      run: |
+        echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
+
     - name: Buildah Action
       id: build-osp-director-provisioner
       uses: redhat-actions/buildah-build@v2
       with:
         image: provision-ip-discovery-agent
-        tags: latest ${{ github.sha }}
+        tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./Dockerfile.provision-ip-discovery-agent
 
-    - name: Push provision-ip-discovery-agent To Quay
+    - name: Push provision-ip-discovery-agent To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-provisioner.outputs.image }}
         tags: ${{ steps.build-osp-director-provisioner.outputs.tags }}
-        registry: quay.io/openstack-k8s-operators
+        registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
@@ -114,7 +146,7 @@ jobs:
     - name: Log in to Red Hat Registry
       uses: redhat-actions/podman-login@v1
       with:
-        registry: quay.io
+        registry: ${{ env.imageregistry }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
@@ -125,24 +157,85 @@ jobs:
         "./create_bundle.sh"
         popd
       env:
-        REGISTRY: quay.io/openstack-k8s-operators
+        REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
         BASE_IMAGE: osp-director-operator
+
+    - name: Get branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set latest tag for non master branch
+      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      run: |
+        echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
     - name: Build osp-director-operator-bundle using buildah
       id: build-osp-director-operator-bundle
       uses: redhat-actions/buildah-build@v2
       with:
         image: osp-director-operator-bundle
-        tags: latest ${{ github.sha }}
+        tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./bundle.Dockerfile
 
-    - name: Push osp-director-operator To Quay
+    - name: Push osp-director-operator To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-operator-bundle.outputs.image }}
         tags: ${{ steps.build-osp-director-operator-bundle.outputs.tags }}
-        registry: quay.io/openstack-k8s-operators
+        registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+  build-osp-director-operator-index:
+    needs: [ build-osp-director-operator-bundle ]
+    name: osp-director-operator-index
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout osp-director-operator repository
+      uses: actions/checkout@v2
+
+    - name: Get branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set latest tag for non master branch
+      if: "${{ steps.branch-name.outputs.current_branch != 'main' }}"
+      run: |
+        echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
+
+    - name: Install opm
+      uses: redhat-actions/openshift-tools-installer@v1
+      with:
+        opm: 'latest'
+
+    - name: Log in to Red Hat Registry
+      uses: redhat-actions/podman-login@v1
+      with:
+        registry: ${{ env.imageregistry }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Create index image
+      run: |
+        pushd "${GITHUB_WORKSPACE}"/.github/
+        chmod +x "create_opm_index.sh"
+        "./create_opm_index.sh"
+        popd
+      env:
+        REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
+        GITHUB_SHA: ${{ github.sha }}
+        BUNDLE_IMAGE: osp-director-operator-bundle
+        INDEX_IMAGE_TAG: ${{ env.latesttag }}
+        INDEX_IMAGE: osp-director-operator-index
+
+    - name: Push osp-director-operator-index To ${{ env.imageregistry }}
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: osp-director-operator-index
+        tags: ${{ env.latesttag }} ${{ github.sha }}
+        registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
