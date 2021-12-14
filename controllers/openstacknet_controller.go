@@ -229,6 +229,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				"Name":       instance.Name,
 				"BridgeName": bridgeName.String(),
 				"Vlan":       vlan,
+				"MTU":        strconv.Itoa(instance.Spec.MTU),
 			},
 		}
 
