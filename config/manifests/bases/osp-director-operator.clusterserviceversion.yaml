@@ -70,6 +70,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackDeploy is the Schema for the openstackdeploys API
+      displayName: OpenStack Deploy
+      kind: OpenStackDeploy
+      name: openstackdeploys.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
         API
       displayName: OpenStack Ephemeral Heat

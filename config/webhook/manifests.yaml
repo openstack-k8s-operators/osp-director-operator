@@ -55,6 +55,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackdeploy
+  failurePolicy: Fail
+  name: mopenstackdeploy.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackdeploys
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-osp-director-openstack-org-v1beta1-openstackephemeralheat
   failurePolicy: Fail
   name: mopenstackephemeralheat.kb.io

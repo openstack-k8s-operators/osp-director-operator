@@ -46,7 +46,7 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 		},
 		{
 			Name:      "openstackclient-scripts",
-			MountPath: "/home/cloud-admin/tripleo-deploy.sh",
+			MountPath: "/usr/local/bin/tripleo-deploy.sh",
 			SubPath:   "tripleo-deploy.sh",
 			ReadOnly:  true,
 		},

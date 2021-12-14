@@ -1,10 +1,27 @@
 #!/usr/bin/env bash
 set -eu
+umask 022
 
-mkdir -p /home/cloud-admin/tripleo-deploy/validations
+export PWD=/home/cloud-admin
+CONFIG_VERSION=${CONFIG_VERSION:?"Please set CONFIG_VERSION."}
+WORKDIR="/home/cloud-admin/work/$CONFIG_VERSION"
+mkdir -p $WORKDIR
+
+# FIXME can this be shared
+mkdir -p ~/tripleo-deploy/validations
 if [ ! -L /var/log/validations ]; then
-  sudo ln -s /home/cloud-admin/tripleo-deploy/validations /var/log/validations
+  sudo ln -s ~/tripleo-deploy/validations /var/log/validations
 fi
+
+GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
+GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
+
+export GIT_SSH_COMMAND="ssh -i $WORKDIR/git_id_rsa -l git -o StrictHostKeyChecking=no"
+echo $GIT_ID_RSA | sed -e 's|- |-\n|' | sed -e 's| -|\n-|'  > $WORKDIR/git_id_rsa
+chmod 600 $WORKDIR/git_id_rsa
+
+git config --global user.email "dev@null.io"
+git config --global user.name "OSP Director Operator"
 
 set_env() {
   echo -e "Exporting environment variables"
@@ -27,14 +44,14 @@ set_env() {
   export ANSIBLE_VARS_PLUGIN_STAGE="inventory"
   export ANSIBLE_GATHER_SUBSET="!all,min"
   export ANSIBLE_GATHERING="smart"
-  export ANSIBLE_LOG_PATH="/home/cloud-admin/ansible.log"
+  export ANSIBLE_LOG_PATH="$WORKDIR/ansible.log"
   export ANSIBLE_PRIVATE_KEY_FILE="/home/cloud-admin/.ssh/id_rsa"
   export ANSIBLE_BECOME="True"
   export ANSIBLE_LIBRARY="/usr/share/ansible/tripleo-plugins/modules:/usr/share/ansible/plugins/modules:/usr/share/ceph-ansible/library:/usr/share/ansible-modules:/usr/share/ansible/library"
   export ANSIBLE_LOOKUP_PLUGINS="/usr/share/ansible/tripleo-plugins/lookup:/usr/share/ansible/plugins/lookup:/usr/share/ceph-ansible/plugins/lookup:/usr/share/ansible/lookup_plugins"
   export ANSIBLE_CALLBACK_PLUGINS="/usr/share/ansible/tripleo-plugins/callback:/usr/share/ansible/plugins/callback:/usr/share/ceph-ansible/plugins/callback:/usr/share/ansible/callback_plugins"
   export ANSIBLE_ACTION_PLUGINS="/usr/share/ansible/tripleo-plugins/action:/usr/share/ansible/plugins/action:/usr/share/ceph-ansible/plugins/actions:/usr/share/ansible/action_plugins"
-  export ANSIBLE_FILTER_PLUGINS="/home/cloud-admin/filter:/usr/share/ansible/tripleo-plugins/filter:/usr/share/ansible/plugins/filter:/usr/share/ceph-ansible/plugins/filter:/usr/share/ansible/filter_plugins"
+  export ANSIBLE_FILTER_PLUGINS="$WORKDIR/filter:/usr/share/ansible/tripleo-plugins/filter:/usr/share/ansible/plugins/filter:/usr/share/ceph-ansible/plugins/filter:/usr/share/ansible/filter_plugins"
   export ANSIBLE_ROLES_PATH="/usr/share/ansible/tripleo-roles:/usr/share/ansible/roles:/usr/share/ceph-ansible/roles:/etc/ansible/roles:/usr/share/ansible/roles"
   export LANG="en_US.UTF-8"
   export HISTCONTROL="ignoredups"
@@ -42,53 +59,21 @@ set_env() {
 }
 
 init() {
-  if [ ! -d /home/cloud-admin/playbooks ]; then
-    git clone $GIT_URL /home/cloud-admin/playbooks
+  if [ ! -d $WORKDIR/playbooks ]; then
+    git clone $GIT_URL $WORKDIR/playbooks
   fi
-  pushd /home/cloud-admin/playbooks > /dev/null
+  pushd $WORKDIR/playbooks > /dev/null
   git fetch -af
-  # exclude any '-> HEAD'... lines if they exist in the supplied git repo
-  export LATEST_BRANCH=$(git branch --sort=-committerdate -lr | grep -v ' -> ' | head -n1 |  sed -e 's|^ *||g')
-  if [ -z "$LATEST_BRANCH" ]; then
-    echo "The Git repo is empty, try again once the OpenStackConfigGenerator finishes and pushes a commit."
-    exit 1
-  fi
-  if ! git tag | grep ^latest$ &>/dev/null; then
-    echo "Initializing 'latest' git tag with refs/remotes/$LATEST_BRANCH"
-    git tag latest refs/remotes/$LATEST_BRANCH
-    git push origin --tags
-  fi
-  popd > /dev/null
-}
-
-diff() {
-  init
-  pushd /home/cloud-admin/playbooks > /dev/null
-  # NOTE: this excludes _server_id lines which get modified each time Heat runs
-  # NOTE: we ignore the inventory.yaml as it gets randomly sorted each time
-  # NOTE: we ignore ansible.cfg which changes each time
-  git difftool -y --extcmd="diff --recursive --unified=1 --color --ignore-matching-lines='_server_id:' $@" refs/tags/latest $LATEST_BRANCH -- . ':!*inventory.yaml' ':!*ansible.cfg'
   popd > /dev/null
 }
 
 play() {
   init
   set_env
-  pushd /home/cloud-admin/playbooks > /dev/null
+  pushd $WORKDIR/playbooks > /dev/null
 
-  if [ ! -d /home/cloud-admin/playbooks/tripleo-ansible ]; then
+  if [ ! -d $WORKDIR/playbooks/tripleo-ansible ]; then
     echo "Playbooks directory don't exist! Run the following command to accept and tag the new playbooks first:"
-    echo "  $0 -a"
-    echo ""
-    echo "Then re-run '$0 -p' to run the new playbooks."
-    exit
-  fi
-
-  if ! git diff --exit-code --no-patch refs/tags/latest remotes/$LATEST_BRANCH; then
-    echo "New playbooks detected. Run the following command to view a diff of the changes:"
-    echo "  $0 -d"
-    echo ""
-    echo "To accept and retag the new playbooks run:"
     echo "  $0 -a"
     echo ""
     echo "Then re-run '$0 -p' to run the new playbooks."
@@ -101,9 +86,9 @@ play() {
   # e.g. The check fails because the lvm2 package is not installed in openstackclient container image image
   # and ansible_facts include packages from undercloud.
   ansible-playbook \
-    -i /home/cloud-admin/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
+    -i $WORKDIR/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
     --skip-tags opendev-validation \
-    /home/cloud-admin/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
+    $WORKDIR/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
 
   mkdir -p ~/.config/openstack
   sudo cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
@@ -114,10 +99,10 @@ play() {
 
 accept() {
   init
-  pushd /home/cloud-admin/playbooks > /dev/null
-  git tag -d latest
-  git push -f --delete origin refs/tags/latest
-  git tag latest refs/remotes/$LATEST_BRANCH
+  pushd $WORKDIR/playbooks > /dev/null
+  git tag -d latest || true
+  git push -f --delete origin refs/tags/latest || true
+  git tag latest remotes/origin/$CONFIG_VERSION
   git push origin --tags
 
   # checkout accepted code
@@ -131,23 +116,5 @@ accept() {
   popd > /dev/null
 }
 
-usage() { echo "Usage: $0 [-d] [-p] [-a]" 1>&2; exit 1; }
-
-[[ $# -eq 0 ]] && usage
-
-while getopts ":dpa" arg; do
-    case "${arg}" in
-        d)
-            diff
-            ;;
-        p)
-            play
-            ;;
-        a)
-            accept
-            ;;
-        *)
-            usage
-            ;;
-    esac
-done
+accept
+play

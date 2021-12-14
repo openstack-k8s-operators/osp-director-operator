@@ -158,9 +158,10 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Cl
 			return nil, err
 		}
 
+		m1 := regexp.MustCompile(`/`)
 		for _, ref := range refs {
 			if ref.Name().IsBranch() {
-				if ref.Name() == "refs/heads/master" {
+				if ref.Name() == "refs/heads/master" || ref.Name() == "HEAD" {
 					continue
 				}
 				commit, err := repo.CommitObject(ref.Hash())
@@ -198,17 +199,17 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Cl
 					//fmt.Println(buffer.String())
 					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      ref.Hash().String(),
+							Name:      m1.Split(ref.Name().String(), -1)[2],
 							Namespace: inst.Namespace,
 						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: ref.Hash().String(), Diff: buffer.String()}}
+						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String()}}
 				} else {
 					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      ref.Hash().String(),
+							Name:      m1.Split(ref.Name().String(), -1)[2],
 							Namespace: inst.Namespace,
 						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: ref.Hash().String(), Diff: ""}}
+						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: ""}}
 				}
 				configVersions[ref.Hash().String()] = configVersion
 			}

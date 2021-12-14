@@ -1,0 +1,20 @@
+# permissions for end users to view openstackdeploys.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackdeploy-viewer-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackdeploys
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackdeploys/status
+  verbs:
+  - get

@@ -25,6 +25,8 @@ spec:
           value: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader:1.0
         - name: PROVISIONING_AGENT_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner:1.0
+        - name: AGENT_IMAGE_URL_DEFAULT
+          value: quay.io/dprince/osp-director-operator-agent:0.0.1
         - name: APACHE_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhel8/httpd-24:latest
         - name: OPENSTACK_RELEASE_DEFAULT
