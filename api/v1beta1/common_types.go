@@ -37,6 +37,57 @@ const (
 	APIActionDelete APIAction = "delete"
 )
 
+// ConditionDetails used for passing condition information into generic functions
+// e.f. GetDataFromSecret
+type ConditionDetails struct {
+	ConditionNotFoundType   ConditionType
+	ConditionNotFoundReason ConditionReason
+	ConditionErrorType      ConditionType
+	ConditionErrordReason   ConditionReason
+}
+
+const (
+	//
+	// condition types
+	//
+
+	// CommonCondTypeEmpty - special state for 0 requested resources and 0 already provisioned
+	CommonCondTypeEmpty ConditionType = "Empty"
+	// CommonCondTypeWaiting - something is causing the CR to wait
+	CommonCondTypeWaiting ConditionType = "Waiting"
+	// CommonCondTypeProvisioning - one or more resoources are provisioning
+	CommonCondTypeProvisioning ConditionType = "Provisioning"
+	// CommonCondTypeProvisioned - the requested resource count has been satisfied
+	CommonCondTypeProvisioned ConditionType = "Provisioned"
+	// CommonCondTypeDeprovisioning - one or more resources are deprovisioning
+	CommonCondTypeDeprovisioning ConditionType = "Deprovisioning"
+	// CommonCondTypeError - general catch-all for actual errors
+	CommonCondTypeError ConditionType = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// CommonCondReasonDeploymentSecretMissing - deployment secret does not exist
+	CommonCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
+	// CommonCondReasonDeploymentSecretError - deployment secret error
+	CommonCondReasonDeploymentSecretError ConditionReason = "DeploymentSecretError"
+	// CommonCondReasonIdmSecretMissing - idm secret does not exist
+	CommonCondReasonIdmSecretMissing ConditionReason = "IdmSecretMissing"
+	// CommonCondReasonIdmSecretError - idm secret error
+	CommonCondReasonIdmSecretError ConditionReason = "IdmSecretError"
+	// CommonCondReasonNewHostnameError - error creating new hostname
+	CommonCondReasonNewHostnameError ConditionReason = "NewHostnameError"
+	// CommonCondReasonCRStatusUpdateError - error updating CR status
+	CommonCondReasonCRStatusUpdateError ConditionReason = "CRStatusUpdateError"
+	// CommonCondReasonOSNetNotFound - openstack network not found
+	CommonCondReasonOSNetNotFound ConditionReason = "OSNetNotFound"
+	// CommonCondReasonOSNetError - openstack network error
+	CommonCondReasonOSNetError ConditionReason = "OSNetError"
+	// CommonCondReasonControllerReferenceError - error set controller reference on object
+	CommonCondReasonControllerReferenceError ConditionReason = "ControllerReferenceError"
+)
+
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter

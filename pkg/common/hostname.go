@@ -36,7 +36,10 @@ type Hostname struct {
 }
 
 // CreateOrGetHostname -
-func CreateOrGetHostname(hostStore HostnameStore, host *Hostname) error {
+func CreateOrGetHostname(
+	hostStore HostnameStore,
+	host *Hostname,
+) error {
 	if found, ok := hostStore.GetHostnames()[host.Hostname]; ok {
 		host.Hostname = found
 		return nil

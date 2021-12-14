@@ -126,17 +126,6 @@ const (
 	VMSetCondReasonPasswordSecretMissing VMSetProvisioningReason = "PasswordSecretMissing"
 	// VMSetCondReasonPasswordSecretError - password secret error
 	VMSetCondReasonPasswordSecretError VMSetProvisioningReason = "PasswordSecretError"
-	// VMSetCondReasonOSNetNotFound - openstack network not found
-	VMSetCondReasonOSNetNotFound VMSetProvisioningReason = "OSNetNotFound"
-	// VMSetCondReasonOSNetError - openstack network error
-	VMSetCondReasonOSNetError VMSetProvisioningReason = "OSNetError"
-	// VMSetCondReasonControllerReferenceError - error set controller reference on object
-	VMSetCondReasonControllerReferenceError VMSetProvisioningReason = "ControllerReferenceError"
-
-	// VMSetCondReasonNewHostnameError - error creating new hostname
-	VMSetCondReasonNewHostnameError VMSetProvisioningReason = "NewHostnameError"
-	// VMSetCondReasonCRStatusUpdateError - error updating CR status
-	VMSetCondReasonCRStatusUpdateError VMSetProvisioningReason = "CRStatusUpdateError"
 
 	// VMSetCondReasonVirtualMachineGetError - failed to get virtual machine
 	VMSetCondReasonVirtualMachineGetError VMSetProvisioningReason = "VirtualMachineGetError"
