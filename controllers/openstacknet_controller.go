@@ -279,15 +279,16 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 		return common.WrapErrorForObject(fmt.Sprintf("failure get bridge name for OpenStackNetAttachment referenc: %s", instance.Spec.AttachConfiguration), instance, err)
 	}
 
-	//
-	// NAD static for openstackclient pods
-	//
 	templateData := map[string]string{
 		"Name":       instance.Name,
 		"BridgeName": bridgeName,
 		"Vlan":       strconv.Itoa(instance.Spec.Vlan),
+		"MTU":        strconv.Itoa(instance.Spec.MTU),
 	}
 
+	//
+	// NAD static for openstackclient pods
+	//
 	if nadStatic {
 		networkAttachmentDefinition.Name = fmt.Sprintf("%s-static", instance.Name)
 		templateData["Name"] = fmt.Sprintf("%s-static", instance.Name)

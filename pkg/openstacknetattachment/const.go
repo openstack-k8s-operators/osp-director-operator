@@ -41,8 +41,9 @@ const (
 	{
 	    "type": "bridge",
 	    "bridge": "{{ .BridgeName }}",
+	    "mtu": {{ .MTU }},
 {{- if ne .Vlan "0"}}
-            "vlan": {{ .Vlan }},
+	    "vlan": {{ .Vlan }},
 {{- end }}
 	    "ipam": {
 {{- if .Static }}
