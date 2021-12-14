@@ -141,7 +141,8 @@ jobs:
     - name: Install operator-sdk
       uses: redhat-actions/openshift-tools-installer@v1
       with:
-        operator-sdk: 'latest'
+        source: github
+        operator-sdk: '1.13.1'
 
     - name: Log in to Red Hat Registry
       uses: redhat-actions/podman-login@v1
