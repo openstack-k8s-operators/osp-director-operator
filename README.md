@@ -300,6 +300,38 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     - for each network a Network Attach Definition gets created which defines the Multus CNI plugin configuration. Specifying the vlan ID on the Network Attach Definition enables the bridge vlan-filtering.
     - for each network a dedicated interface gets attached to the virtual machine. Therefore the network template for the OSVMSet is a multi-nic network template
 
+    **NOTE**: To use Jumbo Frames for a bridge, create a configuration for the device to configure the correnct MTU:
+    ```yaml
+    apiVersion: osp-director.openstack.org/v1beta1
+    kind: OpenStackNetConfig
+    metadata:
+      name: openstacknetconfig
+    spec:
+      attachConfigurations:
+        br-osp:
+          nodeNetworkConfigurationPolicy:
+            nodeSelector:
+              node-role.kubernetes.io/worker: ""
+            desiredState:
+              interfaces:
+              - bridge:
+                  options:
+                    stp:
+                      enabled: false
+                  port:
+                  - name: enp7s0
+                description: Linux bridge with enp7s0 as a port
+                name: br-osp
+                state: up
+                type: linux-bridge
+                mtu: 9000
+              - name: enp7s0
+                description: Configuring enp7s0 on workers
+                type: ethernet
+                state: up
+                mtu: 9000
+    ```
+
 2) Create [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) which define any custom Heat environments, Heat templates and custom roles file (name must be `roles_data.yaml`) used for TripleO network configuration. Any adminstrator defined Heat environment files can be provided in the ConfigMap and will be used as a convention in later steps used to create the Heat stack for Overcloud deployment. As a convention each OSP Director Installation will use 2 ConfigMaps named `heat-env-config` and `tripleo-tarball-config` to provide this information. The `heat-env-config` configmap holds all deployment environment files where each file gets added as `-e file.yaml` to the `openstack stack create` command. A good example is:
 
     - [Tripleo Deploy custom files](https://github.com/openstack-k8s-operators/osp-director-dev-tools/tree/master/ansible/templates/osp/tripleo_deploy)
