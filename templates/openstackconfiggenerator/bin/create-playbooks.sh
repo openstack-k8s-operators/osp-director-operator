@@ -97,6 +97,9 @@ time openstack stack create --wait \
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/network-environment.yaml \
     -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
+{{- range $i, $value := .TripleoEnvironmentFiles }}
+    -e $TEMPLATES_DIR/{{ $value }} \
+{{- end }}
 {{- range $key, $value := .TripleoDeployFiles }}
     -e {{ $key }} \
 {{- end }}

@@ -89,6 +89,12 @@ spec:
                 description: Required. the name of the config map containing Heat
                   env file customizations
                 type: string
+              heatEnvs:
+                description: Optional. List of heat environment files to include from
+                  tripleo-heat-templates/environments
+                items:
+                  type: string
+                type: array
               imageURL:
                 description: Name of the image used to generate configs. If missing
                   will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT

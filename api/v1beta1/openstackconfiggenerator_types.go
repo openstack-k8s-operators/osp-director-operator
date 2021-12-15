@@ -24,6 +24,10 @@ import (
 type OpenStackConfigGeneratorSpec struct {
 	// Name of the image used to generate configs. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
 	ImageURL string `json:"imageURL,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
+	// Optional. List of heat environment files to include from tripleo-heat-templates/environments
+	HeatEnvs []string `json:"heatEnvs,omitempty"`
 	// Required. the name of the config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
 	// Optional. the name of the config map containing custom Heat template tarball which will be extracted prior to config generation
