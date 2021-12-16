@@ -76,6 +76,10 @@ const (
 	CommonCondReasonIdmSecretMissing ConditionReason = "IdmSecretMissing"
 	// CommonCondReasonIdmSecretError - idm secret error
 	CommonCondReasonIdmSecretError ConditionReason = "IdmSecretError"
+	// CommonCondReasonCAConfigMapMissing - ca config map does not exist
+	CommonCondReasonCAConfigMapMissing ConditionReason = "CAConfigMapMissing"
+	// CommonCondReasonCAConfigMapError - ca config map error
+	CommonCondReasonCAConfigMapError ConditionReason = "CAConfigMapError"
 	// CommonCondReasonNewHostnameError - error creating new hostname
 	CommonCondReasonNewHostnameError ConditionReason = "NewHostnameError"
 	// CommonCondReasonCRStatusUpdateError - error updating CR status

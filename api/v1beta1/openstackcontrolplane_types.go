@@ -85,6 +85,9 @@ type OpenStackControlPlaneSpec struct {
 
 	// Idm secret used to register openstack client in IPA
 	IdmSecret string `json:"idmSecret,omitempty"`
+
+	// Name of the config map containing custom CA certificates to trust
+	CAConfigMap string `json:"caConfigMap,omitempty"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

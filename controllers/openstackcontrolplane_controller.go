@@ -246,6 +246,25 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		r.Log.Info(fmt.Sprintf("IdmSecret %s exists", instance.Spec.IdmSecret))
 	}
 
+	if instance.Spec.CAConfigMap != "" {
+		_, _, err = common.GetConfigMapAndHashWithName(r, instance.Spec.CAConfigMap, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				err2 := fmt.Errorf("CAConfigMap %s not found but specified in CR, next reconcile in 30s", instance.Spec.CAConfigMap)
+				newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
+				newProvStatus.Reason = err2.Error()
+				_ = r.setProvisioningStatus(instance, newProvStatus)
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
+			}
+			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
+			newProvStatus.Reason = err.Error()
+			_ = r.setProvisioningStatus(instance, newProvStatus)
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("CAConfigMap %s exists", instance.Spec.CAConfigMap))
+	}
+
 	if instance.Status.VIPStatus == nil {
 		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
 	}
@@ -423,6 +442,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
 		if instance.Spec.IdmSecret != "" {
 			osc.Spec.IdmSecret = instance.Spec.IdmSecret
+		}
+		if instance.Spec.CAConfigMap != "" {
+			osc.Spec.CAConfigMap = instance.Spec.CAConfigMap
 		}
 
 		if len(instance.Spec.OpenStackClientNetworks) > 0 {
