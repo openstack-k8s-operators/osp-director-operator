@@ -144,12 +144,19 @@ jobs:
         source: github
         operator-sdk: '1.13.1'
 
-    - name: Log in to Red Hat Registry
+    - name: Log in to Quay Registry
       uses: redhat-actions/podman-login@v1
       with:
         registry: ${{ env.imageregistry }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Log in to Red Hat Registry
+      uses: redhat-actions/podman-login@v1
+      with:
+        registry: registry.redhat.io
+        username: ${{ secrets.REDHATIO_USERNAME }}
+        password: ${{ secrets.REDHATIO_PASSWORD }}
 
     - name: Create bundle image
       run: |
