@@ -152,7 +152,7 @@ func (r *OpenStackNetConfig) validateControlPlaneNetworkNames() error {
 func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error {
 	for attachRef, attachCfg := range r.Spec.AttachConfigurations {
 		// Get the current (potentially new) bridge name, if any
-		curBridge, err := nmstate.GetDesiredStatedBridgeName(attachCfg.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+		curBridge, err := nmstate.GetDesiredStateBridgeName(attachCfg.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 
 		if err != nil {
 			return err
@@ -166,7 +166,7 @@ func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error
 			return fmt.Errorf("runtime object is not an OpenStackNetConfig")
 		}
 
-		oldBridge, err := nmstate.GetDesiredStatedBridgeName(oldInstance.Spec.AttachConfigurations[attachRef].NodeNetworkConfigurationPolicy.DesiredState.Raw)
+		oldBridge, err := nmstate.GetDesiredStateBridgeName(oldInstance.Spec.AttachConfigurations[attachRef].NodeNetworkConfigurationPolicy.DesiredState.Raw)
 
 		if err != nil {
 			return err

@@ -2,13 +2,14 @@ package nmstate
 
 import (
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
+
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-// GetDesiredStatedBridgeName - Get the bridge name associated with the desiredState of the attachConfiguration
-func GetDesiredStatedBridgeName(desiredStateBytes []byte) (string, error) {
+// GetDesiredStateBridgeName - Get the name associated with the desiredState bridge interface
+func GetDesiredStateBridgeName(desiredStateBytes []byte) (string, error) {
 	bridge := ""
 
 	jsonStr, err := GetDesiredStateAsString(desiredStateBytes)
@@ -16,8 +17,11 @@ func GetDesiredStatedBridgeName(desiredStateBytes []byte) (string, error) {
 		return "", err
 	}
 
-	if gjson.Get(jsonStr, "interfaces.#.name").Exists() {
-		bridge = gjson.Get(jsonStr, "interfaces.#.name").Array()[0].String()
+	if gjson.Get(jsonStr, "interfaces.#.bridge").Exists() &&
+		gjson.Get(jsonStr, "interfaces.#.name").Exists() &&
+		len(gjson.Get(jsonStr, `interfaces.#(bridge).name`).Array()) > 0 {
+
+		bridge = gjson.Get(jsonStr, `interfaces.#(bridge).name`).Array()[0].String()
 	}
 
 	return bridge, nil
@@ -34,8 +38,8 @@ func GetCurrentCondition(conditions nmstateshared.ConditionList) *nmstateshared.
 	return nil
 }
 
-// GetDesiredStateInterfaceState - Get the state of the bridge associated interface of the attachConfiguration
-func GetDesiredStateInterfaceState(desiredStateBytes []byte) (string, error) {
+// GetDesiredStateBridgeInterfaceState - Get the state associated with the desiredState bridge interface
+func GetDesiredStateBridgeInterfaceState(desiredStateBytes []byte) (string, error) {
 	state := ""
 
 	jsonStr, err := GetDesiredStateAsString(desiredStateBytes)
@@ -43,8 +47,11 @@ func GetDesiredStateInterfaceState(desiredStateBytes []byte) (string, error) {
 		return "", err
 	}
 
-	if gjson.Get(jsonStr, "interfaces.#.state").Exists() {
-		state = gjson.Get(jsonStr, "interfaces.#.state").Array()[0].String()
+	if gjson.Get(jsonStr, "interfaces.#.bridge").Exists() &&
+		gjson.Get(jsonStr, "interfaces.#.state").Exists() &&
+		len(gjson.Get(jsonStr, `interfaces.#(bridge).state`).Array()) > 0 {
+
+		state = gjson.Get(jsonStr, `interfaces.#(bridge).state`).Array()[0].String()
 	}
 
 	return state, nil

@@ -301,7 +301,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	//
 	// get bridgeName from desiredState
 	//
-	bridgeName, err := nmstate.GetDesiredStatedBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+	bridgeName, err := nmstate.GetDesiredStateBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error get bridge name from NetworkConfigurationPolicy desired state - %s", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
@@ -422,7 +422,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		return ctrl.Result{}, err
 	}
 
-	bridgeState, err := nmstate.GetDesiredStateInterfaceState(networkConfigurationPolicy.Spec.DesiredState.Raw)
+	bridgeState, err := nmstate.GetDesiredStateBridgeInterfaceState(networkConfigurationPolicy.Spec.DesiredState.Raw)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error getting interface state for bride %s from %s networkConfigurationPolicy", instance.Status.BridgeName, networkConfigurationPolicy.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
@@ -440,10 +440,11 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 			}
 
 			//
-			// Update nncp desired state to down to unconfigure the device on the worker nodes
+			// Update nncp desired state to absent of all interfaces from the NNCP to unconfigure the device on the worker nodes
+			// https://docs.openshift.com/container-platform/4.9/networking/k8s_nmstate/k8s-nmstate-updating-node-network-config.html
 			//
 			re := regexp.MustCompile(`"state":"up"`)
-			desiredStateAbsent := re.ReplaceAllString(desiredState, `"state":"down"`)
+			desiredStateAbsent := re.ReplaceAllString(desiredState, `"state":"absent"`)
 
 			networkConfigurationPolicy.Spec.DesiredState = nmstateshared.State{
 				Raw: nmstateshared.RawState(desiredStateAbsent),
@@ -476,7 +477,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 			return ctrl.Result{}, err
 		}
 
-	} else if bridgeState == "down" && networkConfigurationPolicy.DeletionTimestamp != nil {
+	} else if bridgeState == "absent" && networkConfigurationPolicy.DeletionTimestamp != nil {
 		deletionTime := networkConfigurationPolicy.GetDeletionTimestamp().Time
 		condition := nmstate.GetCurrentCondition(networkConfigurationPolicy.Status.Conditions)
 		if condition != nil {

@@ -86,7 +86,7 @@ func (r *OpenStackNetAttachment) ValidateDelete() error {
 func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {
 
 	// Get the current (potentially new) bridge name, if any
-	curBridge, err := nmstate.GetDesiredStatedBridgeName(r.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+	curBridge, err := nmstate.GetDesiredStateBridgeName(r.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {
 		return fmt.Errorf("runtime object is not an OpenStackNetAttachment")
 	}
 
-	oldBridge, err := nmstate.GetDesiredStatedBridgeName(oldInstance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
+	oldBridge, err := nmstate.GetDesiredStateBridgeName(oldInstance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 
 	if err != nil {
 		return err
