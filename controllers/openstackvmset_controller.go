@@ -787,6 +787,16 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		},
 	}
 
+	if len(instance.Spec.BootstrapDNS) != 0 {
+		vmTemplate.Spec.DNSPolicy = corev1.DNSNone
+		vmTemplate.Spec.DNSConfig = &corev1.PodDNSConfig{
+			Nameservers: instance.Spec.BootstrapDNS,
+		}
+		if len(instance.Spec.DNSSearchDomains) != 0 {
+			vmTemplate.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+		}
+	}
+
 	// This run strategy ensures that the VM boots upon creation and reboots upon
 	// failure, but also allows us to issue manual power commands to the Kubevirt API.
 	// The default strategy, "Always", disallows the direct power command API calls
