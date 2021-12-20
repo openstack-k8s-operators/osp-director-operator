@@ -150,7 +150,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		)
 
 		instance.Status.ProvisioningStatus.Reason = cond.Message
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetProvisioningState(cond.Type)
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
@@ -907,9 +907,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	hostStatus := instance.Status.VMHosts[ctl.Hostname]
 
 	if vm.Status.Ready {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioned
+		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned)
 	} else if vm.Status.Created {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioning
+		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioning)
 	}
 
 	instance.Status.VMHosts[ctl.Hostname] = hostStatus
@@ -1536,7 +1536,7 @@ func (r *OpenStackVMSetReconciler) createVMs(
 		// Calculate provisioning status
 		readyCount := 0
 		for _, host := range instance.Status.VMHosts {
-			if host.ProvisioningState == ospdirectorv1beta1.VMSetCondTypeProvisioned {
+			if host.ProvisioningState == ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned) {
 				readyCount++
 			}
 		}

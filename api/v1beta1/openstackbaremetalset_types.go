@@ -74,29 +74,26 @@ type OpenStackBaremetalHostStatus struct {
 // OpenStackBaremetalSetProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
 // the OpenStackBaremetalSet (with an optional explanatory message)
 type OpenStackBaremetalSetProvisioningStatus struct {
-	State      BaremetalSetProvisioningState `json:"state,omitempty"`
-	Reason     string                        `json:"reason,omitempty"`
-	ReadyCount int                           `json:"readyCount,omitempty"`
+	State      ProvisioningState `json:"state,omitempty"`
+	Reason     string            `json:"reason,omitempty"`
+	ReadyCount int               `json:"readyCount,omitempty"`
 }
-
-// BaremetalSetProvisioningState - the overall state of all BaremetalHosts in this OpenStackBaremetalSet
-type BaremetalSetProvisioningState string
 
 const (
 	// BaremetalSetEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
-	BaremetalSetEmpty BaremetalSetProvisioningState = "Empty"
+	BaremetalSetEmpty ProvisioningState = "Empty"
 	// BaremetalSetWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
-	BaremetalSetWaiting BaremetalSetProvisioningState = "Waiting"
+	BaremetalSetWaiting ProvisioningState = "Waiting"
 	// BaremetalSetProvisioning - one or more BaremetalHosts are provisioning
-	BaremetalSetProvisioning BaremetalSetProvisioningState = "Provisioning"
+	BaremetalSetProvisioning ProvisioningState = "Provisioning"
 	// BaremetalSetProvisioned - the requested BaremetalHosts count has been satisfied
-	BaremetalSetProvisioned BaremetalSetProvisioningState = "Provisioned"
+	BaremetalSetProvisioned ProvisioningState = "Provisioned"
 	// BaremetalSetDeprovisioning - one or more BaremetalHosts are deprovisioning
-	BaremetalSetDeprovisioning BaremetalSetProvisioningState = "Deprovisioning"
+	BaremetalSetDeprovisioning ProvisioningState = "Deprovisioning"
 	// BaremetalSetInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
-	BaremetalSetInsufficient BaremetalSetProvisioningState = "Insufficient availability"
+	BaremetalSetInsufficient ProvisioningState = "Insufficient availability"
 	// BaremetalSetError - general catch-all for actual errors
-	BaremetalSetError BaremetalSetProvisioningState = "Error"
+	BaremetalSetError ProvisioningState = "Error"
 )
 
 // GetHostnames -

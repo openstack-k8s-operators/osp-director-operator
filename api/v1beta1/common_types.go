@@ -108,10 +108,13 @@ type Hash struct {
 	Hash string `json:"hash,omitempty"`
 }
 
+// ProvisioningState - the overall state of all VMs in this OpenStackVmSet
+type ProvisioningState string
+
 // HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {
-	Hostname          string                 `json:"hostname"`
-	ProvisioningState VMSetProvisioningState `json:"provisioningState"`
+	Hostname          string            `json:"hostname"`
+	ProvisioningState ProvisioningState `json:"provisioningState"`
 
 	// +kubebuilder:default=unassigned
 	HostRef string `json:"hostRef"`

@@ -152,7 +152,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		)
 
 		instance.Status.ProvisioningStatus.Reason = cond.Message
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ControlPlaneProvisioningState(cond.Type)
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
@@ -250,6 +250,10 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		true,
 	)
 
+	// right now there can only be one
+	hostnameValue := reflect.ValueOf(instance.GetHostnames()).MapKeys()[0]
+	hostname := hostnameValue.String()
+
 	//
 	// Create VIPs for networks where VIP parameter is true
 	//
@@ -263,7 +267,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	//   Create/Update IPSet CR for the controlplane VIPs
 	//
-	_, ctrlResult, err = openstackipset.CreateOrUpdateIPset(
+	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
 		r,
 		instance,
 		cond,
@@ -278,6 +282,18 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
+	}
+
+	//
+	// update network status
+	//
+	for _, netName := range vipNetworksList {
+		r.setNetStatus(
+			instance,
+			hostname,
+			netName,
+			ipset.Status.HostIPs[hostname].IPAddresses[netName],
+		)
 	}
 
 	//
@@ -349,7 +365,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	instance.Status.ProvisioningStatus.ClientReady = (clientPod != nil && clientPod.Status.Phase == corev1.PodRunning)
 
 	// 2) OpenStackVMSet status
-	vmSetStateCounts := map[ospdirectorv1beta1.VMSetProvisioningState]int{}
+	vmSetStateCounts := map[ospdirectorv1beta1.ProvisioningState]int{}
 	for _, vmSet := range vmSets {
 		if vmSet.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetCondTypeError {
 			// An error overrides all aggregrate state considerations
@@ -390,6 +406,10 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioned)
 		cond.Message = "All requested OSVMSets have been provisioned"
 	}
+
+	hostStatus := instance.Status.VIPStatus[hostname]
+	hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+	instance.Status.VIPStatus[hostname] = hostStatus
 
 	return ctrl.Result{}, nil
 }
@@ -463,55 +483,29 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 	return s
 }
 
-/*
-func (r *OpenStackControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
-
-	// If OpenStackControlPlane status map is nil, create it
-	if instance.Status.VIPStatus == nil {
-		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
-	}
+func (r *OpenStackControlPlaneReconciler) setNetStatus(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	hostname string,
+	netName string,
+	ipaddress string,
+) {
 
 	// Set network information status
-	if instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses == nil {
-		instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			HostRef:  strings.ToLower(instance.Name),
+	if instance.Status.VIPStatus[hostname].IPAddresses == nil {
+		instance.Status.VIPStatus[hostname] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostname,
+			HostRef:  hostname,
 			IPAddresses: map[string]string{
 				netName: ipaddress,
 			},
 		}
 	} else {
-		status := instance.Status.VIPStatus[hostnameDetails.Hostname]
-		status.HostRef = strings.ToLower(instance.Name)
+		status := instance.Status.VIPStatus[hostname]
+		status.HostRef = hostname
 		status.IPAddresses[netName] = ipaddress
-		instance.Status.VIPStatus[hostnameDetails.Hostname] = status
+		instance.Status.VIPStatus[hostname] = status
 	}
-
 }
-
-
-func (r *OpenStackControlPlaneReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, newProvStatus ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus) error {
-
-	// if the current ProvisioningStatus is different from the actual, store the update
-	// otherwise, just log the status again
-	if !reflect.DeepEqual(instance.Status.ProvisioningStatus, newProvStatus) {
-		r.Log.Info(fmt.Sprintf("%s - diff %s", instance.Status.ProvisioningStatus.Reason, diff.ObjectReflectDiff(instance.Status.ProvisioningStatus, newProvStatus)))
-		instance.Status.ProvisioningStatus = newProvStatus
-
-		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
-		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(newProvStatus.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(newProvStatus.Reason), newProvStatus.Reason)
-
-		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return err
-		}
-	} else if newProvStatus.Reason != "" {
-		r.Log.Info(newProvStatus.Reason)
-	}
-
-	return nil
-}
-*/
 
 func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
@@ -917,27 +911,6 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
 
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
-
-		/*
-			actualStatus := instance.Status
-			if !reflect.DeepEqual(currentStatus, &actualStatus) {
-				err := r.Client.Status().Update(context.TODO(), instance)
-				if err != nil {
-					r.Log.Error(err, "Failed to update CR status %v")
-					return err
-				}
-
-				common.LogForObject(
-					r,
-					fmt.Sprintf("VIP network status for Hostname: %s - %s",
-					 instance.Status.VIPStatus[hostnameDetails.Hostname].Hostname,
-					 instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses,
-					),
-
-					instance,
-				)
-			}
-		*/
 
 		//
 		// Create or update the vmSet CR object

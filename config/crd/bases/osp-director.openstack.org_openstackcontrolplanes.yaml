@@ -270,8 +270,8 @@ spec:
                   reason:
                     type: string
                   state:
-                    description: ControlPlaneProvisioningState - the overall state
-                      of this OpenStackControlPlane
+                    description: ProvisioningState - the overall state of all VMs
+                      in this OpenStackVmSet
                     type: string
                 type: object
               vipStatus:
@@ -293,8 +293,8 @@ spec:
                         type: string
                       type: object
                     provisioningState:
-                      description: VMSetProvisioningState - the overall state of all
-                        VMs in this OpenStackVmSet
+                      description: ProvisioningState - the overall state of all VMs
+                        in this OpenStackVmSet
                       type: string
                   required:
                   - annotatedForDeletion

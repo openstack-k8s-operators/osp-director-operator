@@ -430,7 +430,7 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 		}
 	}
 
-	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigState(cond.Type)
+	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 	instance.Status.ProvisioningStatus.Reason = cond.Message
 
 	return ctrlResult, nil
@@ -572,7 +572,7 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 		}
 	}
 
-	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigState(cond.Type)
+	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 	instance.Status.ProvisioningStatus.Reason = cond.Message
 
 	return ctrlResult, nil

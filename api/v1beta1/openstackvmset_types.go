@@ -77,13 +77,10 @@ type OpenStackVMSetStatus struct {
 // OpenStackVMSetProvisioningStatus represents the overall provisioning state of all VMs in
 // the OpenStackVMSet (with an optional explanatory message)
 type OpenStackVMSetProvisioningStatus struct {
-	State      VMSetProvisioningState `json:"state,omitempty"`
-	Reason     string                 `json:"reason,omitempty"`
-	ReadyCount int                    `json:"readyCount,omitempty"`
+	State      ProvisioningState `json:"state,omitempty"`
+	Reason     string            `json:"reason,omitempty"`
+	ReadyCount int               `json:"readyCount,omitempty"`
 }
-
-// VMSetProvisioningState - the overall state of all VMs in this OpenStackVmSet
-type VMSetProvisioningState string
 
 // VMSetProvisioningReason - the reason of the condition for this openstack vmset
 type VMSetProvisioningReason string
@@ -94,17 +91,17 @@ const (
 	//
 
 	// VMSetCondTypeEmpty - special state for 0 requested VMs and 0 already provisioned
-	VMSetCondTypeEmpty VMSetProvisioningState = "Empty"
+	VMSetCondTypeEmpty ProvisioningState = "Empty"
 	// VMSetCondTypeWaiting - something is causing the OpenStackVmSet to wait
-	VMSetCondTypeWaiting VMSetProvisioningState = "Waiting"
+	VMSetCondTypeWaiting ProvisioningState = "Waiting"
 	// VMSetCondTypeProvisioning - one or more VMs are provisioning
-	VMSetCondTypeProvisioning VMSetProvisioningState = "Provisioning"
+	VMSetCondTypeProvisioning ProvisioningState = "Provisioning"
 	// VMSetCondTypeProvisioned - the requested VM count has been satisfied
-	VMSetCondTypeProvisioned VMSetProvisioningState = "Provisioned"
+	VMSetCondTypeProvisioned ProvisioningState = "Provisioned"
 	// VMSetCondTypeDeprovisioning - one or more VMs are deprovisioning
-	VMSetCondTypeDeprovisioning VMSetProvisioningState = "Deprovisioning"
+	VMSetCondTypeDeprovisioning ProvisioningState = "Deprovisioning"
 	// VMSetCondTypeError - general catch-all for actual errors
-	VMSetCondTypeError VMSetProvisioningState = "Error"
+	VMSetCondTypeError ProvisioningState = "Error"
 
 	//
 	// condition reasones

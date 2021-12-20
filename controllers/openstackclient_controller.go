@@ -342,6 +342,10 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	hostStatus := instance.Status.OpenStackClientNetStatus[hostname]
+	hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+	instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
+
 	return ctrl.Result{}, nil
 }
 
