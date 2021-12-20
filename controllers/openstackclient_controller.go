@@ -336,7 +336,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance,
 		cond,
 		hostname,
-		envVars,
+		&envVars,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -397,7 +397,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	instance *ospdirectorv1beta1.OpenStackClient,
 	cond *ospdirectorv1beta1.Condition,
 	hostname string,
-	envVars map[string]common.EnvSetter,
+	envVars *map[string]common.EnvSetter,
 ) error {
 	var terminationGracePeriodSeconds int64 = 0
 
@@ -409,14 +409,14 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
 	volumes := openstackclient.GetVolumes(instance)
 
-	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
+	(*envVars)["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
 
 	if instance.Spec.CloudName != "" {
-		envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
+		(*envVars)["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}
 
 	if instance.Spec.DomainName != "" {
-		envVars["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
+		(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
 
 	}
 
@@ -464,7 +464,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	}
 	annotation := fmt.Sprintf("[%s]", annotations)
 
-	env := common.MergeEnvs([]corev1.EnvVar{}, envVars)
+	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
 
 	if instance.Spec.GitSecret != "" {
 		env = common.MergeEnvs([]corev1.EnvVar{
@@ -479,7 +479,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 					},
 				},
 			},
-		}, envVars)
+		}, *envVars)
 	}
 
 	pod := &corev1.Pod{
@@ -588,7 +588,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	pod.Spec.InitContainers = openstackclient.GetInitContainers(initContainerDetails)
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
-		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, envVars)
+		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
 
 		// labels
 		common.InitMap(&pod.Labels)
@@ -713,7 +713,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 	cond *ospdirectorv1beta1.Condition,
 	newCount int,
 ) ([]string, error) {
-	newVMs := []string{}
+	newHostnames := []string{}
 
 	//
 	//   create hostnames for the newCount
@@ -732,7 +732,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 
 		if hostnameDetails.Hostname != "" {
@@ -743,7 +743,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 					AnnotatedForDeletion: false,
 					IPAddresses:          map[string]string{},
 				}
-				newVMs = append(newVMs, hostnameDetails.Hostname)
+				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}
 
 			common.LogForObject(
@@ -758,7 +758,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 		common.LogForObject(
 			r,
 			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newVMs),
+				len(newHostnames),
 				diff.ObjectReflectDiff(currentNetStatus, instance.Status.OpenStackClientNetStatus),
 			),
 			instance,
@@ -771,11 +771,11 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 	}
 
-	return newVMs, nil
+	return newHostnames, nil
 }
 
 //

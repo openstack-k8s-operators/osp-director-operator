@@ -72,6 +72,14 @@ const (
 	CommonCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
 	// CommonCondReasonDeploymentSecretError - deployment secret error
 	CommonCondReasonDeploymentSecretError ConditionReason = "DeploymentSecretError"
+	// CommonCondReasonSecretMissing - secret does not exist
+	CommonCondReasonSecretMissing ConditionReason = "SecretMissing"
+	// CommonCondReasonSecretError - secret error
+	CommonCondReasonSecretError ConditionReason = "SecretError"
+	// CommonCondReasonConfigMapMissing - config map does not exist
+	CommonCondReasonConfigMapMissing ConditionReason = "ConfigMapMissing"
+	// CommonCondReasonConfigMapError - config map error
+	CommonCondReasonConfigMapError ConditionReason = "ConfigMapError"
 	// CommonCondReasonIdmSecretMissing - idm secret does not exist
 	CommonCondReasonIdmSecretMissing ConditionReason = "IdmSecretMissing"
 	// CommonCondReasonIdmSecretError - idm secret error

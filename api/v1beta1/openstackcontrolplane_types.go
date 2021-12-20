@@ -165,9 +165,19 @@ const (
 	//
 
 	// ControlPlaneReasonNetNotFound - osctlplane not found
-	ControlPlaneReasonNetNotFound ControlPlaneProvisioningReason = "CtlPlaneNotFound"
+	ControlPlaneReasonNetNotFound ConditionReason = "CtlPlaneNotFound"
 	// ControlPlaneReasonNotSupportedVersion - osctlplane not found
-	ControlPlaneReasonNotSupportedVersion ControlPlaneProvisioningReason = "CtlPlaneNotSupportedVersion"
+	ControlPlaneReasonNotSupportedVersion ConditionReason = "CtlPlaneNotSupportedVersion"
+	// ControlPlaneReasonTripleoPasswordsSecretError - Tripleo password secret error
+	ControlPlaneReasonTripleoPasswordsSecretError ConditionReason = "TripleoPasswordsSecretCError"
+	// ControlPlaneReasonTripleoPasswordsSecretCreateError - Tripleo password secret create error
+	ControlPlaneReasonTripleoPasswordsSecretCreateError ConditionReason = "TripleoPasswordsSecretCreateError"
+	// ControlPlaneReasonDeploymentSSHKeysSecretError - Deployment SSH Keys Secret Error
+	ControlPlaneReasonDeploymentSSHKeysSecretError ConditionReason = "DeploymentSSHKeysSecretError"
+	// ControlPlaneReasonDeploymentSSHKeysGenError - Deployment SSH Keys generation Error
+	ControlPlaneReasonDeploymentSSHKeysGenError ConditionReason = "DeploymentSSHKeysGenError"
+	// ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError - Deployment SSH Keys Secret Crate or Update Error
+	ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError ConditionReason = "DeploymentSSHKeysSecretCreateOrUpdateError"
 )
 
 // +kubebuilder:object:root=true

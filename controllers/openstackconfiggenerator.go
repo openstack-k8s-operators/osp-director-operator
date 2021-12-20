@@ -269,7 +269,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	tripleoDeployCM, err := r.createTripleoDeployCM(
 		instance,
 		cond,
-		envVars,
+		&envVars,
 		cmLabels,
 		OSPVersion,
 		&controlPlane,
@@ -765,7 +765,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
-	envVars map[string]common.EnvSetter,
+	envVars *map[string]common.EnvSetter,
 	cmLabels map[string]string,
 	ospVersion ospdirectorv1beta1.OSPVersion,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
@@ -850,7 +850,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 		},
 	}
 
-	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	err = common.EnsureConfigMaps(r, instance, cm, envVars)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)

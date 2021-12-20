@@ -110,6 +110,17 @@ const (
 	// condition reasones
 	//
 
+	// VMSetCondReasonError - error creating osvmset
+	VMSetCondReasonError ConditionReason = "OpenStackVMSetError"
+	// VMSetCondReasonInitialize - vmset initialize
+	VMSetCondReasonInitialize ConditionReason = "OpenStackVMSetInitialize"
+	// VMSetCondReasonProvisioning - vmset provisioning
+	VMSetCondReasonProvisioning ConditionReason = "OpenStackVMSetProvisioning"
+	// VMSetCondReasonDeprovisioning - vmset deprovisioning
+	VMSetCondReasonDeprovisioning ConditionReason = "OpenStackVMSetDeprovisioning"
+	// VMSetCondReasonProvisioned - vmset created
+	VMSetCondReasonProvisioned ConditionReason = "OpenStackVMSetProvisioned"
+
 	// VMSetCondReasonNamespaceFencingDataError - error creating the namespace fencing data
 	VMSetCondReasonNamespaceFencingDataError VMSetProvisioningReason = "NamespaceFencingDataError"
 	// VMSetCondReasonKubevirtFencingServiceAccountError - error creating/reading the KubevirtFencingServiceAccount secret

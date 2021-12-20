@@ -1080,7 +1080,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 	cond *ospdirectorv1beta1.Condition,
 	newCount int,
 ) ([]string, error) {
-	newVMs := []string{}
+	newHostnames := []string{}
 
 	//
 	//   create hostnames for the newCount
@@ -1099,7 +1099,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 
 		if hostnameDetails.Hostname != "" {
@@ -1110,7 +1110,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 					AnnotatedForDeletion: false,
 					IPAddresses:          map[string]string{},
 				}
-				newVMs = append(newVMs, hostnameDetails.Hostname)
+				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}
 
 			common.LogForObject(
@@ -1125,7 +1125,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 		common.LogForObject(
 			r,
 			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newVMs),
+				len(newHostnames),
 				diff.ObjectReflectDiff(currentNetStatus, instance.Status.VMHosts),
 			),
 			instance,
@@ -1138,11 +1138,11 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 	}
 
-	return newVMs, nil
+	return newHostnames, nil
 }
 
 //
