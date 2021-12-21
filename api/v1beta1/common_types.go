@@ -63,6 +63,8 @@ const (
 	CommonCondTypeDeprovisioning ConditionType = "Deprovisioning"
 	// CommonCondTypeError - general catch-all for actual errors
 	CommonCondTypeError ConditionType = "Error"
+	// CommonCondTypeCreated - general resource created
+	CommonCondTypeCreated ConditionType = "Created"
 
 	//
 	// condition reasones

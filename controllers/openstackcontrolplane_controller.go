@@ -609,11 +609,14 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(
 
 		return err
 	}
+
+	cond.Message = "OpenStackMACAddress CR successfully reconciled"
+
 	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("OpenStackMACAddress CR successfully reconciled - operation: %s", string(op))
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
 	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
 }
@@ -664,7 +667,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 
 				return err
 			}
-		} else if err != nil {
+		} else {
 			cond.Message = fmt.Sprintf("Error get TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
@@ -961,18 +964,20 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 
 			return vmSets, err
 		}
+
+		cond.Message = fmt.Sprintf("%s %s successfully reconciled", vmSet.Kind, vmSet.Name)
 		if op != controllerutil.OperationResultNone {
-			cond.Message = fmt.Sprintf("%s %s operation: %s", vmSet.Kind, vmSet.Name, string(op))
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioned)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+			cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
 
 			common.LogForObject(
 				r,
-				fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", vmSet.Name, string(op)),
+				cond.Message,
 				instance,
 			)
-
 		}
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCreated)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
+
 		vmSets = append(vmSets, vmSet)
 	}
 
@@ -1034,11 +1039,19 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 
 		return osc, err
 	}
+
+	cond.Message = fmt.Sprintf("%s %s successfully reconciled", osc.Kind, osc.Name)
 	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("%s %s operation: %s", osc.Kind, osc.Name, string(op))
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonProvisioned)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
+
+		common.LogForObject(
+			r,
+			cond.Message,
+			instance,
+		)
 	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
 
 	return osc, nil
 }

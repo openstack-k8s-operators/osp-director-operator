@@ -115,8 +115,10 @@ const (
 	VMSetCondReasonProvisioning ConditionReason = "OpenStackVMSetProvisioning"
 	// VMSetCondReasonDeprovisioning - vmset deprovisioning
 	VMSetCondReasonDeprovisioning ConditionReason = "OpenStackVMSetDeprovisioning"
-	// VMSetCondReasonProvisioned - vmset created
+	// VMSetCondReasonProvisioned - vmset provisioned
 	VMSetCondReasonProvisioned ConditionReason = "OpenStackVMSetProvisioned"
+	// VMSetCondReasonCreated - vmset created
+	VMSetCondReasonCreated ConditionReason = "OpenStackVMSetCreated"
 
 	// VMSetCondReasonNamespaceFencingDataError - error creating the namespace fencing data
 	VMSetCondReasonNamespaceFencingDataError VMSetProvisioningReason = "NamespaceFencingDataError"
