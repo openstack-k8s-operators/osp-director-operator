@@ -217,6 +217,7 @@ jobs:
     - name: Install opm
       uses: redhat-actions/openshift-tools-installer@v1
       with:
+        source: github
         opm: 'latest'
 
     - name: Log in to Red Hat Registry
