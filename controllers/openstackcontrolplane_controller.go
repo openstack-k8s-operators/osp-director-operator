@@ -170,12 +170,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	}(cond)
 
-	/*
-		// Used in comparisons below to determine whether a status update is actually needed
-		newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
-
-	*/
-
 	envVars := make(map[string]common.EnvSetter)
 
 	//

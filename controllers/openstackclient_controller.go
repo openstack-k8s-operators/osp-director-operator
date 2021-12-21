@@ -646,10 +646,14 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	}
 
 	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("%s %s created", instance.Kind, instance.Name)
+		cond.Message = fmt.Sprintf("%s %s %s", instance.Kind, instance.Name, op)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 	}
+
+	cond.Message = fmt.Sprintf("%s %s provisioned", instance.Kind, instance.Name)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
 }
@@ -669,8 +673,6 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 	for _, netNameLower := range instance.Spec.Networks {
 		timeout := 10
-
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
@@ -701,10 +703,16 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 		if _, ok := nadMap[network.Name]; !ok {
 			cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetWaiting)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
 			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		}
-
 	}
+
+	cond.Message = "All NetworkAttachmentDefinitions available"
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetAvailable)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return ctrl.Result{}, nil
 }
@@ -874,6 +882,10 @@ func (r *OpenStackClientReconciler) createPVCs(
 			instance,
 		)
 	}
+
+	cond.Message = fmt.Sprintf("All PVCs for %s %s available", instance.Kind, instance.Name)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCProvisioned)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
 }

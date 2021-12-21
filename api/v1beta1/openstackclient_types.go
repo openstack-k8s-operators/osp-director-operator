@@ -77,6 +77,8 @@ const (
 	OsClientCondReasonProvisioned ConditionReason = "OpenStackClientProvisioned"
 	// OsClientCondReasonPVCError - error creating pvc
 	OsClientCondReasonPVCError ConditionReason = "PVCError"
+	// OsClientCondReasonPVCProvisioned - pvcs provisioned
+	OsClientCondReasonPVCProvisioned ConditionReason = "PVCProvisioned"
 	// OsClientCondReasonPodError - error creating pod
 	OsClientCondReasonPodError ConditionReason = "PodError"
 	// OsClientCondReasonPodProvisioned - pod created

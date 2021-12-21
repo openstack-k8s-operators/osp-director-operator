@@ -96,6 +96,10 @@ const (
 	CommonCondReasonOSNetNotFound ConditionReason = "OSNetNotFound"
 	// CommonCondReasonOSNetError - openstack network error
 	CommonCondReasonOSNetError ConditionReason = "OSNetError"
+	// CommonCondReasonOSNetWaiting - openstack network waiting
+	CommonCondReasonOSNetWaiting ConditionReason = "OSNetWaiting"
+	// CommonCondReasonOSNetAvailable - openstack networks available
+	CommonCondReasonOSNetAvailable ConditionReason = "OSNetAvailable"
 	// CommonCondReasonControllerReferenceError - error set controller reference on object
 	CommonCondReasonControllerReferenceError ConditionReason = "ControllerReferenceError"
 )
