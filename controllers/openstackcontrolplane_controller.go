@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -45,9 +46,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// OSPVersion - global var to specify tge OSP version, defaults to OSP16.2 (train)
-var OSPVersion = ospdirectorv1beta1.TemplateVersionTrain
 
 // OpenStackControlPlaneReconciler reconciles an OpenStackControlPlane object
 type OpenStackControlPlaneReconciler struct {
@@ -106,6 +104,15 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
+	//
+	// initialize condition
+	//
+	cond := &ospdirectorv1beta1.Condition{}
+
+	if instance.Status.VIPStatus == nil {
+		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
 	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.ControlPlaneProvisioned)
 
@@ -114,12 +121,56 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	if overrideReconcile {
-		r.Log.Info(fmt.Sprintf("OpenStackControlPlane %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		err = common.WrapErrorForObject(
+			fmt.Sprintf("OpenStackControlPlane %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name),
+			instance,
+			err,
+		)
+
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
+	//
 	// Used in comparisons below to determine whether a status update is actually needed
-	newProvStatus := ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus{}
+	//
+	currentStatus := instance.Status.DeepCopy()
+	statusChanged := func() bool {
+		return !equality.Semantic.DeepEqual(
+			r.getNormalizedStatus(&instance.Status),
+			r.getNormalizedStatus(currentStatus),
+		)
+	}
+
+	defer func(cond *ospdirectorv1beta1.Condition) {
+		//
+		// Update object conditions
+		//
+		instance.Status.Conditions.UpdateCurrentCondition(
+			cond.Type,
+			cond.Reason,
+			cond.Message,
+		)
+
+		instance.Status.ProvisioningStatus.Reason = cond.Message
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
+
+		if statusChanged() {
+			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+				if err == nil {
+					err = common.WrapErrorForObject(
+						"Update Status", instance, updateErr)
+				} else {
+					common.LogErrorForObject(r, updateErr, "Update status", instance)
+				}
+			} else {
+				// log status changed messages also to operator log
+				common.LogForObject(r, cond.Message, instance)
+			}
+		}
+
+	}(cond)
+
+	envVars := make(map[string]common.EnvSetter)
 
 	//
 	// Set the OSP version, the version is usually set in the ctlplane webhook,
@@ -132,394 +183,229 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		OSPVersion = ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2)
 	}
 	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNotSupportedVersion)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return ctrl.Result{}, err
 	}
 	instance.Status.OSPVersion = OSPVersion
 
-	// Secret - containing Tripleo Passwords
-	envVars := make(map[string]common.EnvSetter)
-
-	// check if "tripleo-passwords" controlplane.TripleoPasswordSecret secret already exist
-	_, secretHash, err := common.GetSecret(r, controlplane.TripleoPasswordSecret, instance.Namespace)
-	if err != nil && k8s_errors.IsNotFound(err) {
-
-		r.Log.Info(fmt.Sprintf("Creating password secret: %s", controlplane.TripleoPasswordSecret))
-
-		pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
-
-		templateParameters := make(map[string]interface{})
-		templateParameters["TripleoPasswords"] = common.GeneratePasswords()
-		pwSecret := []common.Template{
-			{
-				Name:               controlplane.TripleoPasswordSecret,
-				Namespace:          instance.Namespace,
-				Type:               common.TemplateTypeConfig,
-				InstanceType:       instance.Kind,
-				AdditionalTemplate: map[string]string{},
-				Labels:             pwSecretLabel,
-				ConfigOptions:      templateParameters,
-			},
-		}
-
-		err = common.EnsureSecrets(r, instance, pwSecret, &envVars)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	} else if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
-		return ctrl.Result{}, fmt.Errorf("error get secret %s: %v", controlplane.TripleoPasswordSecret, err)
+	//
+	// create or get hash of "tripleo-passwords" controlplane.TripleoPasswordSecret secret
+	//
+	err = r.createOrGetTripleoPasswords(instance, cond, &envVars)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
-	envVars[controlplane.TripleoPasswordSecret] = common.EnvValue(secretHash)
 
+	//
 	// Secret - used for deployment to ssh into the overcloud nodes,
 	//          gets added to the controller VMs cloud-admin user using cloud-init
-	deploymentSecretName := strings.ToLower(controlplane.AppLabel) + "-ssh-keys"
-
-	deploymentSecret, secretHash, err := common.GetSecret(r, deploymentSecretName, instance.Namespace)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		var op controllerutil.OperationResult
-
-		r.Log.Info(fmt.Sprintf("Creating deployment ssh secret: %s", deploymentSecretName))
-		deploymentSecret, err = common.SSHKeySecret(deploymentSecretName, instance.Namespace, map[string]string{deploymentSecretName: ""})
-		if err != nil {
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			return ctrl.Result{}, err
-		}
-		secretHash, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
-		if err != nil {
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			return ctrl.Result{}, err
-		}
-		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("Secret %s successfully reconciled - operation: %s", deploymentSecret.Name, string(op)))
-		}
-	} else if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
-		return ctrl.Result{}, fmt.Errorf("error get secret %s: %v", deploymentSecretName, err)
-	}
-	envVars[deploymentSecret.Name] = common.EnvValue(secretHash)
-
-	if instance.Spec.PasswordSecret != "" {
-		// check if specified password secret exists before creating the controlplane
-		_, _, err = common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				err2 := fmt.Errorf("PasswordSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.PasswordSecret)
-				newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
-				newProvStatus.Reason = err2.Error()
-				_ = r.setProvisioningStatus(instance, newProvStatus)
-				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
-			}
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-		r.Log.Info(fmt.Sprintf("PasswordSecret %s exists", instance.Spec.PasswordSecret))
+	//
+	deploymentSecret, err := r.createOrGetDeploymentSecret(instance, cond, &envVars)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	if instance.Spec.IdmSecret != "" {
-		_, _, err = common.GetSecret(r, instance.Spec.IdmSecret, instance.Namespace)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				err2 := fmt.Errorf("IdmSecret %s not found but specified in CR, next reconcile in 30s", instance.Spec.IdmSecret)
-				newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
-				newProvStatus.Reason = err2.Error()
-				_ = r.setProvisioningStatus(instance, newProvStatus)
-				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
-			}
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-		r.Log.Info(fmt.Sprintf("IdmSecret %s exists", instance.Spec.IdmSecret))
+	//
+	// check if specified PasswordSecret secret exists
+	//
+	ctrlResult, err := r.verifySecretExist(instance, cond, instance.Spec.PasswordSecret)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
-	if instance.Spec.CAConfigMap != "" {
-		_, _, err = common.GetConfigMapAndHashWithName(r, instance.Spec.CAConfigMap, instance.Namespace)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				err2 := fmt.Errorf("CAConfigMap %s not found but specified in CR, next reconcile in 30s", instance.Spec.CAConfigMap)
-				newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
-				newProvStatus.Reason = err2.Error()
-				_ = r.setProvisioningStatus(instance, newProvStatus)
-				return ctrl.Result{RequeueAfter: 30 * time.Second}, err2
-			}
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			// Error reading the object - requeue the request.
-			return ctrl.Result{}, err
-		}
-		r.Log.Info(fmt.Sprintf("CAConfigMap %s exists", instance.Spec.CAConfigMap))
+	//
+	// check if specified IdmSecret secret exists
+	//
+	ctrlResult, err = r.verifySecretExist(instance, cond, instance.Spec.IdmSecret)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
-	if instance.Status.VIPStatus == nil {
-		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	//
+	// check if specified CAConfigMap config map exists
+	//
+	ctrlResult, err = r.verifyConfigMapExist(instance, cond, instance.Spec.CAConfigMap)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
 	// create hostnames for the overcloud VIP
 	//
-	hostnameDetails := common.Hostname{
-		Basename: controlplane.Role,
-		VIP:      true,
-	}
-	err = common.CreateOrGetHostname(instance, &hostnameDetails)
-	if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
-		return ctrl.Result{}, err
-	}
+	_, err = r.createNewHostnames(
+		instance,
+		cond,
+		controlplane.Role,
+		1-len(instance.Status.VIPStatus),
+		true,
+	)
 
-	if _, ok := instance.Status.VIPStatus[hostnameDetails.Hostname]; !ok {
-		instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			HostRef:  strings.ToLower(instance.Name),
-		}
-
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return ctrl.Result{}, err
-		}
-	}
-
-	hostnameRefs := instance.GetHostnames()
-	// get a copy of the current CR status
-	currentStatus := instance.Status.DeepCopy()
-	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
+	// right now there can only be one
+	hostnameValue := reflect.ValueOf(instance.GetHostnames()).MapKeys()[0]
+	hostname := hostnameValue.String()
 
 	//
 	// Create VIPs for networks where VIP parameter is true
 	//
 
 	// create list of networks where Spec.VIP == True
-	vipNetworksList, err := r.createVIPNetworkList(instance)
+	vipNetworksList, err := r.createVIPNetworkList(instance, cond)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	ipsetDetails := common.IPSet{
-		Networks:            vipNetworksList,
-		Role:                controlplane.Role,
-		HostCount:           controlplane.Count,
-		VIP:                 true,
-		AddToPredictableIPs: true,
-		HostNameRefs:        hostnameRefs,
-	}
-	ipset, op, err := openstackipset.OvercloudipsetCreateOrUpdate(r, instance, ipsetDetails)
-	if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
-		return ctrl.Result{}, err
-	}
-
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("IPSet for %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
-
-	if len(ipset.Status.HostIPs) < controlplane.Count {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
-		newProvStatus.Reason = fmt.Sprintf("IPSet has not yet reached the required replicas %d", controlplane.Count)
-		_ = r.setProvisioningStatus(instance, newProvStatus)
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	//
+	//   Create/Update IPSet CR for the controlplane VIPs
+	//
+	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
+		r,
+		instance,
+		cond,
+		common.IPSet{
+			Networks:            vipNetworksList,
+			Role:                controlplane.Role,
+			HostCount:           controlplane.Count,
+			VIP:                 true,
+			AddToPredictableIPs: true,
+			HostNameRefs:        instance.GetHostnames(),
+		},
+	)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
-	// update VIP network status
+	//
+	// update network status
+	//
 	for _, netName := range vipNetworksList {
-		// TODO: mschuppert, host status format now used for controlplane, openstackclient and vmset, TBD baremetalset
-		r.setNetStatus(instance, &hostnameDetails, netName, ipset.Status.HostIPs[hostnameDetails.Hostname].IPAddresses[netName])
+		r.setNetStatus(
+			instance,
+			hostname,
+			netName,
+			ipset.Status.HostIPs[hostname].IPAddresses[netName],
+		)
 	}
 
-	for _, vmRole := range instance.Spec.VirtualMachineRoles {
-		actualStatus := instance.Status
-		if !reflect.DeepEqual(currentStatus, &actualStatus) {
-			err = r.Client.Status().Update(context.TODO(), instance)
-			if err != nil {
-				r.Log.Error(err, "Failed to update CR status %v")
-				return ctrl.Result{}, err
-			}
-			r.Log.Info(fmt.Sprintf("VIP network status for Hostname: %s - %s", instance.Status.VIPStatus[hostnameDetails.Hostname].Hostname, instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses))
-		}
-
-		// Create or update the vmSet CR object
-		// TODO: mschuppert move to method like createOrUpdateOpenStackMACAddress to make reconcile easier to read
-		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
-			ObjectMeta: metav1.ObjectMeta{
-				// use the role name as the VM CR name
-				Name:      strings.ToLower(vmRole.RoleName),
-				Namespace: instance.Namespace,
-			},
-		}
-
-		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, vmSet, func() error {
-			vmSet.Spec.VMCount = vmRole.RoleCount
-			vmSet.Spec.Cores = vmRole.Cores
-			vmSet.Spec.Memory = vmRole.Memory
-			vmSet.Spec.DiskSize = vmRole.DiskSize
-			if instance.Spec.DomainName != "" {
-				vmSet.Spec.DomainName = instance.Spec.DomainName
-			}
-			vmSet.Spec.BootstrapDNS = instance.Spec.DNSServers
-			vmSet.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
-			if vmRole.StorageClass != "" {
-				vmSet.Spec.StorageClass = vmRole.StorageClass
-			}
-			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
-			vmSet.Spec.DeploymentSSHSecret = deploymentSecretName
-			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface
-			vmSet.Spec.Networks = vmRole.Networks
-			vmSet.Spec.RoleName = vmRole.RoleName
-			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
-			if instance.Spec.PasswordSecret != "" {
-				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
-			}
-
-			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-			newProvStatus.Reason = err.Error()
-			_ = r.setProvisioningStatus(instance, newProvStatus)
-			return ctrl.Result{}, err
-		}
-		if op != controllerutil.OperationResultNone {
-			r.Log.Info(fmt.Sprintf("VMSet CR %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		}
-		vmSets = append(vmSets, vmSet)
+	//
+	// Create VMSets
+	//
+	vmSets, err := r.createOrUpdateVMSets(
+		instance,
+		cond,
+		deploymentSecret,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// TODO:
 	// - check vm container status and update CR.Status.VMsReady
 	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
 
+	//
 	// Create or update the MACAddress CR object
-	err = r.createOrUpdateOpenStackMACAddress(instance, newProvStatus)
+	//
+	err = r.createOrUpdateOpenStackMACAddress(
+		instance,
+		cond,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	//
 	// Create openstack client pod
-	// TODO: mschuppert move to method like createOrUpdateOpenStackMACAddress to make reconcile easier to read
-	osc := &ospdirectorv1beta1.OpenStackClient{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "openstackclient",
-			Namespace: instance.Namespace,
-		},
-	}
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, osc, func() error {
-		osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
-		osc.Spec.DeploymentSSHSecret = deploymentSecretName
-		osc.Spec.CloudName = instance.Name
-		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
-		osc.Spec.GitSecret = instance.Spec.GitSecret
-		osc.Spec.RunUID = openstackclient.CloudAdminUID
-		osc.Spec.RunGID = openstackclient.CloudAdminGID
-		if instance.Spec.DomainName != "" {
-			osc.Spec.DomainName = instance.Spec.DomainName
-		}
-		osc.Spec.DNSServers = instance.Spec.DNSServers
-		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
-		if instance.Spec.IdmSecret != "" {
-			osc.Spec.IdmSecret = instance.Spec.IdmSecret
-		}
-		if instance.Spec.CAConfigMap != "" {
-			osc.Spec.CAConfigMap = instance.Spec.CAConfigMap
-		}
-
-		if len(instance.Spec.OpenStackClientNetworks) > 0 {
-			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks
-		}
-
-		err := controllerutil.SetControllerReference(instance, osc, r.Scheme)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	//
+	osc, err := r.createOrUpdateOpenStackClient(
+		instance,
+		cond,
+		deploymentSecret,
+	)
 	if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
 		return ctrl.Result{}, err
 	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("OpenStackClient CR successfully reconciled - operation: %s", string(op)))
-	}
 
+	//
 	// Calculate overall status
+	//
+	//var ctlPlaneState ospdirectorv1beta1.ControlPlaneProvisioningState
 
-	clientPod, err := r.Kclient.CoreV1().Pods(instance.Namespace).Get(context.TODO(), "openstackclient", metav1.GetOptions{})
+	// 1) OpenStackClient pod status
+	clientPod, err := r.Kclient.CoreV1().Pods(instance.Namespace).Get(context.TODO(), osc.Name, metav1.GetOptions{})
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			timeout := 30
+			cond.Message = fmt.Sprintf("%s pod %s not found, next reconcile in %d s", osc.Kind, osc.Name, timeout)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodMissing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
-	if err != nil && !k8s_errors.IsNotFound(err) {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
+			common.LogForObject(r, cond.Message, instance)
+
+			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
+		}
+
+		cond.Message = fmt.Sprintf("%s pod %s error", osc.Kind, osc.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return ctrl.Result{}, err
 	}
 
-	var ctlPlaneState ospdirectorv1beta1.ControlPlaneProvisioningState
-	var reasonMsg string
-	vmSetStateCounts := map[ospdirectorv1beta1.VMSetProvisioningState]int{}
+	instance.Status.ProvisioningStatus.ClientReady = (clientPod != nil && clientPod.Status.Phase == corev1.PodRunning)
 
+	// 2) OpenStackVMSet status
+	vmSetStateCounts := map[ospdirectorv1beta1.ProvisioningState]int{}
 	for _, vmSet := range vmSets {
 		if vmSet.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetCondTypeError {
 			// An error overrides all aggregrate state considerations
-			ctlPlaneState = ospdirectorv1beta1.ControlPlaneError
-			reasonMsg = fmt.Sprintf("Underlying OSVMSet %s hit an error: %s", vmSet.Name, vmSet.Status.ProvisioningStatus.Reason)
-		} else {
-			vmSetStateCounts[vmSet.Status.ProvisioningStatus.State]++
+			vmSetCondition := vmSet.Status.Conditions.GetCurrentCondition()
+			cond.Message = fmt.Sprintf("Underlying OSVMSet %s hit an error: %s", vmSet.Name, vmSet.Status.ProvisioningStatus.Reason)
+			cond.Reason = vmSetCondition.Reason
+			cond.Type = vmSetCondition.Type
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
 		}
+		vmSetStateCounts[vmSet.Status.ProvisioningStatus.State]++
 	}
 
-	if ctlPlaneState == "" {
-		// No overrides were set, so calculate an appropriate aggregate status.
-		// TODO?: Currently considering states in an arbitrary order of priority here...
-		if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioning] > 0 {
-			ctlPlaneState = ospdirectorv1beta1.ControlPlaneProvisioning
-			reasonMsg = "One or more OSVMSets are provisioning"
-		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeDeprovisioning] > 0 {
-			ctlPlaneState = ospdirectorv1beta1.ControlPlaneDeprovisioning
-			reasonMsg = "One or more OSVMSets are deprovisioning"
-		} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeWaiting] > 0 || vmSetStateCounts[""] > 0 {
-			ctlPlaneState = ospdirectorv1beta1.ControlPlaneWaiting
-			reasonMsg = "Waiting on one or more OSVMSets to initialize or continue"
-		} else {
-			// If we get here, the only states possible for the VMSets are provisioned or empty,
-			// which both count as provisioned
-			ctlPlaneState = ospdirectorv1beta1.ControlPlaneProvisioned
-			reasonMsg = "All requested OSVMSets have been provisioned"
-		}
+	instance.Status.ProvisioningStatus.DesiredCount = len(instance.Spec.VirtualMachineRoles)
+	instance.Status.ProvisioningStatus.ReadyCount =
+		vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioned] +
+			vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeEmpty]
+
+	// TODO?: Currently considering states in an arbitrary order of priority here...
+	if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioning] > 0 {
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneProvisioning)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioning)
+		cond.Message = "One or more OSVMSets are provisioning"
+	} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeDeprovisioning] > 0 {
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneDeprovisioning)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonDeprovisioning)
+		cond.Message = "One or more OSVMSets are deprovisioning"
+	} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeWaiting] > 0 || vmSetStateCounts[""] > 0 {
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneWaiting)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonInitialize)
+		cond.Message = "Waiting on one or more OSVMSets to initialize or continue"
+	} else {
+		// If we get here, the only states possible for the VMSets are provisioned or empty,
+		// which both count as provisioned
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneProvisioned)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioned)
+		cond.Message = "All requested OSVMSets have been provisioned"
 	}
 
-	newProvStatus.ClientReady = (clientPod != nil && clientPod.Status.Phase == corev1.PodRunning)
-	newProvStatus.DesiredCount = len(instance.Spec.VirtualMachineRoles)
-	newProvStatus.ReadyCount = vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioned] + vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeEmpty]
-	newProvStatus.State = ctlPlaneState
-	newProvStatus.Reason = reasonMsg
+	hostStatus := instance.Status.VIPStatus[hostname]
+	hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+	instance.Status.VIPStatus[hostname] = hostStatus
 
-	return ctrl.Result{}, r.setProvisioningStatus(instance, newProvStatus)
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager -
@@ -566,6 +452,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
@@ -575,82 +462,88 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *OpenStackControlPlaneReconciler) setNetStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, hostnameDetails *common.Hostname, netName string, ipaddress string) {
+func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackControlPlaneStatus) *ospdirectorv1beta1.OpenStackControlPlaneStatus {
 
-	// If OpenStackControlPlane status map is nil, create it
-	if instance.Status.VIPStatus == nil {
-		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+	//
+	// set LastHeartbeatTime and LastTransitionTime to a default value as those
+	// need to be ignored to compare if conditions changed.
+	//
+	s := status.DeepCopy()
+	for idx := range s.Conditions {
+		s.Conditions[idx].LastHeartbeatTime = metav1.Time{}
+		s.Conditions[idx].LastTransitionTime = metav1.Time{}
 	}
 
+	return s
+}
+
+func (r *OpenStackControlPlaneReconciler) setNetStatus(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	hostname string,
+	netName string,
+	ipaddress string,
+) {
+
 	// Set network information status
-	if instance.Status.VIPStatus[hostnameDetails.Hostname].IPAddresses == nil {
-		instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostnameDetails.Hostname,
-			HostRef:  strings.ToLower(instance.Name),
+	if instance.Status.VIPStatus[hostname].IPAddresses == nil {
+		instance.Status.VIPStatus[hostname] = ospdirectorv1beta1.HostStatus{
+			Hostname: hostname,
+			HostRef:  hostname,
 			IPAddresses: map[string]string{
 				netName: ipaddress,
 			},
 		}
 	} else {
-		status := instance.Status.VIPStatus[hostnameDetails.Hostname]
-		status.HostRef = strings.ToLower(instance.Name)
+		status := instance.Status.VIPStatus[hostname]
+		status.HostRef = hostname
 		status.IPAddresses[netName] = ipaddress
-		instance.Status.VIPStatus[hostnameDetails.Hostname] = status
+		instance.Status.VIPStatus[hostname] = status
 	}
-
 }
 
-func (r *OpenStackControlPlaneReconciler) setProvisioningStatus(instance *ospdirectorv1beta1.OpenStackControlPlane, newProvStatus ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus) error {
-
-	// if the current ProvisioningStatus is different from the actual, store the update
-	// otherwise, just log the status again
-	if !reflect.DeepEqual(instance.Status.ProvisioningStatus, newProvStatus) {
-		r.Log.Info(fmt.Sprintf("%s - diff %s", instance.Status.ProvisioningStatus.Reason, diff.ObjectReflectDiff(instance.Status.ProvisioningStatus, newProvStatus)))
-		instance.Status.ProvisioningStatus = newProvStatus
-
-		instance.Status.Conditions = ospdirectorv1beta1.ConditionList{}
-		instance.Status.Conditions.Set(ospdirectorv1beta1.ConditionType(newProvStatus.State), corev1.ConditionTrue, ospdirectorv1beta1.ConditionReason(newProvStatus.Reason), newProvStatus.Reason)
-
-		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
-			r.Log.Error(err, "Failed to update CR status %v")
-			return err
-		}
-	} else if newProvStatus.Reason != "" {
-		r.Log.Info(newProvStatus.Reason)
-	}
-
-	return nil
-}
-
-func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(instance *ospdirectorv1beta1.OpenStackControlPlane) ([]string, error) {
+func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+) ([]string, error) {
 
 	// create uniq list networls of all VirtualMachineRoles
 	networkList := make(map[string]bool)
 	uniqNetworksList := []string{}
 
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
-		for _, networkNameLower := range vmRole.Networks {
+		for _, netNameLower := range vmRole.Networks {
+			// get network with name_lower label
+			labelSelector := map[string]string{
+				openstacknet.SubNetNameLabelSelector: netNameLower,
+			}
 
 			// get network with name_lower label to verify if VIP needs to be requested from Spec
 			network, err := openstacknet.GetOpenStackNetWithLabel(
 				r,
 				instance.Namespace,
-				map[string]string{
-					openstacknet.SubNetNameLabelSelector: networkNameLower,
-				},
+				labelSelector,
 			)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					r.Log.Info(fmt.Sprintf("OpenStackNet with NameLower %s not found!", networkNameLower))
+					common.LogForObject(
+						r,
+						fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower),
+						instance,
+					)
 					continue
 				}
 				// Error reading the object - requeue the request.
+				cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
 				return uniqNetworksList, err
 			}
 
-			if _, value := networkList[networkNameLower]; !value && network.Spec.VIP {
-				networkList[networkNameLower] = true
-				uniqNetworksList = append(uniqNetworksList, networkNameLower)
+			if _, value := networkList[netNameLower]; !value && network.Spec.VIP {
+				networkList[netNameLower] = true
+				uniqNetworksList = append(uniqNetworksList, netNameLower)
 			}
 		}
 	}
@@ -658,7 +551,10 @@ func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(instance *ospdire
 	return uniqNetworksList, nil
 }
 
-func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(instance *ospdirectorv1beta1.OpenStackControlPlane, newProvStatus ospdirectorv1beta1.OpenStackControlPlaneProvisioningStatus) error {
+func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+) error {
 
 	mac := &ospdirectorv1beta1.OpenStackMACAddress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -695,20 +591,467 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(inst
 
 		err := controllerutil.SetControllerReference(instance, mac, r.Scheme)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Error set controller reference for %s", mac.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		newProvStatus.State = ospdirectorv1beta1.ControlPlaneError
-		newProvStatus.Reason = err.Error()
-		_ = r.setProvisioningStatus(instance, newProvStatus)
+		cond.Message = fmt.Sprintf("Failed to create or update OpenStackMACAddress %s ", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
 		return err
 	}
+
+	cond.Message = "OpenStackMACAddress CR successfully reconciled"
+
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("OpenStackMACAddress CR successfully reconciled - operation: %s", string(op)))
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
 	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
+}
+
+//
+// create or get hash of "tripleo-passwords" controlplane.TripleoPasswordSecret secret
+//
+func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	envVars *map[string]common.EnvSetter,
+) error {
+	//
+	// check if "tripleo-passwords" controlplane.TripleoPasswordSecret secret already exist
+	//
+	_, secretHash, err := common.GetSecret(r, controlplane.TripleoPasswordSecret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Creating password secret: %s", controlplane.TripleoPasswordSecret),
+				instance,
+			)
+
+			pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
+
+			templateParameters := make(map[string]interface{})
+			templateParameters["TripleoPasswords"] = common.GeneratePasswords()
+			pwSecret := []common.Template{
+				{
+					Name:               controlplane.TripleoPasswordSecret,
+					Namespace:          instance.Namespace,
+					Type:               common.TemplateTypeConfig,
+					InstanceType:       instance.Kind,
+					AdditionalTemplate: map[string]string{},
+					Labels:             pwSecretLabel,
+					ConfigOptions:      templateParameters,
+				},
+			}
+
+			err = common.EnsureSecrets(r, instance, pwSecret, envVars)
+			if err != nil {
+				cond.Message = fmt.Sprintf("Error creating TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretCreateError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return err
+			}
+		} else {
+			cond.Message = fmt.Sprintf("Error get TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+	}
+
+	(*envVars)[controlplane.TripleoPasswordSecret] = common.EnvValue(secretHash)
+
+	return nil
+}
+
+//
+// Secret - used for deployment to ssh into the overcloud nodes,
+//          gets added to the controller VMs cloud-admin user using cloud-init
+//
+func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	envVars *map[string]common.EnvSetter,
+) (*corev1.Secret, error) {
+	deploymentSecretName := strings.ToLower(controlplane.AppLabel) + "-ssh-keys"
+
+	deploymentSecret, secretHash, err := common.GetSecret(r, deploymentSecretName, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+
+			var op controllerutil.OperationResult
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Creating deployment ssh secret: %s", deploymentSecretName),
+				instance,
+			)
+
+			deploymentSecret, err = common.SSHKeySecret(
+				deploymentSecretName,
+				instance.Namespace,
+				map[string]string{deploymentSecretName: ""},
+			)
+			if err != nil {
+				cond.Message = fmt.Sprintf("Error creating ssh keys %s", deploymentSecretName)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonDeploymentSSHKeysGenError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return deploymentSecret, err
+			}
+
+			secretHash, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
+			if err != nil {
+				cond.Message = fmt.Sprintf("Error create or update ssh keys secret %s", deploymentSecretName)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return deploymentSecret, err
+			}
+			if op != controllerutil.OperationResultNone {
+				common.LogForObject(
+					r,
+					fmt.Sprintf("Secret %s successfully reconciled - operation: %s", deploymentSecret.Name, string(op)),
+					instance,
+				)
+			}
+		} else {
+			cond.Message = fmt.Sprintf("Error get secret %s", deploymentSecretName)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonDeploymentSecretError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return deploymentSecret, err
+		}
+	}
+	(*envVars)[deploymentSecret.Name] = common.EnvValue(secretHash)
+
+	return deploymentSecret, nil
+}
+
+func (r *OpenStackControlPlaneReconciler) verifySecretExist(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	secretName string,
+) (ctrl.Result, error) {
+	if secretName != "" {
+		// check if specified secret exists before creating the controlplane
+		_, _, err := common.GetSecret(r, secretName, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				timeout := 30
+				cond.Message = fmt.Sprintf("Secret %s not found but specified in CR, next reconcile in %d s", secretName, timeout)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretMissing)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+				common.LogForObject(r, cond.Message, instance)
+
+				return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
+			}
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error reading secret object: %s", secretName)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
+
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Secret %s exists", secretName),
+			instance,
+		)
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	configMapName string,
+) (ctrl.Result, error) {
+
+	if configMapName != "" {
+		_, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.CAConfigMap, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				timeout := 30
+				cond.Message = fmt.Sprintf("ConfigMap %s not found but specified in CR, next reconcile in %d s", configMapName, timeout)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonConfigMapMissing)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+				common.LogForObject(r, cond.Message, instance)
+
+				return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
+			}
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error reading config map object: %s", configMapName)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonConfigMapError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Secret %s exists", configMapName),
+			instance,
+		)
+	}
+	return ctrl.Result{}, nil
+}
+
+//
+// create hostnames for the requested number of systems
+//
+func (r *OpenStackControlPlaneReconciler) createNewHostnames(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	baseName string,
+	newCount int,
+	vip bool,
+) ([]string, error) {
+	newVMs := []string{}
+
+	//
+	//   create hostnames for the newCount
+	//
+	currentNetStatus := instance.Status.DeepCopy().VIPStatus
+	for i := 0; i < newCount; i++ {
+		hostnameDetails := common.Hostname{
+			Basename: baseName,
+			VIP:      vip,
+		}
+
+		err := common.CreateOrGetHostname(instance, &hostnameDetails)
+		if err != nil {
+			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+
+		if hostnameDetails.Hostname != "" {
+			if _, ok := instance.Status.VIPStatus[hostnameDetails.Hostname]; !ok {
+				instance.Status.VIPStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+					Hostname:             hostnameDetails.Hostname,
+					HostRef:              hostnameDetails.HostRef,
+					AnnotatedForDeletion: false,
+					IPAddresses:          map[string]string{},
+				}
+				newVMs = append(newVMs, hostnameDetails.Hostname)
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("%s hostname created: %s", instance.Kind, hostnameDetails.Hostname),
+				instance,
+			)
+		}
+	}
+
+	if !reflect.DeepEqual(currentNetStatus, instance.Status.VIPStatus) {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
+				len(newVMs),
+				diff.ObjectReflectDiff(currentNetStatus, instance.Status.VIPStatus),
+			),
+			instance,
+		)
+
+		err := r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = "Failed to update CR status for new hostnames"
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return newVMs, err
+		}
+	}
+
+	return newVMs, nil
+}
+
+//
+// Create VMSets
+//
+func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	deploymentSecret *corev1.Secret,
+) ([]*ospdirectorv1beta1.OpenStackVMSet, error) {
+	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
+
+	for _, vmRole := range instance.Spec.VirtualMachineRoles {
+
+		//
+		// Create or update the vmSet CR object
+		//
+		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
+			ObjectMeta: metav1.ObjectMeta{
+				// use the role name as the VM CR name
+				Name:      strings.ToLower(vmRole.RoleName),
+				Namespace: instance.Namespace,
+			},
+		}
+
+		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vmSet, func() error {
+			vmSet.Spec.VMCount = vmRole.RoleCount
+			vmSet.Spec.Cores = vmRole.Cores
+			vmSet.Spec.Memory = vmRole.Memory
+			vmSet.Spec.DiskSize = vmRole.DiskSize
+			if instance.Spec.DomainName != "" {
+				vmSet.Spec.DomainName = instance.Spec.DomainName
+			}
+			vmSet.Spec.BootstrapDNS = instance.Spec.DNSServers
+			vmSet.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
+			if vmRole.StorageClass != "" {
+				vmSet.Spec.StorageClass = vmRole.StorageClass
+			}
+			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
+			vmSet.Spec.DeploymentSSHSecret = deploymentSecret.Name
+			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface
+			vmSet.Spec.Networks = vmRole.Networks
+			vmSet.Spec.RoleName = vmRole.RoleName
+			vmSet.Spec.IsTripleoRole = vmRole.IsTripleoRole
+			if instance.Spec.PasswordSecret != "" {
+				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
+			}
+
+			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
+			if err != nil {
+				cond.Message = fmt.Sprintf("Error set controller reference for %s %s", vmSet.Kind, vmSet.Name)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to create or update %s %s ", vmSet.Kind, vmSet.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return vmSets, err
+		}
+
+		cond.Message = fmt.Sprintf("%s %s successfully reconciled", vmSet.Kind, vmSet.Name)
+		if op != controllerutil.OperationResultNone {
+			cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
+
+			common.LogForObject(
+				r,
+				cond.Message,
+				instance,
+			)
+		}
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCreated)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
+
+		vmSets = append(vmSets, vmSet)
+	}
+
+	return vmSets, nil
+}
+
+func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
+	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	cond *ospdirectorv1beta1.Condition,
+	deploymentSecret *corev1.Secret,
+) (*ospdirectorv1beta1.OpenStackClient, error) {
+	osc := &ospdirectorv1beta1.OpenStackClient{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "openstackclient",
+			Namespace: instance.Namespace,
+		},
+	}
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, osc, func() error {
+		osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
+		osc.Spec.DeploymentSSHSecret = deploymentSecret.Name
+		osc.Spec.CloudName = instance.Name
+		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
+		osc.Spec.GitSecret = instance.Spec.GitSecret
+		osc.Spec.RunUID = openstackclient.CloudAdminUID
+		osc.Spec.RunGID = openstackclient.CloudAdminGID
+		if instance.Spec.DomainName != "" {
+			osc.Spec.DomainName = instance.Spec.DomainName
+		}
+		osc.Spec.DNSServers = instance.Spec.DNSServers
+		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
+		if instance.Spec.IdmSecret != "" {
+			osc.Spec.IdmSecret = instance.Spec.IdmSecret
+		}
+		if instance.Spec.CAConfigMap != "" {
+			osc.Spec.CAConfigMap = instance.Spec.CAConfigMap
+		}
+
+		if len(instance.Spec.OpenStackClientNetworks) > 0 {
+			osc.Spec.Networks = instance.Spec.OpenStackClientNetworks
+		}
+
+		err := controllerutil.SetControllerReference(instance, osc, r.Scheme)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Error set controller reference for %s %s", osc.Kind, osc.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osc.Kind, osc.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return osc, err
+	}
+
+	cond.Message = fmt.Sprintf("%s %s successfully reconciled", osc.Kind, osc.Name)
+	if op != controllerutil.OperationResultNone {
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
+
+		common.LogForObject(
+			r,
+			cond.Message,
+			instance,
+		)
+	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
+
+	return osc, nil
 }

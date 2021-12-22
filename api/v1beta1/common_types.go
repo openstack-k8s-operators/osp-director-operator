@@ -63,6 +63,8 @@ const (
 	CommonCondTypeDeprovisioning ConditionType = "Deprovisioning"
 	// CommonCondTypeError - general catch-all for actual errors
 	CommonCondTypeError ConditionType = "Error"
+	// CommonCondTypeCreated - general resource created
+	CommonCondTypeCreated ConditionType = "Created"
 
 	//
 	// condition reasones
@@ -72,6 +74,14 @@ const (
 	CommonCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
 	// CommonCondReasonDeploymentSecretError - deployment secret error
 	CommonCondReasonDeploymentSecretError ConditionReason = "DeploymentSecretError"
+	// CommonCondReasonSecretMissing - secret does not exist
+	CommonCondReasonSecretMissing ConditionReason = "SecretMissing"
+	// CommonCondReasonSecretError - secret error
+	CommonCondReasonSecretError ConditionReason = "SecretError"
+	// CommonCondReasonConfigMapMissing - config map does not exist
+	CommonCondReasonConfigMapMissing ConditionReason = "ConfigMapMissing"
+	// CommonCondReasonConfigMapError - config map error
+	CommonCondReasonConfigMapError ConditionReason = "ConfigMapError"
 	// CommonCondReasonIdmSecretMissing - idm secret does not exist
 	CommonCondReasonIdmSecretMissing ConditionReason = "IdmSecretMissing"
 	// CommonCondReasonIdmSecretError - idm secret error
@@ -88,6 +98,10 @@ const (
 	CommonCondReasonOSNetNotFound ConditionReason = "OSNetNotFound"
 	// CommonCondReasonOSNetError - openstack network error
 	CommonCondReasonOSNetError ConditionReason = "OSNetError"
+	// CommonCondReasonOSNetWaiting - openstack network waiting
+	CommonCondReasonOSNetWaiting ConditionReason = "OSNetWaiting"
+	// CommonCondReasonOSNetAvailable - openstack networks available
+	CommonCondReasonOSNetAvailable ConditionReason = "OSNetAvailable"
 	// CommonCondReasonControllerReferenceError - error set controller reference on object
 	CommonCondReasonControllerReferenceError ConditionReason = "ControllerReferenceError"
 )
@@ -100,10 +114,13 @@ type Hash struct {
 	Hash string `json:"hash,omitempty"`
 }
 
+// ProvisioningState - the overall state of all VMs in this OpenStackVmSet
+type ProvisioningState string
+
 // HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {
-	Hostname          string                 `json:"hostname"`
-	ProvisioningState VMSetProvisioningState `json:"provisioningState"`
+	Hostname          string            `json:"hostname"`
+	ProvisioningState ProvisioningState `json:"provisioningState"`
 
 	// +kubebuilder:default=unassigned
 	HostRef string `json:"hostRef"`

@@ -71,14 +71,24 @@ const (
 	// condition reasones
 	//
 
+	// OsClientCondReasonError - error creating openstackclient
+	OsClientCondReasonError ConditionReason = "OpenStackClientError"
+	// OsClientCondReasonProvisioned - pod created
+	OsClientCondReasonProvisioned ConditionReason = "OpenStackClientProvisioned"
+	// OsClientCondReasonCreated - created openstackclient
+	OsClientCondReasonCreated ConditionReason = "OpenStackClientCreated"
 	// OsClientCondReasonPVCError - error creating pvc
 	OsClientCondReasonPVCError ConditionReason = "PVCError"
+	// OsClientCondReasonPVCProvisioned - pvcs provisioned
+	OsClientCondReasonPVCProvisioned ConditionReason = "PVCProvisioned"
 	// OsClientCondReasonPodError - error creating pod
 	OsClientCondReasonPodError ConditionReason = "PodError"
 	// OsClientCondReasonPodProvisioned - pod created
-	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientProvisioned"
+	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientPodProvisioned"
 	// OsClientCondReasonPodDeleteError - pod delete error
 	OsClientCondReasonPodDeleteError ConditionReason = "PodDeleteError"
+	// OsClientCondReasonPodMissing - openstackclient pod missing
+	OsClientCondReasonPodMissing ConditionReason = "OpenStackClientPodMissing"
 )
 
 // OpenStackClientStatus defines the observed state of OpenStackClient

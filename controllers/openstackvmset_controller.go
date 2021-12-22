@@ -150,7 +150,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		)
 
 		instance.Status.ProvisioningStatus.Reason = cond.Message
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetProvisioningState(cond.Type)
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
@@ -907,9 +907,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	hostStatus := instance.Status.VMHosts[ctl.Hostname]
 
 	if vm.Status.Ready {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioned
+		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned)
 	} else if vm.Status.Created {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioning
+		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioning)
 	}
 
 	instance.Status.VMHosts[ctl.Hostname] = hostStatus
@@ -1080,7 +1080,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 	cond *ospdirectorv1beta1.Condition,
 	newCount int,
 ) ([]string, error) {
-	newVMs := []string{}
+	newHostnames := []string{}
 
 	//
 	//   create hostnames for the newCount
@@ -1099,7 +1099,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 
 		if hostnameDetails.Hostname != "" {
@@ -1110,7 +1110,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 					AnnotatedForDeletion: false,
 					IPAddresses:          map[string]string{},
 				}
-				newVMs = append(newVMs, hostnameDetails.Hostname)
+				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}
 
 			common.LogForObject(
@@ -1125,7 +1125,7 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 		common.LogForObject(
 			r,
 			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newVMs),
+				len(newHostnames),
 				diff.ObjectReflectDiff(currentNetStatus, instance.Status.VMHosts),
 			),
 			instance,
@@ -1138,11 +1138,11 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 	}
 
-	return newVMs, nil
+	return newHostnames, nil
 }
 
 //
@@ -1536,7 +1536,7 @@ func (r *OpenStackVMSetReconciler) createVMs(
 		// Calculate provisioning status
 		readyCount := 0
 		for _, host := range instance.Status.VMHosts {
-			if host.ProvisioningState == ospdirectorv1beta1.VMSetCondTypeProvisioned {
+			if host.ProvisioningState == ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned) {
 				readyCount++
 			}
 		}

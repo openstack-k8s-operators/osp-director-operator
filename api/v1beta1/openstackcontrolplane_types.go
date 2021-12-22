@@ -133,41 +133,48 @@ type OpenStackControlPlaneStatus struct {
 // OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
 // the OpenStackControlPlane (with an optional explanatory message)
 type OpenStackControlPlaneProvisioningStatus struct {
-	State        ControlPlaneProvisioningState `json:"state,omitempty"`
-	Reason       string                        `json:"reason,omitempty"`
-	DesiredCount int                           `json:"desiredCount,omitempty"`
-	ReadyCount   int                           `json:"readyCount,omitempty"`
-	ClientReady  bool                          `json:"clientReady,omitempty"`
+	State        ProvisioningState `json:"state,omitempty"`
+	Reason       string            `json:"reason,omitempty"`
+	DesiredCount int               `json:"desiredCount,omitempty"`
+	ReadyCount   int               `json:"readyCount,omitempty"`
+	ClientReady  bool              `json:"clientReady,omitempty"`
 }
-
-// ControlPlaneProvisioningState - the overall state of this OpenStackControlPlane
-type ControlPlaneProvisioningState string
 
 // ControlPlaneProvisioningReason - the reason of the condition for this openstack ctlplane
 type ControlPlaneProvisioningReason string
 
 const (
 	// ControlPlaneEmpty - special state for 0 requested VMs and 0 already provisioned
-	ControlPlaneEmpty ControlPlaneProvisioningState = "Empty"
+	ControlPlaneEmpty ProvisioningState = "Empty"
 	// ControlPlaneWaiting - something is causing the OpenStackBaremetalSet to wait
-	ControlPlaneWaiting ControlPlaneProvisioningState = "Waiting"
+	ControlPlaneWaiting ProvisioningState = "Waiting"
 	// ControlPlaneProvisioning - one or more VMs are provisioning
-	ControlPlaneProvisioning ControlPlaneProvisioningState = "Provisioning"
+	ControlPlaneProvisioning ProvisioningState = "Provisioning"
 	// ControlPlaneProvisioned - the requested VM count for all roles has been satisfied
-	ControlPlaneProvisioned ControlPlaneProvisioningState = "Provisioned"
+	ControlPlaneProvisioned ProvisioningState = "Provisioned"
 	// ControlPlaneDeprovisioning - one or more VMs are deprovisioning
-	ControlPlaneDeprovisioning ControlPlaneProvisioningState = "Deprovisioning"
+	ControlPlaneDeprovisioning ProvisioningState = "Deprovisioning"
 	// ControlPlaneError - general catch-all for actual errors
-	ControlPlaneError ControlPlaneProvisioningState = "Error"
+	ControlPlaneError ProvisioningState = "Error"
 
 	//
 	// condition reasones
 	//
 
 	// ControlPlaneReasonNetNotFound - osctlplane not found
-	ControlPlaneReasonNetNotFound ControlPlaneProvisioningReason = "CtlPlaneNotFound"
+	ControlPlaneReasonNetNotFound ConditionReason = "CtlPlaneNotFound"
 	// ControlPlaneReasonNotSupportedVersion - osctlplane not found
-	ControlPlaneReasonNotSupportedVersion ControlPlaneProvisioningReason = "CtlPlaneNotSupportedVersion"
+	ControlPlaneReasonNotSupportedVersion ConditionReason = "CtlPlaneNotSupportedVersion"
+	// ControlPlaneReasonTripleoPasswordsSecretError - Tripleo password secret error
+	ControlPlaneReasonTripleoPasswordsSecretError ConditionReason = "TripleoPasswordsSecretCError"
+	// ControlPlaneReasonTripleoPasswordsSecretCreateError - Tripleo password secret create error
+	ControlPlaneReasonTripleoPasswordsSecretCreateError ConditionReason = "TripleoPasswordsSecretCreateError"
+	// ControlPlaneReasonDeploymentSSHKeysSecretError - Deployment SSH Keys Secret Error
+	ControlPlaneReasonDeploymentSSHKeysSecretError ConditionReason = "DeploymentSSHKeysSecretError"
+	// ControlPlaneReasonDeploymentSSHKeysGenError - Deployment SSH Keys generation Error
+	ControlPlaneReasonDeploymentSSHKeysGenError ConditionReason = "DeploymentSSHKeysGenError"
+	// ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError - Deployment SSH Keys Secret Crate or Update Error
+	ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError ConditionReason = "DeploymentSSHKeysSecretCreateOrUpdateError"
 )
 
 // +kubebuilder:object:root=true

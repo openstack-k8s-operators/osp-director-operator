@@ -267,8 +267,8 @@ spec:
                   reason:
                     type: string
                   state:
-                    description: BaremetalSetProvisioningState - the overall state
-                      of all BaremetalHosts in this OpenStackBaremetalSet
+                    description: ProvisioningState - the overall state of all VMs
+                      in this OpenStackVmSet
                     type: string
                 type: object
             type: object

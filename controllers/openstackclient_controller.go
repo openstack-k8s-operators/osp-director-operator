@@ -336,11 +336,15 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance,
 		cond,
 		hostname,
-		envVars,
+		&envVars,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	hostStatus := instance.Status.OpenStackClientNetStatus[hostname]
+	hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+	instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
 
 	return ctrl.Result{}, nil
 }
@@ -397,7 +401,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	instance *ospdirectorv1beta1.OpenStackClient,
 	cond *ospdirectorv1beta1.Condition,
 	hostname string,
-	envVars map[string]common.EnvSetter,
+	envVars *map[string]common.EnvSetter,
 ) error {
 	var terminationGracePeriodSeconds int64 = 0
 
@@ -409,14 +413,14 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
 	volumes := openstackclient.GetVolumes(instance)
 
-	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
+	(*envVars)["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
 
 	if instance.Spec.CloudName != "" {
-		envVars["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
+		(*envVars)["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}
 
 	if instance.Spec.DomainName != "" {
-		envVars["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
+		(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
 
 	}
 
@@ -464,7 +468,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	}
 	annotation := fmt.Sprintf("[%s]", annotations)
 
-	env := common.MergeEnvs([]corev1.EnvVar{}, envVars)
+	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
 
 	if instance.Spec.GitSecret != "" {
 		env = common.MergeEnvs([]corev1.EnvVar{
@@ -479,7 +483,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 					},
 				},
 			},
-		}, envVars)
+		}, *envVars)
 	}
 
 	pod := &corev1.Pod{
@@ -588,7 +592,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	pod.Spec.InitContainers = openstackclient.GetInitContainers(initContainerDetails)
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
-		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, envVars)
+		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
 
 		// labels
 		common.InitMap(&pod.Labels)
@@ -642,10 +646,14 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	}
 
 	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("%s %s created", instance.Kind, instance.Name)
+		cond.Message = fmt.Sprintf("%s %s %s", instance.Kind, instance.Name, op)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 	}
+
+	cond.Message = fmt.Sprintf("%s %s provisioned", instance.Kind, instance.Name)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
 }
@@ -665,8 +673,6 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 	for _, netNameLower := range instance.Spec.Networks {
 		timeout := 10
-
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
@@ -697,10 +703,16 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 		if _, ok := nadMap[network.Name]; !ok {
 			cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s does not yet exist.  Reconciling again in %d seconds", network.Name, timeout)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetWaiting)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
 			return ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, err
 		}
-
 	}
+
+	cond.Message = "All NetworkAttachmentDefinitions available"
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetAvailable)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return ctrl.Result{}, nil
 }
@@ -713,7 +725,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 	cond *ospdirectorv1beta1.Condition,
 	newCount int,
 ) ([]string, error) {
-	newVMs := []string{}
+	newHostnames := []string{}
 
 	//
 	//   create hostnames for the newCount
@@ -732,7 +744,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 
 		if hostnameDetails.Hostname != "" {
@@ -743,7 +755,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 					AnnotatedForDeletion: false,
 					IPAddresses:          map[string]string{},
 				}
-				newVMs = append(newVMs, hostnameDetails.Hostname)
+				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}
 
 			common.LogForObject(
@@ -758,7 +770,7 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 		common.LogForObject(
 			r,
 			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newVMs),
+				len(newHostnames),
 				diff.ObjectReflectDiff(currentNetStatus, instance.Status.OpenStackClientNetStatus),
 			),
 			instance,
@@ -771,11 +783,11 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return newVMs, err
+			return newHostnames, err
 		}
 	}
 
-	return newVMs, nil
+	return newHostnames, nil
 }
 
 //
@@ -870,6 +882,10 @@ func (r *OpenStackClientReconciler) createPVCs(
 			instance,
 		)
 	}
+
+	cond.Message = fmt.Sprintf("All PVCs for %s %s available", instance.Kind, instance.Name)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCProvisioned)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return nil
 }

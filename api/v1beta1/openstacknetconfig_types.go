@@ -141,28 +141,25 @@ type OpenStackNetConfigStatus struct {
 // OpenStackNetConfigProvisioningStatus represents the overall provisioning state of
 // the OpenStackNetConfig (with an optional explanatory message)
 type OpenStackNetConfigProvisioningStatus struct {
-	State              NetConfigState `json:"state,omitempty"`
-	Reason             string         `json:"reason,omitempty"`
-	AttachDesiredCount int            `json:"attachDesiredCount,omitempty"`
-	AttachReadyCount   int            `json:"attachReadyCount,omitempty"`
-	NetDesiredCount    int            `json:"netDesiredCount,omitempty"`
-	NetReadyCount      int            `json:"netReadyCount,omitempty"`
+	State              ProvisioningState `json:"state,omitempty"`
+	Reason             string            `json:"reason,omitempty"`
+	AttachDesiredCount int               `json:"attachDesiredCount,omitempty"`
+	AttachReadyCount   int               `json:"attachReadyCount,omitempty"`
+	NetDesiredCount    int               `json:"netDesiredCount,omitempty"`
+	NetReadyCount      int               `json:"netReadyCount,omitempty"`
 }
-
-// NetConfigState - the state of this openstack network config
-type NetConfigState string
 
 const (
 	// NetConfigWaiting - the network configuration is blocked by prerequisite objects
-	NetConfigWaiting NetConfigState = "Waiting"
+	NetConfigWaiting ProvisioningState = "Waiting"
 	// NetConfigInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetConfigInitializing NetConfigState = "Initializing"
+	NetConfigInitializing ProvisioningState = "Initializing"
 	// NetConfigConfiguring - the underlying network resources are configuring the nodes
-	NetConfigConfiguring NetConfigState = "Configuring"
+	NetConfigConfiguring ProvisioningState = "Configuring"
 	// NetConfigConfigured - the nodes have been configured by the underlying network resources
-	NetConfigConfigured NetConfigState = "Configured"
+	NetConfigConfigured ProvisioningState = "Configured"
 	// NetConfigError - the network configuration hit a generic error
-	NetConfigError NetConfigState = "Error"
+	NetConfigError ProvisioningState = "Error"
 )
 
 //+kubebuilder:object:root=true
