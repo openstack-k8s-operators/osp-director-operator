@@ -54,22 +54,36 @@ type OpenStackProvisionServerStatus struct {
 // OpenStackProvisionServerProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
 // the OpenStackProvisionServer (with an optional explanatory message)
 type OpenStackProvisionServerProvisioningStatus struct {
-	State  ProvisionServerProvisioningState `json:"state,omitempty"`
-	Reason string                           `json:"reason,omitempty"`
+	State  ProvisioningState `json:"state,omitempty"`
+	Reason string            `json:"reason,omitempty"`
 }
 
-// ProvisionServerProvisioningState - the overall state of this OpenStackProvisionServer
-type ProvisionServerProvisioningState string
-
 const (
-	// ProvisionServerWaiting - something else is causing the OpenStackProvisionServer to wait
-	ProvisionServerWaiting ProvisionServerProvisioningState = "Waiting"
-	// ProvisionServerProvisioning - the provision server pod is provisioning
-	ProvisionServerProvisioning ProvisionServerProvisioningState = "Provisioning"
-	// ProvisionServerProvisioned - the provision server pod is ready
-	ProvisionServerProvisioned ProvisionServerProvisioningState = "Provisioned"
-	// ProvisionServerError - general catch-all for actual errors
-	ProvisionServerError ProvisionServerProvisioningState = "Error"
+	// ProvisionServerCondTypeWaiting - something else is causing the OpenStackProvisionServer to wait
+	ProvisionServerCondTypeWaiting ProvisioningState = "Waiting"
+	// ProvisionServerCondTypeProvisioning - the provision server pod is provisioning
+	ProvisionServerCondTypeProvisioning ProvisioningState = "Provisioning"
+	// ProvisionServerCondTypeProvisioned - the provision server pod is ready
+	ProvisionServerCondTypeProvisioned ProvisioningState = "Provisioned"
+	// ProvisionServerCondTypeError - general catch-all for actual errors
+	ProvisionServerCondTypeError ProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// OpenStackProvisionServerCondReasonListError - osprovserver list objects error
+	OpenStackProvisionServerCondReasonListError ConditionReason = "OpenStackProvisionServerListError"
+	// OpenStackProvisionServerCondReasonNotFound - osprovserver object not found
+	OpenStackProvisionServerCondReasonNotFound ConditionReason = "OpenStackProvisionServerNotFound"
+	// OpenStackProvisionServerCondReasonNotReady - osprovserver not yet ready
+	OpenStackProvisionServerCondReasonNotReady ConditionReason = "OpenStackProvisionServerNotReady"
+	// OpenStackProvisionServerCondReasonReady - osprovserver ready
+	OpenStackProvisionServerCondReasonReady ConditionReason = "OpenStackProvisionServerReady"
+	// OpenStackProvisionServerCondReasonCreateError - error creating osprov server object
+	OpenStackProvisionServerCondReasonCreateError ConditionReason = "OpenStackProvisionServerCreateError"
+	// OpenStackProvisionServerCondReasonCreated - osprov server object created
+	OpenStackProvisionServerCondReasonCreated ConditionReason = "OpenStackProvisionServerCreated"
 )
 
 // +kubebuilder:object:root=true
@@ -98,7 +112,10 @@ type OpenStackProvisionServerList struct {
 }
 
 // GetExistingProvServerPorts - Get all ports currently in use by all OpenStackProvisionServers in this namespace
-func (r *OpenStackProvisionServer) GetExistingProvServerPorts(client goClient.Client) (map[string]int, error) {
+func (r *OpenStackProvisionServer) GetExistingProvServerPorts(
+	cond *Condition,
+	client goClient.Client,
+) (map[string]int, error) {
 	found := map[string]int{}
 
 	provServerList := &OpenStackProvisionServerList{}
@@ -108,8 +125,11 @@ func (r *OpenStackProvisionServer) GetExistingProvServerPorts(client goClient.Cl
 	}
 
 	err := client.List(context.TODO(), provServerList, listOpts...)
-
 	if err != nil {
+		cond.Message = "Failed to get list of all OpenStackProvisionServer(s)"
+		cond.Reason = ConditionReason(OpenStackProvisionServerCondReasonListError)
+		cond.Type = ConditionType(ProvisionServerCondTypeError)
+
 		return nil, err
 	}
 
@@ -121,14 +141,17 @@ func (r *OpenStackProvisionServer) GetExistingProvServerPorts(client goClient.Cl
 }
 
 // AssignProvisionServerPort - Assigns an Apache listening port for a particular OpenStackProvisionServer.
-func (r *OpenStackProvisionServer) AssignProvisionServerPort(client goClient.Client, portStart int) error {
+func (r *OpenStackProvisionServer) AssignProvisionServerPort(
+	cond *Condition,
+	client goClient.Client,
+	portStart int,
+) error {
 	if r.Spec.Port != 0 {
 		// Do nothing, already assigned
 		return nil
 	}
 
-	existingPorts, err := r.GetExistingProvServerPorts(client)
-
+	existingPorts, err := r.GetExistingProvServerPorts(cond, client)
 	if err != nil {
 		return err
 	}

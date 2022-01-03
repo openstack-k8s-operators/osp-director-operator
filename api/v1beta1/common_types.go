@@ -78,6 +78,8 @@ const (
 	CommonCondReasonSecretMissing ConditionReason = "SecretMissing"
 	// CommonCondReasonSecretError - secret error
 	CommonCondReasonSecretError ConditionReason = "SecretError"
+	// CommonCondReasonSecretDeleteError - secret deletion error
+	CommonCondReasonSecretDeleteError ConditionReason = "SecretDeleteError"
 	// CommonCondReasonConfigMapMissing - config map does not exist
 	CommonCondReasonConfigMapMissing ConditionReason = "ConfigMapMissing"
 	// CommonCondReasonConfigMapError - config map error
@@ -104,6 +106,10 @@ const (
 	CommonCondReasonOSNetAvailable ConditionReason = "OSNetAvailable"
 	// CommonCondReasonControllerReferenceError - error set controller reference on object
 	CommonCondReasonControllerReferenceError ConditionReason = "ControllerReferenceError"
+	// CommonCondReasonOwnerRefLabeledObjectsDeleteError - error deleting object using OwnerRef label
+	CommonCondReasonOwnerRefLabeledObjectsDeleteError ConditionReason = "OwnerRefLabeledObjectsDeleteError"
+	// CommonCondReasonRemoveFinalizerError - error removing finalizer from object
+	CommonCondReasonRemoveFinalizerError ConditionReason = "RemoveFinalizerError"
 )
 
 // Hash - struct to add hashes to status

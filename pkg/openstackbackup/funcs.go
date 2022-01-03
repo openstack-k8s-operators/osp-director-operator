@@ -313,7 +313,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check provisioning status of all OpenStackBaremetalSets
 	for _, cr := range crLists.OpenStackBaremetalSets.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioned {
+		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -366,7 +366,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the provisioning status of all OpenStackProvisionServers
 	for _, cr := range crLists.OpenStackProvisionServers.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerProvisioned {
+		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerCondTypeProvisioned {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -464,7 +464,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerProvisioned {
+		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerCondTypeProvisioned {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -480,7 +480,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetProvisioned {
+		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned {
 			badCrs = append(badCrs, found)
 		}
 	}

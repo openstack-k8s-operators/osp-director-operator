@@ -288,6 +288,40 @@ func DeleteSecretsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelector
 }
 
 //
+// DeleteSecretsWithName - Delete names secret object in namespace
+//
+func DeleteSecretsWithName(
+	r ReconcilerCommon,
+	cond *ospdirectorv1beta1.Condition,
+	name string,
+	namespace string,
+) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	err := r.GetClient().Delete(context.Background(), secret, &client.DeleteOptions{})
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		cond.Message = fmt.Sprintf("Failed to delete %s %s", secret.Kind, secret.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretDeleteError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+		return err
+	}
+
+	LogForObject(
+		r,
+		fmt.Sprintf("Secret %s in namespace %s deleted", secret.Name, secret.Namespace),
+		secret,
+	)
+
+	return nil
+}
+
+//
 // GetDataFromSecret - Get data from Secret
 //
 // if the secret or data is not found, requeue after requeueTimeout in seconds
