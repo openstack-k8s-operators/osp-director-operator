@@ -166,7 +166,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// 2. Clean up resources used by the operator
 		//
 		// osnet resources
-		err := r.cleanupNetworkAttachmentDefinition(instance)
+		err := r.cleanupNetworkAttachmentDefinition(instance, cond)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -177,6 +177,12 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		controllerutil.RemoveFinalizer(instance, openstacknet.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		common.LogForObject(r, fmt.Sprintf("CR %s deleted", instance.Name), instance)
@@ -371,6 +377,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 
 func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 	instance *ospdirectorv1beta1.OpenStackNet,
+	cond *ospdirectorv1beta1.Condition,
 ) error {
 
 	networkAttachmentDefinitionList := &networkv1.NetworkAttachmentDefinitionList{}
@@ -393,7 +400,13 @@ func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 	//
 	for _, nad := range networkAttachmentDefinitionList.Items {
 		controllerutil.RemoveFinalizer(&nad, openstacknet.FinalizerName)
-		if err := r.Client.Update(context.TODO(), &nad); err != nil {
+		if err := r.Client.Update(context.TODO(), &nad); err != nil && !k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return err
 		}
 	}

@@ -136,17 +136,6 @@ const (
 	BaremetalSetCondReasonVirtualMachineProvisioned ConditionReason = "BaremetalHostProvisioed"
 	// BaremetalSetCondReasonVirtualMachineCountZero - no bmh requested
 	BaremetalSetCondReasonVirtualMachineCountZero ConditionReason = "BaremetalHostCountZero"
-
-	/*
-		// BaremetalSetReasonListError - osbms list objects error
-		BaremetalSetReasonListError ConditionReason = "BaremetalSetReasonListError"
-		// BaremetalSetReasonNotFound - osbms object not found
-		BaremetalSetReasonNotFound ConditionReason = "BaremetalSetReasonNotFound"
-		// BaremetalSetReasonNotReady - osbms not yet ready
-		BaremetalSetReasonNotReady ConditionReason = "BaremetalSetReasonNotReady"
-		// BaremetalSetReasonReady - osbms ready
-		BaremetalSetReasonReady ConditionReason = "BaremetalSetReasonReady"
-	*/
 )
 
 // GetHostnames -

@@ -185,7 +185,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
-			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", vmset.FinalizerName, instance.Name))
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Finalizer %s added to CR %s", vmset.FinalizerName, instance.Name),
+				instance,
+			)
 		}
 	} else {
 		// 1. check if finalizer is there
@@ -196,7 +200,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// 2. Clean up resources used by the operator
 		// VirtualMachine resources
-		err := r.virtualMachineListFinalizerCleanup(instance, virtualMachineList)
+		err := r.virtualMachineListFinalizerCleanup(instance, cond, virtualMachineList)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
@@ -206,6 +210,12 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		controllerutil.RemoveFinalizer(instance, vmset.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
@@ -563,11 +573,15 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *o
 	return nil
 }
 
-func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(instance *ospdirectorv1beta1.OpenStackVMSet, virtualMachineList *virtv1.VirtualMachineList) error {
+func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	virtualMachineList *virtv1.VirtualMachineList,
+) error {
 	r.Log.Info(fmt.Sprintf("Removing finalizers from VirtualMachines in VMSet: %s", instance.Name))
 
 	for _, virtualMachine := range virtualMachineList.Items {
-		err := r.virtualMachineFinalizerCleanup(&virtualMachine)
+		err := r.virtualMachineFinalizerCleanup(&virtualMachine, cond)
 
 		if err != nil {
 			return err
@@ -577,11 +591,20 @@ func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(instance *
 	return nil
 }
 
-func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(virtualMachine *virtv1.VirtualMachine) error {
+func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(
+	virtualMachine *virtv1.VirtualMachine,
+	cond *ospdirectorv1beta1.Condition,
+) error {
 	controllerutil.RemoveFinalizer(virtualMachine, vmset.FinalizerName)
 	err := r.Client.Update(context.TODO(), virtualMachine)
 
 	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to update %s %s", virtualMachine.Kind, virtualMachine.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+		err = common.WrapErrorForObject(cond.Message, virtualMachine, err)
+
 		return err
 	}
 
@@ -1372,7 +1395,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 
 	// First check if the finalizer is still there and remove it if so
 	if controllerutil.ContainsFinalizer(virtualMachine, vmset.FinalizerName) {
-		err := r.virtualMachineFinalizerCleanup(virtualMachine)
+		err := r.virtualMachineFinalizerCleanup(virtualMachine, cond)
 
 		if err != nil {
 			return err

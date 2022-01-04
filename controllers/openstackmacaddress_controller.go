@@ -147,7 +147,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 			if err := r.Update(context.Background(), instance); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", macaddress.FinalizerName, instance.Name))
+			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to CR %s", macaddress.FinalizerName, instance.Name), instance)
 		}
 	} else {
 		// 1. check if finalizer is there
@@ -160,6 +160,12 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		controllerutil.RemoveFinalizer(instance, macaddress.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))
