@@ -137,6 +137,9 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				}
 			}
 		}
+
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion

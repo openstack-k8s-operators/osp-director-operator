@@ -133,6 +133,8 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 		}
 
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion

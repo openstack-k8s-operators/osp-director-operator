@@ -131,12 +131,11 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay

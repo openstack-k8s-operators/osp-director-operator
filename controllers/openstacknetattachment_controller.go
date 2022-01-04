@@ -137,11 +137,11 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
+
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
