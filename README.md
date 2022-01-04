@@ -168,6 +168,15 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
             cidr: 192.168.25.0/24
             gateway: 192.168.25.1
           attachConfiguration: br-osp
+      # optional: (OSP17 only) specify all phys networks with optional MAC address prefix, used to
+      # create static OVN Bridge MAC address mappings. Unique OVN bridge mac address per node is
+      # dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per node.
+      # If not specfified the default datacentre phynet with "fa:16:3a" MAC prefix will be used.
+      physNetworks:
+            - name: datacentre
+              macPrefix: fa:16:3a
+            - name: datacentre2
+              macPrefix: fa:16:3b
     ```
 
     If you write the above YAML into a file called networkconfig.yaml you can create the OpenStackNetConfig via this command:
@@ -445,14 +454,6 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       openStackClientStorageClass: host-nfs-storageclass
       passwordSecret: userpassword
       gitSecret: git-secret
-      # optional: specify all phys networks with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
-      # Unique OVN bridge mac address per node is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per
-      # physnet per node.
-      physNetworks:
-            - name: datacentre
-              macPrefix: fa:16:3a
-            - name: datacentre2
-              macPrefix: fa:16:3b 
       virtualMachineRoles:
         controller:
           roleName: Controller

@@ -113,7 +113,7 @@ type OpenStackNetStatus struct {
 	ReservedIPCount int `json:"reservedIpCount"`
 
 	// CurrentState - the overall state of this network
-	CurrentState NetState `json:"currentState"`
+	CurrentState ProvisioningState `json:"currentState"`
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
@@ -121,8 +121,8 @@ type OpenStackNetStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
-// NetState - the state of this openstack network
-type NetState string
+// NetReason - the reason of the condition for this openstack net
+type NetReason string
 
 const (
 	//
@@ -130,15 +130,22 @@ const (
 	//
 
 	// NetWaiting - the network configuration is blocked by prerequisite objects
-	NetWaiting NetState = "Waiting"
+	NetWaiting ProvisioningState = "Waiting"
 	// NetInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetInitializing NetState = "Initializing"
+	NetInitializing ProvisioningState = "Initializing"
 	// NetConfiguring - the underlying network resources are configuring the nodes
-	NetConfiguring NetState = "Configuring"
+	NetConfiguring ProvisioningState = "Configuring"
 	// NetConfigured - the nodes have been configured by the underlying network resources
-	NetConfigured NetState = "Configured"
+	NetConfigured ProvisioningState = "Configured"
 	// NetError - the network configuration hit a generic error
-	NetError NetState = "Error"
+	NetError ProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// NetCondReasonCreated - osnet created
+	NetCondReasonCreated ConditionReason = "NetCreated"
 )
 
 // +kubebuilder:object:root=true

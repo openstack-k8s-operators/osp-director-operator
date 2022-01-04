@@ -104,3 +104,8 @@ spec:
         cidr: 172.20.0.0/24
       vlan: 50
       attachConfiguration: br-osp
+  physNetworks:
+    - name: datacentre
+      macPrefix: fa:16:3a
+    - name: datacentre2
+      macPrefix: fa:16:3b

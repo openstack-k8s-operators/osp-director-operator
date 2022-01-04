@@ -76,7 +76,7 @@ type OpenStackNetAttachmentSpec struct {
 // OpenStackNetAttachmentStatus defines the observed state of OpenStackNetAttachment
 type OpenStackNetAttachmentStatus struct {
 	// CurrentState - the overall state of the network attachment
-	CurrentState NetAttachState `json:"currentState"`
+	CurrentState ProvisioningState `json:"currentState"`
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
@@ -94,16 +94,27 @@ type OpenStackNetAttachmentStatus struct {
 type NetAttachState string
 
 const (
+	//
+	// condition types
+	//
+
 	// NetAttachWaiting - the network configuration is blocked by prerequisite objects
-	NetAttachWaiting NetAttachState = "Waiting"
+	NetAttachWaiting ProvisioningState = "Waiting"
 	// NetAttachInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetAttachInitializing NetAttachState = "Initializing"
+	NetAttachInitializing ProvisioningState = "Initializing"
 	// NetAttachConfiguring - the underlying network resources are configuring the nodes
-	NetAttachConfiguring NetAttachState = "Configuring"
+	NetAttachConfiguring ProvisioningState = "Configuring"
 	// NetAttachConfigured - the nodes have been configured by the underlying network resources
-	NetAttachConfigured NetAttachState = "Configured"
+	NetAttachConfigured ProvisioningState = "Configured"
 	// NetAttachError - the network configuration hit a generic error
-	NetAttachError NetAttachState = "Error"
+	NetAttachError ProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	// NetAttachCondReasonCreated - osnetattachment created
+	NetAttachCondReasonCreated ConditionReason = "NetAttachCreated"
 )
 
 //+kubebuilder:object:root=true

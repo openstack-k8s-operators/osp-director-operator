@@ -67,6 +67,18 @@ func (r *OpenStackNetConfig) Default() {
 	}
 
 	//
+	// set default PhysNetworks name/prefix if non speficied
+	//
+	if len(r.Spec.PhysNetworks) == 0 {
+		r.Spec.PhysNetworks = []Physnet{
+			{
+				Name:      DefaultOVNChassisPhysNetName,
+				MACPrefix: DefaultOVNChassisPhysNetMACPrefix,
+			},
+		}
+	}
+
+	//
 	// The default domain name if non specified
 	//
 	if r.Spec.DomainName == "" {

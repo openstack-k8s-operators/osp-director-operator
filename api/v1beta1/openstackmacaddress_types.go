@@ -59,10 +59,7 @@ type OpenStackMACNodeStatus struct {
 	Deleted bool `json:"deleted"`
 }
 
-// MACState - the state of this openstack mac reservation
-type MACState string
-
-// MACReason - the reason of the condition for this openstack ipset
+// MACReason - the reason of the condition for this openstack mac
 type MACReason string
 
 const (
@@ -71,13 +68,13 @@ const (
 	//
 
 	// MACCondTypeWaiting - the mac creation is blocked by prerequisite objects
-	MACCondTypeWaiting MACState = "Waiting"
+	MACCondTypeWaiting ProvisioningState = "Waiting"
 	// MACCondTypeCreating - we are waiting for mac addresses to be created
-	MACCondTypeCreating MACState = "Creating"
+	MACCondTypeCreating ProvisioningState = "Creating"
 	// MACCondTypeConfigured - the MAC addresses have been created
-	MACCondTypeConfigured MACState = "Created"
+	MACCondTypeConfigured ProvisioningState = "Created"
 	// MACCondTypeError - the mac creation hit a error
-	MACCondTypeError MACState = "Error"
+	MACCondTypeError ProvisioningState = "Error"
 
 	//
 	// condition reasones
@@ -102,7 +99,7 @@ type OpenStackMACAddressStatus struct {
 	ReservedMACCount int `json:"reservedMACCount"`
 
 	// CurrentState - the overall state of the OSMAC cr
-	CurrentState MACState `json:"currentState"`
+	CurrentState ProvisioningState `json:"currentState"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`

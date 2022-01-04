@@ -1203,11 +1203,6 @@ func (in *OpenStackControlPlaneSpec) DeepCopyInto(out *OpenStackControlPlaneSpec
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.PhysNetworks != nil {
-		in, out := &in.PhysNetworks, &out.PhysNetworks
-		*out = make([]Physnet, len(*in))
-		copy(*out, *in)
-	}
 	if in.DNSServers != nil {
 		in, out := &in.DNSServers, &out.DNSServers
 		*out = make([]string, len(*in))
@@ -1862,6 +1857,11 @@ func (in *OpenStackNetConfigSpec) DeepCopyInto(out *OpenStackNetConfigSpec) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.PhysNetworks != nil {
+		in, out := &in.PhysNetworks, &out.PhysNetworks
+		*out = make([]Physnet, len(*in))
+		copy(*out, *in)
 	}
 }
 
