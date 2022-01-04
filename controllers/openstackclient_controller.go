@@ -96,7 +96,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := instance.Status.Conditions.InitCondition()
 
 	if instance.Status.OpenStackClientNetStatus == nil {
 		instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
@@ -139,7 +139,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}(cond)
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, true)
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.Conditions.GetCurrentCondition().Reason == ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
 
 	if err != nil {
 		return ctrl.Result{}, err

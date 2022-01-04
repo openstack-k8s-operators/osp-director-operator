@@ -96,7 +96,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := instance.Status.Conditions.InitCondition()
 
 	//
 	// Used in comparisons below to determine whether a status update is actually needed

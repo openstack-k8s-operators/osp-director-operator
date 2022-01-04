@@ -221,6 +221,17 @@ func (conditions ConditionList) Find(conditionType ConditionType) *Condition {
 	return nil
 }
 
+// InitCondition - Either return the current condition (if non-nil), or return an empty Condition
+func (conditions ConditionList) InitCondition() *Condition {
+	cond := conditions.GetCurrentCondition()
+
+	if cond == nil {
+		return &Condition{}
+	}
+
+	return cond
+}
+
 // GetCurrentCondition - Get current condition with status == corev1.ConditionTrue
 func (conditions ConditionList) GetCurrentCondition() *Condition {
 	for i, cond := range conditions {

@@ -95,7 +95,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := instance.Status.Conditions.InitCondition()
 
 	if instance.Status.MACReservations == nil {
 		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeStatus{}

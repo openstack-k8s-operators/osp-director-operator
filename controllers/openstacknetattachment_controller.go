@@ -105,7 +105,8 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := instance.Status.Conditions.InitCondition()
+
 	//
 	// Used in comparisons below to determine whether a status update is actually needed
 	//
