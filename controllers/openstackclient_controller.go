@@ -297,6 +297,25 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrlResult, err
 	}
 
+	// add ctlplane osnet to template params so we can generate Ansible inventory
+	templateParameters := map[string]interface{}{}
+	roleCtlplaneIps, err := openstacknet.GetOpenStackNetworkRoleHostnameIPs(
+		r,
+		instance.Namespace,
+		map[string]string{
+			openstacknet.ControlPlaneNetworkLabelSelector: "true",
+		},
+	)
+	if err != nil {
+		common.LogForObject(
+			r,
+			fmt.Sprintf("BLAH: %v", err),
+			instance,
+		)
+		return ctrl.Result{}, err
+	}
+	templateParameters["RoleCtlplaneNetworkHostnameIPs"] = roleCtlplaneIps
+
 	//
 	// create cm holding deployment script and render deployment script.
 	//
@@ -308,12 +327,12 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Type:               common.TemplateTypeScripts,
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{},
-			ConfigOptions:      make(map[string]interface{}),
+			ConfigOptions:      templateParameters,
 			Labels:             labels,
 		},
 	}
 	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
-	if err != nil && k8s_errors.IsNotFound(err) {
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 

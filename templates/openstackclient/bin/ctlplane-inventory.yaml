@@ -1,0 +1,9 @@
+overcloud:
+{{- if .RoleCtlplaneNetworkHostnameIPs }}
+{{- range $role, $hostIps := .RoleCtlplaneNetworkHostnameIPs }}
+  {{ $role }}:
+{{- range $hostname, $ip := $hostIps }}
+    {{ $ip }}:
+{{- end }}
+{{- end }}
+{{- end }}

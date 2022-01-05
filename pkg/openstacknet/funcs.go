@@ -85,3 +85,25 @@ func GetOpenStackNetWithLabel(r common.ReconcilerCommon, namespace string, label
 	}
 	return &osNetList.Items[0], nil
 }
+
+// GetOpenStackNetworkRoleHostnameIPs - Return a map of hostname/IPs for the specified network selector
+func GetOpenStackNetworkRoleHostnameIPs(r common.ReconcilerCommon, namespace string, labelSelector map[string]string) (map[string]map[string]string, error) {
+	ctlplaneIps := map[string]map[string]string{}
+
+	ctlplane, err := GetOpenStackNetWithLabel(
+		r,
+		namespace,
+		labelSelector,
+	)
+	if err != nil {
+		return ctlplaneIps, err
+	}
+	for val, roleReservation := range ctlplane.Status.RoleReservations {
+		roleReservations := map[string]string{}
+		for _, ipReservation := range roleReservation.Reservations {
+			roleReservations[ipReservation.Hostname] = ipReservation.IP
+		}
+		ctlplaneIps[val] = roleReservations
+	}
+	return ctlplaneIps, err
+}

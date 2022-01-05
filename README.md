@@ -574,7 +574,22 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     * `-a` - accept the new available rendered playbooks and tag them as `latest`
     * `-p` - run the ansible driven OpenStack deployment
 
-    a) check for new version of rendered playbooks and accept them
+    a) register the overcloud systems to required channels
+
+    Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so. The inventory file for all hosts on the ctlplane network has been generated within the openstackclient pod at /home/cloud-admin/ctlplane-inventory.yaml.
+
+    ```bash
+    oc rsh openstackclient
+    bash
+    cd /home/cloud-admin
+
+    <create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
+
+    # register the overcloud nodes to required repositories
+    ansible-playpook -i /home/cloud-admin/ctlplane-inventory.yaml ./rhsm.yaml
+    ```
+
+    b) check for new version of rendered playbooks and accept them
 
     ```bash
     oc rsh openstackclient
@@ -586,21 +601,6 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     # accept the new available rendered playbooks (if available) and tag them as `latest`
     ./tripleo-deploy.sh -a
-    ```
-
-    b) register the overcloud systems to required channels
-
-    The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
-
-    ```bash
-    oc rsh openstackclient
-    bash
-    cd /home/cloud-admin
-
-    <create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
-
-    # register the overcloud nodes to required repositories
-    ansible-playpook -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml ./rhsm.yaml
     ```
 
     c) run ansible driven OpenStack deployment
