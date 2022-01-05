@@ -166,7 +166,9 @@ const (
 	// ControlPlaneReasonNotSupportedVersion - osctlplane not found
 	ControlPlaneReasonNotSupportedVersion ConditionReason = "CtlPlaneNotSupportedVersion"
 	// ControlPlaneReasonTripleoPasswordsSecretError - Tripleo password secret error
-	ControlPlaneReasonTripleoPasswordsSecretError ConditionReason = "TripleoPasswordsSecretCError"
+	ControlPlaneReasonTripleoPasswordsSecretError ConditionReason = "TripleoPasswordsSecretError"
+	// ControlPlaneReasonTripleoPasswordsSecretNotFound - Tripleo password secret not found
+	ControlPlaneReasonTripleoPasswordsSecretNotFound ConditionReason = "TripleoPasswordsSecretNotFound"
 	// ControlPlaneReasonTripleoPasswordsSecretCreateError - Tripleo password secret create error
 	ControlPlaneReasonTripleoPasswordsSecretCreateError ConditionReason = "TripleoPasswordsSecretCreateError"
 	// ControlPlaneReasonDeploymentSSHKeysSecretError - Deployment SSH Keys Secret Error

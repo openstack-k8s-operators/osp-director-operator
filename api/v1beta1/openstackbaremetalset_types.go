@@ -80,20 +80,62 @@ type OpenStackBaremetalSetProvisioningStatus struct {
 }
 
 const (
-	// BaremetalSetEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
-	BaremetalSetEmpty ProvisioningState = "Empty"
-	// BaremetalSetWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
-	BaremetalSetWaiting ProvisioningState = "Waiting"
-	// BaremetalSetProvisioning - one or more BaremetalHosts are provisioning
-	BaremetalSetProvisioning ProvisioningState = "Provisioning"
-	// BaremetalSetProvisioned - the requested BaremetalHosts count has been satisfied
-	BaremetalSetProvisioned ProvisioningState = "Provisioned"
-	// BaremetalSetDeprovisioning - one or more BaremetalHosts are deprovisioning
-	BaremetalSetDeprovisioning ProvisioningState = "Deprovisioning"
-	// BaremetalSetInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
-	BaremetalSetInsufficient ProvisioningState = "Insufficient availability"
-	// BaremetalSetError - general catch-all for actual errors
-	BaremetalSetError ProvisioningState = "Error"
+	// BaremetalSetCondTypeEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
+	BaremetalSetCondTypeEmpty ProvisioningState = "Empty"
+	// BaremetalSetCondTypeWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
+	BaremetalSetCondTypeWaiting ProvisioningState = "Waiting"
+	// BaremetalSetCondTypeProvisioning - one or more BaremetalHosts are provisioning
+	BaremetalSetCondTypeProvisioning ProvisioningState = "Provisioning"
+	// BaremetalSetCondTypeProvisioned - the requested BaremetalHosts count has been satisfied
+	BaremetalSetCondTypeProvisioned ProvisioningState = "Provisioned"
+	// BaremetalSetCondTypeDeprovisioning - one or more BaremetalHosts are deprovisioning
+	BaremetalSetCondTypeDeprovisioning ProvisioningState = "Deprovisioning"
+	// BaremetalSetCondTypeInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
+	BaremetalSetCondTypeInsufficient ProvisioningState = "Insufficient availability"
+	// BaremetalSetCondTypeError - general catch-all for actual errors
+	BaremetalSetCondTypeError ProvisioningState = "Error"
+
+	//
+	// condition reasones
+	//
+
+	//
+	// metal3
+	//
+
+	// BaremetalHostCondReasonListError - metal3 bmh list objects error
+	BaremetalHostCondReasonListError ConditionReason = "BaremetalHostListError"
+	// BaremetalHostCondReasonGetError - error get metal3 bmh object
+	BaremetalHostCondReasonGetError ConditionReason = "BaremetalHostGetError"
+	// BaremetalHostCondReasonUpdateError - error updating metal3 bmh object
+	BaremetalHostCondReasonUpdateError ConditionReason = "BaremetalHostUpdateError"
+	// BaremetalHostCondReasonCloudInitSecretError - error creating cloud-init secrets for metal3
+	BaremetalHostCondReasonCloudInitSecretError ConditionReason = "BaremetalHostCloudInitSecretError"
+
+	//
+	// osbms
+	//
+
+	// BaremetalSetCondReasonBaremetalHostStatusNotFound - bare metal host status not found
+	BaremetalSetCondReasonBaremetalHostStatusNotFound ConditionReason = "BaremetalHostStatusNotFound"
+	// BaremetalSetCondReasonUserDataSecretDeleteError - error deleting user data secret
+	BaremetalSetCondReasonUserDataSecretDeleteError ConditionReason = "BaremetalSetUserDataSecretDeleteError"
+	// BaremetalSetCondReasonNetworkDataSecretDeleteError - error deleting network data secret
+	BaremetalSetCondReasonNetworkDataSecretDeleteError ConditionReason = "BaremetalSetNetworkDataSecretDeleteError"
+	// BaremetalSetCondReasonScaleDownInsufficientAnnotatedHosts - not enough nodes annotated for deletion
+	BaremetalSetCondReasonScaleDownInsufficientAnnotatedHosts ConditionReason = "BaremetalSetScaleDownInsufficientAnnotatedHosts"
+	// BaremetalSetCondReasonScaleUpInsufficientHosts - not enough nodes for requested host count
+	BaremetalSetCondReasonScaleUpInsufficientHosts ConditionReason = "BaremetalSetScaleUpInsufficientHosts"
+	// BaremetalSetCondReasonProvisioningErrors - errors during bmh provisioning
+	BaremetalSetCondReasonProvisioningErrors ConditionReason = "BaremetalSetProvisioningErrors"
+	// BaremetalSetCondReasonVirtualMachineProvisioning - bmh provisioning in progress
+	BaremetalSetCondReasonVirtualMachineProvisioning ConditionReason = "BaremetalHostProvisioning"
+	// BaremetalSetCondReasonVirtualMachineDeprovisioning - bmh deprovisioning in progress
+	BaremetalSetCondReasonVirtualMachineDeprovisioning ConditionReason = "BaremetalHostDeprovisioning"
+	// BaremetalSetCondReasonVirtualMachineProvisioned - bmh provisioned
+	BaremetalSetCondReasonVirtualMachineProvisioned ConditionReason = "BaremetalHostProvisioed"
+	// BaremetalSetCondReasonVirtualMachineCountZero - no bmh requested
+	BaremetalSetCondReasonVirtualMachineCountZero ConditionReason = "BaremetalHostCountZero"
 )
 
 // GetHostnames -

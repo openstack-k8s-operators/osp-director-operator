@@ -155,12 +155,11 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	envVars := make(map[string]common.EnvSetter)
@@ -657,8 +656,8 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 		//
 		// wait for all BMS be provisioned if baremetalhosts for the bms are requested
 		//
-		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetProvisioned) &&
-			bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetEmpty) {
+		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeProvisioned) &&
+			bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeEmpty) {
 			msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
 			return msg, false, nil
 		}

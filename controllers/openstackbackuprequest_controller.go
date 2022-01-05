@@ -421,7 +421,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerWaiting
+		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
@@ -436,7 +436,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetWaiting
+		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {

@@ -138,6 +138,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
@@ -150,7 +152,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
-			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", common.FinalizerName, instance.Name))
+			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to CR %s", common.FinalizerName, instance.Name), instance)
 		}
 	} else {
 		// 1. check if finalizer is there
@@ -172,6 +174,12 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		controllerutil.RemoveFinalizer(instance, common.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("CR %s deleted", instance.Name))

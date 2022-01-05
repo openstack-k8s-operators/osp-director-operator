@@ -137,11 +137,11 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
+
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
@@ -188,6 +188,12 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		controllerutil.RemoveFinalizer(instance, openstacknetattachment.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		common.LogForObject(r, fmt.Sprintf("CR %s deleted", instance.Name), instance)
@@ -491,8 +497,13 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 				condition.Reason == "SuccessfullyConfigured" {
 
 				controllerutil.RemoveFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName)
-				err = r.Client.Update(context.TODO(), networkConfigurationPolicy)
-				if err != nil && !k8s_errors.IsNotFound(err) {
+				if err := r.Client.Update(context.TODO(), networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
+					cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+					err = common.WrapErrorForObject(cond.Message, instance, err)
+
 					return ctrl.Result{}, err
 				}
 

@@ -115,7 +115,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.ProvisionServerProvisioned)
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.ProvisionServerCondTypeProvisioned)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -165,7 +165,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 			if err != nil {
 				msg := fmt.Sprintf("Unable to acquire provisioning interface: %v", err)
-				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
 				actualProvisioningState.Reason = msg
 				_ = r.setProvisioningStatus(instance, actualProvisioningState)
 				return ctrl.Result{}, err
@@ -173,7 +173,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 			if provInterfaceName == "" {
 				err := fmt.Errorf("Metal3 provisioning interface configuration not found")
-				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
 				actualProvisioningState.Reason = err.Error()
 				_ = r.setProvisioningStatus(instance, actualProvisioningState)
 				return ctrl.Result{}, err
@@ -196,7 +196,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// Calculate overall provisioning status
-	actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerProvisioning
+	actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeProvisioning
 	actualProvisioningState.Reason = fmt.Sprintf("ProvisionServer %s is currently provisioning", instance.Name)
 
 	// Provision IP Discovery Agent sets status' ProvisionIP
@@ -230,7 +230,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		})
 
 		if err != nil && !k8s_errors.IsNotFound(err) {
-			actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerError
+			actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
 			actualProvisioningState.Reason = err.Error()
 			_ = r.setProvisioningStatus(instance, actualProvisioningState)
 			return ctrl.Result{}, err
@@ -238,7 +238,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 			// There should only be one pod.  If there is more than one, we have other problems...
 			for _, pod := range podList.Items {
 				if pod.Status.Phase == corev1.PodRunning {
-					actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerProvisioned
+					actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeProvisioned
 					actualProvisioningState.Reason = fmt.Sprintf("ProvisionServer %s has been provisioned", instance.Name)
 					break
 				}

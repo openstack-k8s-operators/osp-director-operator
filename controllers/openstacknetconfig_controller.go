@@ -127,11 +127,11 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
+
+		// log current status message to operator log
+		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
@@ -219,6 +219,12 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		controllerutil.RemoveFinalizer(instance, openstacknetconfig.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
 			return ctrl.Result{}, err
 		}
 		common.LogForObject(r, fmt.Sprintf("CR %s deleted", instance.Name), instance)

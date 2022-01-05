@@ -79,8 +79,7 @@ func (r *OpenStackProvisionServer) ValidateUpdate(old runtime.Object) error {
 }
 
 func (r *OpenStackProvisionServer) validateCr() error {
-	existingPorts, err := r.GetExistingProvServerPorts(webhookClient)
-
+	existingPorts, err := r.GetExistingProvServerPorts(&Condition{}, webhookClient)
 	if err != nil {
 		return err
 	}

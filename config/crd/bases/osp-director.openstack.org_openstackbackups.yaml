@@ -2630,8 +2630,8 @@ spec:
                                     reason:
                                       type: string
                                     state:
-                                      description: ProvisionServerProvisioningState
-                                        - the overall state of this OpenStackProvisionServer
+                                      description: ProvisioningState - the overall
+                                        state of all VMs in this OpenStackVmSet
                                       type: string
                                   type: object
                               type: object

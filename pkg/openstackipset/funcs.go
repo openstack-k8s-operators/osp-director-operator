@@ -29,43 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// OvercloudipsetCreateOrUpdate -
-// TODO: remove when all controllers migrated to use cond and CreateOrUpdateIPset
-func OvercloudipsetCreateOrUpdate(
-	r common.ReconcilerCommon,
-	obj metav1.Object,
-	ipset common.IPSet,
-) (*ospdirectorv1beta1.OpenStackIPSet, controllerutil.OperationResult, error) {
-	overcloudIPSet := &ospdirectorv1beta1.OpenStackIPSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      obj.GetName(),
-			Namespace: obj.GetNamespace(),
-			Labels: map[string]string{
-				AddToPredictableIPsLabel: strconv.FormatBool(ipset.AddToPredictableIPs),
-			},
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), overcloudIPSet, func() error {
-		overcloudIPSet.Spec.Networks = ipset.Networks
-		overcloudIPSet.Spec.RoleName = ipset.Role
-		overcloudIPSet.Spec.HostCount = ipset.HostCount
-		overcloudIPSet.Spec.VIP = ipset.VIP
-		overcloudIPSet.Spec.AddToPredictableIPs = ipset.AddToPredictableIPs
-		overcloudIPSet.Spec.HostNameRefs = ipset.HostNameRefs
-
-		err := controllerutil.SetControllerReference(obj, overcloudIPSet, r.GetScheme())
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return overcloudIPSet, op, err
-}
-
 //
 // CreateOrUpdateIPset - Create/Update IPSet
 //
