@@ -11,12 +11,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: ctlplane
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -28,12 +25,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: external
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet external has been successfully configured on targeted node(s)
-    reason: OpenStackNet external has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -45,12 +39,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: internalapi
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -62,12 +53,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storage
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet storage has been successfully configured on targeted node(s)
-    reason: OpenStackNet storage has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -79,12 +67,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storagemgmt
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -96,12 +81,9 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: tenant
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
