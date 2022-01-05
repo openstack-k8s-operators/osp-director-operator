@@ -19,7 +19,7 @@ metadata:
   name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
   count: 2
   ctlplaneInterface: enp7s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
@@ -41,11 +41,6 @@ status:
       ctlplaneIP: 192.168.25.103/24
       hostname: compute-1
       provisioningState: provisioned
-  conditions:
-  - message: All requested BaremetalHosts have been provisioned
-    reason: All requested BaremetalHosts have been provisioned
-    status: "True"
-    type: Provisioned
   provisioningStatus:
     readyCount: 2
     reason: All requested BaremetalHosts have been provisioned
@@ -132,14 +127,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: ctlplane
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 3
+spec:
   roleReservations:
     Compute:
       addToPredictableIPs: true
@@ -166,6 +154,15 @@ status:
         hostname: openstackclient-0
         ip: 192.168.25.101
         vip: false
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -174,14 +171,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: internalapi
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
+spec:
   roleReservations:
     Compute:
       addToPredictableIPs: true
@@ -208,6 +198,15 @@ status:
         hostname: openstackclient-0
         ip: 172.17.0.11
         vip: false
+status:
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -216,14 +215,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: tenant
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
+spec:
   roleReservations:
     Compute:
       addToPredictableIPs: true
@@ -236,6 +228,15 @@ status:
         hostname: compute-1
         ip: 172.20.0.11
         vip: false
+status:
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -251,6 +252,7 @@ spec:
   hostCount: 2
   networks:
   - ctlplane
+  - internal_api
   - tenant
   roleName: Compute
   vip: false
