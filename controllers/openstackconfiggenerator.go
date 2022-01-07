@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -262,6 +263,16 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 
+	// add build-in heat environment files
+	var tripleoEnvironmentFiles []string
+	for _, f := range instance.Spec.HeatEnvs {
+		// Join the path to root first to ensure it doesn't escape the t-h-t environments dir.
+		cleanPath := filepath.Join("/", f)
+		envPath := filepath.Join("environments", cleanPath)
+		tripleoEnvironmentFiles = append(tripleoEnvironmentFiles, envPath)
+	}
+	templateParameters["TripleoEnvironmentFiles"] = tripleoEnvironmentFiles
+
 	//
 	// render OOO environment, create TripleoDeployCM and read the tripleo-deploy-config CM
 	//
@@ -323,6 +334,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	hashList := []interface{}{
 		tripleoCustomDeployCM.Data,
 		tripleoDeployCM.Data,
+		tripleoEnvironmentFiles,
 	}
 
 	if tripleoTarballCM != nil {
