@@ -212,11 +212,6 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-// DeployGetLabels -
-func DeployGetLabels(name string) map[string]string {
-	return map[string]string{"owner": "osp-director-operator", "cr": name, "app": "deploy"}
-}
-
 func (r *OpenStackDeployReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackDeployStatus) *ospdirectorv1beta1.OpenStackDeployStatus {
 
 	//
