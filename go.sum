@@ -2048,7 +2048,6 @@ k8s.io/autoscaler v0.0.0-20190607113959-1b4f1855cb8e/go.mod h1:QEXezc9uKPT91dwqh
 k8s.io/cli-runtime v0.21.4/go.mod h1:eRbLHYkdVWzvG87yrkgGd8CqX6/+fAG9DTdAqTXmlRY=
 k8s.io/client-go v0.21.4 h1:tcwj167If+v+pIGrCjaPG7hFo6SqFPFCCgMJy+Vm8Jc=
 k8s.io/client-go v0.21.4/go.mod h1:t0/eMKyUAq/DoQ7vW8NVVA00/nomlwC+eInsS8PxSew=
-k8s.io/cluster-bootstrap v0.21.4/go.mod h1:GtXGuiEtdV4XQJcscR6qQCm/vtQWkhUi3qnl9KL9jzw=
 k8s.io/code-generator v0.21.4/go.mod h1:K3y0Bv9Cz2cOW2vXUrNZlFbflhuPvuadW6JdnN6gGKo=
 k8s.io/component-base v0.21.4 h1:Bc0AttSyhJFVXEIHz+VX+D11j/5z7SPPhl6whiXaRzs=
 k8s.io/component-base v0.21.4/go.mod h1:ZKG0eHVX+tUDcaoIGpU3Vtk4TIjMddN9uhEWDmW6Nyg=
