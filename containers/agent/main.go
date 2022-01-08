@@ -14,8 +14,8 @@ const (
 var (
 	rootCmd = &cobra.Command{
 		Use:   componentName,
-		Short: "Run OSP-Director-Operator Deploy Agent",
-		Long:  "Runs the OSP-Director-Operator Deploy Agent",
+		Short: "Run OSP-Director-Operator Agent",
+		Long:  "Runs the OSP-Director-Operator Agent",
 	}
 )
 
