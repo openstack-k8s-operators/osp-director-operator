@@ -142,10 +142,9 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.GetLogger().Error(err, instance.Spec.ConfigGenerator+" ConfigGenerator not found!", "Instance.Namespace", instance.Namespace)
 	}
 
-	// Define a new Job object
-	job := openstackdeploy.DeployJob(instance, "openstackclient", instance.Spec.ConfigVersion, configGenerator.Spec.GitSecret)
-
 	if instance.Status.ConfigVersion != instance.Spec.ConfigVersion {
+		// Define a new Job object
+		job := openstackdeploy.DeployJob(instance, "openstackclient", instance.Spec.ConfigVersion, configGenerator.Spec.GitSecret)
 
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
