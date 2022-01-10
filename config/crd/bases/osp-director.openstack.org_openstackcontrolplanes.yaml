@@ -119,34 +119,6 @@ spec:
               passwordSecret:
                 description: PasswordSecret used to e.g specify root pwd
                 type: string
-              physNetworks:
-                description: PhysNetworks - physical networks list with optional MAC
-                  address prefix, used to create static OVN Bridge MAC address mappings.
-                  Unique OVN bridge mac address is dynamically allocated by creating
-                  OpenStackMACAddress resource and create a MAC per physnet per OpenStack
-                  node. This information is used to create the OVNStaticBridgeMacMappings.
-                  If PhysNetworks is not provided, the tripleo default physnet datacentre
-                  gets created If the macPrefix is not specified for a physnet, the
-                  default macPrefix "fa:16:3a" is used.
-                items:
-                  description: Physnet - name and prefix to be used for the physnet
-                  properties:
-                    macPrefix:
-                      default: fa:16:3a
-                      description: MACPrefix - the MAC address prefix to use Locally
-                        administered addresses are distinguished from universally
-                        administered addresses by setting (assigning the value of
-                        1 to) the second-least-significant bit of the first octet
-                        of the address. https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
-                      type: string
-                    name:
-                      default: datacentre
-                      description: Name - the name of the physnet
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
               virtualMachineRoles:
                 additionalProperties:
                   description: OpenStackVirtualMachineRoleSpec - defines the desired

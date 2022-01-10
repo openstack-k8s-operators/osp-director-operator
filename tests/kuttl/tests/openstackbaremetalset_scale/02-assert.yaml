@@ -26,11 +26,6 @@ spec:
   openStackClientStorageClass: host-nfs-storageclass
   openStackRelease: "16.2"
   passwordSecret: userpassword
-  physNetworks:
-  - name: datacentre
-    macPrefix: fa:16:3a
-  - name: datacentre2
-    macPrefix: fa:16:3b
   virtualMachineRoles:
     controller:
       baseImageVolumeName: controller-base-img
@@ -49,6 +44,26 @@ spec:
       roleCount: 0
       roleName: Controller
       storageClass: host-nfs-storageclass
+status:
+  ospVersion: "16.2"
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+  vipStatus:
+    controlplane:
+      annotatedForDeletion: false
+      hostRef: controlplane
+      hostname: controlplane
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.10/24
+        internal_api: 172.17.0.10/24
+        storage: 172.18.0.10/24
+        storage_mgmt: 172.19.0.10/24
+      provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -79,11 +94,6 @@ spec:
   vmCount: 0
 status:
   baseImageDVReady: true
-  conditions:
-  - message: No VirtualMachines have been requested
-    reason: No VirtualMachines have been requested
-    status: "True"
-    type: Empty
   provisioningStatus:
     reason: No VirtualMachines have been requested
     state: Empty
@@ -109,12 +119,14 @@ spec:
 status:
   netStatus:
     openstackclient-0:
-      hostRef: openstackclient
+      annotatedForDeletion: false
+      hostRef: openstackclient-0
       hostname: openstackclient-0
       ipaddresses:
         ctlplane: 192.168.25.101/24
         external: 10.0.0.11/24
         internal_api: 172.17.0.11/24
+      provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -122,6 +134,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "true"
     ooo-netname: Control
     ooo-netname-lower: ctlplane
     ooo-subnetname: ctlplane
@@ -135,20 +148,11 @@ spec:
   allocationStart: 192.168.25.100
   attachConfiguration: br-osp
   cidr: 192.168.25.0/24
+  domainName: ctlplane.localdomain
   gateway: 192.168.25.1
   mtu: 1500
   name: Control
   nameLower: ctlplane
-  vip: true
-  vlan: 0
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -164,6 +168,13 @@ status:
         hostname: openstackclient-0
         ip: 192.168.25.101
         vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -171,6 +182,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: External
     ooo-netname-lower: external
     ooo-subnetname: external
@@ -184,20 +196,11 @@ spec:
   allocationStart: 10.0.0.10
   attachConfiguration: br-ex
   cidr: 10.0.0.0/24
+  domainName: external.localdomain
   gateway: 10.0.0.1
   mtu: 1500
   name: External
   nameLower: external
-  vip: true
-  vlan: 0
-status:
-  conditions:
-  - message: OpenStackNet external has been successfully configured on targeted node(s)
-    reason: OpenStackNet external has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -213,6 +216,13 @@ status:
         hostname: openstackclient-0
         ip: 10.0.0.11
         vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -220,6 +230,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: InternalApi
     ooo-netname-lower: internal_api
     ooo-subnetname: internal_api
@@ -233,20 +244,11 @@ spec:
   allocationStart: 172.17.0.10
   attachConfiguration: br-osp
   cidr: 172.17.0.0/24
+  domainName: internalapi.localdomain
   gateway: ""
   mtu: 1350
   name: InternalApi
   nameLower: internal_api
-  vip: true
-  vlan: 20
-status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -262,6 +264,13 @@ status:
         hostname: openstackclient-0
         ip: 172.17.0.11
         vip: false
+  routes: []
+  vip: true
+  vlan: 20
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -269,6 +278,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: Storage
     ooo-netname-lower: storage
     ooo-subnetname: storage
@@ -282,20 +292,11 @@ spec:
   allocationStart: 172.18.0.10
   attachConfiguration: br-osp
   cidr: 172.18.0.0/24
+  domainName: storage.localdomain
   gateway: ""
   mtu: 1350
   name: Storage
   nameLower: storage
-  vip: true
-  vlan: 30
-status:
-  conditions:
-  - message: OpenStackNet storage has been successfully configured on targeted node(s)
-    reason: OpenStackNet storage has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 1
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -304,6 +305,13 @@ status:
         hostname: controlplane
         ip: 172.18.0.10
         vip: true
+  routes: []
+  vip: true
+  vlan: 30
+status:
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -311,6 +319,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: StorageMgmt
     ooo-netname-lower: storage_mgmt
     ooo-subnetname: storage_mgmt
@@ -324,20 +333,11 @@ spec:
   allocationStart: 172.19.0.10
   attachConfiguration: br-osp
   cidr: 172.19.0.0/24
+  domainName: storagemgmt.localdomain
   gateway: ""
   mtu: 1350
   name: StorageMgmt
   nameLower: storage_mgmt
-  vip: true
-  vlan: 40
-status:
-  conditions:
-  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 1
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -346,6 +346,13 @@ status:
         hostname: controlplane
         ip: 172.19.0.10
         vip: true
+  routes: []
+  vip: true
+  vlan: 40
+status:
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -353,6 +360,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: Tenant
     ooo-netname-lower: tenant
     ooo-subnetname: tenant
@@ -366,18 +374,16 @@ spec:
   allocationStart: 172.20.0.10
   attachConfiguration: br-osp
   cidr: 172.20.0.0/24
+  domainName: tenant.localdomain
   gateway: ""
   mtu: 1350
   name: Tenant
   nameLower: tenant
+  roleReservations: {}
+  routes: []
   vip: false
   vlan: 50
 status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
@@ -395,7 +401,7 @@ spec:
   addToPredictableIPs: true
   hostCount: 1
   hostNameRefs:
-    controlplane: overcloud
+    controlplane: controlplane
   networks:
   - ctlplane
   - external
@@ -467,6 +473,9 @@ spec:
   - tenant
   roleName: Controller
   vip: false
+status:
+  hosts: {}
+  networks: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -481,7 +490,7 @@ spec:
   addToPredictableIPs: false
   hostCount: 1
   hostNameRefs:
-    openstackclient-0: openstackclient
+    openstackclient-0: openstackclient-0
   networks:
   - ctlplane
   - external
@@ -529,7 +538,7 @@ type: Opaque
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress
 metadata:
-  name: overcloud
+  name: openstacknetconfig
   namespace: openstack
 spec:
   physNetworks:
@@ -538,11 +547,6 @@ spec:
   - macPrefix: fa:16:3b
     name: datacentre2
 status:
-  conditions:
-  - message: All MAC addresses created
-    reason: All MAC addresses created
-    status: "True"
-    type: Created
   currentState: Created
   macReservations: {}
   reservedMACCount: 0

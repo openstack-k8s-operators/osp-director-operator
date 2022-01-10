@@ -127,18 +127,6 @@ func (r *OpenStackControlPlane) Default() {
 	}
 
 	//
-	// set default PhysNetworks name/prefix if non speficied
-	//
-	if len(r.Spec.PhysNetworks) == 0 {
-		r.Spec.PhysNetworks = []Physnet{
-			{
-				Name:      DefaultOVNChassisPhysNetName,
-				MACPrefix: DefaultOVNChassisPhysNetMACPrefix,
-			},
-		}
-	}
-
-	//
 	// set OpenStackRelease if non provided
 	//
 	if r.Spec.OpenStackRelease == "" {

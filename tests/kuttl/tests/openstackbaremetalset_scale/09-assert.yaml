@@ -11,14 +11,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: ctlplane
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 2
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -34,6 +27,15 @@ status:
         hostname: openstackclient-0
         ip: 192.168.25.101
         vip: false
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -42,14 +44,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: internalapi
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 0
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -65,6 +60,15 @@ status:
         hostname: openstackclient-0
         ip: 172.17.0.11
         vip: false
+status:
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -73,6 +77,8 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: tenant
   namespace: openstack
+spec:
+  roleReservations: {}
 status:
   conditions:
   - message: OpenStackNet tenant has been successfully configured on targeted node(s)

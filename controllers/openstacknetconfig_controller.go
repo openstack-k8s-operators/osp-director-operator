@@ -215,7 +215,9 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		}
 
-		// 5. as last step remove the finalizer on the operator CR to finish delete
+		// TODO: osmacaddr cleanup
+
+		// X. as last step remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, openstacknetconfig.FinalizerName)
 		err = r.Client.Update(context.TODO(), instance)
 		if err != nil {
@@ -245,7 +247,20 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	//
-	// 1) create all OpenStackNetworkAttachments
+	// 1) Create or update the MACAddress CR object
+	//
+	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.PhysNetworks)
+	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
+	err = r.createOrUpdateOpenStackMACAddress(
+		instance,
+		cond,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// 2) create all OpenStackNetworkAttachments
 	//
 	instance.Status.ProvisioningStatus.AttachDesiredCount = len(instance.Spec.AttachConfigurations)
 	instance.Status.ProvisioningStatus.AttachReadyCount = 0
@@ -281,7 +296,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	//
-	// 2) create all OpenStackNetworks
+	// 3) create all OpenStackNetworks
 	//
 	instance.Status.ProvisioningStatus.NetDesiredCount = len(instance.Spec.Networks)
 	instance.Status.ProvisioningStatus.NetReadyCount = 0
@@ -388,16 +403,26 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 
 	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, attachConfig, apply)
 	if err != nil {
-		err = common.WrapErrorForObject(fmt.Sprintf("Updating %s OpenStackNetworkAttach", attachConfig.Name), attachConfig, err)
+		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", attachConfig.Kind, attachConfig.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetAttachCondReasonCreateError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, attachConfig, err)
+
 		return attachConfig, err
 	}
 
-	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("OpenStackNetworkAttachment %s is %s", attachConfig.Name, string(op))
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
+	cond.Message = fmt.Sprintf("%s %s %s %s CR successfully reconciled",
+		instance.Kind,
+		instance.Name,
+		attachConfig.Kind,
+		attachConfig.Name,
+	)
 
-		common.LogForObject(r, cond.Message, attachConfig)
+	if op != controllerutil.OperationResultNone {
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
 	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetAttachCondReasonCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return attachConfig, nil
 }
@@ -529,17 +554,26 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 
 	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, osNet, apply)
 	if err != nil {
-		err = common.WrapErrorForObject(fmt.Sprintf("Updating %s OpenStackNetwork", osNet.Name), osNet, err)
+		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osNet.Kind, osNet.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonCreateError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, osNet, err)
+
 		return nil, err
 	}
 
+	cond.Message = fmt.Sprintf("%s %s %s %s CR successfully reconciled",
+		instance.Kind,
+		instance.Name,
+		osNet.Kind,
+		osNet.Name,
+	)
+
 	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("OpenStackNetwork %s is %s", osNet.Name, string(op))
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
-	} else {
-		cond.Message = fmt.Sprintf("OpenStackNetwork %s configured", osNet.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
 	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return osNet, nil
 }
@@ -605,6 +639,81 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 	}
 
 	common.LogForObject(r, cond.Message, instance)
+
+	return nil
+}
+
+//
+// create or update the OpenStackMACAddress object
+//
+func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	cond *ospdirectorv1beta1.Condition,
+) error {
+
+	mac := &ospdirectorv1beta1.OpenStackMACAddress{
+		ObjectMeta: metav1.ObjectMeta{
+			// use the role name as the VM CR name
+			Name:      strings.ToLower(instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mac, func() error {
+		if len(instance.Spec.PhysNetworks) == 0 {
+			mac.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
+				{
+					Name:      ospdirectorv1beta1.DefaultOVNChassisPhysNetName,
+					MACPrefix: ospdirectorv1beta1.DefaultOVNChassisPhysNetMACPrefix,
+				},
+			}
+		} else {
+			macPhysnets := []ospdirectorv1beta1.Physnet{}
+			for _, physnet := range instance.Spec.PhysNetworks {
+				macPrefix := physnet.MACPrefix
+				// make sure if MACPrefix was not speficied to set the default prefix
+				if macPrefix == "" {
+					macPrefix = ospdirectorv1beta1.DefaultOVNChassisPhysNetMACPrefix
+				}
+				macPhysnets = append(macPhysnets, ospdirectorv1beta1.Physnet{
+					Name:      physnet.Name,
+					MACPrefix: macPrefix,
+				})
+			}
+
+			mac.Spec.PhysNetworks = macPhysnets
+		}
+
+		err := controllerutil.SetControllerReference(instance, mac, r.Scheme)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Error set controller reference for %s", mac.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to create or update OpenStackMACAddress %s ", instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+
+	cond.Message = "OpenStackMACAddress CR successfully reconciled"
+
+	if op != controllerutil.OperationResultNone {
+		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
+	}
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+
+	instance.Status.ProvisioningStatus.PhysNetReadyCount = len(mac.Spec.PhysNetworks)
 
 	return nil
 }

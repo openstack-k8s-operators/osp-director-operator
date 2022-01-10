@@ -121,7 +121,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		//
 		// Update object conditions
 		//
-		instance.Status.CurrentState = ospdirectorv1beta1.NetAttachState(cond.Type)
+		instance.Status.CurrentState = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		// TODO, we should set some proper cond.Reason type
 		instance.Status.Conditions.UpdateCurrentCondition(

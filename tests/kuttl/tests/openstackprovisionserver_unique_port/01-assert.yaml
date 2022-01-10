@@ -10,11 +10,11 @@ metadata:
   name: openstack
   namespace: openstack
 spec:
-  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:162cc35b2edb9054d29293ed3f0f98f195cf16647e89c3b8c7a4e911606ef4fd
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
-  downloaderImageUrl: quay.io/openstack-k8s-operators/rhel-downloader@sha256:1a1caa9c2841f6aa66e385c3a21b9d084fd039c02b85e0a78722ededbed0bc22
+  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:d63a22b930f0309a8bb160b452147e81ceb1d3fd3df2d78f0a30e763e1d6f0c4
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  downloaderImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader@sha256:dadca151e8712eef8b206b69722c558b2aac035a4a3c52e705bf69c26d649567
   port: 8080
-  provisioningAgentImageUrl: quay.io/openstack-k8s-operators/provision-ip-discovery-agent@sha256:22db35fb3fb4bb2d67a29f6db46ca8cbd8a903cc4f3437cfaec11f2b6b6d3b6b
+  provisioningAgentImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner@sha256:77eab3a61ef569236a17575d5e4f1318d2ac13f164af8a2c94b732a4c50af579
 status:
   conditions:
   - message: ProvisionServer openstack has been provisioned

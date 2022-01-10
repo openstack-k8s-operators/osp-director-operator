@@ -7,3 +7,5 @@ kind: TestStep
 commands:
   - script: |
       oc patch osnetconfig -n openstack openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/attachConfigurations/br-osp/nodeNetworkConfigurationPolicy/desiredState", "value": {"interfaces":[{"name":"blah"}]}}]'
+    # ignore failure as the webhook will prevent the patch
+    ignoreFailure: true

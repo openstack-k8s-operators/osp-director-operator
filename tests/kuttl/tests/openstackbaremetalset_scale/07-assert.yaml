@@ -42,25 +42,17 @@ status:
     state: provisioned
 ---
 # We don't know which BMH was chosen as compute-0 originally, so we just look
-# for one that is currently deprovisioning
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  finalizers:
-  - baremetalhost.metal3.io
-  namespace: openshift-machine-api
-spec:
-  bootMode: legacy
-  hardwareProfile: unknown
-  rootDeviceHints:
-    deviceName: /dev/sda
-status:
-  errorCount: 0
-  errorMessage: ""
-  hardwareProfile: unknown
-  operationalStatus: OK
-  provisioning:
-    bootMode: legacy
-    image:
-      url: ""
-    state: ready
+# for number of bmh hosts in ready state
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+timeout: 180
+commands:
+  - script: |
+      set -x
+      readyState=$(oc get bmh -n openshift-machine-api -o json | jq -r '.items[] | select(.status.provisioning.state=="ready") | .status.provisioning.state' | wc -l)
+      if [ $readyState -eq 1 ]; then
+          exit 0
+      else
+          exit 1
+      fi

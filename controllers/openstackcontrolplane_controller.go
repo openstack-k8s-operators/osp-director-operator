@@ -306,17 +306,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// - change CR.Status.VMs to be struct with name + Pod IP of the controllers
 
 	//
-	// Create or update the MACAddress CR object
-	//
-	err = r.createOrUpdateOpenStackMACAddress(
-		instance,
-		cond,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
 	// Create openstack client pod
 	//
 	osc, err := r.createOrUpdateOpenStackClient(
@@ -548,76 +537,6 @@ func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
 	}
 
 	return uniqNetworksList, nil
-}
-
-func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackMACAddress(
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
-) error {
-
-	mac := &ospdirectorv1beta1.OpenStackMACAddress{
-		ObjectMeta: metav1.ObjectMeta{
-			// use the role name as the VM CR name
-			Name:      strings.ToLower(instance.Name),
-			Namespace: instance.Namespace,
-		},
-	}
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mac, func() error {
-		if len(instance.Spec.PhysNetworks) == 0 {
-			mac.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
-				{
-					Name:      controlplane.DefaultOVNChassisPhysNetName,
-					MACPrefix: controlplane.DefaultOVNChassisPhysNetMACPrefix,
-				},
-			}
-		} else {
-			macPhysnets := []ospdirectorv1beta1.Physnet{}
-			for _, physnet := range instance.Spec.PhysNetworks {
-				macPrefix := physnet.MACPrefix
-				// make sure if MACPrefix was not speficied to set the default prefix
-				if macPrefix == "" {
-					macPrefix = controlplane.DefaultOVNChassisPhysNetMACPrefix
-				}
-				macPhysnets = append(macPhysnets, ospdirectorv1beta1.Physnet{
-					Name:      physnet.Name,
-					MACPrefix: macPrefix,
-				})
-			}
-
-			mac.Spec.PhysNetworks = macPhysnets
-		}
-
-		err := controllerutil.SetControllerReference(instance, mac, r.Scheme)
-		if err != nil {
-			cond.Message = fmt.Sprintf("Error set controller reference for %s", mac.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to create or update OpenStackMACAddress %s ", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return err
-	}
-
-	cond.Message = "OpenStackMACAddress CR successfully reconciled"
-
-	if op != controllerutil.OperationResultNone {
-		cond.Message = fmt.Sprintf("%s - operation: %s", cond.Message, string(op))
-	}
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
-
-	return nil
 }
 
 //

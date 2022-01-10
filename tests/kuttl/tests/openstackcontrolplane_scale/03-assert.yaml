@@ -47,11 +47,6 @@ spec:
   vmCount: 3
 status:
   baseImageDVReady: true
-  conditions:
-  - message: All requested VirtualMachines have been provisioned
-    reason: All requested VirtualMachines have been provisioned
-    status: "True"
-    type: Provisioned
   provisioningStatus:
     readyCount: 3
     reason: All requested VirtualMachines have been provisioned
@@ -137,14 +132,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: ctlplane
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 5
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -175,6 +163,10 @@ status:
         hostname: openstackclient-0
         ip: 192.168.25.101
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 5
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -183,14 +175,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: external
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet external has been successfully configured on targeted node(s)
-    reason: OpenStackNet external has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 5
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -221,6 +206,10 @@ status:
         hostname: openstackclient-0
         ip: 10.0.0.11
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 5
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -229,14 +218,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: internalapi
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 5
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -267,6 +249,10 @@ status:
         hostname: openstackclient-0
         ip: 172.17.0.11
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 5
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -275,14 +261,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storage
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet storage has been successfully configured on targeted node(s)
-    reason: OpenStackNet storage has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 4
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -306,6 +285,10 @@ status:
         hostname: controller-2
         ip: 172.18.0.13
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -314,14 +297,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: storagemgmt
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    reason: OpenStackNet storagemgmt has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 4
+spec:
   roleReservations:
     ControlPlane:
       addToPredictableIPs: true
@@ -345,6 +321,10 @@ status:
         hostname: controller-2
         ip: 172.19.0.13
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 4
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -353,14 +333,7 @@ metadata:
   - openstacknet.osp-director.openstack.org
   name: tenant
   namespace: openstack
-status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 3
+spec:
   roleReservations:
     Controller:
       addToPredictableIPs: true
@@ -377,6 +350,10 @@ status:
         hostname: controller-2
         ip: 172.20.0.12
         vip: false
+status:
+  currentState: Configured
+  reservedIpCount: 3
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -470,7 +447,9 @@ status:
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress
 metadata:
-  name: overcloud
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
   namespace: openstack
 spec:
   physNetworks:

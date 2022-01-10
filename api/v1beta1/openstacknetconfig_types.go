@@ -129,6 +129,14 @@ type OpenStackNetConfigSpec struct {
 	// +kubebuilder:validation:Required
 	// Networks, list of all tripleo networks of the deployment
 	Networks []Network `json:"networks"`
+
+	// +kubebuilder:validation:Optional
+	// PhysNetworks - physical networks list with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
+	// Unique OVN bridge mac address is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per OpenStack node.
+	// This information is used to create the OVNStaticBridgeMacMappings.
+	// If PhysNetworks is not provided, the tripleo default physnet datacentre gets created
+	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+	PhysNetworks []Physnet `json:"physNetworks"`
 }
 
 // OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig
@@ -141,12 +149,14 @@ type OpenStackNetConfigStatus struct {
 // OpenStackNetConfigProvisioningStatus represents the overall provisioning state of
 // the OpenStackNetConfig (with an optional explanatory message)
 type OpenStackNetConfigProvisioningStatus struct {
-	State              ProvisioningState `json:"state,omitempty"`
-	Reason             string            `json:"reason,omitempty"`
-	AttachDesiredCount int               `json:"attachDesiredCount,omitempty"`
-	AttachReadyCount   int               `json:"attachReadyCount,omitempty"`
-	NetDesiredCount    int               `json:"netDesiredCount,omitempty"`
-	NetReadyCount      int               `json:"netReadyCount,omitempty"`
+	State               ProvisioningState `json:"state,omitempty"`
+	Reason              string            `json:"reason,omitempty"`
+	AttachDesiredCount  int               `json:"attachDesiredCount,omitempty"`
+	AttachReadyCount    int               `json:"attachReadyCount,omitempty"`
+	NetDesiredCount     int               `json:"netDesiredCount,omitempty"`
+	NetReadyCount       int               `json:"netReadyCount,omitempty"`
+	PhysNetDesiredCount int               `json:"physNetDesiredCount,omitempty"`
+	PhysNetReadyCount   int               `json:"physNetReadyCount,omitempty"`
 }
 
 const (
@@ -170,6 +180,8 @@ const (
 //+kubebuilder:printcolumn:name="AttachConfig Ready",type="integer",JSONPath=".status.provisioningStatus.attachReadyCount",description="AttachConfig Ready"
 //+kubebuilder:printcolumn:name="Networks Desired",type="integer",JSONPath=".status.provisioningStatus.netDesiredCount",description="Networks Desired"
 //+kubebuilder:printcolumn:name="Networks Ready",type="integer",JSONPath=".status.provisioningStatus.netReadyCount",description="Networks Ready"
+//+kubebuilder:printcolumn:name="PhysNetworks Desired",type="integer",JSONPath=".status.provisioningStatus.physNetDesiredCount",description="PhysNetworks Desired"
+//+kubebuilder:printcolumn:name="PhysNetworks Ready",type="integer",JSONPath=".status.provisioningStatus.physNetReadyCount",description="PhysNetworks Ready"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
 //+kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
