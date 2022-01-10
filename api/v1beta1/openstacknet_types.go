@@ -121,9 +121,6 @@ type OpenStackNetStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
-// NetReason - the reason of the condition for this openstack net
-type NetReason string
-
 const (
 	//
 	// condition types
@@ -145,7 +142,9 @@ const (
 	//
 
 	// NetCondReasonCreated - osnet created
-	NetCondReasonCreated ConditionReason = "NetCreated"
+	NetCondReasonCreated ConditionReason = "OpenStackNetCreated"
+	// NetCondReasonCreateError - error creating osnet object
+	NetCondReasonCreateError ConditionReason = "OpenStackNetCreateError"
 )
 
 // +kubebuilder:object:root=true

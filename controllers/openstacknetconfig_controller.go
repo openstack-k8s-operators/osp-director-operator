@@ -404,7 +404,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, attachConfig, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", attachConfig.Kind, attachConfig.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonCreateError)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetAttachCondReasonCreateError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, attachConfig, err)
 
@@ -555,7 +555,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, osNet, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osNet.Kind, osNet.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonCreateError)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonCreateError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, osNet, err)
 

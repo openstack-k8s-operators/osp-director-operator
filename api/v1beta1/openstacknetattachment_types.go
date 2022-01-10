@@ -90,9 +90,6 @@ type OpenStackNetAttachmentStatus struct {
 	BridgeName string `json:"bridgeName"`
 }
 
-// NetAttachState - the state of this openstack network
-type NetAttachState string
-
 const (
 	//
 	// condition types
@@ -115,6 +112,8 @@ const (
 
 	// NetAttachCondReasonCreated - osnetattachment created
 	NetAttachCondReasonCreated ConditionReason = "NetAttachCreated"
+	// NetAttachCondReasonCreateError - error creating osnetatt object
+	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachtCreateError"
 )
 
 //+kubebuilder:object:root=true
