@@ -1,0 +1,16 @@
+#
+# Check for:
+#
+# - 1 OpenStackBackupRequest (should not have errored)
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprequest
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Error
+  currentState: Error

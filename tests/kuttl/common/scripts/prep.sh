@@ -12,6 +12,8 @@ oc delete openstackprovisionserver --all -n openstack
 oc delete openstacknetconfig --all -n openstack
 oc delete osconfiggenerator --all -n openstack
 oc delete nncp -n openstack --all
+oc delete openstackbackuprequest --all -n openstack
+oc delete openstackbackup --all -n openstack
 oc delete secret -n openstack userpassword --ignore-not-found
 oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found
 

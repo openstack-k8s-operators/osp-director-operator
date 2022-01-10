@@ -225,7 +225,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
 		r.Client,
 		instance.Namespace,
-		instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.BaremetalSetCondTypeProvisioned,
+		instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.BaremetalSetCondTypeProvisioned || instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.BaremetalSetCondTypeEmpty,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

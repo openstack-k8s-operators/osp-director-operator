@@ -2,6 +2,7 @@ package openstackbackup
 
 import (
 	"context"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +30,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osBms.Items, func(i, j int) bool {
+		return osBms.Items[i].Name < osBms.Items[j].Name
+	})
 	crLists.OpenStackBaremetalSets = osBms
 
 	// OpenStackClients
@@ -39,6 +43,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osClients.Items, func(i, j int) bool {
+		return osClients.Items[i].Name < osClients.Items[j].Name
+	})
 	crLists.OpenStackClients = osClients
 
 	// OpenStackControlPlanes
@@ -49,6 +56,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osCtlPlanes.Items, func(i, j int) bool {
+		return osCtlPlanes.Items[i].Name < osCtlPlanes.Items[j].Name
+	})
 	crLists.OpenStackControlPlanes = osCtlPlanes
 
 	// OpenStackIPSets
@@ -59,6 +69,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osIps.Items, func(i, j int) bool {
+		return osIps.Items[i].Name < osIps.Items[j].Name
+	})
 	crLists.OpenStackIPSets = osIps
 
 	// OpenStackMACAddresses
@@ -69,6 +82,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osMacAddresses.Items, func(i, j int) bool {
+		return osMacAddresses.Items[i].Name < osMacAddresses.Items[j].Name
+	})
 	crLists.OpenStackMACAddresses = osMacAddresses
 
 	// OpenStackNetworks
@@ -79,6 +95,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osNets.Items, func(i, j int) bool {
+		return osNets.Items[i].Name < osNets.Items[j].Name
+	})
 	crLists.OpenStackNets = osNets
 
 	// OpenStackNetAttachments
@@ -89,6 +108,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osNetAttachments.Items, func(i, j int) bool {
+		return osNetAttachments.Items[i].Name < osNetAttachments.Items[j].Name
+	})
 	crLists.OpenStackNetAttachments = osNetAttachments
 
 	// OpenStackNetConfigs
@@ -99,6 +121,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osNetConfigs.Items, func(i, j int) bool {
+		return osNetConfigs.Items[i].Name < osNetConfigs.Items[j].Name
+	})
 	crLists.OpenStackNetConfigs = osNetConfigs
 
 	// OpenStackProvisionServers
@@ -109,6 +134,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osProvServers.Items, func(i, j int) bool {
+		return osProvServers.Items[i].Name < osProvServers.Items[j].Name
+	})
 	crLists.OpenStackProvisionServers = osProvServers
 
 	// OpenStackVMSets
@@ -119,6 +147,9 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 		return crLists, err
 	}
 
+	sort.Slice(osVms.Items, func(i, j int) bool {
+		return osVms.Items[i].Name < osVms.Items[j].Name
+	})
 	crLists.OpenStackVMSets = osVms
 
 	return crLists, nil
@@ -175,6 +206,10 @@ func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.Ope
 			return *configMapList, err
 		}
 	}
+
+	sort.Slice(configMapList.Items, func(i, j int) bool {
+		return configMapList.Items[i].Name < configMapList.Items[j].Name
+	})
 
 	return *configMapList, nil
 }
@@ -281,6 +316,10 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 		}
 	}
 
+	sort.Slice(secretList.Items, func(i, j int) bool {
+		return secretList.Items[i].Name < secretList.Items[j].Name
+	})
+
 	return *secretList, nil
 }
 
@@ -313,7 +352,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check provisioning status of all OpenStackBaremetalSets
 	for _, cr := range crLists.OpenStackBaremetalSets.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned {
+		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned && cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeEmpty {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -374,7 +413,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the provisioning status of all OpenStackVMSets
 	for _, cr := range crLists.OpenStackVMSets.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned {
+		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned && cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeEmpty {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -480,7 +519,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned {
+		if found == nil || (found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned && found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeEmpty) {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -498,7 +537,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned {
+		if found == nil || (found.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned && found.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeEmpty) {
 			badCrs = append(badCrs, found)
 		}
 	}

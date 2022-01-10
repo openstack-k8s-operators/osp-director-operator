@@ -1,0 +1,26 @@
+#
+# Q: WHAT IS TESTED HERE?
+#
+# A: 
+#
+# - Creates:
+#   * OpenStackNetConfig
+#   * OpenStackControlPlane
+#   * OpenStackBaremetalSet
+#   * OpenStackBackupRequest (in "save" mode)
+# - Checks that the OpenStackBackupRequest starts in quiescing state
+# - Once quiesced, checks that the OpenStackBackupRequest ends in the saved state
+# - Checks for the existence of a corresponding OpenStackBackup with the proper resources within its spec
+#
+# NOTE: This test assumes you have two (and only two!) extra OCP workers allocated to your cluster as 
+#       BaremetalHosts, that are not in-use as actual cluster nodes
+#
+
+#
+# Attempt to "clear the field" if necessary
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: ../../common/scripts/prep.sh
