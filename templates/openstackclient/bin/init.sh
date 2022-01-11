@@ -44,6 +44,9 @@ if [ -d /mnt/ssh-config ]; then
   chown -R cloud-admin: /home/cloud-admin/.ssh
 fi
 
+# make the ctlplane ansible inventory executable
+chmod 755 /home/cloud-admin/ctlplane-ansible-inventory
+
 if [ -v GIT_URL ]; then
   GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
   GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')

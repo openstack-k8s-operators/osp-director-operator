@@ -518,7 +518,28 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     oc create -f compute.yaml
     ```
 
-6) (optional) Create roles file
+6) Node registration (register the overcloud systems to required channels)
+
+    Wait for the above resource to finish deploying (Compute and ControlPlane). Once the resources finish deploying proceed with node registration.
+
+    Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
+
+    NOTE: We recommend using manual registration as it works regardless of base image choice. If you are using
+    overcloud-full as your base deployment image then automatic RHSM registration could be used via the 
+    t-h-t rhsm.yaml environment role/file as an alternative to this approach. 
+
+    ```bash
+    oc rsh openstackclient
+    bash
+    cd /home/cloud-admin
+
+    <create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
+
+    # register the overcloud nodes to required repositories
+    ansible-playpook -i /home/cloud-admin/ctlplane-ansible-inventory ./rhsm.yaml
+    ```
+
+7) (optional) Create roles file
     a) use the openstackclient pod to generate a custom roles file
     ```bash
     oc rsh openstackclient
@@ -537,7 +558,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     **NOTE**: Make sure to use `roles_data.yaml` as the file name.
 
-7) Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP cluster deployment.
+8) Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP cluster deployment.
     ```yaml
     apiVersion: osp-director.openstack.org/v1beta1
     kind: OpenStackConfigGenerator
@@ -568,7 +589,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     The osconfiggenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osconfiggenerator's status condition for it to finish.
 
-8) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
+9) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
 
     The `tripleo-deploy.sh` script supports three actions:
     * `-d` - show the `git diff` of the playbooks to the previous accepted
@@ -588,23 +609,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     # accept the new available rendered playbooks (if available) and tag them as `latest`
     ./tripleo-deploy.sh -a
     ```
-
-    b) register the overcloud systems to required channels
-
-    The command in step a) to accept the current available rendered playbooks contain the latest inventory file of the overcloud and can be used to register the overcloud nodes to the required repositories for deployment. Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
-
-    ```bash
-    oc rsh openstackclient
-    bash
-    cd /home/cloud-admin
-
-    <create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
-
-    # register the overcloud nodes to required repositories
-    ansible-playpook -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml ./rhsm.yaml
-    ```
-
-    c) run ansible driven OpenStack deployment
+    b) run ansible driven OpenStack deployment
 
     ```bash
     oc rsh openstackclient

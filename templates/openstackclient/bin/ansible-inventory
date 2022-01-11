@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+APISERVER=https://$KUBERNETES_SERVICE_HOST
+SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
+NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
+TOKEN=$(cat ${SERVICEACCOUNT}/token)
+CACERT=${SERVICEACCOUNT}/ca.crt
+
+HOSTS=$(curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/osp-director.openstack.org/v1beta1/namespaces/$NAMESPACE/openstacknets/ctlplane | jq .spec.roleReservations[].reservations[] | jq 'del(. | select(.hostname == "$OSP_DIRECTOR_OPERATOR_IPSET_HOSTNAME"))' | jq -er 'select(. | . != null).ip' | xargs)
+LAST_HOST=$(echo $HOSTS | sed -e "s|^.* ||")
+
+if [ "$1" == "--list" ] ; then
+cat<<EOF
+{
+  "overcloud": {
+        "hosts": [
+EOF
+
+for HOST in $HOSTS; do
+  if [[ "$HOST" == "$LAST_HOST" ]]; then
+    echo "        \"$HOST\""
+  else
+    echo "        \"$HOST\","
+  fi
+done
+
+cat<<EOF
+        ]
+  }
+}
+EOF
+
+elif [ "$1" == "--host" ]; then
+  echo '{"_meta": {"hostvars": {}}}'
+else
+  echo "{ }"
+fi
