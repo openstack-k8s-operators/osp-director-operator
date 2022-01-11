@@ -46,8 +46,7 @@ import (
 )
 
 var (
-	provInterfaceName = ""
-	provisioningsGVR  = schema.GroupVersionResource{
+	provisioningsGVR = schema.GroupVersionResource{
 		Group:    "metal3.io",
 		Version:  "v1alpha1",
 		Resource: "provisionings",
@@ -157,30 +156,29 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 	// Get the provisioning interface of the cluster worker nodes from either Metal3
 	// or from the instance spec itself if it was provided there
-	if provInterfaceName == "" {
-		if instance.Spec.Interface == "" {
-			r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
+	provInterfaceName := instance.Spec.Interface
 
-			provInterfaceName, err = r.getProvisioningInterface(instance)
+	if provInterfaceName != "" {
+		r.Log.Info(fmt.Sprintf("Provisioning interface supplied by %s spec", instance.Name))
+	} else {
+		r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
 
-			if err != nil {
-				msg := fmt.Sprintf("Unable to acquire provisioning interface: %v", err)
-				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
-				actualProvisioningState.Reason = msg
-				_ = r.setProvisioningStatus(instance, actualProvisioningState)
-				return ctrl.Result{}, err
-			}
+		provInterfaceName, err = r.getProvisioningInterface(instance)
 
-			if provInterfaceName == "" {
-				err := fmt.Errorf("Metal3 provisioning interface configuration not found")
-				actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
-				actualProvisioningState.Reason = err.Error()
-				_ = r.setProvisioningStatus(instance, actualProvisioningState)
-				return ctrl.Result{}, err
-			}
-		} else {
-			r.Log.Info(fmt.Sprintf("Provisioning interface supplied by %s spec", instance.Name))
-			provInterfaceName = instance.Spec.Interface
+		if err != nil {
+			msg := fmt.Sprintf("Unable to acquire provisioning interface: %v", err)
+			actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
+			actualProvisioningState.Reason = msg
+			_ = r.setProvisioningStatus(instance, actualProvisioningState)
+			return ctrl.Result{}, err
+		}
+
+		if provInterfaceName == "" {
+			err := fmt.Errorf("Metal3 provisioning interface configuration not found")
+			actualProvisioningState.State = ospdirectorv1beta1.ProvisionServerCondTypeError
+			actualProvisioningState.Reason = err.Error()
+			_ = r.setProvisioningStatus(instance, actualProvisioningState)
+			return ctrl.Result{}, err
 		}
 	}
 
