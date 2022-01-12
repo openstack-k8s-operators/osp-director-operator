@@ -536,7 +536,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     <create the ansible playbook for the overcloud nodes - e.g. rhsm.yaml>
 
     # register the overcloud nodes to required repositories
-    ansible-playpook -i /home/cloud-admin/ctlplane-ansible-inventory ./rhsm.yaml
+    ansible-playbook -i /home/cloud-admin/ctlplane-ansible-inventory ./rhsm.yaml
     ```
 
 7) (optional) Create roles file
