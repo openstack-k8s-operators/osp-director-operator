@@ -6,27 +6,66 @@ NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
 TOKEN=$(cat ${SERVICEACCOUNT}/token)
 CACERT=${SERVICEACCOUNT}/ca.crt
 
-HOSTS=$(curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/osp-director.openstack.org/v1beta1/namespaces/$NAMESPACE/openstacknets/ctlplane | jq .spec.roleReservations[].reservations[] | jq 'del(. | select(.hostname == "$OSP_DIRECTOR_OPERATOR_IPSET_HOSTNAME"))' | jq -er 'select(. | . != null).ip' | xargs)
-LAST_HOST=$(echo $HOSTS | sed -e "s|^.* ||")
+ROLE_RESERVATIONS=$(curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/osp-director.openstack.org/v1beta1/namespaces/$NAMESPACE/openstacknets/ctlplane | jq .spec.roleReservations | jq -r "to_entries | map(select(.value.addToPredictableIPs == true and .value.reservations[].vip == false and .value.reservations[].deleted == false)) | unique[]")
+
+ROLES=$(echo $ROLE_RESERVATIONS | jq -re '.key')
+
+# function prints out host IPs
+function printHostIPs {
+  local ROLE=$1
+  local ROLE_IPS=$2
+  local LAST_IP=$(echo $ROLE_IPS | sed -e "s|^.* ||")
+
+  for IP in $ROLE_IPS; do
+    if [[ "$IP" == "$LAST_IP" ]]; then
+      echo "        \"$IP\""
+    else
+      echo "        \"$IP\","
+    fi
+  done
+}
+
 
 if [ "$1" == "--list" ] ; then
 cat<<EOF
 {
   "overcloud": {
+        "children": [
+EOF
+
+
+# print out the 'ALL' section (contains each rolename)
+LAST_ROLE=$(echo $ROLES | sed -e "s|^.* ||")
+for ROLE in $ROLES; do
+    if [[ "$ROLE" == "$LAST_ROLE" ]]; then
+      echo "        \"$ROLE\""
+    else
+      echo "        \"$ROLE\","
+    fi
+done
+echo "         ]"
+echo "  },"
+
+# print out the $ROLE sections which contain host IPs
+for ROLE in $ROLES; do
+ROLE_IPS=$(echo $ROLE_RESERVATIONS | jq -r "select(.key == \"$ROLE\") | .value.reservations[].ip")
+cat<<EOF
+  "$ROLE": {
         "hosts": [
 EOF
 
-for HOST in $HOSTS; do
-  if [[ "$HOST" == "$LAST_HOST" ]]; then
-    echo "        \"$HOST\""
-  else
-    echo "        \"$HOST\","
-  fi
+    printHostIPs "$ROLE" "$ROLE_IPS"
+
+echo "         ]"
+
+if [[ "$ROLE" == "$LAST_ROLE" ]]; then
+  echo "  }"
+else
+  echo "  },"
+fi
 done
 
 cat<<EOF
-        ]
-  }
 }
 EOF
 
