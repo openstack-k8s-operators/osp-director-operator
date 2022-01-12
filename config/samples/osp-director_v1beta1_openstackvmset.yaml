@@ -8,7 +8,7 @@ spec:
   cores: 2
   memory: 20
   diskSize: 50
-  baseImageVolumeName: openstack-base-img
+  baseImageVolumeName: controller-base-img
   storageClass: host-nfs-storageclass
   #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys

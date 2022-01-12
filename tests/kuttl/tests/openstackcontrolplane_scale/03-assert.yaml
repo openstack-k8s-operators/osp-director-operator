@@ -6,6 +6,7 @@
 # - 3 VirtualMachines
 # - 6 OpenStackNets (IP reservations)
 # - 1 OpenStackIPSet (IP reservations)
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -457,5 +458,14 @@ spec:
     name: datacentre
   - macPrefix: fa:16:3b
     name: datacentre2
+  roleReservations:
+    Controller:
+      reservations:
+        controller-0:
+          deleted: false
+        controller-1:
+          deleted: false
+        controller-2:
+          deleted: false
 status:
   reservedMACCount: 6

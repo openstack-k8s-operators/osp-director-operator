@@ -5,6 +5,7 @@
 # - 2 OpenStackNetworkAttachment
 # - 2 NodeNetworkConfigurationPolicy
 # - 6 OpenStackNets
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -560,12 +561,9 @@ spec:
     name: datacentre
   - macPrefix: fa:16:3b
     name: datacentre2
+  roleReservations: {}
 status:
   conditions:
-  - message: Waiting for ctlplane network to be created
-    reason: NetNotFound
-    status: "False"
-    type: Waiting
   - message: All MAC addresses created
     reason: MACAddressesCreated
     status: "True"

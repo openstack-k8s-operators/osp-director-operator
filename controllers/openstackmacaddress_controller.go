@@ -26,7 +26,6 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,7 +97,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	cond := instance.Status.Conditions.InitCondition()
 
 	if instance.Status.MACReservations == nil {
-		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeStatus{}
+		instance.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
 	}
 
 	//
@@ -184,110 +183,20 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
-	// get ctlplane osnet as every vm/bm host is connected to it
-	ctlplaneNet := &ospdirectorv1beta1.OpenStackNet{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: "ctlplane", Namespace: instance.Namespace}, ctlplaneNet)
-	if err != nil {
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonNetNotFound)
-
-		// if ctlplaneNet does not exist, wait for it and set Condition to waiting
-		if k8s_errors.IsNotFound(err) {
-			cond.Message = "Waiting for ctlplane network to be created"
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeWaiting)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
-		}
-		cond.Message = "Error fetching the ctlplane network"
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return ctrl.Result{}, err
-	}
-
-	// create reservation for physnet and each node
-	for _, roleStatus := range ctlplaneNet.Spec.RoleReservations {
-
-		// if addToPredictableIPs == false the role can be ignored for creating MAC
-		// this is e.g. the openstackclient pod
-		if roleStatus.AddToPredictableIPs {
-			for _, reservation := range roleStatus.Reservations {
-				// do not create MAC reservation for VIP
-				if !reservation.VIP {
-					// if node does not yet have a reservation, create the entry and set deleted -> false
-					if _, ok := instance.Status.MACReservations[reservation.Hostname]; !ok {
-						instance.Status.MACReservations[reservation.Hostname] = ospdirectorv1beta1.OpenStackMACNodeStatus{
-							Deleted:      false,
-							Reservations: map[string]string{},
-						}
-					}
-
-					macNodeStatus := instance.Status.MACReservations[reservation.Hostname]
-
-					// ignore deleted nodes
-					if !reservation.Deleted {
-						macNodeStatus.Deleted = false
-						// create reservation for every specified physnet
-						for _, physnet := range instance.Spec.PhysNetworks {
-							// if there is no reservation for the physnet, create one
-							if _, ok := macNodeStatus.Reservations[physnet.Name]; !ok {
-								// create MAC address and verify it is uniqe in the CR reservations
-								var newMAC string
-								for ok := true; ok; ok = !macaddress.IsUniqMAC(instance.Status.MACReservations, newMAC) {
-									newMAC, err = macaddress.CreateMACWithPrefix(physnet.MACPrefix)
-									if err != nil {
-										cond.Message = "Waiting for all MAC addresses to get created"
-										cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
-										cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeCreating)
-										err = common.WrapErrorForObject(cond.Message, instance, err)
-
-										return ctrl.Result{}, err
-									}
-									instance.Status.ReservedMACCount++
-
-									common.LogForObject(
-										r,
-										fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", reservation.Hostname, physnet, newMAC),
-										instance,
-									)
-								}
-
-								macNodeStatus.Reservations[physnet.Name] = newMAC
-							}
-						}
-
-					} else {
-						// If the node is flagged as deleted in the osnet, also mark the
-						// MAC reservation as deleted. If the node gets recreated with the
-						// same name, it reuses the MAC.
-						macNodeStatus.Deleted = true
-					}
-
-					instance.Status.MACReservations[reservation.Hostname] = macNodeStatus
-				}
-			}
+	//
+	// Update status with reservation count and flattened reservations
+	//
+	reservedMACCount := 0
+	reservations := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
+	for _, roleReservation := range instance.Spec.RoleReservations {
+		for nodeName, nodeReservation := range roleReservation.Reservations {
+			reservedMACCount += len(nodeReservation.Reservations)
+			reservations[nodeName] = nodeReservation
 		}
 	}
 
-	// When a role get delted, the IPs get freed up in the osnet.
-	// Verify if any node got removed from network status and remove
-	// the MAC reservation.
-	var remove bool
-	for node, reservation := range instance.Status.MACReservations {
-		remove = true
-		for _, roleStatus := range ctlplaneNet.Spec.RoleReservations {
-			for _, netReservation := range roleStatus.Reservations {
-				if node == netReservation.Hostname {
-					remove = false
-				}
-			}
-		}
-
-		if remove {
-			r.Log.Info(fmt.Sprintf("Delete MAC reservation - node %s, %s", node, reservation.Reservations))
-			delete(instance.Status.MACReservations, node)
-		}
-	}
+	instance.Status.ReservedMACCount = reservedMACCount
+	instance.Status.MACReservations = reservations
 
 	cond.Message = "All MAC addresses created"
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)

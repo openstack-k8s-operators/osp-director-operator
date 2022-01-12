@@ -82,9 +82,6 @@ type OpenStackVMSetProvisioningStatus struct {
 	ReadyCount int               `json:"readyCount,omitempty"`
 }
 
-// VMSetProvisioningReason - the reason of the condition for this openstack vmset
-type VMSetProvisioningReason string
-
 const (
 	//
 	// condition types
@@ -121,50 +118,50 @@ const (
 	VMSetCondReasonCreated ConditionReason = "OpenStackVMSetCreated"
 
 	// VMSetCondReasonNamespaceFencingDataError - error creating the namespace fencing data
-	VMSetCondReasonNamespaceFencingDataError VMSetProvisioningReason = "NamespaceFencingDataError"
+	VMSetCondReasonNamespaceFencingDataError ConditionReason = "NamespaceFencingDataError"
 	// VMSetCondReasonKubevirtFencingServiceAccountError - error creating/reading the KubevirtFencingServiceAccount secret
-	VMSetCondReasonKubevirtFencingServiceAccountError VMSetProvisioningReason = "KubevirtFencingServiceAccountError"
+	VMSetCondReasonKubevirtFencingServiceAccountError ConditionReason = "KubevirtFencingServiceAccountError"
 	// VMSetCondReasonKubeConfigError - error getting the KubeConfig used by the operator
-	VMSetCondReasonKubeConfigError VMSetProvisioningReason = "KubeConfigError"
+	VMSetCondReasonKubeConfigError ConditionReason = "KubeConfigError"
 	// VMSetCondReasonCloudInitSecretError - error creating the CloudInitSecret
-	VMSetCondReasonCloudInitSecretError VMSetProvisioningReason = "CloudInitSecretError"
+	VMSetCondReasonCloudInitSecretError ConditionReason = "CloudInitSecretError"
 	// VMSetCondReasonDeploymentSecretMissing - deployment secret does not exist
-	VMSetCondReasonDeploymentSecretMissing VMSetProvisioningReason = "DeploymentSecretMissing"
+	VMSetCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
 	// VMSetCondReasonDeploymentSecretError - deployment secret error
-	VMSetCondReasonDeploymentSecretError VMSetProvisioningReason = "DeploymentSecretError"
+	VMSetCondReasonDeploymentSecretError ConditionReason = "DeploymentSecretError"
 	// VMSetCondReasonPasswordSecretMissing - password secret does not exist
-	VMSetCondReasonPasswordSecretMissing VMSetProvisioningReason = "PasswordSecretMissing"
+	VMSetCondReasonPasswordSecretMissing ConditionReason = "PasswordSecretMissing"
 	// VMSetCondReasonPasswordSecretError - password secret error
-	VMSetCondReasonPasswordSecretError VMSetProvisioningReason = "PasswordSecretError"
+	VMSetCondReasonPasswordSecretError ConditionReason = "PasswordSecretError"
 
 	// VMSetCondReasonVirtualMachineGetError - failed to get virtual machine
-	VMSetCondReasonVirtualMachineGetError VMSetProvisioningReason = "VirtualMachineGetError"
+	VMSetCondReasonVirtualMachineGetError ConditionReason = "VirtualMachineGetError"
 	// VMSetCondReasonVirtualMachineAnnotationMissmatch - Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down
-	VMSetCondReasonVirtualMachineAnnotationMissmatch VMSetProvisioningReason = "VirtualMachineAnnotationMissmatch"
+	VMSetCondReasonVirtualMachineAnnotationMissmatch ConditionReason = "VirtualMachineAnnotationMissmatch"
 	// VMSetCondReasonVirtualMachineNetworkDataError - Error creating VM NetworkData
-	VMSetCondReasonVirtualMachineNetworkDataError VMSetProvisioningReason = "VMSetCondReasonVirtualMachineNetworkDataError"
+	VMSetCondReasonVirtualMachineNetworkDataError ConditionReason = "VMSetCondReasonVirtualMachineNetworkDataError"
 	// VMSetCondReasonVirtualMachineProvisioning - virtual machine provisioning in progress
-	VMSetCondReasonVirtualMachineProvisioning VMSetProvisioningReason = "VirtualMachineProvisioning"
+	VMSetCondReasonVirtualMachineProvisioning ConditionReason = "VirtualMachineProvisioning"
 	// VMSetCondReasonVirtualMachineDeprovisioning - virtual machine deprovisioning in progress
-	VMSetCondReasonVirtualMachineDeprovisioning VMSetProvisioningReason = "VirtualMachineDeprovisioning"
+	VMSetCondReasonVirtualMachineDeprovisioning ConditionReason = "VirtualMachineDeprovisioning"
 	// VMSetCondReasonVirtualMachineProvisioned - virtual machines provisioned
-	VMSetCondReasonVirtualMachineProvisioned VMSetProvisioningReason = "VirtualMachineProvisioed"
+	VMSetCondReasonVirtualMachineProvisioned ConditionReason = "VirtualMachineProvisioed"
 	// VMSetCondReasonVirtualMachineCountZero - no virtual machines requested
-	VMSetCondReasonVirtualMachineCountZero VMSetProvisioningReason = "VirtualMachineCountZero"
+	VMSetCondReasonVirtualMachineCountZero ConditionReason = "VirtualMachineCountZero"
 
 	// VMSetCondReasonIPsetCreateOrUpdateError - create or update ipset error
-	VMSetCondReasonIPsetCreateOrUpdateError VMSetProvisioningReason = "CreateOrUpdateIPsetError"
+	VMSetCondReasonIPsetCreateOrUpdateError ConditionReason = "CreateOrUpdateIPsetError"
 	// VMSetCondReasonIPsetWaitCount - IPSet has not yet reached the required count
-	VMSetCondReasonIPsetWaitCount VMSetProvisioningReason = "CreateOrUpdateIPsetError"
+	VMSetCondReasonIPsetWaitCount ConditionReason = "CreateOrUpdateIPsetError"
 
 	// VMSetCondReasonPersitentVolumeClaimNotFound - Persitent Volume Claim Not Found
-	VMSetCondReasonPersitentVolumeClaimNotFound VMSetProvisioningReason = "PersitentVolumeClaimNotFound"
+	VMSetCondReasonPersitentVolumeClaimNotFound ConditionReason = "PersitentVolumeClaimNotFound"
 	// VMSetCondReasonPersitentVolumeClaimError - Persitent Volume Claim error
-	VMSetCondReasonPersitentVolumeClaimError VMSetProvisioningReason = "PersitentVolumeClaimError"
+	VMSetCondReasonPersitentVolumeClaimError ConditionReason = "PersitentVolumeClaimError"
 	// VMSetCondReasonPersitentVolumeClaimCreating - Persitent Volume Claim create in progress
-	VMSetCondReasonPersitentVolumeClaimCreating VMSetProvisioningReason = "PersitentVolumeClaimCreating"
+	VMSetCondReasonPersitentVolumeClaimCreating ConditionReason = "PersitentVolumeClaimCreating"
 	// VMSetCondReasonBaseImageNotReady - VM base image not ready
-	VMSetCondReasonBaseImageNotReady VMSetProvisioningReason = "BaseImageNotReady"
+	VMSetCondReasonBaseImageNotReady ConditionReason = "BaseImageNotReady"
 )
 
 // Host -

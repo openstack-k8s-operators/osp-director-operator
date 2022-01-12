@@ -7,6 +7,7 @@
 # - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 1 Secret (TripleO passwords)
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -546,6 +547,9 @@ spec:
     name: datacentre
   - macPrefix: fa:16:3b
     name: datacentre2
+  roleReservations:
+    Controller:
+      reservations: {}
 status:
   currentState: Created
   macReservations: {}

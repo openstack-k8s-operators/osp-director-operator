@@ -201,20 +201,29 @@ spec:
             properties:
               baremetalHosts:
                 additionalProperties:
-                  description: OpenStackBaremetalHostStatus represents the observed
-                    state of a particular allocated BaremetalHost resource
+                  description: HostStatus represents the hostname and IP info for
+                    a specific host
                   properties:
                     annotatedForDeletion:
+                      default: false
+                      description: Host annotated for deletion
                       type: boolean
                     ctlplaneIP:
                       type: string
                     hostRef:
+                      default: unassigned
                       type: string
                     hostname:
                       type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
                     networkDataSecretName:
                       type: string
                     provisioningState:
+                      description: ProvisioningState - the overall state of all VMs
+                        in this OpenStackVmSet
                       type: string
                     userDataSecretName:
                       type: string

@@ -73,6 +73,35 @@ spec:
                   type: object
                 minItems: 1
                 type: array
+              roleReservations:
+                additionalProperties:
+                  description: OpenStackMACRoleReservation -
+                  properties:
+                    reservations:
+                      additionalProperties:
+                        description: OpenStackMACNodeReservation defines the observed
+                          state of the MAC addresses per PhysNetworks
+                        properties:
+                          deleted:
+                            description: node and therefore MAC reservation are flagged
+                              as deleted
+                            type: boolean
+                          reservations:
+                            additionalProperties:
+                              type: string
+                            description: Reservations MAC reservations per PhysNetwork
+                            type: object
+                        required:
+                        - deleted
+                        - reservations
+                        type: object
+                      description: Reservations IP address reservations per role
+                      type: object
+                  required:
+                  - reservations
+                  type: object
+                description: RoleReservations, IP address reservations per role
+                type: object
             required:
             - physNetworks
             type: object
@@ -114,8 +143,8 @@ spec:
                 type: string
               macReservations:
                 additionalProperties:
-                  description: OpenStackMACNodeStatus defines the observed state of
-                    the MAC addresses per PhysNetworks
+                  description: OpenStackMACNodeReservation defines the observed state
+                    of the MAC addresses per PhysNetworks
                   properties:
                     deleted:
                       description: node and therefore MAC reservation are flagged

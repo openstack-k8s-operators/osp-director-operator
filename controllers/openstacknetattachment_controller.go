@@ -302,7 +302,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	cond *ospdirectorv1beta1.Condition,
 ) error {
 
-	cond.Message = fmt.Sprintf("OpenStackNetAttach %s is configuring targeted node(s)", instance.Name)
+	cond.Message = fmt.Sprintf("%s %s is configuring targeted node(s)", instance.Kind, instance.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
 	//
@@ -379,7 +379,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 		return err
 	}
 
-	cond.Message = fmt.Sprintf("OpenStackNetAttachment %s is configuring targeted node(s)", instance.Name)
+	cond.Message = fmt.Sprintf("%s %s is configuring targeted node(s)", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfiguring)
 
 	//
@@ -389,7 +389,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 		condition := nmstate.GetCurrentCondition(networkConfigurationPolicy.Status.Conditions)
 		if condition != nil {
 			if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionAvailable {
-				cond.Message = fmt.Sprintf("OpenStackNetAttach %s configured targeted node(s)", networkConfigurationPolicy.Name)
+				cond.Message = fmt.Sprintf("%s %s configured targeted node(s)", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured)
 
 			} else if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionDegraded {

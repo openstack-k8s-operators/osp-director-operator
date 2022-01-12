@@ -2,10 +2,12 @@
 # Check for:
 #
 # - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
 # - 1 OpenStackClient
-# - 2 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
-# - 2 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 1 Secret (TripleO passwords)
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -14,12 +16,88 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
+  domainName: ostest.test.metalkube.org
+  enableFencing: false
+  gitSecret: git-secret
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
-    - ctlplane
-    - external
+  - ctlplane
+  - external
+  - internal_api
   openStackClientStorageClass: host-nfs-storageclass
-  virtualMachineRoles: {}
+  openStackRelease: "16.2"
+  passwordSecret: userpassword
+  virtualMachineRoles:
+    controller:
+      baseImageVolumeName: controller-base-img
+      cores: 6
+      ctlplaneInterface: enp2s0
+      diskSize: 50
+      isTripleoRole: true
+      memory: 20
+      networks:
+      - ctlplane
+      - external
+      - internal_api
+      - storage
+      - storage_mgmt
+      - tenant
+      roleCount: 0
+      roleName: Controller
+      storageClass: host-nfs-storageclass
+status:
+  ospVersion: "16.2"
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+  vipStatus:
+    controlplane:
+      annotatedForDeletion: false
+      hostRef: controlplane
+      hostname: controlplane
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.10/24
+        internal_api: 172.17.0.10/24
+        storage: 172.18.0.10/24
+        storage_mgmt: 172.19.0.10/24
+      provisioningState: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  domainName: ostest.test.metalkube.org
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  - external
+  - internal_api
+  - storage
+  - storage_mgmt
+  - tenant
+  passwordSecret: userpassword
+  roleName: Controller
+  storageClass: host-nfs-storageclass
+  vmCount: 0
+status:
+  baseImageDVReady: true
+  provisioningStatus:
+    reason: No VirtualMachines have been requested
+    state: Empty
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackClient
@@ -29,108 +107,287 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
+  domainName: ostest.test.metalkube.org
+  gitSecret: git-secret
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
   - external
+  - internal_api
+  runGID: 42401
+  runUID: 42401
   storageClass: host-nfs-storageclass
 status:
   netStatus:
     openstackclient-0:
+      annotatedForDeletion: false
+      hostRef: openstackclient-0
       hostname: openstackclient-0
       ipaddresses:
-        ctlplane: 192.168.25.100/24
-        external: 10.0.0.4/24
+        ctlplane: 192.168.25.101/24
+        external: 10.0.0.11/24
+        internal_api: 172.17.0.11/24
+      provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "true"
+    ooo-netname: Control
+    ooo-netname-lower: ctlplane
+    ooo-subnetname: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: ctlplane
   namespace: openstack
 spec:
   allocationEnd: 192.168.25.250
   allocationStart: 192.168.25.100
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp7s0
-          description: Linux bridge with enp7s0 as a port
-          name: br-osp
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
+  attachConfiguration: br-osp
   cidr: 192.168.25.0/24
+  domainName: ctlplane.localdomain
   gateway: 192.168.25.1
-status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
   roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 192.168.25.100
+        vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.100
+        ip: 192.168.25.101
         vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "false"
+    ooo-netname: External
+    ooo-netname-lower: external
+    ooo-subnetname: external
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: external
   namespace: openstack
 spec:
   allocationEnd: 10.0.0.250
-  allocationStart: 10.0.0.4
-  attachConfiguration:
-    nodeNetworkConfigurationPolicy:
-      desiredState:
-        interfaces:
-        - bridge:
-            options:
-              stp:
-                enabled: false
-            port:
-            - name: enp6s0
-          description: Linux bridge with enp6s0 as a port
-          name: br-ex
-          state: up
-          type: linux-bridge
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
+  allocationStart: 10.0.0.10
+  attachConfiguration: br-ex
   cidr: 10.0.0.0/24
+  domainName: external.localdomain
   gateway: 10.0.0.1
-status:
-  conditions:
-  - message: OpenStackNet external has been successfully configured on targeted node(s)
-    reason: OpenStackNet external has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservedIpCount: 1
+  mtu: 1500
+  name: External
+  nameLower: external
   roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 10.0.0.10
+        vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 10.0.0.4
+        ip: 10.0.0.11
         vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "false"
+    ooo-netname: InternalApi
+    ooo-netname-lower: internal_api
+    ooo-subnetname: internal_api
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: internalapi
+  namespace: openstack
+spec:
+  allocationEnd: 172.17.0.250
+  allocationStart: 172.17.0.10
+  attachConfiguration: br-osp
+  cidr: 172.17.0.0/24
+  domainName: internalapi.localdomain
+  gateway: ""
+  mtu: 1350
+  name: InternalApi
+  nameLower: internal_api
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.17.0.10
+        vip: true
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 172.17.0.11
+        vip: false
+  routes: []
+  vip: true
+  vlan: 20
+status:
+  currentState: Configured
+  reservedIpCount: 2
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "false"
+    ooo-netname: Storage
+    ooo-netname-lower: storage
+    ooo-subnetname: storage
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: storage
+  namespace: openstack
+spec:
+  allocationEnd: 172.18.0.250
+  allocationStart: 172.18.0.10
+  attachConfiguration: br-osp
+  cidr: 172.18.0.0/24
+  domainName: storage.localdomain
+  gateway: ""
+  mtu: 1350
+  name: Storage
+  nameLower: storage
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.18.0.10
+        vip: true
+  routes: []
+  vip: true
+  vlan: 30
+status:
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "false"
+    ooo-netname: StorageMgmt
+    ooo-netname-lower: storage_mgmt
+    ooo-subnetname: storage_mgmt
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: storagemgmt
+  namespace: openstack
+spec:
+  allocationEnd: 172.19.0.250
+  allocationStart: 172.19.0.10
+  attachConfiguration: br-osp
+  cidr: 172.19.0.0/24
+  domainName: storagemgmt.localdomain
+  gateway: ""
+  mtu: 1350
+  name: StorageMgmt
+  nameLower: storage_mgmt
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.19.0.10
+        vip: true
+  routes: []
+  vip: true
+  vlan: 40
+status:
+  currentState: Configured
+  reservedIpCount: 1
+  roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "false"
+    ooo-netname: Tenant
+    ooo-netname-lower: tenant
+    ooo-subnetname: tenant
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: tenant
+  namespace: openstack
+spec:
+  allocationEnd: 172.20.0.250
+  allocationStart: 172.20.0.10
+  attachConfiguration: br-osp
+  cidr: 172.20.0.0/24
+  domainName: tenant.localdomain
+  gateway: ""
+  mtu: 1350
+  name: Tenant
+  nameLower: tenant
+  roleReservations: {}
+  routes: []
+  vip: false
+  vlan: 50
+status:
+  currentState: Configured
+  reservedIpCount: 0
+  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackIPSet
@@ -144,12 +401,81 @@ metadata:
 spec:
   addToPredictableIPs: true
   hostCount: 1
+  hostNameRefs:
+    controlplane: controlplane
+  networks:
+  - ctlplane
+  - external
+  - internal_api
+  - storage
+  - storage_mgmt
   roleName: ControlPlane
   vip: true
 status:
   hosts:
     controlplane:
-      ipaddresses: {}
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+        external: 10.0.0.10/24
+        internal_api: 172.17.0.10/24
+        storage: 172.18.0.10/24
+        storage_mgmt: 172.19.0.10/24
+  networks:
+    ctlplane:
+      allocationEnd: 192.168.25.250
+      allocationStart: 192.168.25.100
+      cidr: 192.168.25.0/24
+      gateway: 192.168.25.1
+      vlan: 0
+    external:
+      allocationEnd: 10.0.0.250
+      allocationStart: 10.0.0.10
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+      vlan: 0
+    internalapi:
+      allocationEnd: 172.17.0.250
+      allocationStart: 172.17.0.10
+      cidr: 172.17.0.0/24
+      gateway: ""
+      vlan: 20
+    storage:
+      allocationEnd: 172.18.0.250
+      allocationStart: 172.18.0.10
+      cidr: 172.18.0.0/24
+      gateway: ""
+      vlan: 30
+    storagemgmt:
+      allocationEnd: 172.19.0.250
+      allocationStart: 172.19.0.10
+      cidr: 172.19.0.0/24
+      gateway: ""
+      vlan: 40
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  finalizers:
+  - osp-director.openstack.org
+  labels:
+    addToPredictableIPsLabel: "true"
+  name: controller
+  namespace: openstack
+spec:
+  addToPredictableIPs: true
+  hostCount: 0
+  hostNameRefs: {}
+  networks:
+  - ctlplane
+  - external
+  - internal_api
+  - storage
+  - storage_mgmt
+  - tenant
+  roleName: Controller
+  vip: false
+status:
+  hosts: {}
   networks: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -165,18 +491,20 @@ spec:
   addToPredictableIPs: false
   hostCount: 1
   hostNameRefs:
-    openstackclient-0: openstackclient
+    openstackclient-0: openstackclient-0
   networks:
   - ctlplane
   - external
+  - internal_api
   roleName: OpenstackClientopenstackclient
   vip: false
 status:
   hosts:
     openstackclient-0:
       ipaddresses:
-        ctlplane: 192.168.25.100/24
-        external: 10.0.0.4/24
+        ctlplane: 192.168.25.101/24
+        external: 10.0.0.11/24
+        internal_api: 172.17.0.11/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -186,10 +514,16 @@ status:
       vlan: 0
     external:
       allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.4
+      allocationStart: 10.0.0.10
       cidr: 10.0.0.0/24
       gateway: 10.0.0.1
       vlan: 0
+    internalapi:
+      allocationEnd: 172.17.0.250
+      allocationStart: 172.17.0.10
+      cidr: 172.17.0.0/24
+      gateway: ""
+      vlan: 20
 ---
 apiVersion: v1
 kind: Secret
@@ -201,3 +535,22 @@ metadata:
   name: tripleo-passwords
   namespace: openstack
 type: Opaque
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Controller:
+      reservations: {}
+status:
+  currentState: Created
+  macReservations: {}
+  reservedMACCount: 0

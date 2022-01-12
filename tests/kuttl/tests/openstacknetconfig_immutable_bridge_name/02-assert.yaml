@@ -40,12 +40,8 @@ status:
   attachType: bridge
   bridgeName: br-osp
   conditions:
-  - message: OpenStackNetAttachment br-osp-bridge is configuring targeted node(s)
-    reason: OpenStackNetAttachment br-osp-bridge is configuring targeted node(s)
-    status: "False"
-    type: Configuring
-  - message: OpenStackNetAttach br-osp configured targeted node(s)
-    reason: OpenStackNetAttach br-osp configured targeted node(s)
+  - message: NodeNetworkConfigurationPolicy br-osp configured targeted node(s)
+    reason: NodeNetworkConfigurationPolicy br-osp configured targeted node(s)
     status: "True"
     type: Configured
   currentState: Configured
