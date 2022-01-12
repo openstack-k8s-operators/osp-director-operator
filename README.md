@@ -1399,3 +1399,144 @@ Define an OpenStackConfigGenerator to generate ansible playbooks for the OSP clu
 ### Run the software deployment
 
 As described before in `Run the software deployment` check, apply, register the overcloud nodes to required repositories  and run the sofware deployment from inside the openstackclient pod.
+
+# Backup / Restore
+
+## Operator
+
+OSP-D Operator provides an API to create and restore backups of its current CR, ConfigMap and Secret configurations.  This API consists of two CRDs:
+
+* `OpenStackBackupRequest`
+* `OpenStackBackup`
+
+The `OpenStackBackupRequest` CRD is used to initiate the creation or restoration of a backup, while the `OpenStackBackup` CRD is used to actually store the CR, ConfigMap and Secret data that belongs to the operator.
+This allows for several benefits:
+
+* By representing a backup as a single `OpenStackBackup` CR, the user does not have to manually export/import each piece of the operator's configuration
+* The operator is aware of the state of all resources, and will do its best to not backup configuration that is currently in an incomplete or bad state
+* The operator knows exactly which CRs, ConfigMaps and Secrets it needs to create a complete backup
+* In the near future, the operator will be further extended to automatically create these backups if so desired
+
+### Backup Process
+
+1. To initiate the creation of a new `OpenStackBackup`, create an `OpenStackBackupRequest` with `mode` set to `save` in its spec.  For example:
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackupsave
+  namespace: openstack
+spec:
+  mode: save
+  additionalConfigMaps: []
+  additionalSecrets: []
+```
+
+Spec fields are as follows:
+* The `mode: save` indicates that this is a request to create a backup.
+* The `additionalConfigMaps` and `additionalSecrets` lists may be used to include supplemental ConfigMaps and Secrets of which the operator is otherwise unaware (i.e. ConfigMaps and Secrets manually created for certain purposes).  
+  As noted above, however, the operator will still attempt to include all ConfigMaps and Secrets associated with the various CRs (`OpenStackControlPlane`, `OpenStackBaremetalSet`, etc) in the namespace, without requiring the user 
+  to include them in these additional lists.
+
+2. Once the `OpenStackBackupRequest` has been created, monitor its status:
+
+```bash
+oc get -n openstack osbackuprequest openstackbackupsave
+```
+
+Something like this should appear:
+
+```bash
+NAME                     OPERATION   SOURCE   STATUS      COMPLETION TIMESTAMP
+openstackbackupsave      save                 Quiescing         
+```
+
+The `Quiescing` state indicates that the operator is waiting for provisioning state of all OSP-D operator CRs to reach their "finished" equivalent.  The time required for this will vary based on the quantity 
+of OSP-D operator CRs and the happenstance of their current provisioning state.  NOTE: It is possible that the operator will never fully quiesce due to errors and/or "waiting" states in existing CRs.  To see 
+which CRDs/CRs are preventing quiesence, investigate the operator logs.  For example:
+
+```bash
+oc logs <OSP-D operator pod> -c manager -f
+
+...
+
+2022-01-11T18:26:15.180Z	INFO	controllers.OpenStackBackupRequest	Quiesce for save for OpenStackBackupRequest openstackbackupsave is waiting for: [OpenStackBaremetalSet: compute, OpenStackControlPlane: overcloud, OpenStackVMSet: controller]
+```
+
+If the `OpenStackBackupRequest` enters the `Error` state, look at its full contents to see the error that was encountered (`oc get -n openstack openstackbackuprequest <name> -o yaml`).
+
+3. When the `OpenStackBackupRequest` has been honored by creating and saving an `OpenStackBackup` representing the current OSP-D operator configuration, it will enter the `Saved` state.  For example:
+
+```bash
+oc get -n openstack osbackuprequest
+
+NAME                     OPERATION   SOURCE   STATUS   COMPLETION TIMESTAMP
+openstackbackupsave      save                 Saved    2022-01-11T19:12:58Z
+```
+
+The associated `OpenStackBackup` will have been created as well.  For example:
+
+```bash
+oc get -n openstack osbackup
+
+NAME                                AGE
+openstackbackupsave-1641928378      6m7s
+```
+
+### Restore Process
+
+1. To initiate the restoration of an `OpenStackBackup`, create an `OpenStackBackupRequest` with `mode` set to `restore` in its spec.  For example:
+
+```yaml
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprestore
+  namespace: openstack
+spec:
+  mode: restore
+  restoreSource: openstackbackupsave-1641928378
+```
+
+Spec fields are as follows:
+* The `mode: restore` indicates that this is a request to restore an existing `OpenStackBackup`.  
+* The `restoreSource` indicates which `OpenStackBackup` should be restored.
+
+With `mode` set to `restore`, the OSP-D operator will take the contents of the `restoreSource` `OpenStackBackup` and attempt to apply them against the _existing_ CRs, ConfigMaps and Secrets currently
+present within the namespace.  Thus it will overwrite any existing OSP-D operator resources in the namespace with the same names as those in the `OpenStackBackup`, and will create new resources for
+those not currently found in the namespace.  If desired, `mode` can be set to `cleanRestore` to completely wipe the existing OSP-D operator resources within the namespace before attempting a 
+restoration, such that all resources within the `OpenStackBackup` are created completely anew.
+
+2. Once the `OpenStackBackupRequest` has been created, monitor its status:
+
+```bash
+oc get -n openstack osbackuprequest openstackbackuprestore
+```
+
+Something like this should appear to indicate that all resources from the `OpenStackBackup` are being applied against the cluster:
+
+```bash
+NAME                     OPERATION  SOURCE                           STATUS     COMPLETION TIMESTAMP
+openstackbackuprestore   restore    openstackbackupsave-1641928378   Loading   
+```
+
+Then, once all resources have been loaded, the operator will begin reconciling to attempt to provision all resources:
+
+```bash
+NAME                     OPERATION  SOURCE                           STATUS       COMPLETION TIMESTAMP
+openstackbackuprestore   restore    openstackbackupsave-1641928378   Reconciling   
+```
+
+If the `OpenStackBackupRequest` enters the `Error` state, look at its full contents to see the error that was encountered (`oc get -n openstack openstackbackuprequest <name> -o yaml`).
+
+3. When the `OpenStackBackupRequest` has been honored by fully restoring the `OpenStackBackup`, it will enter the `Restored` state.  For example:
+
+```bash
+oc get -n openstack osbackuprequest
+
+NAME                     OPERATION  SOURCE                           STATUS     COMPLETION TIMESTAMP
+openstackbackuprestore   restore    openstackbackupsave-1641928378   Restored   2022-01-12T13:48:57Z
+```
+
+At this point, all resources contained with the chosen `OpenStackBackup` should be restored and fully provisioned.
