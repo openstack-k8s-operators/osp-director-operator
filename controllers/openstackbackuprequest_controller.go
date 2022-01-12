@@ -74,6 +74,7 @@ func (r *OpenStackBackupRequestReconciler) GetScheme() *runtime.Scheme {
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbaremetalsets/status,verbs=get
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;update;delete;deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get
+//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfiggenerators,verbs=deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch;update;delete;deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/status,verbs=get
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;update;delete;deletecollection
