@@ -43,8 +43,8 @@ for ROLE in $ROLES; do
       echo "        \"$ROLE\","
     fi
 done
-echo "         ]"
-echo "  },"
+echo '         ]'
+echo '  },'
 
 # print out the $ROLE sections which contain host IPs
 for ROLE in $ROLES; do
@@ -56,12 +56,13 @@ EOF
 
     printHostIPs "$ROLE" "$ROLE_IPS"
 
-echo "         ]"
+echo '         ]'
+echo '        "vars": {"ansible_ssh_user": "cloud-admin"}'
 
 if [[ "$ROLE" == "$LAST_ROLE" ]]; then
-  echo "  }"
+  echo '  }'
 else
-  echo "  },"
+  echo '  },'
 fi
 done
 
@@ -72,5 +73,5 @@ EOF
 elif [ "$1" == "--host" ]; then
   echo '{"_meta": {"hostvars": {}}}'
 else
-  echo "{ }"
+  echo '{ }'
 fi
