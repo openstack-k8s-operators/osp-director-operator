@@ -414,8 +414,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 	(*envVars)["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
 
-	(*envVars)["OSP_DIRECTOR_OPERATOR_IPSET_HOSTNAME"] = common.EnvValue(hostname)
-
 	if instance.Spec.CloudName != "" {
 		(*envVars)["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}

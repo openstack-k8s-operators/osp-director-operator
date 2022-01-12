@@ -56,7 +56,7 @@ EOF
 
     printHostIPs "$ROLE" "$ROLE_IPS"
 
-echo '         ]'
+echo '         ],'
 echo '        "vars": {"ansible_ssh_user": "cloud-admin"}'
 
 if [[ "$ROLE" == "$LAST_ROLE" ]]; then
