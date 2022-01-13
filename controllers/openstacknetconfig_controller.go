@@ -28,14 +28,19 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
@@ -116,7 +121,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		//
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
-			ospdirectorv1beta1.ConditionReason(cond.Message),
+			cond.Reason,
 			cond.Message,
 		)
 
@@ -235,14 +240,17 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured)
-
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
+		r.Client,
+		instance.Namespace,
+		instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if overrideReconcile {
-		r.Log.Info(fmt.Sprintf("OpenStackNetConfig %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		r.Log.Info(fmt.Sprintf("%s %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Kind, instance.Name))
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
@@ -287,7 +295,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
-			cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworkAttachments to be configured", instance.Name)
+			cond.Message = fmt.Sprintf("%s %s waiting for all OpenStackNetworkAttachments to be configured", instance.Kind, instance.Name)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
 
 			return ctrlResult, nil
@@ -325,7 +333,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			if err != nil {
 				return ctrl.Result{}, err
 			} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
-				cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworks to be configured", instance.Name)
+				cond.Message = fmt.Sprintf("%s %s waiting for all OpenStackNetworks to be configured", instance.Kind, instance.Name)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
 
 				return ctrlResult, nil
@@ -333,6 +341,17 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			instance.Status.ProvisioningStatus.NetReadyCount++
 		}
+	}
+
+	if (instance.Status.ProvisioningStatus.NetDesiredCount == instance.Status.ProvisioningStatus.NetReadyCount) &&
+		(instance.Status.ProvisioningStatus.AttachDesiredCount == instance.Status.ProvisioningStatus.AttachReadyCount) &&
+		(instance.Status.ProvisioningStatus.PhysNetDesiredCount == instance.Status.ProvisioningStatus.PhysNetReadyCount) {
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfigured
+		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%s %s all resources configured", instance.Kind, instance.Name)
+	} else {
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfiguring
+		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%s %s waiting for all resources to be configured", instance.Kind, instance.Name)
+
 	}
 
 	return ctrl.Result{}, nil
@@ -355,10 +374,36 @@ func (r *OpenStackNetConfigReconciler) getNormalizedStatus(status *ospdirectorv1
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	//
+	// Schedule reconcile on OpenStackNetConfig if any of the objects change where
+	// reconcile label openstacknetconfig.OpenStackNetConfigReconcileLabel
+	//
+	LabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+		labels := o.GetLabels()
+		//
+		// verify object has ConfigGeneratorInputLabel
+		//
+		reconcileCR, ok := labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]
+		if !ok {
+			return []reconcile.Request{}
+		}
+
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{
+				Name:      reconcileCR,
+				Namespace: o.GetNamespace(),
+			}},
+		}
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNetConfig{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
+		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackBaremetalSet{}}, LabelWatcher).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackVMSet{}}, LabelWatcher).
 		Complete(r)
 }
 
@@ -650,8 +695,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
-
-	mac := &ospdirectorv1beta1.OpenStackMACAddress{
+	macAddress := &ospdirectorv1beta1.OpenStackMACAddress{
 		ObjectMeta: metav1.ObjectMeta{
 			// use the role name as the VM CR name
 			Name:      strings.ToLower(instance.Name),
@@ -659,9 +703,115 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mac, func() error {
+	//
+	// get OSMACAddress object
+	//
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: strings.ToLower(instance.Name), Namespace: instance.Namespace}, macAddress)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", macAddress.Kind, macAddress.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+
+	// If network RoleReservations spec map is nil, create it
+	if macAddress.Spec.RoleReservations == nil {
+		macAddress.Spec.RoleReservations = map[string]ospdirectorv1beta1.OpenStackMACRoleReservation{}
+	}
+
+	//
+	// get all VMset
+	//
+	labelSelector := map[string]string{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labelSelector),
+	}
+
+	vmSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+	if err := r.GetClient().List(
+		context.Background(),
+		vmSetList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	//
+	// get all BMset
+	//
+	bmSetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
+	if err := r.GetClient().List(
+		context.Background(),
+		bmSetList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	//
+	// create reservations for all VMset/BMset
+	//
+	reservations := map[string]ospdirectorv1beta1.OpenStackMACRoleReservation{}
+
+	// VMset
+	for _, vmSet := range vmSetList.Items {
+		roleMACReservation := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
+
+		for _, vmHost := range vmSet.Status.VMHosts {
+
+			roleMACReservation[vmHost.Hostname], err = r.ensureMACReservation(
+				instance,
+				cond,
+				macAddress,
+				macAddress.Spec.RoleReservations,
+				vmSet.Spec.RoleName,
+				vmHost.Hostname,
+				vmHost.AnnotatedForDeletion,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		reservations[vmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
+			Reservations: roleMACReservation,
+		}
+	}
+
+	// bmset
+	for _, bmSet := range bmSetList.Items {
+		roleMACReservation := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
+
+		for _, bmHost := range bmSet.Status.BaremetalHosts {
+
+			roleMACReservation[bmHost.Hostname], err = r.ensureMACReservation(
+				instance,
+				cond,
+				macAddress,
+				macAddress.Spec.RoleReservations,
+				bmSet.Spec.RoleName,
+				bmHost.Hostname,
+				bmHost.AnnotatedForDeletion,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		reservations[bmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
+			Reservations: roleMACReservation,
+		}
+	}
+
+	//
+	// create/update OSMACAddress
+	//
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, macAddress, func() error {
 		if len(instance.Spec.PhysNetworks) == 0 {
-			mac.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
+			macAddress.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
 				{
 					Name:      ospdirectorv1beta1.DefaultOVNChassisPhysNetName,
 					MACPrefix: ospdirectorv1beta1.DefaultOVNChassisPhysNetMACPrefix,
@@ -681,12 +831,14 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 				})
 			}
 
-			mac.Spec.PhysNetworks = macPhysnets
+			macAddress.Spec.PhysNetworks = macPhysnets
 		}
 
-		err := controllerutil.SetControllerReference(instance, mac, r.Scheme)
+		macAddress.Spec.RoleReservations = reservations
+
+		err := controllerutil.SetControllerReference(instance, macAddress, r.Scheme)
 		if err != nil {
-			cond.Message = fmt.Sprintf("Error set controller reference for %s", mac.Name)
+			cond.Message = fmt.Sprintf("Error set controller reference for %s", macAddress.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
@@ -713,7 +865,78 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
-	instance.Status.ProvisioningStatus.PhysNetReadyCount = len(mac.Spec.PhysNetworks)
+	instance.Status.ProvisioningStatus.PhysNetReadyCount = len(macAddress.Spec.PhysNetworks)
 
 	return nil
+}
+
+//
+// create or update the OpenStackMACAddress object
+//
+func (r *OpenStackNetConfigReconciler) ensureMACReservation(
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	cond *ospdirectorv1beta1.Condition,
+	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
+	reservations map[string]ospdirectorv1beta1.OpenStackMACRoleReservation,
+	roleName string,
+	hostname string,
+	annotatedForDeletion bool,
+) (ospdirectorv1beta1.OpenStackMACNodeReservation, error) {
+
+	nodeMACReservation := ospdirectorv1beta1.OpenStackMACNodeReservation{}
+
+	//
+	// if node does not yet have a reservation, create one
+	//
+	if _, ok := reservations[roleName].Reservations[hostname]; !ok {
+		nodeMACReservation = ospdirectorv1beta1.OpenStackMACNodeReservation{
+			Deleted:      annotatedForDeletion,
+			Reservations: map[string]string{},
+		}
+
+	} else {
+		nodeMACReservation = reservations[roleName].Reservations[hostname]
+	}
+
+	if !annotatedForDeletion {
+		nodeMACReservation.Deleted = annotatedForDeletion
+
+		// create reservation for every specified physnet
+		for _, physnet := range instance.Spec.PhysNetworks {
+			// if there is no reservation for the physnet, create one
+			if _, ok := nodeMACReservation.Reservations[physnet.Name]; !ok {
+
+				// create MAC address and verify it is uniqe in the CR reservations
+				var newMAC string
+				var err error
+				for ok := true; ok; ok = !macaddress.IsUniqMAC(macAddress.Status.MACReservations, newMAC) {
+					newMAC, err = macaddress.CreateMACWithPrefix(physnet.MACPrefix)
+					if err != nil {
+						cond.Message = "Waiting for all MAC addresses to get created"
+						cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
+						cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeCreating)
+						err = common.WrapErrorForObject(cond.Message, instance, err)
+
+						return nodeMACReservation, err
+					}
+
+					common.LogForObject(
+						r,
+						fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", hostname, physnet, newMAC),
+						instance,
+					)
+				}
+
+				nodeMACReservation.Reservations[physnet.Name] = newMAC
+			}
+		}
+
+	} else {
+		// If the node is flagged as deleted in the osnet, also mark the
+		// MAC reservation as deleted. If the node gets recreated with the
+		// same name, it reuses the MAC.
+		nodeMACReservation.Deleted = annotatedForDeletion
+	}
+
+	return nodeMACReservation, nil
 }

@@ -2,6 +2,7 @@
 # Check for:
 #
 # - 2 OpenStackNets
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -88,3 +89,29 @@ status:
   currentState: Configured
   reservedIpCount: 0
   roleReservations: {}
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Controller:
+      reservations: {}
+status:
+  conditions:
+  - message: All MAC addresses created
+    reason: MACAddressesCreated
+    status: "True"
+    type: Created
+  currentState: Created
+  macReservations: {}
+  reservedMACCount: 0

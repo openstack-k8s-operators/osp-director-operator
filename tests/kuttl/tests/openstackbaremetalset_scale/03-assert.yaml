@@ -4,6 +4,7 @@
 # - 1 OpenStackBaremetalSet
 # - 1 OpenStackProvisionServer
 # - 1 OpenStackIpSet
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -78,3 +79,31 @@ spec:
   - tenant
   roleName: Compute
   vip: false
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Compute:
+      reservations: {}
+    Controller:
+      reservations: {}
+status:
+  conditions:
+  - message: All MAC addresses created
+    reason: MACAddressesCreated
+    status: "True"
+    type: Created
+  currentState: Created
+  macReservations: {}
+  reservedMACCount: 0

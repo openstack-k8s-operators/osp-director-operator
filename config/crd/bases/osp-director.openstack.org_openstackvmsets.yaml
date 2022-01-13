@@ -196,6 +196,8 @@ spec:
                       default: false
                       description: Host annotated for deletion
                       type: boolean
+                    ctlplaneIP:
+                      type: string
                     hostRef:
                       default: unassigned
                       type: string
@@ -205,15 +207,22 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    networkDataSecretName:
+                      type: string
                     provisioningState:
                       description: ProvisioningState - the overall state of all VMs
                         in this OpenStackVmSet
                       type: string
+                    userDataSecretName:
+                      type: string
                   required:
                   - annotatedForDeletion
+                  - ctlplaneIP
                   - hostRef
                   - hostname
+                  - networkDataSecretName
                   - provisioningState
+                  - userDataSecretName
                   type: object
                 type: object
               vmpods:

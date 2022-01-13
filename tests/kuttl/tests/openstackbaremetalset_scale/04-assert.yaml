@@ -5,6 +5,7 @@
 # - 2 BaremetalHosts
 # - 2 OpenStackNets (populated with reservations)
 # - 1 OpenStackIpSet (populated with reservations)
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -287,3 +288,39 @@ status:
       cidr: 172.20.0.0/24
       gateway: ""
       vlan: 50
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Compute:
+      reservations:
+        compute-0:
+          deleted: false
+        compute-1:
+          deleted: false
+    Controller:
+      reservations: {}
+status:
+  conditions:
+  - message: All MAC addresses created
+    reason: MACAddressesCreated
+    status: "True"
+    type: Created
+  currentState: Created
+  macReservations:
+    compute-0:
+      deleted: false
+    compute-1:
+      deleted: false
+  reservedMACCount: 4

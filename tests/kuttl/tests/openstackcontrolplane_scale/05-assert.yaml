@@ -6,6 +6,7 @@
 # - 1 VirtualMachine
 # - 6 OpenStackNets (IP reservations)
 # - 1 OpenStackIPSet (IP reservations)
+# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -402,20 +403,10 @@ spec:
     name: datacentre
   - macPrefix: fa:16:3b
     name: datacentre2
+  roleReservations:
+    Controller:
+      reservations:
+        controller-2:
+          deleted: false
 status:
-  reservedMACCount: 6
----
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-namespaced: true
-timeout: 20
-commands:
-# verify scaled down controller nodes MAC entries are marked as deleted
-  - script: |
-      set -x
-      deletedFlaggedMAC=$(oc get -n openstack osmacaddr openstacknetconfig -o json | jq -r '.status.macReservations[] | select(.deleted==true) | .deleted' | wc -l)
-      if [ $deletedFlaggedMAC -eq 2 ]; then
-          exit 0
-      else
-          exit 1
-      fi
+  reservedMACCount: 2

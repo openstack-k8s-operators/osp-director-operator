@@ -70,6 +70,8 @@ const (
 	// condition reasones
 	//
 
+	// CommonCondReasonInit - new resource set to reason Init
+	CommonCondReasonInit ConditionReason = "CommonInit"
 	// CommonCondReasonDeploymentSecretMissing - deployment secret does not exist
 	CommonCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
 	// CommonCondReasonDeploymentSecretError - deployment secret error
@@ -110,6 +112,8 @@ const (
 	CommonCondReasonOwnerRefLabeledObjectsDeleteError ConditionReason = "OwnerRefLabeledObjectsDeleteError"
 	// CommonCondReasonRemoveFinalizerError - error removing finalizer from object
 	CommonCondReasonRemoveFinalizerError ConditionReason = "RemoveFinalizerError"
+	// CommonCondReasonAddRefLabelError - error adding reference label
+	CommonCondReasonAddRefLabelError ConditionReason = "AddRefLabelError"
 )
 
 // Hash - struct to add hashes to status
@@ -137,6 +141,10 @@ type HostStatus struct {
 	// +kubebuilder:default=false
 	// Host annotated for deletion
 	AnnotatedForDeletion bool `json:"annotatedForDeletion"`
+
+	UserDataSecretName    string `json:"userDataSecretName"`
+	NetworkDataSecretName string `json:"networkDataSecretName"`
+	CtlplaneIP            string `json:"ctlplaneIP"`
 }
 
 // NetworkStatus represents the network details of a network
@@ -226,7 +234,11 @@ func (conditions ConditionList) InitCondition() *Condition {
 	cond := conditions.GetCurrentCondition()
 
 	if cond == nil {
-		return &Condition{}
+		return &Condition{
+			Type:    CommonCondTypeEmpty,
+			Reason:  CommonCondReasonInit,
+			Message: string(CommonCondReasonInit),
+		}
 	}
 
 	return cond

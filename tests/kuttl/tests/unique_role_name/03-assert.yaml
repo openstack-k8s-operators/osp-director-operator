@@ -12,7 +12,7 @@ metadata:
   name: customvmset
   namespace: openstack
 spec:
-  baseImageVolumeName: openstack-base-img
+  baseImageVolumeName: controller-base-img
   cores: 2
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
@@ -26,11 +26,6 @@ spec:
   vmCount: 1
 status:
   baseImageDVReady: true
-  conditions:
-  - message: All requested VirtualMachines have been provisioned
-    reason: All requested VirtualMachines have been provisioned
-    status: "True"
-    type: Provisioned
   provisioningStatus:
     readyCount: 1
     reason: All requested VirtualMachines have been provisioned
@@ -41,5 +36,5 @@ status:
       hostRef: somecustomrole-0
       hostname: somecustomrole-0
       ipaddresses:
-        ctlplane: 192.168.25.101/24
+        ctlplane: 192.168.25.102/24
       provisioningState: Provisioned

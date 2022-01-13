@@ -57,18 +57,7 @@ type OpenStackBaremetalSetSpec struct {
 type OpenStackBaremetalSetStatus struct {
 	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackBaremetalSetProvisioningStatus `json:"provisioningStatus,omitempty"`
-	BaremetalHosts     map[string]OpenStackBaremetalHostStatus `json:"baremetalHosts,omitempty"`
-}
-
-// OpenStackBaremetalHostStatus represents the observed state of a particular allocated BaremetalHost resource
-type OpenStackBaremetalHostStatus struct {
-	Hostname              string `json:"hostname"`
-	HostRef               string `json:"hostRef"`
-	UserDataSecretName    string `json:"userDataSecretName"`
-	NetworkDataSecretName string `json:"networkDataSecretName"`
-	CtlplaneIP            string `json:"ctlplaneIP"`
-	ProvisioningState     string `json:"provisioningState"`
-	AnnotatedForDeletion  bool   `json:"annotatedForDeletion"`
+	BaremetalHosts     map[string]HostStatus                   `json:"baremetalHosts,omitempty"`
 }
 
 // OpenStackBaremetalSetProvisioningStatus represents the overall provisioning state of all BaremetalHosts in

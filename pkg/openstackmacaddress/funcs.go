@@ -21,7 +21,7 @@ func CreateMACWithPrefix(prefix string) (string, error) {
 }
 
 // getAllMACReservations - get all MAC reservations in format MAC -> hostname
-func getAllMACReservations(macNodeStatus map[string]ospdirectorv1beta1.OpenStackMACNodeStatus) map[string]string {
+func getAllMACReservations(macNodeStatus map[string]ospdirectorv1beta1.OpenStackMACNodeReservation) map[string]string {
 	ret := make(map[string]string)
 	for hostname, status := range macNodeStatus {
 		for _, mac := range status.Reservations {
@@ -33,7 +33,7 @@ func getAllMACReservations(macNodeStatus map[string]ospdirectorv1beta1.OpenStack
 
 // IsUniqMAC - check if the hostname is uniq or already present in the reservations
 // TODO: check if all MAC addresses with prefix from mac got consumed
-func IsUniqMAC(macNodeStatus map[string]ospdirectorv1beta1.OpenStackMACNodeStatus, mac string) bool {
+func IsUniqMAC(macNodeStatus map[string]ospdirectorv1beta1.OpenStackMACNodeReservation, mac string) bool {
 	reservations := getAllMACReservations(macNodeStatus)
 	if _, ok := reservations[mac]; !ok {
 		return true

@@ -47,6 +47,7 @@ import (
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
+	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 )
 
@@ -118,7 +119,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	// If BaremetalHosts status map is nil, create it
 	if instance.Status.BaremetalHosts == nil {
-		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.OpenStackBaremetalHostStatus{}
+		instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.HostStatus{}
 	}
 
 	//
@@ -241,11 +242,20 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
+	var ctrlResult reconcile.Result
+	//
+	// add osnetcfg CR label reference which is used in the in the osnetcfg
+	// controller to watch this resource and reconcile
+	//
+	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
+
 	//
 	// get Password Secret if defined
 	//
 	var passwordSecret *corev1.Secret
-	var ctrlResult reconcile.Result
 	if instance.Spec.PasswordSecret != "" {
 		passwordSecret, ctrlResult, err = r.getPasswordSecret(instance, cond)
 		if (err != nil) || (ctrlResult != ctrl.Result{}) {
@@ -355,9 +365,9 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	bmhErrors := 0
 
 	for _, bmh := range instance.Status.BaremetalHosts {
-		if strings.EqualFold(bmh.ProvisioningState, string(ospdirectorv1beta1.BaremetalSetCondTypeProvisioned)) {
+		if strings.EqualFold(string(bmh.ProvisioningState), string(ospdirectorv1beta1.BaremetalSetCondTypeProvisioned)) {
 			readyCount++
-		} else if strings.EqualFold(bmh.ProvisioningState, string(ospdirectorv1beta1.BaremetalSetCondTypeError)) {
+		} else if strings.EqualFold(string(bmh.ProvisioningState), string(ospdirectorv1beta1.BaremetalSetCondTypeError)) {
 			bmhErrors++
 		}
 	}
@@ -795,7 +805,7 @@ func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	bmh string,
-) (ospdirectorv1beta1.OpenStackBaremetalHostStatus, error) {
+) (ospdirectorv1beta1.HostStatus, error) {
 
 	for _, bmhStatus := range instance.Status.DeepCopy().BaremetalHosts {
 		if bmhStatus.HostRef == bmh {
@@ -807,7 +817,7 @@ func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondReasonBaremetalHostStatusNotFound)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeError)
 
-	return ospdirectorv1beta1.OpenStackBaremetalHostStatus{}, k8s_errors.NewNotFound(corev1.Resource("OpenStackBaremetalHostStatus"), "not found")
+	return ospdirectorv1beta1.HostStatus{}, k8s_errors.NewNotFound(corev1.Resource("OpenStackBaremetalHostStatus"), "not found")
 }
 
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
@@ -1011,7 +1021,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	bmhStatus.UserDataSecretName = userDataSecretName
 	bmhStatus.NetworkDataSecretName = networkDataSecretName
 	bmhStatus.CtlplaneIP = ipCidr
-	bmhStatus.ProvisioningState = string(foundBaremetalHost.Status.Provisioning.State)
+	bmhStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(foundBaremetalHost.Status.Provisioning.State)
 
 	actualBMHStatus := instance.Status.BaremetalHosts[bmhStatus.Hostname]
 	if !reflect.DeepEqual(actualBMHStatus, bmhStatus) {
@@ -1033,7 +1043,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
-	bmh ospdirectorv1beta1.OpenStackBaremetalHostStatus,
+	bmh ospdirectorv1beta1.HostStatus,
 ) error {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
@@ -1397,11 +1407,20 @@ func (r *OpenStackBaremetalSetReconciler) createNewHostnames(
 			return newHostnames, err
 		}
 
+		if instance.Status.BaremetalHosts == nil {
+			instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.HostStatus{}
+		}
+
 		if hostnameDetails.Hostname != "" {
 			if _, ok := instance.Status.BaremetalHosts[hostnameDetails.Hostname]; !ok {
-				instance.Status.BaremetalHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.OpenStackBaremetalHostStatus{
-					Hostname: hostnameDetails.Hostname,
-					HostRef:  hostnameDetails.HostRef,
+				instance.Status.BaremetalHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
+					Hostname:             hostnameDetails.Hostname,
+					HostRef:              hostnameDetails.HostRef,
+					AnnotatedForDeletion: false,
+					// TODO (mschuppert): update ipaddresses for bmh
+					//    1) add ipaddress information for all networks
+					//    2) remove ctlplaneip from status and use info from ipaddress list
+					IPAddresses: map[string]string{},
 				}
 				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}

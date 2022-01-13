@@ -48,19 +48,26 @@ type OpenStackMACAddressSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// PhysNetworks - physical networks list to create MAC addresses per physnet per node to create OVNStaticBridgeMacMappings
 	PhysNetworks []Physnet `json:"physNetworks"`
+
+	// +kubebuilder:validation:Optional
+	// RoleReservations, IP address reservations per role
+	RoleReservations map[string]OpenStackMACRoleReservation `json:"roleReservations"`
 }
 
-// OpenStackMACNodeStatus defines the observed state of the MAC addresses per PhysNetworks
-type OpenStackMACNodeStatus struct {
+// OpenStackMACRoleReservation -
+type OpenStackMACRoleReservation struct {
+	// Reservations IP address reservations per role
+	Reservations map[string]OpenStackMACNodeReservation `json:"reservations"`
+}
+
+// OpenStackMACNodeReservation defines the observed state of the MAC addresses per PhysNetworks
+type OpenStackMACNodeReservation struct {
 	// Reservations MAC reservations per PhysNetwork
 	Reservations map[string]string `json:"reservations"`
 
 	// node and therefore MAC reservation are flagged as deleted
 	Deleted bool `json:"deleted"`
 }
-
-// MACReason - the reason of the condition for this openstack mac
-type MACReason string
 
 const (
 	//
@@ -81,19 +88,21 @@ const (
 	//
 
 	// MACCondReasonRemovedIPs - the removed MAC reservations
-	MACCondReasonRemovedIPs MACReason = "RemovedIPs"
+	MACCondReasonRemovedIPs ConditionReason = "RemovedIPs"
 	// MACCondReasonNetNotFound - osnet not found
-	MACCondReasonNetNotFound MACReason = "NetNotFound"
+	MACCondReasonNetNotFound ConditionReason = "NetNotFound"
 	// MACCondReasonCreateMACError - error creating MAC address
-	MACCondReasonCreateMACError MACReason = "CreateMACError"
+	MACCondReasonCreateMACError ConditionReason = "CreateMACError"
 	// MACCondReasonAllMACAddressesCreated - all MAC addresses created
-	MACCondReasonAllMACAddressesCreated MACReason = "MACAddressesCreated"
+	MACCondReasonAllMACAddressesCreated ConditionReason = "MACAddressesCreated"
+	// MACCondReasonError - General error getting the OSMACaddr object
+	MACCondReasonError ConditionReason = "MACError"
 )
 
 // OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress
 type OpenStackMACAddressStatus struct {
 	// Reservations MAC address reservations per node
-	MACReservations map[string]OpenStackMACNodeStatus `json:"macReservations"`
+	MACReservations map[string]OpenStackMACNodeReservation `json:"macReservations"`
 
 	// ReservedMACCount - the count of all MAC addresses reserved
 	ReservedMACCount int `json:"reservedMACCount"`

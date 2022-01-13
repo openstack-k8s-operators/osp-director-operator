@@ -382,21 +382,29 @@ spec:
                               properties:
                                 baremetalHosts:
                                   additionalProperties:
-                                    description: OpenStackBaremetalHostStatus represents
-                                      the observed state of a particular allocated
-                                      BaremetalHost resource
+                                    description: HostStatus represents the hostname
+                                      and IP info for a specific host
                                     properties:
                                       annotatedForDeletion:
+                                        default: false
+                                        description: Host annotated for deletion
                                         type: boolean
                                       ctlplaneIP:
                                         type: string
                                       hostRef:
+                                        default: unassigned
                                         type: string
                                       hostname:
                                         type: string
+                                      ipaddresses:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
                                       networkDataSecretName:
                                         type: string
                                       provisioningState:
+                                        description: ProvisioningState - the overall
+                                          state of all VMs in this OpenStackVmSet
                                         type: string
                                       userDataSecretName:
                                         type: string
@@ -672,6 +680,8 @@ spec:
                                         default: false
                                         description: Host annotated for deletion
                                         type: boolean
+                                      ctlplaneIP:
+                                        type: string
                                       hostRef:
                                         default: unassigned
                                         type: string
@@ -681,15 +691,22 @@ spec:
                                         additionalProperties:
                                           type: string
                                         type: object
+                                      networkDataSecretName:
+                                        type: string
                                       provisioningState:
                                         description: ProvisioningState - the overall
                                           state of all VMs in this OpenStackVmSet
                                         type: string
+                                      userDataSecretName:
+                                        type: string
                                     required:
                                     - annotatedForDeletion
+                                    - ctlplaneIP
                                     - hostRef
                                     - hostname
+                                    - networkDataSecretName
                                     - provisioningState
+                                    - userDataSecretName
                                     type: object
                                   type: object
                               type: object
@@ -1009,6 +1026,8 @@ spec:
                                         default: false
                                         description: Host annotated for deletion
                                         type: boolean
+                                      ctlplaneIP:
+                                        type: string
                                       hostRef:
                                         default: unassigned
                                         type: string
@@ -1018,15 +1037,22 @@ spec:
                                         additionalProperties:
                                           type: string
                                         type: object
+                                      networkDataSecretName:
+                                        type: string
                                       provisioningState:
                                         description: ProvisioningState - the overall
                                           state of all VMs in this OpenStackVmSet
                                         type: string
+                                      userDataSecretName:
+                                        type: string
                                     required:
                                     - annotatedForDeletion
+                                    - ctlplaneIP
                                     - hostRef
                                     - hostname
+                                    - networkDataSecretName
                                     - provisioningState
+                                    - userDataSecretName
                                     type: object
                                   type: object
                               required:
@@ -1388,6 +1414,39 @@ spec:
                                     type: object
                                   minItems: 1
                                   type: array
+                                roleReservations:
+                                  additionalProperties:
+                                    description: OpenStackMACRoleReservation -
+                                    properties:
+                                      reservations:
+                                        additionalProperties:
+                                          description: OpenStackMACNodeReservation
+                                            defines the observed state of the MAC
+                                            addresses per PhysNetworks
+                                          properties:
+                                            deleted:
+                                              description: node and therefore MAC
+                                                reservation are flagged as deleted
+                                              type: boolean
+                                            reservations:
+                                              additionalProperties:
+                                                type: string
+                                              description: Reservations MAC reservations
+                                                per PhysNetwork
+                                              type: object
+                                          required:
+                                          - deleted
+                                          - reservations
+                                          type: object
+                                        description: Reservations IP address reservations
+                                          per role
+                                        type: object
+                                    required:
+                                    - reservations
+                                    type: object
+                                  description: RoleReservations, IP address reservations
+                                    per role
+                                  type: object
                               required:
                               - physNetworks
                               type: object
@@ -1431,8 +1490,9 @@ spec:
                                   type: string
                                 macReservations:
                                   additionalProperties:
-                                    description: OpenStackMACNodeStatus defines the
-                                      observed state of the MAC addresses per PhysNetworks
+                                    description: OpenStackMACNodeReservation defines
+                                      the observed state of the MAC addresses per
+                                      PhysNetworks
                                     properties:
                                       deleted:
                                         description: node and therefore MAC reservation
@@ -2898,6 +2958,8 @@ spec:
                                         default: false
                                         description: Host annotated for deletion
                                         type: boolean
+                                      ctlplaneIP:
+                                        type: string
                                       hostRef:
                                         default: unassigned
                                         type: string
@@ -2907,15 +2969,22 @@ spec:
                                         additionalProperties:
                                           type: string
                                         type: object
+                                      networkDataSecretName:
+                                        type: string
                                       provisioningState:
                                         description: ProvisioningState - the overall
                                           state of all VMs in this OpenStackVmSet
                                         type: string
+                                      userDataSecretName:
+                                        type: string
                                     required:
                                     - annotatedForDeletion
+                                    - ctlplaneIP
                                     - hostRef
                                     - hostname
+                                    - networkDataSecretName
                                     - provisioningState
+                                    - userDataSecretName
                                     type: object
                                   type: object
                                 vmpods:

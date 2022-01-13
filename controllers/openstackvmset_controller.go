@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -43,6 +42,7 @@ import (
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
+	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -223,8 +223,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.Conditions.GetCurrentCondition().Reason == ospdirectorv1beta1.VMSetCondReasonProvisioned)
-
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
+		r.Client,
+		instance.Namespace,
+		cond.Reason == ospdirectorv1beta1.VMSetCondReasonProvisioned,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -237,6 +240,16 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	secretLabels := common.GetLabels(instance, vmset.AppLabel, map[string]string{})
+	var ctrlResult ctrl.Result
+
+	//
+	// add osnetcfg CR label reference which is used in the in the osnetcfg
+	// controller to watch this resource and reconcile
+	//
+	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
 
 	//
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
@@ -252,7 +265,6 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	// check for DeploymentSSHSecret and add AuthorizedKeys from DeploymentSSHSecret
 	//
-	var ctrlResult ctrl.Result
 	templateParameters["AuthorizedKeys"], ctrlResult, err = common.GetDataFromSecret(
 		r,
 		instance,
@@ -615,16 +627,6 @@ func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(
 
 // SetupWithManager -
 func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
-	// index spec.isTripleoRole so that it can be used to
-	// https://github.com/kubernetes-sigs/kubebuilder/issues/547#issuecomment-573870160
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &ospdirectorv1beta1.OpenStackVMSet{}, "spec.isTripleoRole", func(obj client.Object) []string {
-		vmset := obj.(*ospdirectorv1beta1.OpenStackVMSet)
-		return []string{strconv.FormatBool(vmset.Spec.IsTripleoRole)}
-	}); err != nil {
-		return err
-	}
-
 	// TODO: Myabe use filtering functions here since some resource permissions
 	// are now cluster-scoped?
 	return ctrl.NewControllerManagedBy(mgr).
@@ -1124,6 +1126,10 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			return newHostnames, err
 		}
 
+		if instance.Status.VMHosts == nil {
+			instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
+		}
+
 		if hostnameDetails.Hostname != "" {
 			if _, ok := instance.Status.VMHosts[hostnameDetails.Hostname]; !ok {
 				instance.Status.VMHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
@@ -1454,13 +1460,14 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 		// TODO: multi nic support with bindata template
 		netName := "ctlplane"
 
+		networkDataSecret := fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname)
 		vmDetails[vm.Hostname] = ospdirectorv1beta1.Host{
 			Hostname:          vm.Hostname,
 			HostRef:           vm.Hostname,
 			DomainName:        vm.Hostname,
 			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
 			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
-			NetworkDataSecret: fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname),
+			NetworkDataSecret: networkDataSecret,
 			Labels:            secretLabelsWithMustGather,
 			NAD:               nadMap,
 		}
@@ -1475,7 +1482,11 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 			return err
 		}
 
-		// update VMSet network status
+		// update VM status NetworkDataSecret and UserDataSecret
+		vm.NetworkDataSecretName = networkDataSecret
+		vm.UserDataSecretName = fmt.Sprintf("%s-cloudinit", instance.Name)
+
+		// update VM status network
 		for _, netName := range instance.Spec.Networks {
 			vm.HostRef = vm.Hostname
 			vm.IPAddresses[netName] = ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName]
