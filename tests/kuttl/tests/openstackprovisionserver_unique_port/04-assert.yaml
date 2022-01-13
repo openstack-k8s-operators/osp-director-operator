@@ -188,7 +188,7 @@ status:
     attachReadyCount: 2
     netDesiredCount: 6
     netReadyCount: 6
-    reason: OpenStackNetConfig openstacknetconfig has successfully configured OpenStackNet tenant
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
 ---
 apiVersion: osp-director.openstack.org/v1beta1

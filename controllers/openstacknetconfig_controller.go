@@ -121,7 +121,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		//
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
-			ospdirectorv1beta1.ConditionReason(cond.Message),
+			cond.Reason,
 			cond.Message,
 		)
 
@@ -240,14 +240,17 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured)
-
+	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
+		r.Client,
+		instance.Namespace,
+		instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if overrideReconcile {
-		r.Log.Info(fmt.Sprintf("OpenStackNetConfig %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Name))
+		r.Log.Info(fmt.Sprintf("%s %s reconcile overridden due to OpenStackBackupRequest(s) state; requeuing after 20 seconds", instance.Kind, instance.Name))
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
@@ -292,7 +295,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
-			cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworkAttachments to be configured", instance.Name)
+			cond.Message = fmt.Sprintf("%s %s waiting for all OpenStackNetworkAttachments to be configured", instance.Kind, instance.Name)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
 
 			return ctrlResult, nil
@@ -330,7 +333,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			if err != nil {
 				return ctrl.Result{}, err
 			} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
-				cond.Message = fmt.Sprintf("OpenStackNetConfig %s waiting for all OpenStackNetworks to be configured", instance.Name)
+				cond.Message = fmt.Sprintf("%s %s waiting for all OpenStackNetworks to be configured", instance.Kind, instance.Name)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
 
 				return ctrlResult, nil
@@ -338,6 +341,17 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			instance.Status.ProvisioningStatus.NetReadyCount++
 		}
+	}
+
+	if (instance.Status.ProvisioningStatus.NetDesiredCount == instance.Status.ProvisioningStatus.NetReadyCount) &&
+		(instance.Status.ProvisioningStatus.AttachDesiredCount == instance.Status.ProvisioningStatus.AttachReadyCount) &&
+		(instance.Status.ProvisioningStatus.PhysNetDesiredCount == instance.Status.ProvisioningStatus.PhysNetReadyCount) {
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfigured
+		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%s %s all resources configured", instance.Kind, instance.Name)
+	} else {
+		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfiguring
+		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%s %s waiting for all resources to be configured", instance.Kind, instance.Name)
+
 	}
 
 	return ctrl.Result{}, nil

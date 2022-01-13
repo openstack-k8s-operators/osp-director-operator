@@ -70,6 +70,8 @@ const (
 	// condition reasones
 	//
 
+	// CommonCondReasonInit - new resource set to reason Init
+	CommonCondReasonInit ConditionReason = "CommonInit"
 	// CommonCondReasonDeploymentSecretMissing - deployment secret does not exist
 	CommonCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
 	// CommonCondReasonDeploymentSecretError - deployment secret error
@@ -232,7 +234,11 @@ func (conditions ConditionList) InitCondition() *Condition {
 	cond := conditions.GetCurrentCondition()
 
 	if cond == nil {
-		return &Condition{}
+		return &Condition{
+			Type:    CommonCondTypeEmpty,
+			Reason:  CommonCondReasonInit,
+			Message: string(CommonCondReasonInit),
+		}
 	}
 
 	return cond
