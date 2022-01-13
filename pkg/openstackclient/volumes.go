@@ -51,6 +51,12 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 			ReadOnly:  true,
 		},
 		{
+			Name:      "openstackclient-scripts",
+			MountPath: "/home/cloud-admin/ctlplane-ansible-inventory",
+			SubPath:   "ansible-inventory",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "kolla-config",
 			MountPath: "/var/lib/kolla/config_files",
 			ReadOnly:  true,
@@ -181,6 +187,10 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 						{
 							Key:  "init.sh",
 							Path: "init.sh",
+						},
+						{
+							Key:  "ansible-inventory",
+							Path: "ansible-inventory",
 						},
 					},
 				},
