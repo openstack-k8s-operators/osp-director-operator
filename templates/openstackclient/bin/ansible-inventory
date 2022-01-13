@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Script to generate a dynamic JSON ansible inventory based on the ctlplane OpenstackNet query
+
 APISERVER=https://$KUBERNETES_SERVICE_HOST
 SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
 NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
@@ -27,14 +29,13 @@ function printHostIPs {
 
 
 if [ "$1" == "--list" ] ; then
+# print out the 'overcloud' section (contains each rolename)
 cat<<EOF
 {
   "overcloud": {
         "children": [
 EOF
 
-
-# print out the 'ALL' section (contains each rolename)
 LAST_ROLE=$(echo $ROLES | sed -e "s|^.* ||")
 for ROLE in $ROLES; do
     if [[ "$ROLE" == "$LAST_ROLE" ]]; then
