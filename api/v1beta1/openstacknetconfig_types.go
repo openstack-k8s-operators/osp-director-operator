@@ -131,12 +131,31 @@ type OpenStackNetConfigSpec struct {
 	Networks []Network `json:"networks"`
 
 	// +kubebuilder:validation:Optional
-	// PhysNetworks - physical networks list with optional MAC address prefix, used to create static OVN Bridge MAC address mappings.
+	// OVNBridgeMacMappings - configuration of the physical networks used to create to create static OVN Bridge MAC address mappings.
 	// Unique OVN bridge mac address is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per OpenStack node.
 	// This information is used to create the OVNStaticBridgeMacMappings.
-	// If PhysNetworks is not provided, the tripleo default physnet datacentre gets created
-	// If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+	// - If PhysNetworks is not provided, the tripleo default physnet datacentre gets created.
+	// - If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+	// - If PreserveReservations is not specified, the default is true.
+	OVNBridgeMacMappings OVNBridgeMacMappingConfig `json:"ovnBridgeMacMappings"`
+}
+
+// OVNBridgeMacMappingConfig defines the desired state of OpenStackMACAddress
+type OVNBridgeMacMappingConfig struct {
+	// +kubebuilder:validation:MinItems=1
+	// PhysNetworks - physical networks list to create MAC addresses per physnet per node to create OVNStaticBridgeMacMappings
 	PhysNetworks []Physnet `json:"physNetworks"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// PreserveReservations - preserve the MAC reservation of the host within a node role when the node got deleted
+	// but the role itself is not deleted. The reservations of all nodes in the role get deleted when the full node
+	// role is being deleted. (default: true)
+	PreserveReservations *bool `json:"preserveReservations"`
+
+	// +kubebuilder:validation:Optional
+	// StaticReservations, manual/static MAC address reservations per role
+	StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
 }
 
 // OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig

@@ -104,8 +104,23 @@ spec:
         cidr: 172.20.0.0/24
       vlan: 50
       attachConfiguration: br-osp
-  physNetworks:
-    - name: datacentre
-      macPrefix: fa:16:3a
-    - name: datacentre2
-      macPrefix: fa:16:3b
+  ovnBridgeMacMappings:
+    preserveReservations: true
+    physNetworks:
+    - macPrefix: fa:16:3a
+      name: datacentre
+    - macPrefix: fa:16:3b
+      name: datacentre2
+    staticReservations:
+      controller-0:
+        reservations:
+          datacentre: fa:16:3a:aa:aa:aa
+          datacentre2: fa:16:3b:aa:aa:aa
+      controller-1:
+        reservations:
+          datacentre: fa:16:3a:aa:aa:bb
+          datacentre2: fa:16:3b:aa:aa:bb
+      compute-0:
+        reservations:
+          datacentre: fa:16:3a:bb:bb:bb
+          datacentre2: fa:16:3b:bb:bb:bb

@@ -1,0 +1,9 @@
+#
+# First, create all OpenStackNetConfig with single net
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstacknetconfig_single_net.yaml
+    namespaced: true

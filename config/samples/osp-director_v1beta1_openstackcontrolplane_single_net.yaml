@@ -1,0 +1,28 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  domainName: ostest.test.metalkube.org
+  enableFencing: false
+  gitSecret: git-secret
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  openStackClientNetworks:
+  - ctlplane
+  openStackClientStorageClass: host-nfs-storageclass
+  openStackRelease: "16.2"
+  passwordSecret: userpassword
+  virtualMachineRoles:
+    controller:
+      baseImageVolumeName: controller-base-img
+      cores: 6
+      ctlplaneInterface: enp2s0
+      diskSize: 50
+      isTripleoRole: true
+      memory: 20
+      networks:
+      - ctlplane
+      roleCount: 0
+      roleName: Controller
+      storageClass: host-nfs-storageclass

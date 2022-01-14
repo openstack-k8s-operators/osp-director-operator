@@ -171,12 +171,26 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       # optional: (OSP17 only) specify all phys networks with optional MAC address prefix, used to
       # create static OVN Bridge MAC address mappings. Unique OVN bridge mac address per node is
       # dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per node.
-      # If not specfified the default datacentre phynet with "fa:16:3a" MAC prefix will be used.
-      physNetworks:
-            - name: datacentre
-              macPrefix: fa:16:3a
-            - name: datacentre2
-              macPrefix: fa:16:3b
+      # - If PhysNetworks is not provided, the tripleo default physnet datacentre gets created.
+      # - If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+      # - If PreserveReservations is not specified, the default is true.
+      ovnBridgeMacMappings:
+        preserveReservations: True
+        physNetworks:
+        - macPrefix: fa:16:3a
+          name: datacentre
+        - macPrefix: fa:16:3b
+          name: datacentre2
+        # optional: configure static mapping for the networks per nodes. If there is none, a random gets created
+        staticReservations:
+          controller-0:
+            reservations:
+              datacentre: fa:16:3a:aa:aa:aa
+              datacentre2: fa:16:3b:aa:aa:aa
+          compute-0:
+            reservations:
+              datacentre: fa:16:3a:bb:bb:bb
+              datacentre2: fa:16:3b:bb:bb:bb
     ```
 
     If you write the above YAML into a file called networkconfig.yaml you can create the OpenStackNetConfig via this command:

@@ -1,0 +1,29 @@
+#
+# verify no changes on:
+# - change MAC of current reservation
+# - add static reservation with dupe MAC
+# - add static reservation with wrong MAC format
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      # change MAC of current reservation
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/ovnBridgeMacMappings/staticReservations/controller-0/reservations/datacentre", "value": "fa:16:3a:aa:aa:bb"}]'
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # add new empty reservation
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/ovnBridgeMacMappings/staticReservations/controller-1", "value": {"reservations":{}}}]'
+    namespaced: true
+  - command: |
+      # add static reservation with dupe MAC
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/ovnBridgeMacMappings/staticReservations/controller-1", "value": {"reservations":{"datacentre": "fa:16:3a:aa:aa:aa" }}}]'
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # add static reservation with wrong MAC format
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/ovnBridgeMacMappings/staticReservations/controller-1", "value": {"reservations":{"datacentre": "fa:16:3a:aa:aa" }}}]'
+    namespaced: true
+    ignoreFailure: true

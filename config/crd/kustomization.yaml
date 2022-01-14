@@ -54,8 +54,8 @@ patchesStrategicMerge:
 - patches/cainjection_in_openstackephemeralheats.yaml
 #- patches/cainjection_in_openstackmacaddresses.yaml
 #- patches/cainjection_in_openstackconfigversions.yaml
-#- patches/cainjection_in_openstacknetconfigs.yaml
-#- patches/cainjection_in_openstacknetattachments.yaml
+- patches/cainjection_in_openstacknetconfigs.yaml
+- patches/cainjection_in_openstacknetattachments.yaml
 #- patches/cainjection_in_openstackbackups.yaml
 #- patches/cainjection_in_openstackbackuprequests.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
