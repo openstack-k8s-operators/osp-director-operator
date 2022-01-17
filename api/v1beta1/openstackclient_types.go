@@ -99,6 +99,11 @@ type OpenStackClientStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackClient) IsReady() bool {
+	return instance.Status.Conditions.InitCondition().Reason == OsClientCondReasonPodProvisioned
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osclient;osclients
@@ -127,10 +132,10 @@ func init() {
 }
 
 // GetHostnames -
-func (openstackclient OpenStackClient) GetHostnames() map[string]string {
+func (instance OpenStackClient) GetHostnames() map[string]string {
 
 	ret := make(map[string]string)
-	for _, val := range openstackclient.Status.OpenStackClientNetStatus {
+	for _, val := range instance.Status.OpenStackClientNetStatus {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret

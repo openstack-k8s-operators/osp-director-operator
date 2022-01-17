@@ -352,28 +352,39 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check provisioning status of all OpenStackBaremetalSets
 	for _, cr := range crLists.OpenStackBaremetalSets.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned && cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeEmpty {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
 	}
 
-	// OpenStackClients don't have a state
+	// Check provisioning status of all OpenStackClients
+	for _, cr := range crLists.OpenStackClients.Items {
+		if !cr.IsReady() {
+			copy := cr.DeepCopy()
+			badCrs = append(badCrs, copy)
+		}
+	}
 
 	// Check provisioning status of all OpenStackControlPlanes
 	for _, cr := range crLists.OpenStackControlPlanes.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
 	}
 
-	// OpenStackIPSets don't have a state (OpenStackBaremetalSets and OpenStackVMSets won't reach "finished" state
-	// without having successfully "received" IPs from their associated OpenStackIPSets)
+	// Check provisioning status of all OpenStackIPSets
+	for _, cr := range crLists.OpenStackIPSets.Items {
+		if !cr.IsReady() {
+			copy := cr.DeepCopy()
+			badCrs = append(badCrs, copy)
+		}
+	}
 
 	// Check the creation status of all OpenStackMACAddresses
 	for _, cr := range crLists.OpenStackMACAddresses.Items {
-		if cr.Status.CurrentState != ospdirectorv1beta1.MACCondTypeConfigured {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -381,7 +392,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the creation status of all OpenStackNets
 	for _, cr := range crLists.OpenStackNets.Items {
-		if cr.Status.CurrentState != ospdirectorv1beta1.NetConfigured {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -389,7 +400,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the creation status of all OpenStackNetAttachments
 	for _, cr := range crLists.OpenStackNetAttachments.Items {
-		if cr.Status.CurrentState != ospdirectorv1beta1.NetAttachConfigured {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -397,7 +408,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the creation status of all OpenStackNetConfigs
 	for _, cr := range crLists.OpenStackNetConfigs.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.NetConfigConfigured {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -405,7 +416,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the provisioning status of all OpenStackProvisionServers
 	for _, cr := range crLists.OpenStackProvisionServers.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerCondTypeProvisioned {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -413,7 +424,7 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 
 	// Check the provisioning status of all OpenStackVMSets
 	for _, cr := range crLists.OpenStackVMSets.Items {
-		if cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned && cr.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeEmpty {
+		if !cr.IsReady() {
 			copy := cr.DeepCopy()
 			badCrs = append(badCrs, copy)
 		}
@@ -437,7 +448,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.CurrentState != ospdirectorv1beta1.NetConfigured {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -453,7 +464,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.CurrentState != ospdirectorv1beta1.NetAttachConfigured {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -469,7 +480,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.NetConfigConfigured {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -485,12 +496,26 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.CurrentState != ospdirectorv1beta1.MACCondTypeConfigured {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
 
-	// No state in status for OpenStackIPSets
+	// OpenStackIPSets
+	for _, desired := range backup.Spec.Crs.OpenStackIPSets.Items {
+		found := &ospdirectorv1beta1.OpenStackIPSet{}
+
+		for _, actual := range crLists.OpenStackIPSets.Items {
+			if actual.Name == desired.Name {
+				found = actual.DeepCopy()
+				break
+			}
+		}
+
+		if found == nil || !found.IsReady() {
+			badCrs = append(badCrs, found)
+		}
+	}
 
 	// OpenStackProvisionServers
 	for _, desired := range backup.Spec.Crs.OpenStackProvisionServers.Items {
@@ -503,7 +528,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisionServerCondTypeProvisioned {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -519,12 +544,26 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || (found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeProvisioned && found.Status.ProvisioningStatus.State != ospdirectorv1beta1.BaremetalSetCondTypeEmpty) {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
 
-	// No state in status for OpenStackClients
+	// OpenStackClients
+	for _, desired := range backup.Spec.Crs.OpenStackClients.Items {
+		found := &ospdirectorv1beta1.OpenStackClient{}
+
+		for _, actual := range crLists.OpenStackClients.Items {
+			if actual.Name == desired.Name {
+				found = actual.DeepCopy()
+				break
+			}
+		}
+
+		if found == nil || !found.IsReady() {
+			badCrs = append(badCrs, found)
+		}
+	}
 
 	// OpenStackVMSets
 	for _, desired := range backup.Spec.Crs.OpenStackVMSets.Items {
@@ -537,7 +576,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || (found.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned && found.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeEmpty) {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}
@@ -553,7 +592,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 			}
 		}
 
-		if found == nil || found.Status.ProvisioningStatus.State != ospdirectorv1beta1.ControlPlaneProvisioned {
+		if found == nil || !found.IsReady() {
 			badCrs = append(badCrs, found)
 		}
 	}

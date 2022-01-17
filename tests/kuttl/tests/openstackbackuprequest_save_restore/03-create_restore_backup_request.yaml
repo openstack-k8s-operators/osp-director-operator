@@ -6,5 +6,6 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
-      oc delete osbackuprequest --all;
-      sed -e '$a\ \ restoreSource: '$(oc get osbackup -o name | cut -d '/' -f 2) ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml | sed 's/save/cleanRestore/' | oc apply -f - || true
+      oc delete -n openstack osbackuprequest --all;
+      sleep 5;
+      sed -e '$a\ \ restoreSource: '$(oc get osbackup -n openstack -o name | cut -d '/' -f 2) ../../../../config/samples/osp-director_v1beta1_openstackbackuprequest.yaml | sed 's/save/cleanRestore/' | oc apply -n openstack -f - || true

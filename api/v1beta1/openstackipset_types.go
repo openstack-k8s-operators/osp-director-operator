@@ -106,6 +106,11 @@ type OpenStackIPHostsStatus struct {
 	IPAddresses map[string]string `json:"ipaddresses"`
 }
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackIPSet) IsReady() bool {
+	return instance.Status.Conditions.InitCondition().Reason == ConditionReason(IPSetCondReasonSuccessfullyConfigured)
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osipset;osipsets;osips

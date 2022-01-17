@@ -1,0 +1,26 @@
+#
+# Check for:
+#
+# - 1 OpenStackBackupRequest (should be restored)
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 420
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprequest
+  namespace: openstack
+status:
+  conditions:
+  - status: "False"
+    type: Cleaning
+  - status: "False"
+    type: Loading
+  - status: "False"
+    type: Reconciling
+  - status: "True"
+    type: Restored
+  currentState: Restored

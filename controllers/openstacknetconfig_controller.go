@@ -240,11 +240,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
-		r.Client,
-		instance.Namespace,
-		instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.NetConfigConfigured,
-	)
+	overrideReconcile, err := common.OpenStackBackupOverridesReconcile(r.Client, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -343,9 +339,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	}
 
-	if (instance.Status.ProvisioningStatus.NetDesiredCount == instance.Status.ProvisioningStatus.NetReadyCount) &&
-		(instance.Status.ProvisioningStatus.AttachDesiredCount == instance.Status.ProvisioningStatus.AttachReadyCount) &&
-		(instance.Status.ProvisioningStatus.PhysNetDesiredCount == instance.Status.ProvisioningStatus.PhysNetReadyCount) {
+	if instance.IsReady() {
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfigured
 		instance.Status.ProvisioningStatus.Reason = fmt.Sprintf("%s %s all resources configured", instance.Kind, instance.Name)
 	} else {

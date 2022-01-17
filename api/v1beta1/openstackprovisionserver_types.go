@@ -86,6 +86,11 @@ const (
 	OpenStackProvisionServerCondReasonCreated ConditionReason = "OpenStackProvisionServerCreated"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackProvisionServer) IsReady() bool {
+	return instance.Status.ProvisioningStatus.State == ProvisionServerCondTypeProvisioned
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osprovserver;osprovservers
@@ -112,7 +117,7 @@ type OpenStackProvisionServerList struct {
 }
 
 // GetExistingProvServerPorts - Get all ports currently in use by all OpenStackProvisionServers in this namespace
-func (r *OpenStackProvisionServer) GetExistingProvServerPorts(
+func (instance *OpenStackProvisionServer) GetExistingProvServerPorts(
 	cond *Condition,
 	client goClient.Client,
 ) (map[string]int, error) {
@@ -121,7 +126,7 @@ func (r *OpenStackProvisionServer) GetExistingProvServerPorts(
 	provServerList := &OpenStackProvisionServerList{}
 
 	listOpts := []goClient.ListOption{
-		goClient.InNamespace(r.Namespace),
+		goClient.InNamespace(instance.Namespace),
 	}
 
 	err := client.List(context.TODO(), provServerList, listOpts...)
@@ -141,27 +146,27 @@ func (r *OpenStackProvisionServer) GetExistingProvServerPorts(
 }
 
 // AssignProvisionServerPort - Assigns an Apache listening port for a particular OpenStackProvisionServer.
-func (r *OpenStackProvisionServer) AssignProvisionServerPort(
+func (instance *OpenStackProvisionServer) AssignProvisionServerPort(
 	cond *Condition,
 	client goClient.Client,
 	portStart int,
 ) error {
-	if r.Spec.Port != 0 {
+	if instance.Spec.Port != 0 {
 		// Do nothing, already assigned
 		return nil
 	}
 
-	existingPorts, err := r.GetExistingProvServerPorts(cond, client)
+	existingPorts, err := instance.GetExistingProvServerPorts(cond, client)
 	if err != nil {
 		return err
 	}
 
 	// It's possible that this prov server already exists and we are just dealing with
 	// a minimized version of it (only its ObjectMeta is set, etc)
-	r.Spec.Port = existingPorts[r.GetName()]
+	instance.Spec.Port = existingPorts[instance.GetName()]
 
 	// If we get this far, no port has been previously assigned, so we pick one
-	if r.Spec.Port == 0 {
+	if instance.Spec.Port == 0 {
 		cur := portStart
 
 		for {
@@ -181,7 +186,7 @@ func (r *OpenStackProvisionServer) AssignProvisionServerPort(
 			cur++
 		}
 
-		r.Spec.Port = cur
+		instance.Spec.Port = cur
 	}
 
 	return nil

@@ -172,6 +172,13 @@ const (
 	NetConfigError ProvisioningState = "Error"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackNetConfig) IsReady() bool {
+	return instance.Status.ProvisioningStatus.NetDesiredCount == instance.Status.ProvisioningStatus.NetReadyCount &&
+		instance.Status.ProvisioningStatus.AttachDesiredCount == instance.Status.ProvisioningStatus.AttachReadyCount &&
+		instance.Status.ProvisioningStatus.PhysNetDesiredCount == instance.Status.ProvisioningStatus.PhysNetReadyCount
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=osnetconfig;osnetsconfig;osnetcfg;osnetscfg

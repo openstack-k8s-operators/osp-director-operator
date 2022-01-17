@@ -116,6 +116,11 @@ const (
 	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachtCreateError"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackNetAttachment) IsReady() bool {
+	return instance.Status.CurrentState == NetAttachConfigured
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=osnetattachment;osnetsattachment;osnetatt;osnetsatt

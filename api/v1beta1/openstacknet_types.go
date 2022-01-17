@@ -147,6 +147,11 @@ const (
 	NetCondReasonCreateError ConditionReason = "OpenStackNetCreateError"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackNet) IsReady() bool {
+	return instance.Status.CurrentState == NetConfigured
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osnet;osnets

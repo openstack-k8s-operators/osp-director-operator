@@ -86,7 +86,7 @@ func (r *OpenStackBackupRequest) ValidateDelete() error {
 }
 
 func (r *OpenStackBackupRequest) validateCr() error {
-	if r.Spec.Mode == BackupRestore {
+	if r.Spec.Mode == BackupRestore || r.Spec.Mode == BackupCleanRestore {
 		return webhookClient.Get(context.TODO(), types.NamespacedName{Name: r.Spec.RestoreSource, Namespace: r.Namespace}, &OpenStackBackup{})
 	}
 
