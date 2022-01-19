@@ -1425,8 +1425,8 @@ spec:
                                             addresses per PhysNetworks
                                           properties:
                                             deleted:
-                                              description: node and therefore MAC
-                                                reservation are flagged as deleted
+                                              description: Deleted - node and therefore
+                                                MAC reservation are flagged as deleted
                                               type: boolean
                                             reservations:
                                               additionalProperties:
@@ -1435,7 +1435,6 @@ spec:
                                                 per PhysNetwork
                                               type: object
                                           required:
-                                          - deleted
                                           - reservations
                                           type: object
                                         description: Reservations IP address reservations
@@ -1444,7 +1443,7 @@ spec:
                                     required:
                                     - reservations
                                     type: object
-                                  description: RoleReservations, IP address reservations
+                                  description: RoleReservations, MAC address reservations
                                     per role
                                   type: object
                               required:
@@ -1495,8 +1494,8 @@ spec:
                                       PhysNetworks
                                     properties:
                                       deleted:
-                                        description: node and therefore MAC reservation
-                                          are flagged as deleted
+                                        description: Deleted - node and therefore
+                                          MAC reservation are flagged as deleted
                                         type: boolean
                                       reservations:
                                         additionalProperties:
@@ -1505,7 +1504,6 @@ spec:
                                           per PhysNetwork
                                         type: object
                                     required:
-                                    - deleted
                                     - reservations
                                     type: object
                                   description: Reservations MAC address reservations
@@ -2107,39 +2105,83 @@ spec:
                                     - subnets
                                     type: object
                                   type: array
-                                physNetworks:
-                                  description: PhysNetworks - physical networks list
-                                    with optional MAC address prefix, used to create
+                                ovnBridgeMacMappings:
+                                  description: OVNBridgeMacMappings - configuration
+                                    of the physical networks used to create to create
                                     static OVN Bridge MAC address mappings. Unique
                                     OVN bridge mac address is dynamically allocated
                                     by creating OpenStackMACAddress resource and create
                                     a MAC per physnet per OpenStack node. This information
                                     is used to create the OVNStaticBridgeMacMappings.
-                                    If PhysNetworks is not provided, the tripleo default
-                                    physnet datacentre gets created If the macPrefix
-                                    is not specified for a physnet, the default macPrefix
-                                    "fa:16:3a" is used.
-                                  items:
-                                    description: Physnet - name and prefix to be used
-                                      for the physnet
-                                    properties:
-                                      macPrefix:
-                                        default: fa:16:3a
-                                        description: MACPrefix - the MAC address prefix
-                                          to use Locally administered addresses are
-                                          distinguished from universally administered
-                                          addresses by setting (assigning the value
-                                          of 1 to) the second-least-significant bit
-                                          of the first octet of the address. https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
-                                        type: string
-                                      name:
-                                        default: datacentre
-                                        description: Name - the name of the physnet
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type: array
+                                    - If PhysNetworks is not provided, the tripleo
+                                    default physnet datacentre gets created. - If
+                                    the macPrefix is not specified for a physnet,
+                                    the default macPrefix "fa:16:3a" is used. - If
+                                    PreserveReservations is not specified, the default
+                                    is true.
+                                  properties:
+                                    physNetworks:
+                                      description: PhysNetworks - physical networks
+                                        list to create MAC addresses per physnet per
+                                        node to create OVNStaticBridgeMacMappings
+                                      items:
+                                        description: Physnet - name and prefix to
+                                          be used for the physnet
+                                        properties:
+                                          macPrefix:
+                                            default: fa:16:3a
+                                            description: MACPrefix - the MAC address
+                                              prefix to use Locally administered addresses
+                                              are distinguished from universally administered
+                                              addresses by setting (assigning the
+                                              value of 1 to) the second-least-significant
+                                              bit of the first octet of the address.
+                                              https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
+                                            type: string
+                                          name:
+                                            default: datacentre
+                                            description: Name - the name of the physnet
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      minItems: 1
+                                      type: array
+                                    preserveReservations:
+                                      default: true
+                                      description: 'PreserveReservations - preserve
+                                        the MAC reservation of the host within a node
+                                        role when the node got deleted but the role
+                                        itself is not deleted. The reservations of
+                                        all nodes in the role get deleted when the
+                                        full node role is being deleted. (default:
+                                        true)'
+                                      type: boolean
+                                    staticReservations:
+                                      additionalProperties:
+                                        description: OpenStackMACNodeReservation defines
+                                          the observed state of the MAC addresses
+                                          per PhysNetworks
+                                        properties:
+                                          deleted:
+                                            description: Deleted - node and therefore
+                                              MAC reservation are flagged as deleted
+                                            type: boolean
+                                          reservations:
+                                            additionalProperties:
+                                              type: string
+                                            description: Reservations MAC reservations
+                                              per PhysNetwork
+                                            type: object
+                                        required:
+                                        - reservations
+                                        type: object
+                                      description: StaticReservations, manual/static
+                                        MAC address reservations per role
+                                      type: object
+                                  required:
+                                  - physNetworks
+                                  type: object
                               required:
                               - attachConfigurations
                               - networks

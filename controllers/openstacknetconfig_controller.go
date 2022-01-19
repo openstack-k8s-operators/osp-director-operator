@@ -253,7 +253,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	//
 	// 1) Create or update the MACAddress CR object
 	//
-	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.PhysNetworks)
+	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.OVNBridgeMacMappings.PhysNetworks)
 	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
 	err = r.createOrUpdateOpenStackMACAddress(
 		instance,
@@ -746,7 +746,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	}
 
 	//
-	// create reservations for all VMset/BMset
+	// create MAC reservations for all VMset/BMset
 	//
 	reservations := map[string]ospdirectorv1beta1.OpenStackMACRoleReservation{}
 
@@ -768,6 +768,17 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 			if err != nil {
 				return err
 			}
+		}
+
+		//
+		// add reservations from deleted nodes if physnet.PreserveReservations
+		//
+		if *instance.Spec.OVNBridgeMacMappings.PreserveReservations {
+			r.preserveMACReservations(
+				macAddress,
+				&roleMACReservation,
+				vmSet.Spec.RoleName,
+			)
 		}
 
 		reservations[vmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
@@ -795,6 +806,17 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 			}
 		}
 
+		//
+		// add reservations from deleted nodes if physnet.PreserveReservations
+		//
+		if *instance.Spec.OVNBridgeMacMappings.PreserveReservations {
+			r.preserveMACReservations(
+				macAddress,
+				&roleMACReservation,
+				bmSet.Spec.RoleName,
+			)
+		}
+
 		reservations[bmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
 			Reservations: roleMACReservation,
 		}
@@ -804,7 +826,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	// create/update OSMACAddress
 	//
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, macAddress, func() error {
-		if len(instance.Spec.PhysNetworks) == 0 {
+		if len(instance.Spec.OVNBridgeMacMappings.PhysNetworks) == 0 {
 			macAddress.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
 				{
 					Name:      ospdirectorv1beta1.DefaultOVNChassisPhysNetName,
@@ -813,7 +835,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 			}
 		} else {
 			macPhysnets := []ospdirectorv1beta1.Physnet{}
-			for _, physnet := range instance.Spec.PhysNetworks {
+			for _, physnet := range instance.Spec.OVNBridgeMacMappings.PhysNetworks {
 				macPrefix := physnet.MACPrefix
 				// make sure if MACPrefix was not speficied to set the default prefix
 				if macPrefix == "" {
@@ -843,7 +865,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		return nil
 	})
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to create or update OpenStackMACAddress %s ", instance.Name)
+		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", macAddress.Kind, macAddress.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
@@ -889,24 +911,47 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 		}
 
 	} else {
-		nodeMACReservation = reservations[roleName].Reservations[hostname]
+		nodeMACReservation = ospdirectorv1beta1.OpenStackMACNodeReservation{
+			Deleted:      reservations[roleName].Reservations[hostname].Deleted,
+			Reservations: map[string]string{},
+		}
+		for _, physnet := range instance.Spec.OVNBridgeMacMappings.PhysNetworks {
+			nodeMACReservation.Reservations[physnet.Name] = reservations[roleName].Reservations[hostname].Reservations[physnet.Name]
+		}
 	}
 
 	if !annotatedForDeletion {
 		nodeMACReservation.Deleted = annotatedForDeletion
 
 		// create reservation for every specified physnet
-		for _, physnet := range instance.Spec.PhysNetworks {
-			// if there is no reservation for the physnet, create one
-			if _, ok := nodeMACReservation.Reservations[physnet.Name]; !ok {
+		for _, physnet := range instance.Spec.OVNBridgeMacMappings.PhysNetworks {
 
+			//
+			// if there is a static reservation configured for the physnet AND is not "", use it
+			//
+			if res, ok := instance.Spec.OVNBridgeMacMappings.StaticReservations[hostname]; ok && res.Reservations[physnet.Name] != "" {
+				nodeMACReservation.Reservations[physnet.Name] = res.Reservations[physnet.Name]
+				continue
+			}
+
+			//
+			// if there is no reservation for the physnet, OR the reservation is empty (e.g. new physnet), create one
+			//
+			if res, ok := nodeMACReservation.Reservations[physnet.Name]; !ok || res == "" {
 				// create MAC address and verify it is uniqe in the CR reservations
 				var newMAC string
 				var err error
-				for ok := true; ok; ok = !macaddress.IsUniqMAC(macAddress.Status.MACReservations, newMAC) {
+				for ok := true; ok; ok = !ospdirectorv1beta1.IsUniqMAC(
+					r.allMACReservations(
+						cond,
+						instance,
+						macAddress,
+					),
+					newMAC,
+				) {
 					newMAC, err = macaddress.CreateMACWithPrefix(physnet.MACPrefix)
 					if err != nil {
-						cond.Message = "Waiting for all MAC addresses to get created"
+						cond.Message = err.Error()
 						cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonCreateMACError)
 						cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeCreating)
 						err = common.WrapErrorForObject(cond.Message, instance, err)
@@ -916,7 +961,7 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 
 					common.LogForObject(
 						r,
-						fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", hostname, physnet, newMAC),
+						fmt.Sprintf("New MAC created - node: %s, physnet: %s, mac: %s", hostname, physnet.Name, newMAC),
 						instance,
 					)
 				}
@@ -933,4 +978,44 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 	}
 
 	return nodeMACReservation, nil
+}
+
+//
+// allMACReservations - get all reservations from static + dynamic created
+//
+func (r *OpenStackNetConfigReconciler) allMACReservations(
+	cond *ospdirectorv1beta1.Condition,
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
+) map[string]ospdirectorv1beta1.OpenStackMACNodeReservation {
+	reservations := macAddress.Status.MACReservations
+
+	for node, res := range instance.Spec.OVNBridgeMacMappings.StaticReservations {
+		reservations[node] = res
+	}
+
+	return reservations
+}
+
+//
+// add reservations from deleted nodes if physnet.PreserveReservations
+//
+func (r *OpenStackNetConfigReconciler) preserveMACReservations(
+	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
+	roleMACReservation *map[string]ospdirectorv1beta1.OpenStackMACNodeReservation,
+	roleName string,
+) {
+	for hostname := range macAddress.Spec.RoleReservations[roleName].Reservations {
+		nodeMACReservation := ospdirectorv1beta1.OpenStackMACNodeReservation{
+			Deleted:      true,
+			Reservations: map[string]string{},
+		}
+
+		if _, ok := (*roleMACReservation)[hostname]; !ok {
+			nodeMACReservation.Reservations =
+				macAddress.Spec.RoleReservations[roleName].Reservations[hostname].Reservations
+			(*roleMACReservation)[hostname] = nodeMACReservation
+		}
+	}
+
 }

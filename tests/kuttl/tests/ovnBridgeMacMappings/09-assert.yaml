@@ -1,0 +1,139 @@
+#
+# Check for:
+#
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 1 OpenStackClient
+# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 1 Secret (TripleO passwords)
+# - 1 OpenStackMACAddress
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  finalizers:
+  - openstacknetconfig.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            mtu: 1500
+            name: br-osp
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+  dnsServers: []
+  domainName: localdomain
+  networks:
+  - isControlPlane: true
+    mtu: 1500
+    name: Control
+    nameLower: ctlplane
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 192.168.25.250
+        allocationStart: 192.168.25.100
+        cidr: 192.168.25.0/24
+        gateway: 192.168.25.1
+        routes: []
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+        routes: []
+      name: ctlplane
+      vlan: 0
+    vip: true
+  ovnBridgeMacMappings:
+    physNetworks:
+    - macPrefix: fa:16:3a
+      name: datacentre
+    - macPrefix: fa:16:3b
+      name: datacentre2
+    preserveReservations: false
+    staticReservations:
+      controller-0:
+        deleted: false
+        reservations:
+          datacentre: fa:16:3a:aa:aa:aa
+      controller-1:
+        deleted: false
+        reservations:
+          datacentre: fa:16:3a:aa:aa:bb
+status:
+  provisioningStatus:
+    attachDesiredCount: 1
+    attachReadyCount: 1
+    netDesiredCount: 1
+    netReadyCount: 1
+    physNetDesiredCount: 2
+    physNetReadyCount: 2
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
+    state: Configured
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Controller:
+      reservations:
+        controller-0:
+          deleted: false
+          reservations:
+            datacentre: fa:16:3a:aa:aa:aa
+status:
+  currentState: Created
+  macReservations:
+    controller-0:
+      deleted: false
+      reservations:
+        datacentre: fa:16:3a:aa:aa:aa
+  reservedMACCount: 2
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+commands:
+  - script: |
+      set -x
+      # should return the new reservation for the added physnet
+      reservation=$(oc get -n openstack osmacaddr openstacknetconfig -o json | jq .spec.roleReservations.Controller.reservations | jq -r 'to_entries | map(select(.key == "controller-0"))[0] | .value.reservations.datacentre2'| wc -l)
+      if [ $reservation -eq 1 ]; then
+          exit 0
+      else
+          exit 1
+      fi
+

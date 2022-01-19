@@ -1,0 +1,10 @@
+#
+# Add static MAC reservation for controller-1
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/ovnBridgeMacMappings/staticReservations/controller-1/reservations", "value": {"datacentre": "fa:16:3a:aa:aa:bb"}}]'
+    namespaced: true

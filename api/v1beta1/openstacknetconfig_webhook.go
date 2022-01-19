@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"net"
 
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,13 +70,21 @@ func (r *OpenStackNetConfig) Default() {
 	//
 	// set default PhysNetworks name/prefix if non speficied
 	//
-	if len(r.Spec.PhysNetworks) == 0 {
-		r.Spec.PhysNetworks = []Physnet{
+	if len(r.Spec.OVNBridgeMacMappings.PhysNetworks) == 0 {
+		r.Spec.OVNBridgeMacMappings.PhysNetworks = []Physnet{
 			{
 				Name:      DefaultOVNChassisPhysNetName,
 				MACPrefix: DefaultOVNChassisPhysNetMACPrefix,
 			},
 		}
+	}
+	if r.Spec.OVNBridgeMacMappings.StaticReservations == nil {
+		r.Spec.OVNBridgeMacMappings.StaticReservations = map[string]OpenStackMACNodeReservation{}
+	}
+
+	if r.Spec.OVNBridgeMacMappings.PreserveReservations == nil {
+		var trueVal bool = true
+		r.Spec.OVNBridgeMacMappings.PreserveReservations = &trueVal
 	}
 
 	//
@@ -117,6 +126,14 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// Validate static MAC address reservations
+	//
+	err = r.validateStaticMacReservations(nil)
+	if err != nil {
+		return err
+	}
+
 	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
 }
 
@@ -128,6 +145,14 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	// validate that the bridge names won't change on CR update
 	//
 	err := r.validateBridgeNameChanged(old)
+	if err != nil {
+		return err
+	}
+
+	//
+	// Validate static MAC address reservations
+	//
+	err = r.validateStaticMacReservations(old)
 	if err != nil {
 		return err
 	}
@@ -149,10 +174,10 @@ func (r *OpenStackNetConfig) validateControlPlaneNetworkNames() error {
 	for _, net := range r.Spec.Networks {
 		if net.IsControlPlane {
 			if net.Name != ControlPlaneName {
-				return fmt.Errorf(fmt.Sprintf("control plane network name %s does not match %s", net.Name, ControlPlaneName))
+				return fmt.Errorf("control plane network name %s does not match %s", net.Name, ControlPlaneName)
 			}
 			if net.NameLower != ControlPlaneNameLower {
-				return fmt.Errorf(fmt.Sprintf("control plane network name_lower  %s does not match %s", net.NameLower, ControlPlaneNameLower))
+				return fmt.Errorf("control plane network name_lower  %s does not match %s", net.NameLower, ControlPlaneNameLower)
 			}
 		}
 	}
@@ -189,5 +214,47 @@ func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error
 		}
 	}
 
+	return nil
+}
+
+// validateStaticMacReservations - validate static MAC address reservations
+func (r *OpenStackNetConfig) validateStaticMacReservations(old runtime.Object) error {
+	// fill an empty reservations map to check for uniq MAC reservations
+	reservations := map[string]OpenStackMACNodeReservation{}
+
+	for node, res := range r.Spec.OVNBridgeMacMappings.StaticReservations {
+		for physnet, mac := range res.Reservations {
+			//
+			// check if the MAC address has a valid format
+			//
+			if _, err := net.ParseMAC(mac); err != nil {
+				return fmt.Errorf("MAC address %s of node %s has an invalid format", mac, node)
+			}
+
+			//
+			// check for duplicate reservations on static reservations
+			//
+			if !IsUniqMAC(reservations, mac) {
+				return fmt.Errorf("MAC address %s of node %s is not uniq", mac, node)
+			}
+
+			//
+			// check that a MAC reservation won't change
+			//
+			if old != nil {
+				var ok bool
+				var oldInstance *OpenStackNetConfig
+				if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
+					return fmt.Errorf("runtime object is not an OpenStackNetConfig")
+				}
+				if currentMAC, ok := oldInstance.Spec.OVNBridgeMacMappings.StaticReservations[node].Reservations[physnet]; ok && currentMAC != mac {
+					return fmt.Errorf("MAC address %s of node %s must not change - new MAC address %s", currentMAC, node, mac)
+				}
+			}
+		}
+
+		// if all tests pass add to reservations
+		reservations[node] = res
+	}
 	return nil
 }

@@ -1,0 +1,10 @@
+#
+# Add new second physnet definition to ovnBridgeMacMappings/physNetworks
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/ovnBridgeMacMappings/physNetworks/-", "value": {"macPrefix": "fa:16:3b", "name": "datacentre2"}}]'
+    namespaced: true

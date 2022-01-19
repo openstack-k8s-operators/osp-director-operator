@@ -83,8 +83,8 @@ spec:
                           state of the MAC addresses per PhysNetworks
                         properties:
                           deleted:
-                            description: node and therefore MAC reservation are flagged
-                              as deleted
+                            description: Deleted - node and therefore MAC reservation
+                              are flagged as deleted
                             type: boolean
                           reservations:
                             additionalProperties:
@@ -92,7 +92,6 @@ spec:
                             description: Reservations MAC reservations per PhysNetwork
                             type: object
                         required:
-                        - deleted
                         - reservations
                         type: object
                       description: Reservations IP address reservations per role
@@ -100,7 +99,7 @@ spec:
                   required:
                   - reservations
                   type: object
-                description: RoleReservations, IP address reservations per role
+                description: RoleReservations, MAC address reservations per role
                 type: object
             required:
             - physNetworks
@@ -147,8 +146,8 @@ spec:
                     of the MAC addresses per PhysNetworks
                   properties:
                     deleted:
-                      description: node and therefore MAC reservation are flagged
-                        as deleted
+                      description: Deleted - node and therefore MAC reservation are
+                        flagged as deleted
                       type: boolean
                     reservations:
                       additionalProperties:
@@ -156,7 +155,6 @@ spec:
                       description: Reservations MAC reservations per PhysNetwork
                       type: object
                   required:
-                  - deleted
                   - reservations
                   type: object
                 description: Reservations MAC address reservations per node

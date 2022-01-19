@@ -50,7 +50,7 @@ type OpenStackMACAddressSpec struct {
 	PhysNetworks []Physnet `json:"physNetworks"`
 
 	// +kubebuilder:validation:Optional
-	// RoleReservations, IP address reservations per role
+	// RoleReservations, MAC address reservations per role
 	RoleReservations map[string]OpenStackMACRoleReservation `json:"roleReservations"`
 }
 
@@ -65,7 +65,8 @@ type OpenStackMACNodeReservation struct {
 	// Reservations MAC reservations per PhysNetwork
 	Reservations map[string]string `json:"reservations"`
 
-	// node and therefore MAC reservation are flagged as deleted
+	// +kubebuilder:validation:Optional
+	// Deleted - node and therefore MAC reservation are flagged as deleted
 	Deleted bool `json:"deleted"`
 }
 
@@ -97,6 +98,12 @@ const (
 	MACCondReasonAllMACAddressesCreated ConditionReason = "MACAddressesCreated"
 	// MACCondReasonError - General error getting the OSMACaddr object
 	MACCondReasonError ConditionReason = "MACError"
+	/*
+		// MACCondReasonStaticMACNotUniqError - Mac from provided static list is not uniq
+		MACCondReasonStaticMACNotUniqError ConditionReason = "StaticMACNotUniqError"
+		// MACCondReasonStaticMACNotValidError - Mac from provided static list is a valid MAC address
+		MACCondReasonStaticMACNotValidError ConditionReason = "StaticMACNotValidError"
+	*/
 )
 
 // OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress
