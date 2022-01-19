@@ -81,6 +81,10 @@ spec:
         deleted: false
         reservations:
           datacentre: fa:16:3a:aa:aa:bb
+      controller-2:
+        deleted: false
+        reservations:
+          datacentre: fa:16:3a:aa:aa:cc
 status:
   provisioningStatus:
     attachDesiredCount: 1

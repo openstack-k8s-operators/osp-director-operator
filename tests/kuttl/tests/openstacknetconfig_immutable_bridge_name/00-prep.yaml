@@ -1,18 +1,1 @@
-#
-# Q: WHAT IS TESTED HERE?
-#
-# A: 
-#
-# - Create 1 OpenStackNet
-# - Try to change the bridge name of the OpenStackNet after it is created
-# - Verify that the bridge name did not in fact change
-#
-
-#
-# Attempt to "clear the field" if necessary
-#
-
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: ../../common/scripts/prep.sh
+../../common/tests/00-prep.yaml

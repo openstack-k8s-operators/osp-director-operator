@@ -85,6 +85,10 @@ spec:
         deleted: false
         reservations:
           datacentre: fa:16:3a:aa:aa:bb
+      controller-2:
+        deleted: false
+        reservations:
+          datacentre: fa:16:3a:aa:aa:cc
 status:
   provisioningStatus:
     attachDesiredCount: 1
@@ -110,27 +114,28 @@ spec:
   roleReservations:
     Controller:
       reservations:
-        controller-0:
+        controller-2:
           deleted: false
           reservations:
-            datacentre: fa:16:3a:aa:aa:aa
+            datacentre: fa:16:3a:aa:aa:cc
 status:
   currentState: Created
   macReservations:
-    controller-0:
+    controller-2:
       deleted: false
       reservations:
-        datacentre: fa:16:3a:aa:aa:aa
+        datacentre: fa:16:3a:aa:aa:cc
   reservedMACCount: 2
 ---
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
+timeout: 10
 namespaced: true
 commands:
   - script: |
       set -x
       # should return the new reservation for the added physnet
-      reservation=$(oc get -n openstack osmacaddr openstacknetconfig -o json | jq .spec.roleReservations.Controller.reservations | jq -r 'to_entries | map(select(.key == "controller-0"))[0] | .value.reservations.datacentre2'| wc -l)
+      reservation=$(oc get -n openstack osmacaddr openstacknetconfig -o json | jq .spec.roleReservations.Controller.reservations | jq -r 'to_entries | map(select(.key == "controller-2"))[0] | .value.reservations.datacentre2'| wc -l)
       if [ $reservation -eq 1 ]; then
           exit 0
       else

@@ -1,10 +1,1 @@
-#
-# Scale OpenStackControlPlane to 2 controllers
-#
-
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - command: |
-      oc patch -n openstack openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/controller/roleCount", "value":2}]'
-    namespaced: true
+../../common/tests/scale_up_openstackcontrolplane_3_controllers.yaml

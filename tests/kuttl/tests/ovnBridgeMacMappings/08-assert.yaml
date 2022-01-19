@@ -84,14 +84,14 @@ status:
     reason: All requested VirtualMachines have been provisioned
     state: Provisioned
   vmHosts:
-    controller-0:
+    controller-2:
       annotatedForDeletion: false
       ctlplaneIP: ""
-      hostRef: controller-0
-      hostname: controller-0
+      hostRef: controller-2
+      hostname: controller-2
       ipaddresses:
-        ctlplane: 192.168.25.102/24
-      networkDataSecretName: controller-controller-0-networkdata
+        ctlplane: 192.168.25.104/24
+      networkDataSecretName: controller-controller-2-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
 ---
@@ -157,13 +157,17 @@ spec:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: false
+      - deleted: true
         hostname: controller-0
         ip: 192.168.25.102
         vip: false
       - deleted: true
         hostname: controller-1
         ip: 192.168.25.103
+        vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 192.168.25.104
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -177,7 +181,7 @@ spec:
   vlan: 0
 status:
   currentState: Configured
-  reservedIpCount: 4
+  reservedIpCount: 5
   roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -224,16 +228,16 @@ spec:
   addToPredictableIPs: true
   hostCount: 1
   hostNameRefs:
-    controller-0: controller-0
+    controller-2: controller-2
   networks:
   - ctlplane
   roleName: Controller
   vip: false
 status:
   hosts:
-    controller-0:
+    controller-2:
       ipaddresses:
-        ctlplane: 192.168.25.102/24
+        ctlplane: 192.168.25.104/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -296,23 +300,33 @@ spec:
   roleReservations:
     Controller:
       reservations:
-        controller-0:
+        controller-2:
           deleted: false
           reservations:
-            datacentre: fa:16:3a:aa:aa:aa
+            datacentre: fa:16:3a:aa:aa:cc
 status:
   currentState: Created
   macReservations:
-    controller-0:
+    controller-2:
       deleted: false
       reservations:
-        datacentre: fa:16:3a:aa:aa:aa
+        datacentre: fa:16:3a:aa:aa:cc
   reservedMACCount: 1
 ---
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
+timeout: 10
 namespaced: true
 commands:
+  - script: |
+      set -x
+      # should return only [] to validate that the reservation is gone
+      reservation=$(oc get -n openstack osmacaddr openstacknetconfig -o json | jq .spec.roleReservations.Controller.reservations | jq -r 'to_entries | map(select(.key == "controller-0"))' | wc -l)
+      if [ $reservation -eq 1 ]; then
+          exit 0
+      else
+          exit 1
+      fi
   - script: |
       set -x
       # should return only [] to validate that the reservation is gone
