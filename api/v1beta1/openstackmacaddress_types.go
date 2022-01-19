@@ -114,6 +114,11 @@ type OpenStackMACAddressStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackMACAddress) IsReady() bool {
+	return instance.Status.CurrentState == MACCondTypeConfigured
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osmacaddress;osmacaddresses;osmacaddr;osmacaddrs

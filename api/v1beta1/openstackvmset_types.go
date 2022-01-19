@@ -177,6 +177,13 @@ type Host struct {
 	NAD               map[string]networkv1.NetworkAttachmentDefinition `json:"nad"`
 }
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackVMSet) IsReady() bool {
+	cond := instance.Status.Conditions.InitCondition()
+
+	return cond.Reason == VMSetCondReasonProvisioned || cond.Reason == VMSetCondReasonVirtualMachineCountZero
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osvmset;osvmsets;osvms
@@ -196,9 +203,9 @@ type OpenStackVMSet struct {
 }
 
 // GetHostnames -
-func (vms OpenStackVMSet) GetHostnames() map[string]string {
+func (instance OpenStackVMSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for _, val := range vms.Status.VMHosts {
+	for _, val := range instance.Status.VMHosts {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret

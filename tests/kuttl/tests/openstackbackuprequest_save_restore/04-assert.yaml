@@ -1,0 +1,24 @@
+#
+# Check for:
+#
+# - 1 OpenStackBackupRequest (should be reconciling)
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprequest
+  namespace: openstack
+status:
+  conditions:
+  - status: "False"
+    type: Cleaning
+  - status: "False"
+    type: Loading
+  - status: "True"
+    type: Reconciling
+  currentState: Reconciling

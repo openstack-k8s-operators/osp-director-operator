@@ -172,7 +172,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.CurrentState == ospdirectorv1beta1.MACCondTypeConfigured)
+	overrideReconcile, err := common.OpenStackBackupOverridesReconcile(r.Client, instance)
 
 	if err != nil {
 		return ctrl.Result{}, err

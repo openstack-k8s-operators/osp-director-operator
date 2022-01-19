@@ -223,11 +223,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(
-		r.Client,
-		instance.Namespace,
-		cond.Reason == ospdirectorv1beta1.VMSetCondReasonProvisioned,
-	)
+	overrideReconcile, err := common.OpenStackBackupOverridesReconcile(r.Client, instance)
+
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -1,0 +1,11 @@
+#
+# Create an OpenStackBackupRequest requesting a clean restore of the previously-saved OpenStackBackup
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      oc delete -n openstack osbackuprequest --all;
+      sleep 5;
+      sed -e '$a\ \ restoreSource: '$(oc get osbackup -n openstack -o name | cut -d '/' -f 2) ../../../../config/samples/osp-director_v1beta1_openstackbackuprequest.yaml | sed 's/save/cleanRestore/' | oc apply -n openstack -f - || true

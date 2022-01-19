@@ -114,7 +114,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
-	overrideReconcile, err := ospdirectorv1beta1.OpenStackBackupOverridesReconcile(r.Client, instance.Namespace, instance.Status.ProvisioningStatus.State == ospdirectorv1beta1.ProvisionServerCondTypeProvisioned)
+	overrideReconcile, err := common.OpenStackBackupOverridesReconcile(r.Client, instance)
 
 	if err != nil {
 		return ctrl.Result{}, err

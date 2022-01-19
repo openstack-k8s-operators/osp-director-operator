@@ -124,6 +124,13 @@ const (
 	ConfigGeneratorCondReasonClusterServiceIPError ConfigGeneratorReason = "ClusterServiceIPError"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackConfigGenerator) IsReady() bool {
+	cond := instance.Status.Conditions.InitCondition()
+
+	return cond.Type == ConditionType(ConfigGeneratorCondTypeFinished) && cond.Reason == ConditionReason(ConfigGeneratorCondReasonJobFinished)
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osconfiggenerator;osconfiggenerators

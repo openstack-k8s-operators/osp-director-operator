@@ -171,6 +171,11 @@ const (
 	ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError ConditionReason = "DeploymentSSHKeysSecretCreateOrUpdateError"
 )
 
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackControlPlane) IsReady() bool {
+	return instance.Status.ProvisioningStatus.State == ControlPlaneProvisioned
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osctlplane;osctlplanes
@@ -204,9 +209,9 @@ func init() {
 }
 
 // GetHostnames -
-func (vips OpenStackControlPlane) GetHostnames() map[string]string {
+func (instance OpenStackControlPlane) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for _, val := range vips.Status.VIPStatus {
+	for _, val := range instance.Status.VIPStatus {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret

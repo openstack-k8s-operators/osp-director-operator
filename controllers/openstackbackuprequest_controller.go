@@ -357,7 +357,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.NetWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -371,7 +371,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.NetAttachWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -386,7 +386,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigWaiting
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -400,7 +400,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -412,7 +412,11 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 			return err
 		}
 
-		// No state in status for OpenStackIPSets
+		// Now try to update the status
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
+		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+			return err
+		}
 	}
 
 	// OpenStackProvisionServers
@@ -424,7 +428,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -439,7 +443,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -451,7 +455,11 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 			return err
 		}
 
-		// No state in status for OpenStackClients
+		// Now try to update the status
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
+		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+			return err
+		}
 	}
 
 	// OpenStackVMSets
@@ -463,7 +471,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -478,7 +486,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.ConditionReason(msg), msg)
+		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}

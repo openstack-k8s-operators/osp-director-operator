@@ -1,0 +1,20 @@
+#
+# Check for:
+#
+# - 1 OpenStackBackupRequest (should be cleaning)
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 420
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBackupRequest
+metadata:
+  name: openstackbackuprequest
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Cleaning
+  currentState: Cleaning

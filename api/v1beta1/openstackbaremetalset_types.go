@@ -122,15 +122,15 @@ const (
 	// BaremetalSetCondReasonVirtualMachineDeprovisioning - bmh deprovisioning in progress
 	BaremetalSetCondReasonVirtualMachineDeprovisioning ConditionReason = "BaremetalHostDeprovisioning"
 	// BaremetalSetCondReasonVirtualMachineProvisioned - bmh provisioned
-	BaremetalSetCondReasonVirtualMachineProvisioned ConditionReason = "BaremetalHostProvisioed"
+	BaremetalSetCondReasonVirtualMachineProvisioned ConditionReason = "BaremetalHostProvisioned"
 	// BaremetalSetCondReasonVirtualMachineCountZero - no bmh requested
 	BaremetalSetCondReasonVirtualMachineCountZero ConditionReason = "BaremetalHostCountZero"
 )
 
 // GetHostnames -
-func (bmSet OpenStackBaremetalSet) GetHostnames() map[string]string {
+func (instance OpenStackBaremetalSet) GetHostnames() map[string]string {
 	ret := make(map[string]string)
-	for _, val := range bmSet.Status.BaremetalHosts {
+	for _, val := range instance.Status.BaremetalHosts {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret
@@ -204,6 +204,11 @@ type DiskSSDReq struct {
 	// This second flag is necessary as SSD's bool zero-value (false) is indistinguishable
 	// from it being explicitly set to false
 	ExactMatch bool `json:"exactMatch,omitempty"`
+}
+
+// IsReady - Is this resource in its fully-configured (quiesced) state?
+func (instance *OpenStackBaremetalSet) IsReady() bool {
+	return instance.Status.ProvisioningStatus.State == BaremetalSetCondTypeProvisioned || instance.Status.ProvisioningStatus.State == BaremetalSetCondTypeEmpty
 }
 
 // +genclient
