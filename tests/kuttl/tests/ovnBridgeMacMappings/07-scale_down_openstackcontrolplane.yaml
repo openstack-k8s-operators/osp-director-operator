@@ -1,15 +1,1 @@
-#
-# Annotate 1 OpenStackVMSet VMs for deletion and scale OpenStackControlPlane down to 1 controller
-#
-
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - command: |
-      oc annotate -n openstack vm controller-1 osp-director.openstack.org/delete-host=true
-    namespaced: true
-  - command: |
-      oc patch -n openstack openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/controller/roleCount", "value":1}]'
-    namespaced: true
-  - command: |
-      sleep 5
+../../common/tests/scale_down_openstackcontrolplane_single_controller.yaml

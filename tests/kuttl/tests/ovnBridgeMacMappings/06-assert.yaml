@@ -35,7 +35,7 @@ spec:
       memory: 20
       networks:
       - ctlplane
-      roleCount: 2
+      roleCount: 3
       roleName: Controller
       storageClass: host-nfs-storageclass
 status:
@@ -76,11 +76,11 @@ spec:
   passwordSecret: userpassword
   roleName: Controller
   storageClass: host-nfs-storageclass
-  vmCount: 2
+  vmCount: 3
 status:
   baseImageDVReady: true
   provisioningStatus:
-    readyCount: 2
+    readyCount: 3
     reason: All requested VirtualMachines have been provisioned
     state: Provisioned
   vmHosts:
@@ -102,6 +102,16 @@ status:
       ipaddresses:
         ctlplane: 192.168.25.103/24
       networkDataSecretName: controller-controller-1-networkdata
+      provisioningState: Provisioned
+      userDataSecretName: controller-cloudinit
+    controller-2:
+      annotatedForDeletion: false
+      ctlplaneIP: ""
+      hostRef: controller-2
+      hostname: controller-2
+      ipaddresses:
+        ctlplane: 192.168.25.104/24
+      networkDataSecretName: controller-controller-2-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
 ---
@@ -175,6 +185,10 @@ spec:
         hostname: controller-1
         ip: 192.168.25.103
         vip: false
+      - deleted: false
+        hostname: controller-2
+        ip: 192.168.25.104
+        vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
@@ -187,7 +201,7 @@ spec:
   vlan: 0
 status:
   currentState: Configured
-  reservedIpCount: 4
+  reservedIpCount: 5
   roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -232,10 +246,11 @@ metadata:
   namespace: openstack
 spec:
   addToPredictableIPs: true
-  hostCount: 2
+  hostCount: 3
   hostNameRefs:
     controller-0: controller-0
     controller-1: controller-1
+    controller-2: controller-2
   networks:
   - ctlplane
   roleName: Controller
@@ -248,6 +263,9 @@ status:
     controller-1:
       ipaddresses:
         ctlplane: 192.168.25.103/24
+    controller-2:
+      ipaddresses:
+        ctlplane: 192.168.25.104/24
   networks:
     ctlplane:
       allocationEnd: 192.168.25.250
@@ -318,6 +336,10 @@ spec:
           deleted: false
           reservations:
             datacentre: fa:16:3a:aa:aa:bb
+        controller-2:
+          deleted: false
+          reservations:
+            datacentre: fa:16:3a:aa:aa:cc
 status:
   currentState: Created
   macReservations:
@@ -329,4 +351,8 @@ status:
       deleted: false
       reservations:
         datacentre: fa:16:3a:aa:aa:bb
-  reservedMACCount: 2
+    controller-2:
+      deleted: false
+      reservations:
+        datacentre: fa:16:3a:aa:aa:cc
+  reservedMACCount: 3

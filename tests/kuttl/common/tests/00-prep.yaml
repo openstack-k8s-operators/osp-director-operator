@@ -1,0 +1,8 @@
+#
+# Attempt to "clear the field" if necessary
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: ../../common/scripts/prep.sh

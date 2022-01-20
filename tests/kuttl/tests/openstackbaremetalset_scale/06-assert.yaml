@@ -270,6 +270,11 @@ spec:
   roleReservations:
     Compute:
       reservations:
+        compute-0:
+          deleted: true
+          reservations:
+            datacentre: fa:16:3a:bb:bb:bb
+            datacentre2: fa:16:3b:bb:bb:bb
         compute-1:
           deleted: false
     Controller:
@@ -282,6 +287,11 @@ status:
     type: Created
   currentState: Created
   macReservations:
+    compute-0:
+      deleted: true
+      reservations:
+        datacentre: fa:16:3a:bb:bb:bb
+        datacentre2: fa:16:3b:bb:bb:bb
     compute-1:
       deleted: false
-  reservedMACCount: 2
+  reservedMACCount: 4
