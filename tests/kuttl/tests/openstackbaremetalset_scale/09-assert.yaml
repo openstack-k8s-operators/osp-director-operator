@@ -35,8 +35,14 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 192.168.25.100
+    openstackclient-0:
+      deleted: false
+      ip: 192.168.25.101
   reservedIpCount: 2
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -68,8 +74,14 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 172.17.0.11
   reservedIpCount: 2
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -87,8 +99,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

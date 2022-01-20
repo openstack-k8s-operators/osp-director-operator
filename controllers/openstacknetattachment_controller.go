@@ -133,11 +133,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject("Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 

@@ -13,10 +13,9 @@ The OSP Director Operator creates a set of Custom Resource Definitions on top of
 Hardware Provisioning CRDs
 --------------------------
 - openstacknetattachment: manages NodeNetworkConfigurationPolicy and NodeSriovConfigurationPolicy used to attach networks to virtual machines
-- openstacknetconfig: high level CRD to specify openstacknetattachments and openstacknets to describe the full network configuration. 
+- openstacknetconfig: high level CRD to specify openstacknetattachments and openstacknets to describe the full network configuration. The set of reserved IP/MAC addresses per node are reflected in the status.
 - openstackbaremetalset: create sets of baremetal hosts for a specific TripleO role (Compute, Storage, etc.)
 - openstackcontrolplane: A CRD used to create the OpenStack control plane and manage associated openstackvmsets
-- openstackipset: Contains a set of IPs for a given network and role. Used internally to manage IP addresses.
 - openstacknet: Create networks which are used to assign IPs to the vmset and baremetalset resources below
 - openstackprovisionservers: used to serve custom images for baremetal provisioning with Metal3
 - openstackvmset: create sets of VMs using OpenShift Virtualization for a specific TripleO role (Controller, Database, NetworkController, etc.)

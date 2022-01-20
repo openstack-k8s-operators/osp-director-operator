@@ -101,8 +101,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	// If RoleReservations status map is nil, create it
 	//
-	if instance.Status.RoleReservations == nil {
-		instance.Status.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleStatus{}
+	if instance.Status.Reservations == nil {
+		instance.Status.Reservations = map[string]ospdirectorv1beta1.NodeIPReservation{}
 	}
 
 	//
@@ -129,12 +129,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -221,15 +216,22 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	//
-	// Count IP assignments and update status
+	// Update status with reservation count and flattened reservations
 	//
-	totalIps := 0
-
-	for _, roleIps := range instance.Spec.RoleReservations {
-		totalIps += len(roleIps.Reservations)
+	reservedIPCount := 0
+	reservations := map[string]ospdirectorv1beta1.NodeIPReservation{}
+	for _, roleReservation := range instance.Spec.RoleReservations {
+		for _, reservation := range roleReservation.Reservations {
+			reservedIPCount++
+			reservations[reservation.Hostname] = ospdirectorv1beta1.NodeIPReservation{
+				IP:      reservation.IP,
+				Deleted: reservation.Deleted,
+			}
+		}
 	}
 
-	instance.Status.ReservedIPCount = totalIps
+	instance.Status.ReservedIPCount = reservedIPCount
+	instance.Status.Reservations = reservations
 
 	// If we get this far, we assume the NAD been successfully created (NAD does not
 	// have a status block we can examine)

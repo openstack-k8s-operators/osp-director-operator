@@ -48,8 +48,6 @@ type CrsForBackup struct {
 	OpenStackClients OpenStackClientList `json:"openStackClients,omitempty" optional:"true"`
 	// OpenStackControlPlanes - list of OpenStackControlPlanes saved in the backup
 	OpenStackControlPlanes OpenStackControlPlaneList `json:"openStackControlPlanes,omitempty" optional:"true"`
-	// OpenStackIPSets - list of OpenStackIPSets saved in the backup
-	OpenStackIPSets OpenStackIPSetList `json:"openStackIPSets,omitempty" optional:"true"`
 	// OpenStackMACAddresses - list of OpenStackMACAddresses saved in the backup
 	OpenStackMACAddresses OpenStackMACAddressList `json:"openStackMACAddresses,omitempty" optional:"true"`
 	// OpenStackNets - list of OpenStackNets saved in the backup

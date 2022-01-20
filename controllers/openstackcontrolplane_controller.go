@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,8 +41,8 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
+	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -156,12 +157,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -242,6 +238,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		1-len(instance.Status.VIPStatus),
 		true,
 	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// right now there can only be one
 	hostnameValue := reflect.ValueOf(instance.GetHostnames()).MapKeys()[0]
@@ -258,35 +257,57 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
-	//   Create/Update IPSet CR for the controlplane VIPs
+	// add osnetcfg CR label reference which is used in the in the osnetcfg
+	// controller to watch this resource and reconcile
 	//
-	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
-		r,
-		instance,
-		cond,
-		common.IPSet{
-			Networks:            vipNetworksList,
-			Role:                controlplane.Role,
-			HostCount:           controlplane.Count,
-			VIP:                 true,
-			AddToPredictableIPs: true,
-			HostNameRefs:        instance.GetHostnames(),
-		},
-	)
+	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, vipNetworksList[0])
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	//
-	// update network status
+	// add labels of all networks used by this CR
 	//
-	for _, netName := range vipNetworksList {
-		r.setNetStatus(
+	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, vipNetworksList)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// get OSNetCfg object
+	//
+	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
+		Namespace: instance.Namespace},
+		osnetcfg)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
+	}
+
+	//
+	// Wait for IPs created on all configured networks
+	//
+	for hostname, hostStatus := range instance.Status.VIPStatus {
+		err = openstacknetconfig.WaitOnIPsCreated(
 			instance,
+			cond,
+			osnetcfg,
+			vipNetworksList,
 			hostname,
-			netName,
-			ipset.Status.HostIPs[hostname].IPAddresses[netName],
+			&hostStatus,
 		)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+
+		hostStatus.HostRef = hostname
+		instance.Status.VIPStatus[hostname] = hostStatus
 	}
 
 	//
@@ -440,10 +461,8 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
-		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
-		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		// watch vmset and openstackclient pods in the same namespace
 		// as we want to reconcile if VMs or openstack client pods change
 		Watches(&source.Kind{Type: &corev1.Pod{}}, podWatcher).
@@ -463,30 +482,6 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 	}
 
 	return s
-}
-
-func (r *OpenStackControlPlaneReconciler) setNetStatus(
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	hostname string,
-	netName string,
-	ipaddress string,
-) {
-
-	// Set network information status
-	if instance.Status.VIPStatus[hostname].IPAddresses == nil {
-		instance.Status.VIPStatus[hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostname,
-			HostRef:  hostname,
-			IPAddresses: map[string]string{
-				netName: ipaddress,
-			},
-		}
-	} else {
-		status := instance.Status.VIPStatus[hostname]
-		status.HostRef = hostname
-		status.IPAddresses[netName] = ipaddress
-		instance.Status.VIPStatus[hostname] = status
-	}
 }
 
 func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
@@ -513,16 +508,13 @@ func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
 			)
 			if err != nil {
 				if k8s_errors.IsNotFound(err) {
-					common.LogForObject(
-						r,
-						fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower),
-						instance,
-					)
-					continue
+					cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
+				} else {
+					// Error reading the object - requeue the request.
+					cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
 				}
-				// Error reading the object - requeue the request.
-				cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -770,6 +762,10 @@ func (r *OpenStackControlPlaneReconciler) createNewHostnames(
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newVMs, err
+		}
+
+		if instance.Status.VIPStatus == nil {
+			instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
 		}
 
 		if hostnameDetails.Hostname != "" {

@@ -28,6 +28,12 @@ type IPReservation struct {
 	Deleted  bool   `json:"deleted"`
 }
 
+// NodeIPReservation contains an IP and Deleted flag
+type NodeIPReservation struct {
+	IP      string `json:"ip"`
+	Deleted bool   `json:"deleted"`
+}
+
 // Route definition
 type Route struct {
 	// +kubebuilder:validation:Required
@@ -94,7 +100,7 @@ type OpenStackNetSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// Reservations, IP address reservations per role
-	RoleReservations map[string]OpenStackNetRoleStatus `json:"roleReservations"`
+	RoleReservations map[string]OpenStackNetRoleReservation `json:"roleReservations"`
 }
 
 // OpenStackNetRoleStatus defines the observed state of the Role Net status
@@ -104,10 +110,17 @@ type OpenStackNetRoleStatus struct {
 	AddToPredictableIPs bool            `json:"addToPredictableIPs"`
 }
 
+// OpenStackNetRoleReservation defines the observed state of the Role Net reservation
+type OpenStackNetRoleReservation struct {
+	// Reservations IP address reservations
+	Reservations        []IPReservation `json:"reservations"`
+	AddToPredictableIPs bool            `json:"addToPredictableIPs"`
+}
+
 // OpenStackNetStatus defines the observed state of OpenStackNet
 type OpenStackNetStatus struct {
-	// Reservations IP address reservations per role
-	RoleReservations map[string]OpenStackNetRoleStatus `json:"roleReservations"`
+	// Reservations MAC address reservations per node
+	Reservations map[string]NodeIPReservation `json:"reservations"`
 
 	// ReservedIPCount - the count of all IPs ever reserved on this network
 	ReservedIPCount int `json:"reservedIpCount"`
@@ -145,6 +158,8 @@ const (
 	NetCondReasonCreated ConditionReason = "OpenStackNetCreated"
 	// NetCondReasonCreateError - error creating osnet object
 	NetCondReasonCreateError ConditionReason = "OpenStackNetCreateError"
+	// NetCondReasonNetNotFound - error osnet not found
+	NetCondReasonNetNotFound ConditionReason = "OpenStackNetNotFound"
 )
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?

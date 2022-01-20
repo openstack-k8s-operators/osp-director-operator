@@ -5,7 +5,6 @@
 # - 1 OpenStackVMSet
 # - 1 VirtualMachine
 # - 6 OpenStackNets (IP reservations)
-# - 1 OpenStackIPSet (IP reservations)
 # - 1 OpenStackMACAddress
 #
 
@@ -129,8 +128,23 @@ spec:
         vip: false
 status:
   currentState: Configured
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 192.168.25.102
+    controller-1:
+      deleted: true
+      ip: 192.168.25.103
+    controller-2:
+      deleted: false
+      ip: 192.168.25.104
+    controlplane:
+      deleted: false
+      ip: 192.168.25.100
+    openstackclient-0:
+      deleted: false
+      ip: 192.168.25.101
   reservedIpCount: 5
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -172,8 +186,23 @@ spec:
         vip: false
 status:
   currentState: Configured
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 10.0.0.12
+    controller-1:
+      deleted: true
+      ip: 10.0.0.13
+    controller-2:
+      deleted: false
+      ip: 10.0.0.14
+    controlplane:
+      deleted: false
+      ip: 10.0.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 10.0.0.11
   reservedIpCount: 5
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -215,8 +244,23 @@ spec:
         vip: false
 status:
   currentState: Configured
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.17.0.12
+    controller-1:
+      deleted: true
+      ip: 172.17.0.13
+    controller-2:
+      deleted: false
+      ip: 172.17.0.14
+    controlplane:
+      deleted: false
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 172.17.0.11
   reservedIpCount: 5
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -251,8 +295,20 @@ spec:
         vip: false
 status:
   currentState: Configured
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.18.0.11
+    controller-1:
+      deleted: true
+      ip: 172.18.0.12
+    controller-2:
+      deleted: false
+      ip: 172.18.0.13
+    controlplane:
+      deleted: false
+      ip: 172.18.0.10
   reservedIpCount: 4
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -287,8 +343,20 @@ spec:
         vip: false
 status:
   currentState: Configured
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.19.0.11
+    controller-1:
+      deleted: true
+      ip: 172.19.0.12
+    controller-2:
+      deleted: false
+      ip: 172.19.0.13
+    controlplane:
+      deleted: false
+      ip: 172.19.0.10
   reservedIpCount: 4
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -316,79 +384,17 @@ spec:
         vip: false
 status:
   currentState: Configured
-  reservedIpCount: 3
-  roleReservations: {}
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "true"
-  name: controller
-  namespace: openstack
-spec:
-  addToPredictableIPs: true
-  hostCount: 1
-  hostNameRefs:
-    controller-2: controller-2
-  networks:
-  - ctlplane
-  - external
-  - internal_api
-  - storage
-  - storage_mgmt
-  - tenant
-  roleName: Controller
-  vip: false
-status:
-  hosts:
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.20.0.10
+    controller-1:
+      deleted: true
+      ip: 172.20.0.11
     controller-2:
-      ipaddresses:
-        ctlplane: 192.168.25.104/24
-        external: 10.0.0.14/24
-        internal_api: 172.17.0.14/24
-        storage: 172.18.0.13/24
-        storage_mgmt: 172.19.0.13/24
-        tenant: 172.20.0.12/24
-  networks:
-    ctlplane:
-      allocationEnd: 192.168.25.250
-      allocationStart: 192.168.25.100
-      cidr: 192.168.25.0/24
-      gateway: 192.168.25.1
-      vlan: 0
-    external:
-      allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.10
-      cidr: 10.0.0.0/24
-      gateway: 10.0.0.1
-      vlan: 0
-    internalapi:
-      allocationEnd: 172.17.0.250
-      allocationStart: 172.17.0.10
-      cidr: 172.17.0.0/24
-      gateway: ""
-      vlan: 20
-    storage:
-      allocationEnd: 172.18.0.250
-      allocationStart: 172.18.0.10
-      cidr: 172.18.0.0/24
-      gateway: ""
-      vlan: 30
-    storagemgmt:
-      allocationEnd: 172.19.0.250
-      allocationStart: 172.19.0.10
-      cidr: 172.19.0.0/24
-      gateway: ""
-      vlan: 40
-    tenant:
-      allocationEnd: 172.20.0.250
-      allocationStart: 172.20.0.10
-      cidr: 172.20.0.0/24
-      gateway: ""
-      vlan: 50
+      deleted: false
+      ip: 172.20.0.12
+  reservedIpCount: 3
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

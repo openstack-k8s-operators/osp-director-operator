@@ -16,8 +16,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -30,8 +30,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -44,8 +44,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -58,8 +58,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -72,8 +72,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -86,8 +86,8 @@ spec:
   roleReservations: {}
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

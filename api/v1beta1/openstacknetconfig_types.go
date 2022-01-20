@@ -104,6 +104,12 @@ type Network struct {
 	// +kubebuilder:default=true
 	// VIP create virtual ip on the network
 	VIP bool `json:"vip"`
+
+	/*
+		// +kubebuilder:validation:Optional
+		// StaticReservations, manual/static IP address reservations per node
+		StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
+	*/
 }
 
 // OpenStackNetConfigSpec defines the desired state of OpenStackNetConfig
@@ -138,6 +144,13 @@ type OpenStackNetConfigSpec struct {
 	// - If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
 	// - If PreserveReservations is not specified, the default is true.
 	OVNBridgeMacMappings OVNBridgeMacMappingConfig `json:"ovnBridgeMacMappings"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// PreserveReservations - preserve the MAC/IP reservation of the host within a node role when the node got deleted
+	// but the role itself is not deleted. The reservations of all nodes in the role get deleted when the full node
+	// role is being deleted. (default: true)
+	PreserveReservations *bool `json:"preserveReservations"`
 }
 
 // OVNBridgeMacMappingConfig defines the desired state of OpenStackMACAddress
@@ -147,14 +160,7 @@ type OVNBridgeMacMappingConfig struct {
 	PhysNetworks []Physnet `json:"physNetworks"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=true
-	// PreserveReservations - preserve the MAC reservation of the host within a node role when the node got deleted
-	// but the role itself is not deleted. The reservations of all nodes in the role get deleted when the full node
-	// role is being deleted. (default: true)
-	PreserveReservations *bool `json:"preserveReservations"`
-
-	// +kubebuilder:validation:Optional
-	// StaticReservations, manual/static MAC address reservations per role
+	// StaticReservations, manual/static MAC address reservations per node
 	StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
 }
 
@@ -163,6 +169,14 @@ type OpenStackNetConfigStatus struct {
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions         ConditionList                        `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackNetConfigProvisioningStatus `json:"provisioningStatus,omitempty"`
+
+	Hosts map[string]OpenStackHostStatus `json:"hosts"`
+}
+
+// OpenStackHostStatus per host IP set
+type OpenStackHostStatus struct {
+	IPAddresses          map[string]string `json:"ipaddresses"`
+	OVNBridgeMacAdresses map[string]string `json:"ovnBridgeMacAdresses"`
 }
 
 // OpenStackNetConfigProvisioningStatus represents the overall provisioning state of
@@ -189,6 +203,15 @@ const (
 	NetConfigConfigured ProvisioningState = "Configured"
 	// NetConfigError - the network configuration hit a generic error
 	NetConfigError ProvisioningState = "Error"
+
+	// NetConfigCondReasonWaitingOnIPsForHost - waiting on IPs for all configured networks to be created
+	NetConfigCondReasonWaitingOnIPsForHost ConditionReason = "WaitingOnIPsForHost"
+	// NetConfigCondReasonWaitingOnHost - waiting on host to be added to osnetcfg
+	NetConfigCondReasonWaitingOnHost ConditionReason = "WaitingOnHost"
+	// NetConfigCondReasonIPReservationError - Failed to do ip reservation
+	NetConfigCondReasonIPReservationError ConditionReason = "IPReservationError"
+	// NetConfigCondReasonIPReservation - ip reservation created
+	NetConfigCondReasonIPReservation ConditionReason = "IPReservationCreated"
 )
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?

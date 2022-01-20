@@ -46,7 +46,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
+	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 )
@@ -85,9 +85,6 @@ func (r *OpenStackBaremetalSetReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbackups,verbs=get;list;watch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackbackups/status,verbs=get;watch;update;patch
 // +kubebuilder:rbac:groups=metal3.io,resources=baremetalhosts,verbs=get;list;watch;create;update;patch;delete
@@ -148,12 +145,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -250,6 +242,14 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
+	// add labels of all networks used by this CR
+	//
+	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
 	// get Password Secret if defined
 	//
 	var passwordSecret *corev1.Secret
@@ -301,8 +301,6 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	//hostnameRefs := instance.GetHostnames()
-
 	//
 	//   check/update instance status for annotated for deletion marged BMHs
 	//
@@ -316,22 +314,40 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
-	//   Create/Update IPSet for the BMSet CR
+	// get OSNetCfg object
 	//
-	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
-		r,
-		instance,
-		cond,
-		common.IPSet{
-			Networks:            instance.Spec.Networks,
-			Role:                instance.Spec.RoleName,
-			HostCount:           instance.Spec.Count,
-			AddToPredictableIPs: true, // right now all BMSet are tripleo roles
-			HostNameRefs:        instance.GetHostnames(),
-		},
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
+		Namespace: instance.Namespace},
+		osnetcfg)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
+	}
+
+	//
+	// Wait for IPs created on all configured networks
+	//
+	for hostname, hostStatus := range instance.Status.BaremetalHosts {
+		err = openstacknetconfig.WaitOnIPsCreated(
+			instance,
+			cond,
+			osnetcfg,
+			instance.Spec.Networks,
+			hostname,
+			&hostStatus,
+		)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+
+		// Can not set (like in vmset, osclient, osctlplane) HostRef for BMS to hostname as it references the used BMH host
+		instance.Status.BaremetalHosts[hostname] = hostStatus
 	}
 
 	//
@@ -352,7 +368,6 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		provisionServer,
 		sshSecret,
 		passwordSecret,
-		ipset,
 	); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -447,7 +462,6 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
-		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
@@ -575,7 +589,6 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	provisionServer *ospdirectorv1beta1.OpenStackProvisionServer,
 	sshSecret string,
 	passwordSecret *corev1.Secret,
-	ipset *ospdirectorv1beta1.OpenStackIPSet,
 ) error {
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
@@ -660,22 +673,6 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 					removalAnnotatedBaremetalHosts = removalAnnotatedBaremetalHosts[1:]
 				} else {
 					removalAnnotatedBaremetalHosts = []string{}
-				}
-
-				ipset, _, err = openstackipset.CreateOrUpdateIPset(
-					r,
-					instance,
-					cond,
-					common.IPSet{
-						Networks:            instance.Spec.Networks,
-						Role:                instance.Spec.RoleName,
-						HostCount:           instance.Spec.Count,
-						AddToPredictableIPs: true, // right now all BMSet are tripleo roles
-						HostNameRefs:        instance.GetHostnames(),
-					},
-				)
-				if err != nil {
-					return err
 				}
 
 				// We removed a removal-annotated BaremetalHost, so increment the removed count
@@ -770,7 +767,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 				provisionServer.Status.LocalImageURL,
 				sshSecret,
 				passwordSecret,
-				ipset)
+			)
 
 			if err != nil {
 				return err
@@ -788,7 +785,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 			provisionServer.Status.LocalImageURL,
 			sshSecret,
 			passwordSecret,
-			ipset)
+		)
 
 		if err != nil {
 			return err
@@ -826,7 +823,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	localImageURL string,
 	sshSecret string,
 	passwordSecret *corev1.Secret,
-	ipset *ospdirectorv1beta1.OpenStackIPSet,
 ) error {
 	// Prepare cloudinit (create secret)
 	sts := []common.Template{}
@@ -837,12 +833,12 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	//
 	bmhStatus, err := r.getBmhHostRefStatus(instance, cond, bmh)
 	//
-	//  if bmhStatus is not found, get free hostname from instance.Status.baremetalHosts (HostRef == "unassigned") for the new bmh
+	//  if bmhStatus is not found, get free hostname from instance.Status.baremetalHosts (HostRef == ospdirectorv1beta1.HostRefInitState ("unassigned")) for the new bmh
 	//
 	if err != nil && k8s_errors.IsNotFound(err) {
 		for _, bmhStatus = range instance.Status.BaremetalHosts {
 
-			if bmhStatus.HostRef == "unassigned" {
+			if bmhStatus.HostRef == ospdirectorv1beta1.HostRefInitState {
 
 				bmhStatus.HostRef = bmh
 				instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
@@ -907,16 +903,44 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	}
 
 	sts = append(sts, userDataSt)
-	ipCidr := ipset.Status.HostIPs[bmhStatus.Hostname].IPAddresses["ctlplane"]
+	// TODO mschuppert: get ctlplane network name using ooo-ctlplane-network label
+	ipCidr := instance.Status.BaremetalHosts[bmhStatus.Hostname].IPAddresses["ctlplane"]
 
 	ip, network, _ := net.ParseCIDR(ipCidr)
 	netMask := network.Mask
+
+	netNameLower := "ctlplane"
+	// get network with name_lower label
+	labelSelector := map[string]string{
+		openstacknet.SubNetNameLabelSelector: netNameLower,
+	}
+
+	// get ctlplane network
+	ctlPlaneNetwork, err := openstacknet.GetOpenStackNetWithLabel(
+		r,
+		instance.Namespace,
+		labelSelector,
+	)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
+		} else {
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+		}
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
 
 	// Network data cloud-init secret
 	templateParameters = make(map[string]interface{})
 	templateParameters["CtlplaneIp"] = ip.String()
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
-	templateParameters["CtlplaneGateway"] = ipset.Status.Networks["ctlplane"].Gateway
+	templateParameters["CtlplaneGateway"] = ctlPlaneNetwork.Spec.Gateway
 	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
 	templateParameters["CtlplaneDns"] = DNSServers
 	templateParameters["CtlplaneDnsSearch"] = DNSSearchDomains
@@ -971,7 +995,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	//
 	// Set our ownership labels so we can watch this resource
 	// Set ownership labels that can be found by the respective controller kind
-	labelSelector := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
+	labelSelector = common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
 		common.OSPHostnameLabelSelector: bmhStatus.Hostname,
 	})
 

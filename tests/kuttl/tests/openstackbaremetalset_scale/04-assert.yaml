@@ -4,7 +4,6 @@
 # - 1 OpenStackBaremetalSet
 # - 2 BaremetalHosts
 # - 2 OpenStackNets (populated with reservations)
-# - 1 OpenStackIpSet (populated with reservations)
 # - 1 OpenStackMACAddress
 #
 
@@ -162,8 +161,20 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations:
+    compute-0:
+      deleted: false
+      ip: 192.168.25.102
+    compute-1:
+      deleted: false
+      ip: 192.168.25.103
+    controlplane:
+      deleted: false
+      ip: 192.168.25.100
+    openstackclient-0:
+      deleted: false
+      ip: 192.168.25.101
   reservedIpCount: 4
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -206,8 +217,20 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations:
+    compute-0:
+      deleted: false
+      ip: 172.17.0.12
+    compute-1:
+      deleted: false
+      ip: 172.17.0.13
+    controlplane:
+      deleted: false
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 172.17.0.11
   reservedIpCount: 4
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -236,58 +259,14 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
-  reservedIpCount: 2
-  roleReservations: {}
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "true"
-  name: compute
-  namespace: openstack
-spec:
-  addToPredictableIPs: true
-  hostCount: 2
-  networks:
-  - ctlplane
-  - internal_api
-  - tenant
-  roleName: Compute
-  vip: false
-status:
-  hosts:
+  reservations:
     compute-0:
-      ipaddresses:
-        ctlplane: 192.168.25.102/24
-        internal_api: 172.17.0.12/24
-        tenant: 172.20.0.10/24
+      deleted: false
+      ip: 172.20.0.10
     compute-1:
-      ipaddresses:
-        ctlplane: 192.168.25.103/24
-        internal_api: 172.17.0.13/24
-        tenant: 172.20.0.11/24
-  networks:
-    ctlplane:
-      allocationEnd: 192.168.25.250
-      allocationStart: 192.168.25.100
-      cidr: 192.168.25.0/24
-      gateway: 192.168.25.1
-      vlan: 0
-    internalapi:
-      allocationEnd: 172.17.0.250
-      allocationStart: 172.17.0.10
-      cidr: 172.17.0.0/24
-      gateway: ""
-      vlan: 20
-    tenant:
-      allocationEnd: 172.20.0.250   
-      allocationStart: 172.20.0.10
-      cidr: 172.20.0.0/24
-      gateway: ""
-      vlan: 50
+      deleted: false
+      ip: 172.20.0.11
+  reservedIpCount: 2
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

@@ -8,6 +8,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
+	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -30,7 +31,7 @@ func AddOSNetConfigRefLabel(
 
 	//
 	// only add label if it is not already there
-	// Note, any rename of the osnetcfg will be reflected
+	// Note, any rename of the osnetcfg won't be reflected
 	//
 	if _, ok := obj.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
 		//
@@ -103,4 +104,56 @@ func AddOSNetConfigRefLabel(
 	}
 
 	return ctrl.Result{}, nil
+}
+
+//
+// WaitOnIPsCreated - Wait for IPs created on all configured networks
+//
+func WaitOnIPsCreated(
+	obj client.Object,
+	cond *ospdirectorv1beta1.Condition,
+	osnetcfg *ospdirectorv1beta1.OpenStackNetConfig,
+	networks []string,
+	hostname string,
+	hostStatus *ospdirectorv1beta1.HostStatus,
+) error {
+	//
+	// If verify that we have the hosts entry on the status if the osnetcfg object
+	//
+	var osnetcfgHostStatus ospdirectorv1beta1.OpenStackHostStatus
+	var ok bool
+	if osnetcfgHostStatus, ok = osnetcfg.Status.Hosts[hostname]; !ok {
+		cond.Message = fmt.Sprintf("%s %s waiting on node %s to be added to %s config %s",
+			obj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetName(),
+			hostname,
+			osnetcfg.Kind,
+			osnetcfg.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnHost)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+		return k8s_errors.NewNotFound(v1.Resource(obj.GetObjectKind().GroupVersionKind().Kind), cond.Message)
+	}
+
+	//
+	// verify we have IPs on all required networks
+	//
+	for _, osNet := range networks {
+		if ip, ok := osnetcfgHostStatus.IPAddresses[osNet]; ok && ip != "" {
+			hostStatus.IPAddresses[osNet] = ip
+			continue
+		}
+
+		cond.Message = fmt.Sprintf("%s %s waiting on IP address for node %s on network %s to be available",
+			obj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetName(),
+			hostname,
+			osNet)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnIPsForHost)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+
+		return k8s_errors.NewNotFound(v1.Resource(obj.GetObjectKind().GroupVersionKind().Kind), cond.Message)
+	}
+
+	return nil
 }

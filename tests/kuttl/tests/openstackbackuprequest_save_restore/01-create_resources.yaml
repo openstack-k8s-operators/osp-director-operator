@@ -22,5 +22,3 @@ commands:
   - command: |
       oc patch openstackbaremetalset compute --type='json' -p='[{"op": "remove", "path": "/spec/hardwareReqs"}]'
     namespaced: true
-  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackbackuprequest.yaml
-    namespaced: true

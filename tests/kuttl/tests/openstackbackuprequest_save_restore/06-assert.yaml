@@ -1,7 +1,7 @@
 #
 # Check for:
 #
-# - 1 OpenStackBackupRequest (should be cleaning)
+# - 1 OpenStackBackupRequest (should be restored)
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -15,6 +15,12 @@ metadata:
   namespace: openstack
 status:
   conditions:
-  - status: "True"
+  - status: "False"
     type: Cleaning
-  currentState: Cleaning
+  - status: "False"
+    type: Loading
+  - status: "False"
+    type: Reconciling
+  - status: "True"
+    type: Restored
+  currentState: Restored

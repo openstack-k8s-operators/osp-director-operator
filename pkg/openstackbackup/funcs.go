@@ -61,19 +61,6 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 	})
 	crLists.OpenStackControlPlanes = osCtlPlanes
 
-	// OpenStackIPSets
-
-	osIps := ospdirectorv1beta1.OpenStackIPSetList{}
-
-	if err := r.GetClient().List(context.Background(), &osIps, listOpts...); err != nil {
-		return crLists, err
-	}
-
-	sort.Slice(osIps.Items, func(i, j int) bool {
-		return osIps.Items[i].Name < osIps.Items[j].Name
-	})
-	crLists.OpenStackIPSets = osIps
-
 	// OpenStackMACAddresses
 
 	osMacAddresses := ospdirectorv1beta1.OpenStackMACAddressList{}
@@ -374,14 +361,6 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 		}
 	}
 
-	// Check provisioning status of all OpenStackIPSets
-	for _, cr := range crLists.OpenStackIPSets.Items {
-		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
-		}
-	}
-
 	// Check the creation status of all OpenStackMACAddresses
 	for _, cr := range crLists.OpenStackMACAddresses.Items {
 		if !cr.IsReady() {
@@ -490,22 +469,6 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 		found := &ospdirectorv1beta1.OpenStackMACAddress{}
 
 		for _, actual := range crLists.OpenStackMACAddresses.Items {
-			if actual.Name == desired.Name {
-				found = actual.DeepCopy()
-				break
-			}
-		}
-
-		if found == nil || !found.IsReady() {
-			badCrs = append(badCrs, found)
-		}
-	}
-
-	// OpenStackIPSets
-	for _, desired := range backup.Spec.Crs.OpenStackIPSets.Items {
-		found := &ospdirectorv1beta1.OpenStackIPSet{}
-
-		for _, actual := range crLists.OpenStackIPSets.Items {
 			if actual.Name == desired.Name {
 				found = actual.DeepCopy()
 				break
@@ -648,13 +611,6 @@ func CleanNamespace(r common.ReconcilerCommon, namespace string, crLists ospdire
 	if len(crLists.OpenStackMACAddresses.Items) > 0 {
 		foundRemaining = true
 		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackMACAddress{}, client.InNamespace(namespace)); err != nil {
-			return false, err
-		}
-	}
-
-	if len(crLists.OpenStackIPSets.Items) > 0 {
-		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackIPSet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}

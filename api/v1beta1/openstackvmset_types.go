@@ -149,11 +149,6 @@ const (
 	// VMSetCondReasonVirtualMachineCountZero - no virtual machines requested
 	VMSetCondReasonVirtualMachineCountZero ConditionReason = "VirtualMachineCountZero"
 
-	// VMSetCondReasonIPsetCreateOrUpdateError - create or update ipset error
-	VMSetCondReasonIPsetCreateOrUpdateError ConditionReason = "CreateOrUpdateIPsetError"
-	// VMSetCondReasonIPsetWaitCount - IPSet has not yet reached the required count
-	VMSetCondReasonIPsetWaitCount ConditionReason = "CreateOrUpdateIPsetError"
-
 	// VMSetCondReasonPersitentVolumeClaimNotFound - Persitent Volume Claim Not Found
 	VMSetCondReasonPersitentVolumeClaimNotFound ConditionReason = "PersitentVolumeClaimNotFound"
 	// VMSetCondReasonPersitentVolumeClaimError - Persitent Volume Claim error

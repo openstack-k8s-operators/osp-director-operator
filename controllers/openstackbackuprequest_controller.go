@@ -77,8 +77,6 @@ func (r *OpenStackBackupRequestReconciler) GetScheme() *runtime.Scheme {
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackconfiggenerators,verbs=deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=get;list;watch;update;delete;deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackcontrolplanes/status,verbs=get
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;update;delete;deletecollection
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses,verbs=get;list;watch;update;delete;deletecollection
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses/status,verbs=get
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch;update;delete;deletecollection
@@ -145,7 +143,6 @@ func (r *OpenStackBackupRequestReconciler) SetupWithManager(mgr ctrl.Manager) er
 		Owns(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		Owns(&ospdirectorv1beta1.OpenStackControlPlane{}).
-		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
@@ -401,19 +398,6 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeWaiting
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
-			return err
-		}
-	}
-
-	// OpenStackIPSets
-	for _, item := range backup.Spec.Crs.OpenStackIPSets.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
-			return err
-		}
-
-		// Now try to update the status
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
 		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}

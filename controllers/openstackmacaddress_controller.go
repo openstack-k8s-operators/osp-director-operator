@@ -71,7 +71,6 @@ func (r *OpenStackMACAddressReconciler) GetScheme() *runtime.Scheme {
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list;watch
-//+kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipset,verbs=get;list;watch
 
 // Reconcile -
 func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
