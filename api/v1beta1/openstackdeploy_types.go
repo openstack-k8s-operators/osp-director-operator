@@ -20,38 +20,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployState - the state of the deployment
-type DeployState string
-
-// DeployReason - the reason of the condition for this deployment
-type DeployReason string
-
 const (
 	//
 	// condition types
 	//
 
 	// DeployCondTypeWaiting - the deployment is waiting
-	DeployCondTypeWaiting DeployState = "Waiting"
+	DeployCondTypeWaiting ProvisioningState = "Waiting"
 	// DeployCondTypeInitializing - the deployment is waiting
-	DeployCondTypeInitializing DeployState = "Initializing"
+	DeployCondTypeInitializing ProvisioningState = "Initializing"
 	// DeployCondTypeRunning - the deployment is running
-	DeployCondTypeRunning DeployState = "Running"
+	DeployCondTypeRunning ProvisioningState = "Running"
 	// DeployCondTypeFinished - the deploy has finished executing
-	DeployCondTypeFinished DeployState = "Finished"
+	DeployCondTypeFinished ProvisioningState = "Finished"
 	// DeployCondTypeError - the deployment hit a generic error
-	DeployCondTypeError DeployState = "Error"
+	DeployCondTypeError ProvisioningState = "Error"
 
-	// DeployCondReasonJobCreated - configmap updated
-	DeployCondReasonJobCreated DeployReason = "JobCreated"
-	// DeployCondReasonJobDelete - configmap not found
-	DeployCondReasonJobDelete DeployReason = "JobDeleted"
-	// DeployCondReasonCMUpdated - error creating/update CM
-	DeployCondReasonCMUpdated DeployReason = "ConfigVersionUpdated"
+	// DeployCondReasonJobCreated - job created
+	DeployCondReasonJobCreated ConditionReason = "JobCreated"
+	// DeployCondReasonJobCreateFailed - job create failed
+	DeployCondReasonJobCreateFailed ConditionReason = "JobCreated"
+	// DeployCondReasonJobDelete - job deleted
+	DeployCondReasonJobDelete ConditionReason = "JobDeleted"
+	// DeployCondReasonCMUpdated - error creating/update ConfigVersion
+	DeployCondReasonCMUpdated ConditionReason = "ConfigVersionUpdated"
+	// DeployCondReasonConfigVersionNotFound - error finding ConfigVersion
+	DeployCondReasonConfigVersionNotFound ConditionReason = "ConfigVersionNotFound"
 	// DeployCondReasonJobFailed - error creating/update CM
-	DeployCondReasonJobFailed DeployReason = "JobFailed"
+	DeployCondReasonJobFailed ConditionReason = "JobFailed"
 	// DeployCondReasonConfigCreate - error creating/update CM
-	DeployCondReasonConfigCreate DeployReason = "ConfigCreate"
+	DeployCondReasonConfigCreate ConditionReason = "ConfigCreate"
 )
 
 // OpenStackDeploySpec defines the desired state of OpenStackDeploy
@@ -72,17 +70,17 @@ type OpenStackDeployStatus struct {
 	ConfigVersion string `json:"configVersion"`
 
 	// CurrentState
-	CurrentState DeployState `json:"currentState"`
+	CurrentState ProvisioningState `json:"currentState"`
 
 	// CurrentReason
-	CurrentReason DeployReason `json:"currentReason"`
+	CurrentReason ConditionReason `json:"currentReason"`
 
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=osdeploy;osdeploys
+//+kubebuilder:resource:shortName=osdeploy;osdeploys;osdepl
 //+operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Deploy"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 

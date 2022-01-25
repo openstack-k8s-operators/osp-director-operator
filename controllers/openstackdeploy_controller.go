@@ -110,8 +110,8 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		//
 		// Update object conditions
 		//
-		instance.Status.CurrentState = ospdirectorv1beta1.DeployState(cond.Type)
-		instance.Status.CurrentReason = ospdirectorv1beta1.DeployReason(cond.Message)
+		instance.Status.CurrentState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.CurrentReason = ospdirectorv1beta1.ConditionReason(cond.Message)
 
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
@@ -122,14 +122,10 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
 				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
+					err = common.WrapErrorForObject("Update Status", instance, updateErr)
 				} else {
 					common.LogErrorForObject(r, updateErr, "Update status", instance)
 				}
-			} else {
-				// log status changed messages also to operator log
-				common.LogForObject(r, cond.Message, instance)
 			}
 		}
 
@@ -139,7 +135,12 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	configGenerator := &ospdirectorv1beta1.OpenStackConfigGenerator{}
 	err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
 	if err != nil && errors.IsNotFound(err) {
-		r.GetLogger().Error(err, instance.Spec.ConfigGenerator+" ConfigGenerator not found!", "Instance.Namespace", instance.Namespace)
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonConfigVersionNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
 	}
 
 	if instance.Status.ConfigVersion != instance.Spec.ConfigVersion {
@@ -149,7 +150,14 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
+
+				cond.Message = err.Error()
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonJobCreated)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
 				return err
+
 			}
 
 			return nil

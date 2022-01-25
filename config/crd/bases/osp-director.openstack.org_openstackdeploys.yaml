@@ -16,6 +16,7 @@ spec:
     shortNames:
     - osdeploy
     - osdeploys
+    - osdepl
     singular: openstackdeploy
   scope: Namespaced
   versions:

@@ -17,13 +17,6 @@ limitations under the License.
 package openstackdeploy
 
 const (
-	// AppLabel -
-	//AppLabel = "osp-openstackconfiggenerator"
-
-	// ConfigGeneratorInputLabel - label set on objects which are input for the configgenerator
-	// but not owned by the configgenerator
-	//ConfigGeneratorInputLabel = "playbook-generator-input"
-
 	// ServiceAccount -
 	ServiceAccount = "osp-director-operator-openstackdeploy"
 )
