@@ -188,7 +188,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 
 			cond.Message = "ConfigVersion has changed. Requeing to start again..."
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonCMUpdated)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonCVUpdated)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeInitializing)
 			common.LogForObject(r, cond.Message, instance)
 
@@ -216,6 +216,11 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
+
+	cond.Message = "The OpenStackDeploy Finished."
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonJobFinished)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeFinished)
+	common.LogForObject(r, cond.Message, instance)
 
 	return ctrl.Result{}, nil
 }

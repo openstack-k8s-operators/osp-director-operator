@@ -42,8 +42,10 @@ const (
 	DeployCondReasonJobCreateFailed ConditionReason = "JobCreated"
 	// DeployCondReasonJobDelete - job deleted
 	DeployCondReasonJobDelete ConditionReason = "JobDeleted"
+	// DeployCondReasonJobFinished - job deleted
+	DeployCondReasonJobFinished ConditionReason = "JobFinished"
 	// DeployCondReasonCMUpdated - error creating/update ConfigVersion
-	DeployCondReasonCMUpdated ConditionReason = "ConfigVersionUpdated"
+	DeployCondReasonCVUpdated ConditionReason = "ConfigVersionUpdated"
 	// DeployCondReasonConfigVersionNotFound - error finding ConfigVersion
 	DeployCondReasonConfigVersionNotFound ConditionReason = "ConfigVersionNotFound"
 	// DeployCondReasonJobFailed - error creating/update CM
