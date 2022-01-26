@@ -1,13 +1,9 @@
 #
 # Check for:
 #
-# - 1 OpenStackControlPlane
-# - 1 OpenStackVMSet
-# - 1 OpenStackClient
-# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
-# - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
-# - 1 Secret (TripleO passwords)
+# - 1 OpenStackNetConfig
 # - 1 OpenStackMACAddress
+# - 1 TestAssert
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -75,7 +71,6 @@ spec:
       name: datacentre
     - macPrefix: fa:16:3b
       name: datacentre2
-    preserveReservations: false
     staticReservations:
       controller-0:
         deleted: false
@@ -89,6 +84,7 @@ spec:
         deleted: false
         reservations:
           datacentre: fa:16:3a:aa:aa:cc
+  preserveReservations: false
 status:
   provisioningStatus:
     attachDesiredCount: 1

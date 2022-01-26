@@ -48,20 +48,8 @@ func (a AssignmentError) Error() string {
 	return fmt.Sprintf("Could not allocate IP in range: ip: %v / - %v / range: %#v", a.firstIP, a.lastIP, a.ipnet)
 }
 
-// IPReservation a reservation
-/*
-type IPReservation struct {
-	IP       net.IP `json:"ip"`
-	Hostname string `json:"id"`
-	//IsAllocated bool
-}
-*/
-
 // AssignIP assigns an IP using a range and a reserve list.
 func AssignIP(assignIPDetails AssignIPDetails) (net.IPNet, []ospdirectorv1beta1.IPReservation, error) {
-
-	// Setup the basics here.
-	//_, ipnet, _ := net.ParseCIDR(ipamConf.Range)
 
 	newip, updatedreservelist, err := IterateForAssignment(assignIPDetails)
 	if err != nil {

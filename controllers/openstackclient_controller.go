@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,8 +37,8 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
+	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -125,12 +127,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -150,13 +147,30 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
+	//
+	// add osnetcfg CR label reference which is used in the in the osnetcfg
+	// controller to watch this resource and reconcile
+	//
+	var ctrlResult ctrl.Result
+	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
+
+	//
+	// add labels of all networks used by this CR
+	//
+	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	envVars := make(map[string]common.EnvSetter)
 	labels := common.GetLabels(instance, openstackclient.AppLabel, map[string]string{})
 
 	//
 	// check for DeploymentSSHSecret is there
 	//
-	var ctrlResult ctrl.Result
 	if instance.Spec.DeploymentSSHSecret != "" {
 		_, ctrlResult, err = common.GetDataFromSecret(
 			r,
@@ -240,37 +254,43 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	hostname := hostnameValue.String()
 
 	//
-	// create/update IPSet for the openstackclient
+	// get OSNetCfg object
 	//
-	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
-		r,
-		instance,
-		cond,
-		common.IPSet{
-			Networks:            instance.Spec.Networks,
-			Role:                fmt.Sprintf("%s%s", openstackclient.Role, instance.Name),
-			HostCount:           openstackclient.Count,
-			AddToPredictableIPs: false,
-			HostNameRefs:        instance.GetHostnames(),
-		},
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
+		Namespace: instance.Namespace},
+		osnetcfg)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
 	}
 
 	//
-	// update network status
+	// Wait for IPs created on all configured networks
 	//
-	for _, netName := range instance.Spec.Networks {
-		r.setNetStatus(
+	for hostname, hostStatus := range instance.Status.OpenStackClientNetStatus {
+		err = openstacknetconfig.WaitOnIPsCreated(
 			instance,
+			cond,
+			osnetcfg,
+			instance.Spec.Networks,
 			hostname,
-			netName,
-			ipset.Status.HostIPs[hostname].IPAddresses[netName],
+			&hostStatus,
 		)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+
+		hostStatus.HostRef = hostname
+		instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
 	}
 
-	// update the IPs for IPSet if status got updated
+	// Log network status if changed
 	if !reflect.DeepEqual(currentStatus.OpenStackClientNetStatus, instance.Status.OpenStackClientNetStatus) {
 		common.LogForObject(
 			r,
@@ -370,30 +390,6 @@ func (r *OpenStackClientReconciler) getNormalizedStatus(status *ospdirectorv1bet
 	}
 
 	return s
-}
-
-func (r *OpenStackClientReconciler) setNetStatus(
-	instance *ospdirectorv1beta1.OpenStackClient,
-	hostname string,
-	netName string,
-	ipaddress string,
-) {
-
-	// Set network information status
-	if instance.Status.OpenStackClientNetStatus[hostname].IPAddresses == nil {
-		instance.Status.OpenStackClientNetStatus[hostname] = ospdirectorv1beta1.HostStatus{
-			Hostname: hostname,
-			HostRef:  hostname,
-			IPAddresses: map[string]string{
-				netName: ipaddress,
-			},
-		}
-	} else {
-		status := instance.Status.OpenStackClientNetStatus[hostname]
-		status.HostRef = hostname
-		status.IPAddresses[netName] = ipaddress
-		instance.Status.OpenStackClientNetStatus[hostname] = status
-	}
 }
 
 func (r *OpenStackClientReconciler) podCreateOrUpdate(
@@ -744,6 +740,10 @@ func (r *OpenStackClientReconciler) createNewHostnames(
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newHostnames, err
+		}
+
+		if instance.Status.OpenStackClientNetStatus == nil {
+			instance.Status.OpenStackClientNetStatus = map[string]ospdirectorv1beta1.HostStatus{}
 		}
 
 		if hostnameDetails.Hostname != "" {

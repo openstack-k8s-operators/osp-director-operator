@@ -150,12 +150,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -897,8 +892,8 @@ func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
 	if err != nil {
 		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonServiceNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 
 		return "", err
 	}
@@ -909,8 +904,8 @@ func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 	}
 
 	cond.Message = fmt.Sprintf("failed to get Cluster ServiceEndpoint - %s", fmt.Sprint(labelSelector))
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonServiceNotFound)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonServiceNotFound)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 
 	return "", k8s_errors.NewNotFound(appsv1.Resource("service"), fmt.Sprint(labelSelector))
 }

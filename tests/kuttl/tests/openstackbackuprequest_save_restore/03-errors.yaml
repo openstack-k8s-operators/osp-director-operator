@@ -12,5 +12,5 @@ metadata:
 status:
   conditions:
   - status: "True"
-    type: Restore Error
-  currentState: Restore Error
+    type: Error
+  currentState: Error

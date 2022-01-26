@@ -19,7 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -40,6 +43,8 @@ import (
 	"github.com/go-logr/logr"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstackcontrolplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
+	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
@@ -103,6 +108,10 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	//
 	cond := instance.Status.Conditions.InitCondition()
 
+	if instance.Status.Hosts == nil {
+		instance.Status.Hosts = make(map[string]ospdirectorv1beta1.OpenStackHostStatus)
+	}
+
 	//
 	// Used in comparisons below to determine whether a status update is actually needed
 	//
@@ -127,11 +136,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject("Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -251,17 +256,31 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	//
+	// Add AppLabel
+	//
+	instance.SetLabels(labels.Merge(instance.GetLabels(), common.GetLabels(instance, openstacknetconfig.AppLabel, map[string]string{})))
+
+	//
 	// 1) Create or update the MACAddress CR object
 	//
 	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.OVNBridgeMacMappings.PhysNetworks)
 	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
-	err = r.createOrUpdateOpenStackMACAddress(
+	macAddress, err := r.createOrUpdateOpenStackMACAddress(
 		instance,
 		cond,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	//
+	// Update CR status from OSmac status
+	//
+	r.getMACStatus(
+		instance,
+		cond,
+		macAddress,
+	)
 
 	//
 	// 2) create all OpenStackNetworkAttachments
@@ -309,6 +328,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// TODO: (mschuppert) cleanup single removed netConfig in list
 		for _, subnet := range net.Subnets {
 			osNet, err := r.applyNetConfig(
+				ctx,
 				instance,
 				cond,
 				&net,
@@ -397,6 +417,8 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackBaremetalSet{}}, LabelWatcher).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackClient{}}, LabelWatcher).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackControlPlane{}}, LabelWatcher).
 		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackVMSet{}}, LabelWatcher).
 		Complete(r)
 }
@@ -538,18 +560,54 @@ func (r *OpenStackNetConfigReconciler) attachCleanup(
 }
 
 func (r *OpenStackNetConfigReconciler) applyNetConfig(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	cond *ospdirectorv1beta1.Condition,
 	net *ospdirectorv1beta1.Network,
 	subnet *ospdirectorv1beta1.Subnet,
 ) (*ospdirectorv1beta1.OpenStackNet, error) {
-	osNet := &ospdirectorv1beta1.OpenStackNet{}
+	osNet := &ospdirectorv1beta1.OpenStackNet{
+		ObjectMeta: metav1.ObjectMeta{
+			// _ is a not allowed char for an OCP object, lets remove it
+			Name:      strings.ToLower(strings.Replace(subnet.Name, "_", "", -1)),
+			Namespace: instance.Namespace,
+		},
+	}
 
 	//
-	// _ is a not allowed char for an OCP object, lets remove it
+	// get OSNet object
 	//
-	osNet.Name = strings.ToLower(strings.Replace(subnet.Name, "_", "", -1))
-	osNet.Namespace = instance.Namespace
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: strings.ToLower(osNet.Name), Namespace: osNet.Namespace}, osNet)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", osNet.Kind, osNet.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return osNet, err
+	}
+
+	// If network RoleReservations spec map is nil, create it
+	if osNet.Spec.RoleReservations == nil {
+		osNet.Spec.RoleReservations = map[string]ospdirectorv1beta1.OpenStackNetRoleReservation{}
+	}
+
+	if osNet.Status.Reservations == nil {
+		osNet.Status.Reservations = map[string]ospdirectorv1beta1.NodeIPReservation{}
+	}
+
+	//
+	// Create IPs for new nodes added to OSClient,OSVMset,OSBMset and OSCtlplane (VIPs)
+	//
+	reservations, err := r.ensureIPReservation(
+		ctx,
+		instance,
+		cond,
+		osNet,
+	)
+	if err != nil {
+		return osNet, err
+	}
 
 	apply := func() error {
 		common.InitMap(&osNet.Labels)
@@ -588,6 +646,8 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 			osNet.Spec.Routes = subnet.IPv6.Routes
 		}
 
+		osNet.Spec.RoleReservations = reservations
+
 		return controllerutil.SetControllerReference(instance, osNet, r.Scheme)
 	}
 
@@ -619,7 +679,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 
 func (r *OpenStackNetConfigReconciler) getNetStatus(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
-	net *ospdirectorv1beta1.OpenStackNet,
+	osNet *ospdirectorv1beta1.OpenStackNet,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 
@@ -632,12 +692,12 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 	//
 	// sync latest status of the osnet object to the osnetconfig
 	//
-	if net.Status.Conditions != nil && len(net.Status.Conditions) > 0 {
-		condition := net.Status.Conditions.GetCurrentCondition()
+	if osNet.Status.Conditions != nil && len(osNet.Status.Conditions) > 0 {
+		condition := osNet.Status.Conditions.GetCurrentCondition()
 
 		if condition != nil {
 			if condition.Type == ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured) {
-				cond.Message = fmt.Sprintf("OpenStackNetConfig %s has successfully configured OpenStackNet %s", instance.Name, net.Spec.NameLower)
+				cond.Message = fmt.Sprintf("OpenStackNetConfig %s has successfully configured OpenStackNet %s", instance.Name, osNet.Spec.NameLower)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
 
 				ctrlResult = ctrl.Result{}
@@ -648,6 +708,45 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 
 				return ctrl.Result{}, fmt.Errorf(cond.Message)
 			}
+		}
+	}
+
+	_, cidrSuffix, err := common.GetCidrParts(osNet.Spec.Cidr)
+	if err != nil {
+		// TODO set cond
+		return ctrl.Result{}, err
+	}
+
+	for _, roleNetStatus := range osNet.Spec.RoleReservations {
+		for _, roleReservation := range roleNetStatus.Reservations {
+
+			//
+			// Add net status to netcfg status if reservation exist in spec
+			// and host is not deleted
+			//
+			if nodeReservation, ok := osNet.Status.Reservations[roleReservation.Hostname]; ok &&
+				roleReservation.IP == nodeReservation.IP &&
+				!nodeReservation.Deleted {
+
+				// set/update host status
+
+				hostStatus := ospdirectorv1beta1.OpenStackHostStatus{}
+				if _, ok := instance.Status.Hosts[roleReservation.Hostname]; ok {
+					hostStatus = instance.Status.Hosts[roleReservation.Hostname]
+				}
+
+				if hostStatus.IPAddresses == nil {
+					hostStatus.IPAddresses = map[string]string{}
+				}
+				if hostStatus.OVNBridgeMacAdresses == nil {
+					hostStatus.OVNBridgeMacAdresses = map[string]string{}
+				}
+				hostStatus.IPAddresses[osNet.Spec.NameLower] = fmt.Sprintf("%s/%d", nodeReservation.IP, cidrSuffix)
+				instance.Status.Hosts[roleReservation.Hostname] = hostStatus
+			} else {
+				delete(instance.Status.Hosts, roleReservation.Hostname)
+			}
+
 		}
 	}
 
@@ -688,7 +787,7 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	cond *ospdirectorv1beta1.Condition,
-) error {
+) (*ospdirectorv1beta1.OpenStackMACAddress, error) {
 	macAddress := &ospdirectorv1beta1.OpenStackMACAddress{
 		ObjectMeta: metav1.ObjectMeta{
 			// use the role name as the VM CR name
@@ -707,12 +806,16 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-		return err
+		return macAddress, err
 	}
 
 	// If network RoleReservations spec map is nil, create it
 	if macAddress.Spec.RoleReservations == nil {
 		macAddress.Spec.RoleReservations = map[string]ospdirectorv1beta1.OpenStackMACRoleReservation{}
+	}
+
+	if macAddress.Status.MACReservations == nil {
+		macAddress.Status.MACReservations = map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
 	}
 
 	//
@@ -730,7 +833,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		vmSetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
-		return err
+		return macAddress, err
 	}
 
 	//
@@ -742,7 +845,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		bmSetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
-		return err
+		return macAddress, err
 	}
 
 	//
@@ -766,14 +869,14 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 				vmHost.AnnotatedForDeletion,
 			)
 			if err != nil {
-				return err
+				return macAddress, err
 			}
 		}
 
 		//
 		// add reservations from deleted nodes if physnet.PreserveReservations
 		//
-		if *instance.Spec.OVNBridgeMacMappings.PreserveReservations {
+		if *instance.Spec.PreserveReservations {
 			r.preserveMACReservations(
 				macAddress,
 				&roleMACReservation,
@@ -802,14 +905,14 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 				bmHost.AnnotatedForDeletion,
 			)
 			if err != nil {
-				return err
+				return macAddress, err
 			}
 		}
 
 		//
-		// add reservations from deleted nodes if physnet.PreserveReservations
+		// add reservations from deleted nodes if Spec.PreserveReservations
 		//
-		if *instance.Spec.OVNBridgeMacMappings.PreserveReservations {
+		if *instance.Spec.PreserveReservations {
 			r.preserveMACReservations(
 				macAddress,
 				&roleMACReservation,
@@ -870,7 +973,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-		return err
+		return macAddress, err
 	}
 
 	cond.Message = "OpenStackMACAddress CR successfully reconciled"
@@ -883,7 +986,35 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 
 	instance.Status.ProvisioningStatus.PhysNetReadyCount = len(macAddress.Spec.PhysNetworks)
 
-	return nil
+	return macAddress, nil
+}
+
+func (r *OpenStackNetConfigReconciler) getMACStatus(
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	cond *ospdirectorv1beta1.Condition,
+	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
+) {
+
+	for hostname, reservation := range macAddress.Status.MACReservations {
+		hostStatus := ospdirectorv1beta1.OpenStackHostStatus{}
+		if _, ok := instance.Status.Hosts[hostname]; ok {
+			hostStatus = instance.Status.Hosts[hostname]
+		}
+
+		if hostStatus.IPAddresses == nil {
+			hostStatus.IPAddresses = map[string]string{}
+		}
+		if hostStatus.OVNBridgeMacAdresses == nil {
+			hostStatus.OVNBridgeMacAdresses = map[string]string{}
+		}
+
+		if !reservation.Deleted {
+			hostStatus.OVNBridgeMacAdresses = reservation.Reservations
+		}
+
+		instance.Status.Hosts[hostname] = hostStatus
+	}
+
 }
 
 //
@@ -943,7 +1074,6 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 				var err error
 				for ok := true; ok; ok = !ospdirectorv1beta1.IsUniqMAC(
 					r.allMACReservations(
-						cond,
 						instance,
 						macAddress,
 					),
@@ -984,7 +1114,6 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 // allMACReservations - get all reservations from static + dynamic created
 //
 func (r *OpenStackNetConfigReconciler) allMACReservations(
-	cond *ospdirectorv1beta1.Condition,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
 ) map[string]ospdirectorv1beta1.OpenStackMACNodeReservation {
@@ -998,7 +1127,7 @@ func (r *OpenStackNetConfigReconciler) allMACReservations(
 }
 
 //
-// add reservations from deleted nodes if physnet.PreserveReservations
+// add reservations from deleted nodes if Spec.PreserveReservations
 //
 func (r *OpenStackNetConfigReconciler) preserveMACReservations(
 	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
@@ -1018,4 +1147,307 @@ func (r *OpenStackNetConfigReconciler) preserveMACReservations(
 		}
 	}
 
+}
+
+//
+// create or update the OpenStackMACAddress object
+//
+func (r *OpenStackNetConfigReconciler) ensureIPReservation(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	cond *ospdirectorv1beta1.Condition,
+	osNet *ospdirectorv1beta1.OpenStackNet,
+) (map[string]ospdirectorv1beta1.OpenStackNetRoleReservation, error) {
+
+	//
+	// * get objects which use the network
+	// * verify for all nodes of the role if they have reservation on the network
+	// * if a host got added to the network create IP and update the network
+	//   * otherwise take existing reservation
+	//   * TODO static reservation
+	//
+
+	// reduce object scope by limit to the added name_lower network label
+	labelSelector := map[string]string{
+		fmt.Sprintf("%s/%s", openstacknet.SubNetNameLabelSelector, osNet.Spec.NameLower): strconv.FormatBool(true),
+	}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labelSelector),
+	}
+
+	//
+	// get all OSClients
+	//
+	osClientList := &ospdirectorv1beta1.OpenStackClientList{}
+	if err := r.GetClient().List(
+		ctx,
+		osClientList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	allRoles := map[string]bool{}
+
+	for _, osClient := range osClientList.Items {
+		roleName := fmt.Sprintf("%s%s", openstackclient.Role, osClient.Name)
+		allRoles[roleName] = true
+
+		//
+		// are there new networks added to the CR?
+		//
+		err := r.ensureIPs(
+			instance,
+			cond,
+			osNet,
+			roleName,
+			common.SortMapByValue(osClient.GetHostnames()),
+			false,
+			false,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//
+	// get all OSCtlplane
+	//
+	osCtlPlaneList := &ospdirectorv1beta1.OpenStackControlPlaneList{}
+	if err := r.GetClient().List(
+		ctx,
+		osCtlPlaneList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	for _, osCtlPlane := range osCtlPlaneList.Items {
+		allRoles[openstackcontrolplane.Role] = true
+
+		err := r.ensureIPs(
+			instance,
+			cond,
+			osNet,
+			openstackcontrolplane.Role,
+			common.SortMapByValue(osCtlPlane.GetHostnames()),
+			true,
+			true,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//
+	// get all OSVMSet
+	//
+	osVMSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+	if err := r.GetClient().List(
+		ctx,
+		osVMSetList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	for _, osVMSet := range osVMSetList.Items {
+		allRoles[osVMSet.Spec.RoleName] = true
+
+		err := r.ensureIPs(
+			instance,
+			cond,
+			osNet,
+			osVMSet.Spec.RoleName,
+			common.SortMapByValue(osVMSet.GetHostnames()),
+			false,
+			osVMSet.Spec.IsTripleoRole,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//
+	// get all OSBMSet
+	//
+	osBMSetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
+	if err := r.GetClient().List(
+		ctx,
+		osBMSetList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	for _, osBMSet := range osBMSetList.Items {
+		allRoles[osBMSet.Spec.RoleName] = true
+
+		err := r.ensureIPs(
+			instance,
+			cond,
+			osNet,
+			osBMSet.Spec.RoleName,
+			common.SortMapByValue(osBMSet.GetHostnames()),
+			false,
+			true,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//
+	// cleanup reservations from deleted roles
+	//
+	for role := range osNet.Spec.RoleReservations {
+		if _, ok := allRoles[role]; !ok {
+			delete(osNet.Spec.RoleReservations, role)
+		}
+	}
+
+	return osNet.Spec.RoleReservations, nil
+}
+
+//
+// ensureIPs - create IP reservations for all nodes of a role.
+// If there is already an existing IP its being reused
+//
+func (r *OpenStackNetConfigReconciler) ensureIPs(
+	instance *ospdirectorv1beta1.OpenStackNetConfig,
+	cond *ospdirectorv1beta1.Condition,
+	osNet *ospdirectorv1beta1.OpenStackNet,
+	roleName string,
+	allRoleHosts common.List,
+	vip bool,
+	addToPredictableIPs bool,
+) error {
+
+	reservations := []ospdirectorv1beta1.IPReservation{}
+
+	_, cidr, err := net.ParseCIDR(osNet.Spec.Cidr)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to parse CIDR %s", osNet.Spec.Cidr)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCIDRParseError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+
+	start := net.ParseIP(osNet.Spec.AllocationStart)
+	end := net.ParseIP(osNet.Spec.AllocationEnd)
+
+	for _, host := range allRoleHosts {
+
+		hostname := host.Key
+
+		//
+		// Do we already have a reservation for this hostname on the network?
+		//
+		if reservation, ok := osNet.Status.Reservations[hostname]; ok {
+
+			nodeReservation := ospdirectorv1beta1.IPReservation{
+				IP:       reservation.IP,
+				Hostname: hostname,
+				VIP:      vip,
+				Deleted:  false,
+			}
+
+			found := false
+			for _, res := range reservations {
+				if res.Hostname == hostname {
+					found = true
+					break
+				}
+			}
+			if !found {
+				reservations = append(reservations, nodeReservation)
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Re-use existing reservation for host %s in network %s with IP %s",
+					hostname,
+					osNet.Spec.NameLower,
+					reservation.IP),
+				instance,
+			)
+
+		} else {
+			//
+			// No reservation found, so create a new one
+			//
+			var ip net.IPNet
+			ip, reservations, err = common.AssignIP(common.AssignIPDetails{
+				IPnet:           *cidr,
+				RangeStart:      start,
+				RangeEnd:        end,
+				RoleReservelist: reservations,
+				Reservelist:     openstacknet.GetAllIPReservations(osNet, reservations),
+				ExcludeRanges:   []string{},
+				Hostname:        hostname,
+				VIP:             vip,
+				Deleted:         false,
+			})
+			if err != nil {
+				cond.Message = fmt.Sprintf("Failed to do ip reservation: %s", hostname)
+				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonIPReservationError)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigError)
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return err
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Created new reservation for host %s in network %s with IP %s",
+					hostname,
+					osNet.Spec.NameLower,
+					ip.String()),
+				instance,
+			)
+		}
+	}
+
+	//
+	// Add reservations for delete nodes of the role if Spec.PreserveReservations
+	//
+	if *instance.Spec.PreserveReservations {
+		for _, oldReservation := range osNet.Spec.RoleReservations[roleName].Reservations {
+			found := false
+			for _, newReservation := range reservations {
+				if oldReservation.Hostname == newReservation.Hostname {
+					found = true
+					continue
+				}
+			}
+			if !found {
+				oldReservation.Deleted = true
+				reservations = append(reservations, oldReservation)
+			}
+		}
+
+	}
+
+	//
+	// If there are reservations for the role, store them on the OpenStackNet
+	//
+	if len(reservations) > 0 {
+		sort.Slice(reservations[:], func(i, j int) bool {
+			return reservations[i].Hostname < reservations[j].Hostname
+		})
+
+		osNet.Spec.RoleReservations[roleName] = ospdirectorv1beta1.OpenStackNetRoleReservation{
+			AddToPredictableIPs: addToPredictableIPs,
+			Reservations:        reservations,
+		}
+	}
+
+	cond.Message = fmt.Sprintf("IP reservations for role %s created", roleName)
+	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonIPReservation)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
+
+	return nil
 }

@@ -40,7 +40,6 @@ import (
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
@@ -93,9 +92,6 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=get;list
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackipsets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstacknets,verbs=get;list
 // FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-sriov-network-operator" namespace?
 // +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworknodepolicies;sriovnetworks,verbs=get;list;watch;create;update;patch;delete
@@ -154,12 +150,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		if statusChanged() {
 			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -246,6 +237,14 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
+	}
+
+	//
+	// add labels of all networks used by this CR
+	//
+	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	//
@@ -365,22 +364,40 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	//   Create/Update IPSet for the VMSet CR
+	// get OSNetCfg object
 	//
-	ipset, ctrlResult, err := openstackipset.CreateOrUpdateIPset(
-		r,
-		instance,
-		cond,
-		common.IPSet{
-			Networks:            instance.Spec.Networks,
-			Role:                instance.Spec.RoleName,
-			HostCount:           instance.Spec.VMCount,
-			AddToPredictableIPs: instance.Spec.IsTripleoRole,
-			HostNameRefs:        instance.GetHostnames(),
-		},
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
+		Namespace: instance.Namespace},
+		osnetcfg)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
+	}
+
+	//
+	// Wait for IPs created on all configured networks
+	//
+	for hostname, hostStatus := range instance.Status.VMHosts {
+		err = openstacknetconfig.WaitOnIPsCreated(
+			instance,
+			cond,
+			osnetcfg,
+			instance.Spec.Networks,
+			hostname,
+			&hostStatus,
+		)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+
+		hostStatus.HostRef = hostname
+		instance.Status.VMHosts[hostname] = hostStatus
 	}
 
 	//
@@ -414,10 +431,12 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		cond,
 		newVMs,
 		nadMap,
-		ipset,
 		envVars,
 		templateParameters,
 	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	//
 	//   Create the VM objects
@@ -548,13 +567,47 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 	return nil
 }
 
-func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *ospdirectorv1beta1.OpenStackVMSet, ipset *ospdirectorv1beta1.OpenStackIPSet, envVars *map[string]common.EnvSetter, templateParameters map[string]interface{}, host ospdirectorv1beta1.Host) error {
+func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
+	instance *ospdirectorv1beta1.OpenStackVMSet,
+	cond *ospdirectorv1beta1.Condition,
+	envVars *map[string]common.EnvSetter,
+	templateParameters map[string]interface{},
+	host ospdirectorv1beta1.Host,
+) error {
 	templateParameters["ControllerIP"] = host.IPAddress
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
 	templateParameters["CtlplaneDnsSearch"] = instance.Spec.DNSSearchDomains
 
-	gateway := ipset.Status.Networks["ctlplane"].Gateway
+	netNameLower := "ctlplane"
+	// get network with name_lower label
+	labelSelector := map[string]string{
+		openstacknet.SubNetNameLabelSelector: netNameLower,
+	}
+
+	// get ctlplane network
+	network, err := openstacknet.GetOpenStackNetWithLabel(
+		r,
+		instance.Namespace,
+		labelSelector,
+	)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
+		} else {
+			// Error reading the object - requeue the request.
+			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
+		}
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
+
+	gateway := network.Spec.Gateway
+
 	if gateway != "" {
 		if strings.Contains(gateway, ":") {
 			templateParameters["Gateway"] = fmt.Sprintf("gateway6: %s", gateway)
@@ -574,7 +627,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(instance *o
 		},
 	}
 
-	err := common.EnsureSecrets(r, instance, networkdata, envVars)
+	err = common.EnsureSecrets(r, instance, networkdata, envVars)
 	if err != nil {
 		return err
 	}
@@ -632,7 +685,6 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
-		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Complete(r)
 }
 
@@ -1440,7 +1492,6 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 	cond *ospdirectorv1beta1.Condition,
 	newVMs []string,
 	nadMap map[string]networkv1.NetworkAttachmentDefinition,
-	ipset *ospdirectorv1beta1.OpenStackIPSet,
 	envVars map[string]common.EnvSetter,
 	templateParameters map[string]interface{},
 ) (map[string]ospdirectorv1beta1.Host, error) {
@@ -1454,7 +1505,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 
 	// Func to help increase DRY below in NetworkData loops
 	generateNetworkData := func(instance *ospdirectorv1beta1.OpenStackVMSet, vm *ospdirectorv1beta1.HostStatus) error {
-		// TODO: multi nic support with bindata template
+		// TODO mschuppert: get ctlplane network name using ooo-ctlplane-network label
 		netName := "ctlplane"
 
 		networkDataSecret := fmt.Sprintf("%s-%s-networkdata", instance.Name, vm.Hostname)
@@ -1463,13 +1514,19 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 			HostRef:           vm.Hostname,
 			DomainName:        vm.Hostname,
 			DomainNameUniq:    fmt.Sprintf("%s-%s", vm.Hostname, instance.UID[0:4]),
-			IPAddress:         ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName],
+			IPAddress:         instance.Status.VMHosts[vm.Hostname].IPAddresses[netName],
 			NetworkDataSecret: networkDataSecret,
 			Labels:            secretLabelsWithMustGather,
 			NAD:               nadMap,
 		}
 
-		err := r.generateVirtualMachineNetworkData(instance, ipset, &envVars, templateParameters, vmDetails[vm.Hostname])
+		err := r.generateVirtualMachineNetworkData(
+			instance,
+			cond,
+			&envVars,
+			templateParameters,
+			vmDetails[vm.Hostname],
+		)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Error creating VM NetworkData for %s ", vm.Hostname)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineNetworkDataError)
@@ -1482,12 +1539,6 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 		// update VM status NetworkDataSecret and UserDataSecret
 		vm.NetworkDataSecretName = networkDataSecret
 		vm.UserDataSecretName = fmt.Sprintf("%s-cloudinit", instance.Name)
-
-		// update VM status network
-		for _, netName := range instance.Spec.Networks {
-			vm.HostRef = vm.Hostname
-			vm.IPAddresses[netName] = ipset.Status.HostIPs[vm.Hostname].IPAddresses[netName]
-		}
 
 		return nil
 	}

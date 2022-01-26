@@ -1118,225 +1118,6 @@ spec:
                     required:
                     - items
                     type: object
-                  openStackIPSets:
-                    description: OpenStackIPSets - list of OpenStackIPSets saved in
-                      the backup
-                    properties:
-                      apiVersion:
-                        description: 'APIVersion defines the versioned schema of this
-                          representation of an object. Servers should convert recognized
-                          schemas to the latest internal value, and may reject unrecognized
-                          values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                        type: string
-                      items:
-                        items:
-                          description: OpenStackIPSet represents a group of IP addresses
-                            for a specific deployment role within the OpenStack Overcloud
-                          properties:
-                            apiVersion:
-                              description: 'APIVersion defines the versioned schema
-                                of this representation of an object. Servers should
-                                convert recognized schemas to the latest internal
-                                value, and may reject unrecognized values. More info:
-                                https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                              type: string
-                            kind:
-                              description: 'Kind is a string value representing the
-                                REST resource this object represents. Servers may
-                                infer this from the endpoint the client submits requests
-                                to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                              type: string
-                            metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
-                              type: object
-                            spec:
-                              description: OpenStackIPSetSpec defines the desired
-                                state of OpenStackIPSet
-                              properties:
-                                addToPredictableIPs:
-                                  description: AddToPredictableIPs add/ignore ipset
-                                    to add entries to Predictable IPs list
-                                  type: boolean
-                                hostCount:
-                                  description: HostCount Host count
-                                  type: integer
-                                hostNameRefs:
-                                  additionalProperties:
-                                    type: string
-                                  description: HostNameRefs Hostname references for
-                                    the HostCount with [hostname]->hostRef
-                                  type: object
-                                networks:
-                                  description: Networks the name(s) of the OpenStackNetworks
-                                    used to generate IPs
-                                  items:
-                                    type: string
-                                  type: array
-                                roleName:
-                                  description: RoleName the name of the TripleO role
-                                    this VM Spec is associated with. If it is a TripleO
-                                    role, the name must match.
-                                  type: string
-                                vip:
-                                  description: VIP flag to indicate ipset is a request
-                                    for a VIP
-                                  type: boolean
-                              required:
-                              - addToPredictableIPs
-                              - hostCount
-                              - hostNameRefs
-                              - networks
-                              - roleName
-                              - vip
-                              type: object
-                            status:
-                              description: OpenStackIPSetStatus set of hosts with
-                                IP information
-                              properties:
-                                conditions:
-                                  description: Conditions - conditions to display
-                                    in the OpenShift GUI, which reflect CurrentState
-                                  items:
-                                    description: Condition - A particular overall
-                                      condition of a certain resource
-                                    properties:
-                                      lastHearbeatTime:
-                                        format: date-time
-                                        type: string
-                                      lastTransitionTime:
-                                        format: date-time
-                                        type: string
-                                      message:
-                                        type: string
-                                      reason:
-                                        description: ConditionReason - Why a particular
-                                          condition is true, false or unknown
-                                        type: string
-                                      status:
-                                        type: string
-                                      type:
-                                        description: ConditionType - A summarizing
-                                          name for a given condition
-                                        type: string
-                                    required:
-                                    - status
-                                    - type
-                                    type: object
-                                  type: array
-                                hosts:
-                                  additionalProperties:
-                                    description: OpenStackIPHostsStatus per host IP
-                                      set
-                                    properties:
-                                      ipaddresses:
-                                        additionalProperties:
-                                          type: string
-                                        type: object
-                                    required:
-                                    - ipaddresses
-                                    type: object
-                                  type: object
-                                networks:
-                                  additionalProperties:
-                                    description: NetworkStatus represents the network
-                                      details of a network
-                                    properties:
-                                      allocationEnd:
-                                        type: string
-                                      allocationStart:
-                                        type: string
-                                      cidr:
-                                        type: string
-                                      gateway:
-                                        type: string
-                                      vlan:
-                                        type: integer
-                                    required:
-                                    - allocationEnd
-                                    - allocationStart
-                                    - cidr
-                                    type: object
-                                  type: object
-                              required:
-                              - hosts
-                              - networks
-                              type: object
-                          type: object
-                        type: array
-                      kind:
-                        description: 'Kind is a string value representing the REST
-                          resource this object represents. Servers may infer this
-                          from the endpoint the client submits requests to. Cannot
-                          be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                        type: string
-                      metadata:
-                        description: ListMeta describes metadata that synthetic resources
-                          must have, including lists and various status objects. A
-                          resource may have only one of {ObjectMeta, ListMeta}.
-                        properties:
-                          continue:
-                            description: continue may be set if the user set a limit
-                              on the number of items returned, and indicates that
-                              the server has more data available. The value is opaque
-                              and may be used to issue another request to the endpoint
-                              that served this list to retrieve the next set of available
-                              objects. Continuing a consistent list may not be possible
-                              if the server configuration has changed or more than
-                              a few minutes have passed. The resourceVersion field
-                              returned when using this continue value will be identical
-                              to the value in the first response, unless you have
-                              received this token from an error message.
-                            type: string
-                          remainingItemCount:
-                            description: remainingItemCount is the number of subsequent
-                              items in the list which are not included in this list
-                              response. If the list request contained label or field
-                              selectors, then the number of remaining items is unknown
-                              and the field will be left unset and omitted during
-                              serialization. If the list is complete (either because
-                              it is not chunking or because this is the last chunk),
-                              then there are no more remaining items and this field
-                              will be left unset and omitted during serialization.
-                              Servers older than v1.15 do not set this field. The
-                              intended use of the remainingItemCount is *estimating*
-                              the size of a collection. Clients should not rely on
-                              the remainingItemCount to be set or to be exact.
-                            format: int64
-                            type: integer
-                          resourceVersion:
-                            description: 'String that identifies the server''s internal
-                              version of this object that can be used by clients to
-                              determine when objects have changed. Value must be treated
-                              as opaque by clients and passed unmodified back to the
-                              server. Populated by the system. Read-only. More info:
-                              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
-                            type: string
-                          selfLink:
-                            description: "selfLink is a URL representing this object.
-                              Populated by the system. Read-only. \n DEPRECATED Kubernetes
-                              will stop propagating this field in 1.20 release and
-                              the field is planned to be removed in 1.21 release."
-                            type: string
-                        type: object
-                    required:
-                    - items
-                    type: object
                   openStackMACAddresses:
                     description: OpenStackMACAddresses - list of OpenStackMACAddresses
                       saved in the backup
@@ -2147,16 +1928,6 @@ spec:
                                         type: object
                                       minItems: 1
                                       type: array
-                                    preserveReservations:
-                                      default: true
-                                      description: 'PreserveReservations - preserve
-                                        the MAC reservation of the host within a node
-                                        role when the node got deleted but the role
-                                        itself is not deleted. The reservations of
-                                        all nodes in the role get deleted when the
-                                        full node role is being deleted. (default:
-                                        true)'
-                                      type: boolean
                                     staticReservations:
                                       additionalProperties:
                                         description: OpenStackMACNodeReservation defines
@@ -2177,11 +1948,20 @@ spec:
                                         - reservations
                                         type: object
                                       description: StaticReservations, manual/static
-                                        MAC address reservations per role
+                                        MAC address reservations per node
                                       type: object
                                   required:
                                   - physNetworks
                                   type: object
+                                preserveReservations:
+                                  default: true
+                                  description: 'PreserveReservations - preserve the
+                                    MAC/IP reservation of the host within a node role
+                                    when the node got deleted but the role itself
+                                    is not deleted. The reservations of all nodes
+                                    in the role get deleted when the full node role
+                                    is being deleted. (default: true)'
+                                  type: boolean
                               required:
                               - attachConfigurations
                               - networks
@@ -2220,6 +2000,23 @@ spec:
                                     - type
                                     type: object
                                   type: array
+                                hosts:
+                                  additionalProperties:
+                                    description: OpenStackHostStatus per host IP set
+                                    properties:
+                                      ipaddresses:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
+                                      ovnBridgeMacAdresses:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
+                                    required:
+                                    - ipaddresses
+                                    - ovnBridgeMacAdresses
+                                    type: object
+                                  type: object
                                 provisioningStatus:
                                   description: OpenStackNetConfigProvisioningStatus
                                     represents the overall provisioning state of the
@@ -2245,6 +2042,8 @@ spec:
                                         state of all VMs in this OpenStackVmSet
                                       type: string
                                   type: object
+                              required:
+                              - hosts
                               type: object
                           type: object
                         type: array
@@ -2396,8 +2195,8 @@ spec:
                                   type: string
                                 roleReservations:
                                   additionalProperties:
-                                    description: OpenStackNetRoleStatus defines the
-                                      observed state of the Role Net status
+                                    description: OpenStackNetRoleReservation defines
+                                      the observed state of the Role Net reservation
                                     properties:
                                       addToPredictableIPs:
                                         type: boolean
@@ -2503,49 +2302,30 @@ spec:
                                   description: CurrentState - the overall state of
                                     this network
                                   type: string
+                                reservations:
+                                  additionalProperties:
+                                    description: NodeIPReservation contains an IP
+                                      and Deleted flag
+                                    properties:
+                                      deleted:
+                                        type: boolean
+                                      ip:
+                                        type: string
+                                    required:
+                                    - deleted
+                                    - ip
+                                    type: object
+                                  description: Reservations MAC address reservations
+                                    per node
+                                  type: object
                                 reservedIpCount:
                                   description: ReservedIPCount - the count of all
                                     IPs ever reserved on this network
                                   type: integer
-                                roleReservations:
-                                  additionalProperties:
-                                    description: OpenStackNetRoleStatus defines the
-                                      observed state of the Role Net status
-                                    properties:
-                                      addToPredictableIPs:
-                                        type: boolean
-                                      reservations:
-                                        description: Reservations IP address reservations
-                                        items:
-                                          description: IPReservation contains an IP,
-                                            Hostname, and a VIP flag
-                                          properties:
-                                            deleted:
-                                              type: boolean
-                                            hostname:
-                                              type: string
-                                            ip:
-                                              type: string
-                                            vip:
-                                              type: boolean
-                                          required:
-                                          - deleted
-                                          - hostname
-                                          - ip
-                                          - vip
-                                          type: object
-                                        type: array
-                                    required:
-                                    - addToPredictableIPs
-                                    - reservations
-                                    type: object
-                                  description: Reservations IP address reservations
-                                    per role
-                                  type: object
                               required:
                               - currentState
+                              - reservations
                               - reservedIpCount
-                              - roleReservations
                               type: object
                           type: object
                         type: array

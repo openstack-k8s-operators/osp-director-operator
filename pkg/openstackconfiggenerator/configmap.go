@@ -112,7 +112,7 @@ type networkType struct {
 	DNSServers     []string
 }
 
-// CreateConfigMapParams - creates a map of parameters for the overcloud ipset config map
+// CreateConfigMapParams - creates a map of parameters to render the required overcloud parameter files
 func CreateConfigMapParams(
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
@@ -132,9 +132,9 @@ func CreateConfigMapParams(
 	}
 	err := r.GetClient().List(context.TODO(), osNetList, osNetListOpts...)
 	if err != nil {
-		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSNets", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonNetsNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSNets", instance.Kind, instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonNetNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return templateParameters, rolesMap, err
@@ -150,9 +150,9 @@ func CreateConfigMapParams(
 	}
 	err = r.GetClient().List(context.TODO(), osMACList, osMACListOpts...)
 	if err != nil {
-		cond.Message = fmt.Sprintf("OSIPSet %s failed to get list of all OSMACs", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.IPSetCondReasonMACsNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.IPSetCondTypeError)
+		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSMACs", instance.Kind, instance.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonMACNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return templateParameters, rolesMap, err
@@ -173,7 +173,6 @@ func CreateConfigMapParams(
 	//
 	// create networksMap map from OpenStackNetConfig
 	//
-	// TODO add label to osNetCFG that we can filter the one corresponding to the ipset
 	netConfigList := &ospdirectorv1beta1.OpenStackNetConfigList{}
 	labelSelector := map[string]string{}
 	listOpts := []client.ListOption{

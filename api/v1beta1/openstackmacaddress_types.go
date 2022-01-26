@@ -98,12 +98,8 @@ const (
 	MACCondReasonAllMACAddressesCreated ConditionReason = "MACAddressesCreated"
 	// MACCondReasonError - General error getting the OSMACaddr object
 	MACCondReasonError ConditionReason = "MACError"
-	/*
-		// MACCondReasonStaticMACNotUniqError - Mac from provided static list is not uniq
-		MACCondReasonStaticMACNotUniqError ConditionReason = "StaticMACNotUniqError"
-		// MACCondReasonStaticMACNotValidError - Mac from provided static list is a valid MAC address
-		MACCondReasonStaticMACNotValidError ConditionReason = "StaticMACNotValidError"
-	*/
+	// MACCondReasonMACNotFound - osmacaddr object not found
+	MACCondReasonMACNotFound ConditionReason = "OpenStackMACNotFound"
 )
 
 // OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress

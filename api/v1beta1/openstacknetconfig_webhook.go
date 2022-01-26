@@ -82,9 +82,9 @@ func (r *OpenStackNetConfig) Default() {
 		r.Spec.OVNBridgeMacMappings.StaticReservations = map[string]OpenStackMACNodeReservation{}
 	}
 
-	if r.Spec.OVNBridgeMacMappings.PreserveReservations == nil {
+	if r.Spec.PreserveReservations == nil {
 		var trueVal bool = true
-		r.Spec.OVNBridgeMacMappings.PreserveReservations = &trueVal
+		r.Spec.PreserveReservations = &trueVal
 	}
 
 	//

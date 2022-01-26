@@ -7,7 +7,7 @@ metadata:
     operatorframework.io/suggested-namespace: openstack
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v1.2.0
-    operators.operatorframework.io/internal-objects: '["openstacknetattachments.osp-director.openstack.org","openstacknets.osp-director.openstack.org","openstackipsets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org","openstackephemeralheats.osp-director.openstack.org"]'
+    operators.operatorframework.io/internal-objects: '["openstacknetattachments.osp-director.openstack.org","openstacknets.osp-director.openstack.org","openstackprovisionservers.osp-director.openstack.org","openstackephemeralheats.osp-director.openstack.org"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: osp-director-operator.v0.0.0
   namespace: placeholder
@@ -75,12 +75,6 @@ spec:
       displayName: OpenStack Ephemeral Heat
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
-      version: v1beta1
-    - description: OpenStackIPSet represents a group of IP addresses for a specific
-        deployment role within the OpenStack Overcloud
-      displayName: OpenStack IpSet
-      kind: OpenStackIPSet
-      name: openstackipsets.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackMACAddress is the Schema for the openstackmacaddresses
         API

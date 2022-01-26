@@ -4,7 +4,6 @@
 # - OpenStackBaremetalSet (should be deleted)
 # - OpenStackProvisionServer (should be deleted)
 # - BaremetalHosts (compute-0 and compute-1 should NOT be provisioned)
-# - OpenStackIpSet ("compute" should be deleted)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -64,9 +63,3 @@ status:
     rootDeviceHints:
       deviceName: /dev/sda
     state: provisioned
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  name: compute
-  namespace: openstack

@@ -323,14 +323,6 @@ spec:
                       type: object
                     minItems: 1
                     type: array
-                  preserveReservations:
-                    default: true
-                    description: 'PreserveReservations - preserve the MAC reservation
-                      of the host within a node role when the node got deleted but
-                      the role itself is not deleted. The reservations of all nodes
-                      in the role get deleted when the full node role is being deleted.
-                      (default: true)'
-                    type: boolean
                   staticReservations:
                     additionalProperties:
                       description: OpenStackMACNodeReservation defines the observed
@@ -349,11 +341,19 @@ spec:
                       - reservations
                       type: object
                     description: StaticReservations, manual/static MAC address reservations
-                      per role
+                      per node
                     type: object
                 required:
                 - physNetworks
                 type: object
+              preserveReservations:
+                default: true
+                description: 'PreserveReservations - preserve the MAC/IP reservation
+                  of the host within a node role when the node got deleted but the
+                  role itself is not deleted. The reservations of all nodes in the
+                  role get deleted when the full node role is being deleted. (default:
+                  true)'
+                type: boolean
             required:
             - attachConfigurations
             - networks
@@ -391,6 +391,23 @@ spec:
                   - type
                   type: object
                 type: array
+              hosts:
+                additionalProperties:
+                  description: OpenStackHostStatus per host IP set
+                  properties:
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    ovnBridgeMacAdresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                  - ipaddresses
+                  - ovnBridgeMacAdresses
+                  type: object
+                type: object
               provisioningStatus:
                 description: OpenStackNetConfigProvisioningStatus represents the overall
                   provisioning state of the OpenStackNetConfig (with an optional explanatory
@@ -415,6 +432,8 @@ spec:
                       in this OpenStackVmSet
                     type: string
                 type: object
+            required:
+            - hosts
             type: object
         type: object
     served: true

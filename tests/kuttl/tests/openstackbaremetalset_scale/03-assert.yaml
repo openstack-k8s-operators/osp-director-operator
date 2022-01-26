@@ -3,7 +3,6 @@
 #
 # - 1 OpenStackBaremetalSet
 # - 1 OpenStackProvisionServer
-# - 1 OpenStackIpSet
 # - 1 OpenStackMACAddress
 #
 
@@ -59,26 +58,6 @@ status:
   provisioningStatus:
     reason: ProvisionServer compute-provisionserver has been provisioned
     state: Provisioned
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "true"
-  name: compute
-  namespace: openstack
-spec:
-  addToPredictableIPs: true
-  hostCount: 0
-  hostNameRefs: {}
-  networks:
-  - ctlplane
-  - internal_api
-  - tenant
-  roleName: Compute
-  vip: false
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

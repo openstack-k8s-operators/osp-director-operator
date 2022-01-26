@@ -71,7 +71,6 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
-    preserveReservations: true
     staticReservations:
       controller-0:
         deleted: false
@@ -80,6 +79,7 @@ spec:
       controller-1:
         deleted: false
         reservations: {}
+  preserveReservations: true
 status:
   provisioningStatus:
     attachDesiredCount: 1

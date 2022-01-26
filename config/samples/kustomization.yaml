@@ -6,7 +6,6 @@ resources:
 - osp-director_v1beta1_openstackbaremetalset.yaml
 - osp-director_v1beta1_openstackclient.yaml
 - osp-director_v1beta1_openstacknet.yaml
-- osp-director_v1beta1_openstackipset.yaml
 - osp-director_v1beta1_openstackconfiggenerator.yaml
 - osp-director_v1beta1_openstacknetconfig.yaml
 - osp-director_v1beta1_openstacknetattachment.yaml

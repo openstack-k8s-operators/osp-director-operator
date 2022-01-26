@@ -1,16 +1,62 @@
 #
 # Check for:
 #
-# - 1 OpenStackBackupRequest (should be quiescing)
+# - 1 OpenStackNetConfig
+# - 1 OpenStackControlPlane
+# - 1 OpenStackBaremetalSet
+# - 1 OpenStackVMSet
 #
 
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 420
+---
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBackupRequest
+kind: OpenStackNetConfig
 metadata:
-  name: openstackbackuprequest
+  name: openstacknetconfig
   namespace: openstack
 status:
-  conditions:
-  - status: "True"
-    type: Quiescing
-  currentState: Quiescing
+  provisioningStatus:
+    attachDesiredCount: 2
+    attachReadyCount: 2
+    netDesiredCount: 6
+    netReadyCount: 6
+    physNetDesiredCount: 2
+    physNetReadyCount: 2
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
+    state: Configured
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+status:
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: compute
+  namespace: openstack
+status:
+  provisioningStatus:
+    readyCount: 1
+    reason: All requested BaremetalHosts have been provisioned
+    state: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  name: controller
+  namespace: openstack
+status:
+  provisioningStatus:
+    reason: No VirtualMachines have been requested
+    state: Empty

@@ -5,7 +5,6 @@
 # - 1 OpenStackVMSet
 # - 1 OpenStackClient
 # - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
-# - 3 OpenStackIPSets (IP reservations for OpenStackControlPlane and OpenStackClient)
 # - 1 Secret (TripleO passwords)
 # - 1 OpenStackMACAddress
 #
@@ -174,8 +173,14 @@ spec:
   vlan: 0
 status:
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 192.168.25.100
+    openstackclient-0:
+      deleted: false
+      ip: 192.168.25.101
   reservedIpCount: 2
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -222,8 +227,14 @@ spec:
   vlan: 0
 status:
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 10.0.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 10.0.0.11
   reservedIpCount: 2
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -270,8 +281,14 @@ spec:
   vlan: 20
 status:
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 172.17.0.11
   reservedIpCount: 2
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -311,8 +328,11 @@ spec:
   vlan: 30
 status:
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 172.18.0.10
   reservedIpCount: 1
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -352,8 +372,11 @@ spec:
   vlan: 40
 status:
   currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 172.19.0.10
   reservedIpCount: 1
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -386,144 +409,8 @@ spec:
   vlan: 50
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "true"
-  name: overcloud
-  namespace: openstack
-spec:
-  addToPredictableIPs: true
-  hostCount: 1
-  hostNameRefs:
-    controlplane: controlplane
-  networks:
-  - ctlplane
-  - external
-  - internal_api
-  - storage
-  - storage_mgmt
-  roleName: ControlPlane
-  vip: true
-status:
-  hosts:
-    controlplane:
-      ipaddresses:
-        ctlplane: 192.168.25.100/24
-        external: 10.0.0.10/24
-        internal_api: 172.17.0.10/24
-        storage: 172.18.0.10/24
-        storage_mgmt: 172.19.0.10/24
-  networks:
-    ctlplane:
-      allocationEnd: 192.168.25.250
-      allocationStart: 192.168.25.100
-      cidr: 192.168.25.0/24
-      gateway: 192.168.25.1
-      vlan: 0
-    external:
-      allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.10
-      cidr: 10.0.0.0/24
-      gateway: 10.0.0.1
-      vlan: 0
-    internalapi:
-      allocationEnd: 172.17.0.250
-      allocationStart: 172.17.0.10
-      cidr: 172.17.0.0/24
-      gateway: ""
-      vlan: 20
-    storage:
-      allocationEnd: 172.18.0.250
-      allocationStart: 172.18.0.10
-      cidr: 172.18.0.0/24
-      gateway: ""
-      vlan: 30
-    storagemgmt:
-      allocationEnd: 172.19.0.250
-      allocationStart: 172.19.0.10
-      cidr: 172.19.0.0/24
-      gateway: ""
-      vlan: 40
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "true"
-  name: controller
-  namespace: openstack
-spec:
-  addToPredictableIPs: true
-  hostCount: 0
-  hostNameRefs: {}
-  networks:
-  - ctlplane
-  - external
-  - internal_api
-  - storage
-  - storage_mgmt
-  - tenant
-  roleName: Controller
-  vip: false
-status:
-  hosts: {}
-  networks: {}
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackIPSet
-metadata:
-  finalizers:
-  - osp-director.openstack.org
-  labels:
-    addToPredictableIPsLabel: "false"
-  name: openstackclient
-  namespace: openstack
-spec:
-  addToPredictableIPs: false
-  hostCount: 1
-  hostNameRefs:
-    openstackclient-0: openstackclient-0
-  networks:
-  - ctlplane
-  - external
-  - internal_api
-  roleName: OpenstackClientopenstackclient
-  vip: false
-status:
-  hosts:
-    openstackclient-0:
-      ipaddresses:
-        ctlplane: 192.168.25.101/24
-        external: 10.0.0.11/24
-        internal_api: 172.17.0.11/24
-  networks:
-    ctlplane:
-      allocationEnd: 192.168.25.250
-      allocationStart: 192.168.25.100
-      cidr: 192.168.25.0/24
-      gateway: 192.168.25.1
-      vlan: 0
-    external:
-      allocationEnd: 10.0.0.250
-      allocationStart: 10.0.0.10
-      cidr: 10.0.0.0/24
-      gateway: 10.0.0.1
-      vlan: 0
-    internalapi:
-      allocationEnd: 172.17.0.250
-      allocationStart: 172.17.0.10
-      cidr: 172.17.0.0/24
-      gateway: ""
-      vlan: 20
 ---
 apiVersion: v1
 kind: Secret

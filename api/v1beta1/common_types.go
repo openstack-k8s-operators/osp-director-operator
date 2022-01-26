@@ -114,6 +114,12 @@ const (
 	CommonCondReasonRemoveFinalizerError ConditionReason = "RemoveFinalizerError"
 	// CommonCondReasonAddRefLabelError - error adding reference label
 	CommonCondReasonAddRefLabelError ConditionReason = "AddRefLabelError"
+	// CommonCondReasonAddOSNetLabelError - error adding osnet labels
+	CommonCondReasonAddOSNetLabelError ConditionReason = "AddOSNetLabelError"
+	// CommonCondReasonCIDRParseError - could not parse CIDR
+	CommonCondReasonCIDRParseError ConditionReason = "CIDRParseError"
+	// CommonCondReasonServiceNotFound - service not found
+	CommonCondReasonServiceNotFound ConditionReason = "ServiceNotFound"
 )
 
 // Hash - struct to add hashes to status
@@ -126,6 +132,11 @@ type Hash struct {
 
 // ProvisioningState - the overall state of all VMs in this OpenStackVmSet
 type ProvisioningState string
+
+const (
+	// HostRefInitState - intial HostRef state of a new node which has not yet assigned
+	HostRefInitState string = "unassigned"
+)
 
 // HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {

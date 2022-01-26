@@ -71,8 +71,8 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
-    preserveReservations: true
     staticReservations: {}
+  preserveReservations: true
 status:
   provisioningStatus:
     attachDesiredCount: 1
@@ -192,8 +192,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress

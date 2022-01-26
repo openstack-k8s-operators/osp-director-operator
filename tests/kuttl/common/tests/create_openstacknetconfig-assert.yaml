@@ -190,7 +190,6 @@ spec:
       name: datacentre
     - macPrefix: fa:16:3b
       name: datacentre2
-    preserveReservations: true
     staticReservations:
       compute-0:
         deleted: false
@@ -207,6 +206,7 @@ spec:
         reservations:
           datacentre: fa:16:3a:aa:aa:bb
           datacentre2: fa:16:3b:aa:aa:bb
+  preserveReservations: true
 status:
   provisioningStatus:
     attachDesiredCount: 2
@@ -376,6 +376,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "true"
     ooo-netname: Control
     ooo-netname-lower: ctlplane
     ooo-subnetname: ctlplane
@@ -389,10 +390,13 @@ spec:
   allocationStart: 192.168.25.100
   attachConfiguration: br-osp
   cidr: 192.168.25.0/24
+  domainName: ctlplane.localdomain
   gateway: 192.168.25.1
   mtu: 1500
   name: Control
   nameLower: ctlplane
+  roleReservations: {}
+  routes: []
   vip: true
   vlan: 0
 status:
@@ -402,8 +406,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -411,6 +415,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: External
     ooo-netname-lower: external
     ooo-subnetname: external
@@ -424,10 +429,13 @@ spec:
   allocationStart: 10.0.0.10
   attachConfiguration: br-ex
   cidr: 10.0.0.0/24
+  domainName: external.localdomain
   gateway: 10.0.0.1
   mtu: 1500
   name: External
   nameLower: external
+  roleReservations: {}
+  routes: []
   vip: true
   vlan: 0
 status:
@@ -437,8 +445,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -446,6 +454,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: InternalApi
     ooo-netname-lower: internal_api
     ooo-subnetname: internal_api
@@ -459,10 +468,13 @@ spec:
   allocationStart: 172.17.0.10
   attachConfiguration: br-osp
   cidr: 172.17.0.0/24
+  domainName: internalapi.localdomain
   gateway: ""
   mtu: 1350
   name: InternalApi
   nameLower: internal_api
+  roleReservations: {}
+  routes: []
   vip: true
   vlan: 20
 status:
@@ -472,8 +484,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -481,6 +493,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: Storage
     ooo-netname-lower: storage
     ooo-subnetname: storage
@@ -494,10 +507,13 @@ spec:
   allocationStart: 172.18.0.10
   attachConfiguration: br-osp
   cidr: 172.18.0.0/24
+  domainName: storage.localdomain
   gateway: ""
   mtu: 1350
   name: Storage
   nameLower: storage
+  roleReservations: {}
+  routes: []
   vip: true
   vlan: 30
 status:
@@ -507,8 +523,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -516,6 +532,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: StorageMgmt
     ooo-netname-lower: storage_mgmt
     ooo-subnetname: storage_mgmt
@@ -529,10 +546,13 @@ spec:
   allocationStart: 172.19.0.10
   attachConfiguration: br-osp
   cidr: 172.19.0.0/24
+  domainName: storagemgmt.localdomain
   gateway: ""
   mtu: 1350
   name: StorageMgmt
   nameLower: storage_mgmt
+  roleReservations: {}
+  routes: []
   vip: true
   vlan: 40
 status:
@@ -542,8 +562,8 @@ status:
     status: "True"
     type: Configured
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -551,6 +571,7 @@ metadata:
   finalizers:
   - openstacknet.osp-director.openstack.org
   labels:
+    ooo-ctlplane-network: "false"
     ooo-netname: Tenant
     ooo-netname-lower: tenant
     ooo-subnetname: tenant
@@ -564,16 +585,19 @@ spec:
   allocationStart: 172.20.0.10
   attachConfiguration: br-osp
   cidr: 172.20.0.0/24
+  domainName: tenant.localdomain
   gateway: ""
   mtu: 1350
   name: Tenant
   nameLower: tenant
+  roleReservations: {}
+  routes: []
   vip: false
   vlan: 50
 status:
   currentState: Configured
+  reservations: {}
   reservedIpCount: 0
-  roleReservations: {}
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress
