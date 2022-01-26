@@ -822,9 +822,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			EvictionStrategy:              &evictionStrategy,
 			TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 			Domain: virtv1.DomainSpec{
-				CPU: &virtv1.CPU{
-					Cores: instance.Spec.Cores,
-				},
 				Devices: virtv1.Devices{
 					Disks: disks,
 					Interfaces: []virtv1.Interface{
@@ -841,11 +838,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				},
 				Machine: virtv1.Machine{
 					Type: "",
-				},
-				Resources: virtv1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.Memory)),
-					},
 				},
 			},
 			Volumes: volumes,
@@ -894,6 +886,14 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 
 		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
+		vm.Spec.Template.Spec.Domain.CPU = &virtv1.CPU{
+			Cores: instance.Spec.Cores,
+		}
+		vm.Spec.Template.Spec.Domain.Resources = virtv1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.Memory)),
+			},
+		}
 
 		// merge additional networks
 		networks := instance.Spec.Networks
