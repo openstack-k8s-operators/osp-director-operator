@@ -37,7 +37,7 @@ ARG USER_ID=nonroot:nonroot
 
 ARG IMAGE_COMPONENT="osp-director-operator-container"
 ARG IMAGE_NAME="osp-director-operator"
-ARG IMAGE_VERSION="1.0.0"
+ARG IMAGE_VERSION="1.2.0"
 ARG IMAGE_SUMMARY="OSP Director Operator"
 ARG IMAGE_DESC="This image includes the osp-director-operator"
 ARG IMAGE_TAGS="cn-openstack openstack"
