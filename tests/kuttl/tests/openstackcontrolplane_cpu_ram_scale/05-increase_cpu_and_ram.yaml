@@ -1,0 +1,24 @@
+#
+# Increase vmset resources and reset vm
+# - cores 8
+# - ram 21GB
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch -n openstack osctlplane overcloud --type='json' -p='[{"op": "add", "path": "/spec/virtualMachineRoles/controller/cores", "value": 8 }]'
+    namespaced: true
+  - command: |
+      oc patch -n openstack osctlplane overcloud --type='json' -p='[{"op": "add", "path": "/spec/virtualMachineRoles/controller/memory", "value": 22 }]'
+    namespaced: true
+  - script: |
+      #!/usr/bin/env bash
+      CONTROLLER=$(oc get -n openstack osnet ctlplane -o json | jq .status.reservations | jq -r "to_entries | map(select(.key == \"controller-0\")) | unique[] | .value.ip")
+      oc rsh -n openstack openstackclient ssh $CONTROLLER sudo poweroff || true
+  - command: |
+      sleep 20
+  - command: |
+      virtctl -n openstack start controller-0
+    namespaced: true

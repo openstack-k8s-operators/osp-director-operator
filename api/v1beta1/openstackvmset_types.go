@@ -183,6 +183,8 @@ func (instance *OpenStackVMSet) IsReady() bool {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osvmset;osvmsets;osvms
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack VMSet"
+// +kubebuilder:printcolumn:name="Cores",type="integer",JSONPath=".spec.cores",description="Cores"
+// +kubebuilder:printcolumn:name="RAM",type="integer",JSONPath=".spec.memory",description="RAM in GB"
 // +kubebuilder:printcolumn:name="Desired",type="integer",JSONPath=".spec.vmCount",description="Desired"
 // +kubebuilder:printcolumn:name="Ready",type="integer",JSONPath=".status.provisioningStatus.readyCount",description="Ready"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"

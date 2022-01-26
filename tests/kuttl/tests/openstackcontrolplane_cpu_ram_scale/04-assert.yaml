@@ -1,0 +1,20 @@
+#
+# Check for:
+#
+# - verify the VM has 6 cores
+# - verify the VM has 20 GB RAM
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  - script: |
+      #!/usr/bin/env bash
+      sleep 10
+      CONTROLLER=$(oc get -n openstack osnet ctlplane -o json | jq .status.reservations | jq -r "to_entries | map(select(.key == \"controller-0\")) | unique[] | .value.ip")
+      CPUS=$(oc rsh -n openstack openstackclient ssh $CONTROLLER "grep processor /proc/cpuinfo | wc -l")
+      RAM=$(oc rsh -n openstack openstackclient ssh $CONTROLLER grep MemTotal /proc/meminfo | awk '{ print $2 }')
+      if [[ ( "${CPUS}" != 6 ) || ( "${RAM}" < 20000000 ) || ( "${RAM}" > 21000000 ) ]]; then
+        exit 1
+      fi
