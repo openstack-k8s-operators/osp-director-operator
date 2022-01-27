@@ -1,0 +1,23 @@
+#
+# verify no changes on:
+# - add static reservation with dupe IP
+# - add static reservation with wrong MAC format
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      # add new empty reservation for controller-1
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-1", "value": {"ipReservations":{}, "macReservations": {}}}]'
+    namespaced: true
+  - command: |
+      # add static reservation with dupe IP
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/reservations/controller-1/ipReservations/ctlplane", "value": "192.168.25.40"}]'
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # add static reservation with wrong IP format
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-1/ipReservations/ctlplane", "value": "192.168.25.25.40" }]'
+    namespaced: true
+    ignoreFailure: true

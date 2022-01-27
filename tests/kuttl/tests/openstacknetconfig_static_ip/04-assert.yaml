@@ -2,10 +2,6 @@
 # Check for:
 #
 # - 1 OpenstackNetworkConfig
-# - 2 OpenStackNetworkAttachment
-# - 2 NodeNetworkConfigurationPolicy
-# - 6 OpenStackNets
-# - 1 OpenStackMACAddress
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
@@ -74,17 +70,17 @@ spec:
   preserveReservations: true
   reservations:
     controller-0:
-      ipReservations: {}
-      macReservations:
-        datacentre: fa:16:3a:aa:aa:aa
+      ipReservations:
+        ctlplane: 192.168.25.40
+      macReservations: {}
     controller-1:
-      ipReservations: {}
-      macReservations:
-        datacentre: fa:16:3a:aa:aa:bb
+      ipReservations:
+        ctlplane: 192.168.25.41
+      macReservations: {}
     controller-2:
-      ipReservations: {}
-      macReservations:
-        datacentre: fa:16:3a:aa:aa:cc
+      ipReservations:
+        ctlplane: 192.168.25.42
+      macReservations: {}
     openstackclient-0:
       ipReservations:
         ctlplane: 192.168.25.251
@@ -103,25 +99,3 @@ status:
     physNetReadyCount: 1
     reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackMACAddress
-metadata:
-  finalizers:
-  - openstackmacaddress.osp-director.openstack.org
-  name: openstacknetconfig
-  namespace: openstack
-spec:
-  physNetworks:
-  - macPrefix: fa:16:3a
-    name: datacentre
-  roleReservations: {}
-status:
-  conditions:
-  - message: All MAC addresses created
-    reason: MACAddressesCreated
-    status: "True"
-    type: Created
-  currentState: Created
-  macReservations: {}
-  reservedMACCount: 0

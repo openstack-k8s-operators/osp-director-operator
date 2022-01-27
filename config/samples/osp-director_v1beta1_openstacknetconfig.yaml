@@ -110,17 +110,56 @@ spec:
       name: datacentre
     - macPrefix: fa:16:3b
       name: datacentre2
-    staticReservations:
-      controller-0:
-        reservations:
-          datacentre: fa:16:3a:aa:aa:aa
-          datacentre2: fa:16:3b:aa:aa:aa
-      controller-1:
-        reservations:
-          datacentre: fa:16:3a:aa:aa:bb
-          datacentre2: fa:16:3b:aa:aa:bb
-      compute-0:
-        reservations:
-          datacentre: fa:16:3a:bb:bb:bb
-          datacentre2: fa:16:3b:bb:bb:bb
   preserveReservations: true
+  reservations:
+    compute-0:
+      ipReservations:
+        ctlplane: 192.168.25.40
+        internal_api: 172.17.0.40
+        storage: 172.18.0.40
+        tenant: 172.20.0.40
+      macReservations:
+        datacentre: fa:16:3a:bb:bb:bb
+        datacentre2: fa:16:3b:bb:bb:bb
+    controller-0:
+      ipReservations:
+        ctlplane: 192.168.25.20
+        external: 10.0.0.20
+        internal_api: 172.17.0.20
+        storage: 172.18.0.20
+        storage_mgmt: 172.19.0.20
+        tenant: 172.20.0.20
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:aa
+        datacentre2: fa:16:3b:aa:aa:aa
+    controller-1:
+      ipReservations:
+        ctlplane: 192.168.25.21
+        external: 10.0.0.21
+        internal_api: 172.17.0.21
+        storage: 172.18.0.21
+        storage_mgmt: 172.19.0.21
+        tenant: 172.20.0.21
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:bb
+        datacentre2: fa:16:3b:aa:aa:bb
+    controller-2:
+      ipReservations:
+        ctlplane: 192.168.25.22
+        external: 10.0.0.22
+        internal_api: 172.17.0.22
+        storage: 172.18.0.22
+        storage_mgmt: 172.19.0.22
+        tenant: 172.20.0.22
+    controlplane:
+      ipReservations:
+        ctlplane: 192.168.25.10
+        external: 10.0.0.10
+        internal_api: 172.17.0.10
+        storage: 172.18.0.10
+        storage_mgmt: 172.19.0.10
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 192.168.25.251
+        external: 10.0.0.251
+        internal_api: 172.17.0.251

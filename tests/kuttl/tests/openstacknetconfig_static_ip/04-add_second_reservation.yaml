@@ -1,0 +1,17 @@
+#
+# Add static IP reservation for controller-1 and controller-2
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/reservations/controller-1/ipReservations/ctlplane", "value": "192.168.25.41"}]'
+    namespaced: true
+  - command: |
+      # add new empty reservation for controller-2
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-2", "value": {"ipReservations":{}, "macReservations": {}}}]'
+    namespaced: true
+  - command: |
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "replace", "path": "/spec/reservations/controller-2/ipReservations/ctlplane", "value": "192.168.25.42"}]'
+    namespaced: true

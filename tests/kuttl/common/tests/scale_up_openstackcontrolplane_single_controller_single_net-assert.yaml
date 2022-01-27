@@ -52,7 +52,7 @@ status:
       hostRef: controller-0
       hostname: controller-0
       ipaddresses:
-        ctlplane: 192.168.25.102/24
+        ctlplane: 192.168.25.100/24
       provisioningState: Provisioned
 ---
 apiVersion: kubevirt.io/v1alpha3
@@ -81,34 +81,34 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.100
+        ip: 192.168.25.10
         vip: true
     Controller:
       addToPredictableIPs: true
       reservations:
       - deleted: false
         hostname: controller-0
-        ip: 192.168.25.102
+        ip: 192.168.25.100
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.101
+        ip: 192.168.25.251
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: false
-      ip: 192.168.25.102
+      ip: 192.168.25.100
     controlplane:
       deleted: false
-      ip: 192.168.25.100
+      ip: 192.168.25.10
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.101
+      ip: 192.168.25.251
   reservedIpCount: 3
 ---
 apiVersion: osp-director.openstack.org/v1beta1

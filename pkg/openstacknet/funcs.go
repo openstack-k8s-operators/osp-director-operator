@@ -231,6 +231,7 @@ func AddOSNetNameLowerLabels(
 func GetAllIPReservations(
 	osNet *ospdirectorv1beta1.OpenStackNet,
 	newReservations []ospdirectorv1beta1.IPReservation,
+	staticReservations []ospdirectorv1beta1.IPReservation,
 ) []ospdirectorv1beta1.IPReservation {
 	//
 	// add just now new created
@@ -238,21 +239,16 @@ func GetAllIPReservations(
 	reservationList := newReservations
 
 	//
-	// add already synamic created
+	// add already dynamic created
 	//
 	for _, roleReservations := range osNet.Spec.RoleReservations {
 		reservationList = append(reservationList, roleReservations.Reservations...)
 	}
 
-	// TODO static reservation
-	/*
-		//
-		// add static configured reservations
-		//
-		for node, res := range instance.Spec.XX.StaticReservations {
-			reservations[node] = res
-		}
-	*/
+	//
+	// add staticReservations provided by osnetcfg CR
+	//
+	reservationList = append(reservationList, staticReservations...)
 
 	// sort reservationList by IP
 	sort.Slice(reservationList[:], func(i, j int) bool {

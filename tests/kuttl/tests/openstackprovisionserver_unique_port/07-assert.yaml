@@ -10,7 +10,7 @@ metadata:
   name: compute2-provisionserver
   namespace: openstack
 spec:
-  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:d63a22b930f0309a8bb160b452147e81ceb1d3fd3df2d78f0a30e763e1d6f0c4
+  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:87d58041da70f094e685511f86f8a83e9b2a67424fcf8cf2530ff071f566350b
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
   downloaderImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader@sha256:dadca151e8712eef8b206b69722c558b2aac035a4a3c52e705bf69c26d649567
   port: 6191
