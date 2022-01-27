@@ -1,0 +1,11 @@
+#
+# Check for:
+#
+# - VirtualMachines (1 should be removed)
+#
+
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-1
+  namespace: openstack

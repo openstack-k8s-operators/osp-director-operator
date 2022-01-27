@@ -15,4 +15,9 @@ commands:
       oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/controller/roleCount", "value":1}]'
     namespaced: true
   - command: |
-      sleep 5
+      sleep 20
+  - script: |
+      # Remove bindings of PV's in Released state
+      for i in $(oc get pv | egrep "Failed|Released" | awk {'print $1'}); do
+        oc patch pv $i --type='json' -p='[{"op": "remove", "path": "/spec/claimRef"}]'
+      done

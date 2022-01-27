@@ -18,4 +18,4 @@ oc delete secret -n openstack userpassword --ignore-not-found
 oc delete secret -n openstack osp-controlplane-ssh-keys osp-baremetalset-ssh-keys --ignore-not-found
 
 # Free any dead PVs
-for i in $(oc get pv | grep Failed | awk {'print $1'}); do oc patch pv $i --type='json' -p='[{"op": "remove", "path": "/spec/claimRef"}]'; done
+for i in $(oc get pv | egrep "Failed|Released" | awk {'print $1'}); do oc patch pv $i --type='json' -p='[{"op": "remove", "path": "/spec/claimRef"}]'; done

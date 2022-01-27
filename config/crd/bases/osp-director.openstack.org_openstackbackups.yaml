@@ -1955,28 +1955,6 @@ spec:
                                         type: object
                                       minItems: 1
                                       type: array
-                                    staticReservations:
-                                      additionalProperties:
-                                        description: OpenStackMACNodeReservation defines
-                                          the observed state of the MAC addresses
-                                          per PhysNetworks
-                                        properties:
-                                          deleted:
-                                            description: Deleted - node and therefore
-                                              MAC reservation are flagged as deleted
-                                            type: boolean
-                                          reservations:
-                                            additionalProperties:
-                                              type: string
-                                            description: Reservations MAC reservations
-                                              per PhysNetwork
-                                            type: object
-                                        required:
-                                        - reservations
-                                        type: object
-                                      description: StaticReservations, manual/static
-                                        MAC address reservations per node
-                                      type: object
                                   required:
                                   - physNetworks
                                   type: object
@@ -1989,6 +1967,27 @@ spec:
                                     in the role get deleted when the full node role
                                     is being deleted. (default: true)'
                                   type: boolean
+                                reservations:
+                                  additionalProperties:
+                                    description: OpenStackNetStaticNodeReservations
+                                      defines the static reservations of the nodes
+                                    properties:
+                                      ipReservations:
+                                        additionalProperties:
+                                          type: string
+                                        description: IPReservations, manual/static
+                                          IP address reservations per network
+                                        type: object
+                                      macReservations:
+                                        additionalProperties:
+                                          type: string
+                                        description: MACReservations, manual/static
+                                          MAC address reservations per physnet
+                                        type: object
+                                    type: object
+                                  description: Reservations, manual/static MAC/IP
+                                    address reservations per node
+                                  type: object
                               required:
                               - attachConfigurations
                               - networks

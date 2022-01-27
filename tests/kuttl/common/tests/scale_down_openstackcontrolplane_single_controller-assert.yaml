@@ -24,7 +24,7 @@ status:
       hostRef: controlplane
       hostname: controlplane
       ipaddresses:
-        ctlplane: 192.168.25.100/24
+        ctlplane: 192.168.25.10/24
         external: 10.0.0.10/24
         internal_api: 172.17.0.10/24
         storage: 172.18.0.10/24
@@ -68,12 +68,12 @@ status:
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:
-        ctlplane: 192.168.25.104/24
-        external: 10.0.0.14/24
-        internal_api: 172.17.0.14/24
-        storage: 172.18.0.13/24
-        storage_mgmt: 172.19.0.13/24
-        tenant: 172.20.0.12/24
+        ctlplane: 192.168.25.22/24
+        external: 10.0.0.22/24
+        internal_api: 172.17.0.22/24
+        storage: 172.18.0.22/24
+        storage_mgmt: 172.19.0.22/24
+        tenant: 172.20.0.22/24
       provisioningState: Provisioned
 ---
 apiVersion: kubevirt.io/v1alpha3
@@ -102,48 +102,48 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.100
+        ip: 192.168.25.10
         vip: true
     Controller:
       addToPredictableIPs: true
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 192.168.25.102
+        ip: 192.168.25.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 192.168.25.103
+        ip: 192.168.25.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 192.168.25.104
+        ip: 192.168.25.22
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.101
+        ip: 192.168.25.251
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 192.168.25.102
+      ip: 192.168.25.20
     controller-1:
       deleted: true
-      ip: 192.168.25.103
+      ip: 192.168.25.21
     controller-2:
       deleted: false
-      ip: 192.168.25.104
+      ip: 192.168.25.22
     controlplane:
       deleted: false
-      ip: 192.168.25.100
+      ip: 192.168.25.10
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.101
+      ip: 192.168.25.251
   reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -167,41 +167,41 @@ spec:
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 10.0.0.12
+        ip: 10.0.0.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 10.0.0.13
+        ip: 10.0.0.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 10.0.0.14
+        ip: 10.0.0.22
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 10.0.0.11
+        ip: 10.0.0.251
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 10.0.0.12
+      ip: 10.0.0.20
     controller-1:
       deleted: true
-      ip: 10.0.0.13
+      ip: 10.0.0.21
     controller-2:
       deleted: false
-      ip: 10.0.0.14
+      ip: 10.0.0.22
     controlplane:
       deleted: false
       ip: 10.0.0.10
     openstackclient-0:
       deleted: false
-      ip: 10.0.0.11
+      ip: 10.0.0.251
   reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -225,41 +225,41 @@ spec:
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 172.17.0.12
+        ip: 172.17.0.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 172.17.0.13
+        ip: 172.17.0.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 172.17.0.14
+        ip: 172.17.0.22
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 172.17.0.11
+        ip: 172.17.0.251
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 172.17.0.12
+      ip: 172.17.0.20
     controller-1:
       deleted: true
-      ip: 172.17.0.13
+      ip: 172.17.0.21
     controller-2:
       deleted: false
-      ip: 172.17.0.14
+      ip: 172.17.0.22
     controlplane:
       deleted: false
       ip: 172.17.0.10
     openstackclient-0:
       deleted: false
-      ip: 172.17.0.11
+      ip: 172.17.0.251
   reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -283,28 +283,28 @@ spec:
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 172.18.0.11
+        ip: 172.18.0.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 172.18.0.12
+        ip: 172.18.0.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 172.18.0.13
+        ip: 172.18.0.22
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 172.18.0.11
+      ip: 172.18.0.20
     controller-1:
       deleted: true
-      ip: 172.18.0.12
+      ip: 172.18.0.21
     controller-2:
       deleted: false
-      ip: 172.18.0.13
+      ip: 172.18.0.22
     controlplane:
       deleted: false
       ip: 172.18.0.10
@@ -331,28 +331,28 @@ spec:
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 172.19.0.11
+        ip: 172.19.0.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 172.19.0.12
+        ip: 172.19.0.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 172.19.0.13
+        ip: 172.19.0.22
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 172.19.0.11
+      ip: 172.19.0.20
     controller-1:
       deleted: true
-      ip: 172.19.0.12
+      ip: 172.19.0.21
     controller-2:
       deleted: false
-      ip: 172.19.0.13
+      ip: 172.19.0.22
     controlplane:
       deleted: false
       ip: 172.19.0.10
@@ -372,28 +372,28 @@ spec:
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 172.20.0.10
+        ip: 172.20.0.20
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 172.20.0.11
+        ip: 172.20.0.21
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 172.20.0.12
+        ip: 172.20.0.22
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 172.20.0.10
+      ip: 172.20.0.20
     controller-1:
       deleted: true
-      ip: 172.20.0.11
+      ip: 172.20.0.21
     controller-2:
       deleted: false
-      ip: 172.20.0.12
+      ip: 172.20.0.22
   reservedIpCount: 3
 ---
 apiVersion: osp-director.openstack.org/v1beta1

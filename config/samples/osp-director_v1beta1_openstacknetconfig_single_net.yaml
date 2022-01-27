@@ -32,3 +32,10 @@ spec:
         cidr: 192.168.25.0/24
         gateway: 192.168.25.1
       attachConfiguration: br-osp
+  reservations:
+    controlplane:
+      ipReservations:
+        ctlplane: 192.168.25.10
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 192.168.25.251
