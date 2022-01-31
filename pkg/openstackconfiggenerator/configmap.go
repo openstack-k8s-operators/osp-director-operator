@@ -350,6 +350,23 @@ func createNetworksMap(
 	return networksMap, networkMappingList, nil
 }
 
+// IsRoleIncluded - checks if the role exists in the ConfigGenerator Roles set
+func IsRoleIncluded(roleName string, instance *ospdirectorv1beta1.OpenStackConfigGenerator) bool {
+
+	if len(instance.Spec.Roles) == 0 {
+		return true
+	} else if roleName == "ControlPlane" {
+		return true
+	}
+	for _, r := range instance.Spec.Roles {
+		if roleName == r {
+			return true
+		}
+	}
+	return false
+
+}
+
 //
 // createRolesMap - create map with all roles
 //
@@ -366,119 +383,121 @@ func createRolesMap(
 
 	for _, osnet := range osNetList.Items {
 		for roleName, roleReservation := range osnet.Spec.RoleReservations {
-			//
-			// check if role is VM
-			//
-			isVMType, isTripleoRole, err := isVMRole(ctx, r, strings.ToLower(roleName), instance.Namespace)
-			if err != nil {
-				return err
-			}
-
-			if !roleReservation.AddToPredictableIPs {
-				continue
-			}
-
-			//
-			// create map of all roles with Name and Count
-			//
-			// the role is ControlPlane if its either vip or serviceVIP
-			isControlPlane := false
-			for _, res := range roleReservation.Reservations {
-				if res.VIP || res.ServiceVIP {
-					isControlPlane = true
+			if IsRoleIncluded(roleName, instance) {
+				//
+				// check if role is VM
+				//
+				isVMType, isTripleoRole, err := isVMRole(ctx, r, strings.ToLower(roleName), instance.Namespace)
+				if err != nil {
+					return err
 				}
-			}
 
-			if rolesMap[roleName] == nil {
-				rolesMap[roleName] = &RoleType{
-					Name:           roleName,
-					NameLower:      strings.ToLower(roleName),
-					Networks:       map[string]*roleNetworkType{},
-					Nodes:          map[string]*roleNodeType{},
-					IsVMType:       isVMType,
-					IsTripleoRole:  isTripleoRole,
-					IsControlPlane: isControlPlane,
+				if !roleReservation.AddToPredictableIPs {
+					continue
 				}
-			}
-
-			//
-			// add network details to role
-			//
-			netAddr, cidrSuffix, err := common.GetCidrParts(osnet.Spec.Cidr)
-			if err != nil {
-				return err
-			}
-
-			isIPv6 := false
-			if common.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
-				isIPv6 = true
-			}
-
-			nameLower := networkMappingList[osnet.Spec.NameLower]
-
-			rolesMap[roleName].Networks[osnet.Spec.NameLower] = &roleNetworkType{
-				Name:            osnet.Spec.Name,
-				NameLower:       nameLower,
-				Cidr:            osnet.Spec.Cidr,
-				CidrSuffix:      cidrSuffix,
-				NetAddr:         netAddr,
-				MTU:             osnet.Spec.MTU,
-				Vlan:            osnet.Spec.Vlan,
-				AllocationStart: osnet.Spec.AllocationStart,
-				AllocationEnd:   osnet.Spec.AllocationEnd,
-				Gateway:         osnet.Spec.Gateway,
-				VIP:             osnet.Spec.VIP,
-				IPv6:            isIPv6,
-				IsControlPlane:  networksMap[nameLower].IsControlPlane,
-			}
-
-			hostnameMapIndex := 0
-			for _, reservation := range roleReservation.Reservations {
 
 				//
-				// get OVNStaticBridgeMacMappings information from overcloudMACList
+				// create map of all roles with Name and Count
 				//
-				ovnStaticBridgeMappings := map[string]string{}
-				for _, macReservations := range osMACList.Items {
-					for node, macReservation := range macReservations.Status.MACReservations {
-						if node == reservation.Hostname {
-							for net, mac := range macReservation.Reservations {
-								ovnStaticBridgeMappings[net] = mac
+				// the role is ControlPlane if its either vip or serviceVIP
+				isControlPlane := false
+				for _, res := range roleReservation.Reservations {
+					if res.VIP || res.ServiceVIP {
+						isControlPlane = true
+					}
+				}
+
+				if rolesMap[roleName] == nil {
+					rolesMap[roleName] = &RoleType{
+						Name:           roleName,
+						NameLower:      strings.ToLower(roleName),
+						Networks:       map[string]*roleNetworkType{},
+						Nodes:          map[string]*roleNodeType{},
+						IsVMType:       isVMType,
+						IsTripleoRole:  isTripleoRole,
+						IsControlPlane: isControlPlane,
+					}
+				}
+
+				//
+				// add network details to role
+				//
+				netAddr, cidrSuffix, err := common.GetCidrParts(osnet.Spec.Cidr)
+				if err != nil {
+					return err
+				}
+
+				isIPv6 := false
+				if common.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
+					isIPv6 = true
+				}
+
+				nameLower := networkMappingList[osnet.Spec.NameLower]
+
+				rolesMap[roleName].Networks[osnet.Spec.NameLower] = &roleNetworkType{
+					Name:            osnet.Spec.Name,
+					NameLower:       nameLower,
+					Cidr:            osnet.Spec.Cidr,
+					CidrSuffix:      cidrSuffix,
+					NetAddr:         netAddr,
+					MTU:             osnet.Spec.MTU,
+					Vlan:            osnet.Spec.Vlan,
+					AllocationStart: osnet.Spec.AllocationStart,
+					AllocationEnd:   osnet.Spec.AllocationEnd,
+					Gateway:         osnet.Spec.Gateway,
+					VIP:             osnet.Spec.VIP,
+					IPv6:            isIPv6,
+					IsControlPlane:  networksMap[nameLower].IsControlPlane,
+				}
+
+				hostnameMapIndex := 0
+				for _, reservation := range roleReservation.Reservations {
+
+					//
+					// get OVNStaticBridgeMacMappings information from overcloudMACList
+					//
+					ovnStaticBridgeMappings := map[string]string{}
+					for _, macReservations := range osMACList.Items {
+						for node, macReservation := range macReservations.Status.MACReservations {
+							if node == reservation.Hostname {
+								for net, mac := range macReservation.Reservations {
+									ovnStaticBridgeMappings[net] = mac
+								}
 							}
 						}
 					}
-				}
 
-				//
-				// update rolesMap with reservations
-				//
-				if !reservation.Deleted {
-					if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
-						rolesMap[roleName].Nodes[reservation.Hostname] = &roleNodeType{
-							Index:                   hostnameMapIndex,
-							IPaddr:                  map[string]*roleIPType{},
-							Hostname:                reservation.Hostname,
-							VIP:                     reservation.VIP,
-							ServiceVIP:              reservation.ServiceVIP,
-							OVNStaticBridgeMappings: ovnStaticBridgeMappings,
+					//
+					// update rolesMap with reservations
+					//
+					if !reservation.Deleted {
+						if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
+							rolesMap[roleName].Nodes[reservation.Hostname] = &roleNodeType{
+								Index:                   hostnameMapIndex,
+								IPaddr:                  map[string]*roleIPType{},
+								Hostname:                reservation.Hostname,
+								VIP:                     reservation.VIP,
+								ServiceVIP:              reservation.ServiceVIP,
+								OVNStaticBridgeMappings: ovnStaticBridgeMappings,
+							}
 						}
-					}
 
-					uri := reservation.IP
-					if common.IsIPv6(net.ParseIP(reservation.IP)) {
-						// IP address with brackets in case of IPv6, e.g. [2001:DB8:24::15]
-						uri = fmt.Sprintf("[%s]", uri)
-					}
-					if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] == nil {
-						rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] = &roleIPType{
-							IPaddr:       reservation.IP,
-							IPAddrURI:    uri,
-							IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, cidrSuffix),
-							Network:      rolesMap[roleName].Networks[osnet.Spec.NameLower],
+						uri := reservation.IP
+						if common.IsIPv6(net.ParseIP(reservation.IP)) {
+							// IP address with brackets in case of IPv6, e.g. [2001:DB8:24::15]
+							uri = fmt.Sprintf("[%s]", uri)
 						}
-					}
+						if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] == nil {
+							rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] = &roleIPType{
+								IPaddr:       reservation.IP,
+								IPAddrURI:    uri,
+								IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, cidrSuffix),
+								Network:      rolesMap[roleName].Networks[osnet.Spec.NameLower],
+							}
+						}
 
-					hostnameMapIndex++
+						hostnameMapIndex++
+					}
 				}
 			}
 		}

@@ -667,9 +667,11 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 	}
 
 	for _, vmset := range vmsetList.Items {
-		if vmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned {
-			msg := fmt.Sprintf("Waiting on OpenStackVMset %s to be provisioned...", vmset.Name)
-			return msg, false, nil
+		if openstackconfiggenerator.IsRoleIncluded(vmset.Spec.RoleName, instance) {
+			if vmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.VMSetCondTypeProvisioned {
+				msg := fmt.Sprintf("Waiting on OpenStackVMset %s to be provisioned...", vmset.Name)
+				return msg, false, nil
+			}
 		}
 	}
 
@@ -686,10 +688,12 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 		//
 		// wait for all BMS be provisioned if baremetalhosts for the bms are requested
 		//
-		if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeProvisioned) &&
-			bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeEmpty) {
-			msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
-			return msg, false, nil
+		if openstackconfiggenerator.IsRoleIncluded(bmset.Spec.RoleName, instance) {
+			if bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeProvisioned) &&
+				bmset.Status.ProvisioningStatus.State != ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.BaremetalSetCondTypeEmpty) {
+				msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
+				return msg, false, nil
+			}
 		}
 	}
 

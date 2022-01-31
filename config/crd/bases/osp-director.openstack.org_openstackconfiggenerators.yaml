@@ -107,6 +107,12 @@ spec:
                   If enabled manual execution of the script to generate playbooks
                   will be required.
                 type: boolean
+              roles:
+                description: Optional. List of Roles used to limit which roles have
+                  playbooks generated. If missing all roles are included.
+                items:
+                  type: string
+                type: array
               tarballConfigMap:
                 description: Optional. the name of the config map containing custom
                   Heat template tarball which will be extracted prior to config generation
