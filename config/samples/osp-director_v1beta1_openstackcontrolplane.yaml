@@ -33,3 +33,5 @@ spec:
       roleCount: 0
       roleName: Controller
       storageClass: host-nfs-storageclass
+      storageAccessMode:  ReadWriteMany
+      storageVolumeMode: Filesystem

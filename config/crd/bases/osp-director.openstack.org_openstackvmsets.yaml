@@ -120,8 +120,30 @@ spec:
                 description: RoleName the name of the TripleO role this VM Spec is
                   associated with. If it is a TripleO role, the name must match.
                 type: string
+              storageAccessMode:
+                default: ReadWriteMany
+                description: StorageAccessMode - Virtual machines must have a persistent
+                  volume claim (PVC) with a shared ReadWriteMany (RWX) access mode
+                  to be live migrated.
+                enum:
+                - ReadWriteOnce
+                - ReadWriteMany
+                type: string
               storageClass:
                 description: StorageClass to be used for the disks
+                type: string
+              storageVolumeMode:
+                default: Filesystem
+                description: 'StorageVolumeMode - When using OpenShift Virtualization
+                  with OpenShift Container Platform Container Storage, specify RBD
+                  block mode persistent volume claims (PVCs) when creating virtual
+                  machine disks. With virtual machine disks, RBD block mode volumes
+                  are more efficient and provide better performance than Ceph FS or
+                  RBD filesystem-mode PVCs. To specify RBD block mode PVCs, use the
+                  ''ocs-storagecluster-ceph-rbd'' storage class and VolumeMode: Block.'
+                enum:
+                - Block
+                - Filesystem
                 type: string
               vmCount:
                 description: Number of VMs to configure, 1 or 3

@@ -847,6 +847,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			if vmRole.StorageClass != "" {
 				vmSet.Spec.StorageClass = vmRole.StorageClass
 			}
+			vmSet.Spec.StorageAccessMode = vmRole.StorageAccessMode
+			vmSet.Spec.StorageVolumeMode = vmRole.StorageVolumeMode
 			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecret.Name
 			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface

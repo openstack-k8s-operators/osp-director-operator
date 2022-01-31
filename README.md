@@ -482,7 +482,14 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
           memory: 12
           diskSize: 50
           baseImageVolumeName: openstack-base-img
+          # storageClass must support RWX to be able to live migrate VMs
           storageClass: host-nfs-storageclass
+          storageAccessMode: ReadWriteMany
+          # When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+          # specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+          # RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+          # To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
+          storageVolumeMode: Filesystem
     ```
 
     If you write the above YAML into a file called openstackcontrolplane.yaml you can create the OpenStackControlPlane via this command:
