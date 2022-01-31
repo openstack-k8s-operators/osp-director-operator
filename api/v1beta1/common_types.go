@@ -98,6 +98,8 @@ const (
 	CommonCondReasonNewHostnameError ConditionReason = "NewHostnameError"
 	// CommonCondReasonCRStatusUpdateError - error updating CR status
 	CommonCondReasonCRStatusUpdateError ConditionReason = "CRStatusUpdateError"
+	// CommonCondReasonNNCPError - NNCP error
+	CommonCondReasonNNCPError ConditionReason = "NNCPError"
 	// CommonCondReasonOSNetNotFound - openstack network not found
 	CommonCondReasonOSNetNotFound ConditionReason = "OSNetNotFound"
 	// CommonCondReasonOSNetError - openstack network error

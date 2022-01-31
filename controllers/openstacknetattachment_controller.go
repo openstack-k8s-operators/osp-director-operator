@@ -224,22 +224,35 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeSriov
 	} else {
 		//
-		// Create/update Bridge
+		// Set/update CR status from NNCP status
 		//
-		if err = r.createOrUpdateNodeNetworkConfigurationPolicy(instance, cond); err != nil {
-			cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeNetworkConfigurationPolicy", instance.Name)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
-
+		if err = r.getNodeNetworkConfigurationPolicyStatus(instance, cond); err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 
-		instance.Status.AttachType = ospdirectorv1beta1.AttachTypeBridge
+		//
+		// if no NNCP was found, or the NNCP is in SuccessfullyConfigured -> create or update nncp
+		//
+		if k8s_errors.IsNotFound(err) ||
+			cond.Reason == ospdirectorv1beta1.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured) {
+			//
+			// Create/update Bridge
+			//
+			if err := r.createOrUpdateNodeNetworkConfigurationPolicy(instance, cond); err != nil {
+				cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeNetworkConfigurationPolicy", instance.Name)
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
-		//
-		// Set/update CR status from NNCP status
-		//
-		if err := r.getNodeNetworkConfigurationPolicyStatus(instance, cond); err != nil {
-			return ctrl.Result{}, err
+				return ctrl.Result{}, err
+			}
+
+			instance.Status.AttachType = ospdirectorv1beta1.AttachTypeBridge
+		} else {
+			common.LogForObject(r, fmt.Sprintf("NNCP %s config in progress waiting to be in %s state",
+				instance.Status.BridgeName,
+				nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured),
+				instance)
+
+			return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 		}
 	}
 	return ctrl.Result{}, nil
@@ -297,10 +310,6 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
-
-	cond.Message = fmt.Sprintf("%s %s is configuring targeted node(s)", instance.Kind, instance.Name)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
-
 	//
 	// get bridgeName from desiredState
 	//
@@ -372,6 +381,10 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNNCPError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
 		return err
 	}
 
@@ -384,14 +397,14 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 	if networkConfigurationPolicy.Status.Conditions != nil && len(networkConfigurationPolicy.Status.Conditions) > 0 {
 		condition := nmstate.GetCurrentCondition(networkConfigurationPolicy.Status.Conditions)
 		if condition != nil {
-			if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionAvailable {
-				cond.Message = fmt.Sprintf("%s %s configured targeted node(s)", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured)
+			cond.Message = fmt.Sprintf("%s %s: %s", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name, condition.Message)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(condition.Reason)
+			cond.Type = ospdirectorv1beta1.ConditionType(condition.Type)
 
+			if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionAvailable &&
+				condition.Reason == nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured {
+				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured)
 			} else if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionDegraded {
-				cond.Message = fmt.Sprintf("underlying NNCP error: %s", condition.Message)
-				// set condition reason from nncp that we can react on CR cleanup
-				cond.Reason = ospdirectorv1beta1.ConditionReason(condition.Reason)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
 				return common.WrapErrorForObject(cond.Message, instance, err)
