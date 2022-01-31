@@ -10,6 +10,8 @@ spec:
   diskSize: 50
   baseImageVolumeName: controller-base-img
   storageClass: host-nfs-storageclass
+  storageAccessMode:  ReadWriteMany
+  storageVolumeMode: Filesystem
   #imageImportStorageClass: local #optional
   deploymentSSHSecret: osp-controlplane-ssh-keys
   isTripleoRole: true

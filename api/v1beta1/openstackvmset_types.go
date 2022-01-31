@@ -33,6 +33,20 @@ type OpenStackVMSetSpec struct {
 	DiskSize uint32 `json:"diskSize"`
 	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=ReadWriteMany
+	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
+	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
+	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
+	StorageAccessMode string `json:"storageAccessMode,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=Filesystem
+	// +kubebuilder:validation:Enum=Block;Filesystem
+	// StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+	// specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+	// RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+	// To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
+	StorageVolumeMode string `json:"storageVolumeMode"`
 	// BaseImageVolumeName used as the base volume for the VM
 	BaseImageVolumeName string `json:"baseImageVolumeName"`
 	// name of secret holding the stack-admin ssh keys
