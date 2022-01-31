@@ -842,7 +842,6 @@ oc patch osbms computehci --type=merge --patch '{"spec":{"count":1}}'
 ```
 
 As a result:
-* the corresponding OSIPSet for the node gets deleted
 * the IPreservation entry in the OSNet resources gets flagged as deleted
 
 ```bash
@@ -915,7 +914,6 @@ oc patch osctlplane overcloud --type=merge --patch '{"spec":{"virtualMachineRole
 ```
 
 As a result:
-* the corresponding OSIPSet for the node got deleted
 * the IPreservation entry in the OSNet resources is flagged as deleted
 
 This results in the following behavior
