@@ -111,9 +111,9 @@ const (
 	//
 
 	// NetAttachCondReasonCreated - osnetattachment created
-	NetAttachCondReasonCreated ConditionReason = "NetAttachCreated"
+	NetAttachCondReasonCreated ConditionReason = "OpenStackNetAttachCreated"
 	// NetAttachCondReasonCreateError - error creating osnetatt object
-	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachtCreateError"
+	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachCreateError"
 )
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
