@@ -7,10 +7,12 @@ exclude k8s.io/cluster-bootstrap v0.0.0
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-git/v5 v5.3.0
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/uuid v1.2.0
+	github.com/gophercloud/gophercloud v0.12.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
 	github.com/metal3-io/baremetal-operator v0.0.0-20201116105209-c72e2e0d8803
 	github.com/nmstate/kubernetes-nmstate v0.33.0

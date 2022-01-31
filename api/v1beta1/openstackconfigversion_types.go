@@ -22,8 +22,9 @@ import (
 
 // OpenStackConfigVersionSpec defines the desired state of OpenStackConfigVersion
 type OpenStackConfigVersionSpec struct {
-	Hash string `json:"hash"`
-	Diff string `json:"diff"`
+	Hash            string `json:"hash"`
+	Diff            string `json:"diff"`
+	CtlplaneExports string `json:"ctlplaneExports"`
 }
 
 // OpenStackConfigVersionStatus defines the observed state of OpenStackConfigVersion
