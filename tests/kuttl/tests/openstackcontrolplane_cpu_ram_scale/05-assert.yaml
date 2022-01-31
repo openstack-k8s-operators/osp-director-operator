@@ -1,0 +1,65 @@
+#
+# Check for:
+#
+# - 1 OpenStackControlPlane cores/memory changed to 8/22
+# - 1 OpenStackVMSet cores/memory changed to 8/22
+# - 1 VirtualMachines resource changed to
+# - ssh to the VM and verify the VM has 8 cores 22 GB RAM after restart
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  virtualMachineRoles:
+    controller:
+      cores: 8
+      memory: 22
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  cores: 8
+  memory: 22
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-0
+  namespace: openstack
+spec:
+  template:
+    spec:
+      domain:
+        cpu:
+          cores: 8
+        resources:
+          requests:
+            memory: 22Gi
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+  created: true
+  ready: true
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  - script: |
+      #!/usr/bin/env bash
+      sleep 10
+      CONTROLLER=$(oc get -n openstack osnet ctlplane -o json | jq .status.reservations | jq -r "to_entries | map(select(.key == \"controller-0\")) | unique[] | .value.ip")
+      CPUS=$(oc rsh -n openstack openstackclient ssh $CONTROLLER "grep processor /proc/cpuinfo | wc -l")
+      RAM=$(oc rsh -n openstack openstackclient ssh $CONTROLLER grep MemTotal /proc/meminfo | awk '{ print $2 }')
+      if [[ ( "${CPUS}" != 8 ) || ( "${RAM}" < 21500000 ) ]]; then
+        exit 1
+      fi

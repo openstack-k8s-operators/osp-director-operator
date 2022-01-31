@@ -21,6 +21,14 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: Cores
+      jsonPath: .spec.cores
+      name: Cores
+      type: integer
+    - description: RAM in GB
+      jsonPath: .spec.memory
+      name: RAM
+      type: integer
     - description: Desired
       jsonPath: .spec.vmCount
       name: Desired

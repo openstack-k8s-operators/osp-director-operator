@@ -1550,3 +1550,24 @@ openstackbackuprestore   restore    openstackbackupsave-1641928378   Restored   
 ```
 
 At this point, all resources contained with the chosen `OpenStackBackup` should be restored and fully provisioned.
+
+# Day2 Operations
+
+## Change resources on virtual machines
+
+If required it is possible to change CPU/RAM of an openstackvmset configured via the openstackcontrolplane. The workflow is as follows:
+
+* change/patch the virtualMachineRole within the virtualMachineRoles list of the openstackcontrolplane CR
+
+E.g. to change the controller virtualMachineRole to have 8 cores and 21GB of RAM:
+
+```bash
+oc patch -n openstack osctlplane overcloud --type='json' -p='[{"op": "add", "path": "/spec/virtualMachineRoles/controller/cores", "value": 8 }]'
+oc patch -n openstack osctlplane overcloud --type='json' -p='[{"op": "add", "path": "/spec/virtualMachineRoles/controller/memory", "value": 22 }]'
+
+oc get osvmset
+NAME         CORES   RAM   DESIRED   READY   STATUS        REASON
+controller   8       22    1         1       Provisioned   All requested VirtualMachines have been provisioned
+```
+
+* schedule a restart of the virtual machines, one at a time, to get the change reflected inside the virtual machine (**Important** it is required to power off/on the virtual machine). The recommended way is to do a graceful shutdown from inside the virtual machine and use `virtctl start <VM>` to power the VM back on.
