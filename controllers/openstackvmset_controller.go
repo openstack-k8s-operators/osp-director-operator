@@ -697,7 +697,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 ) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
-	fsMode := corev1.PersistentVolumeFilesystem
+	fsMode := corev1.PersistentVolumeMode(instance.Spec.StorageVolumeMode)
 	trueValue := true
 	terminationGracePeriodSeconds := int64(0)
 
@@ -726,7 +726,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		Spec: cdiv1.DataVolumeSpec{
 			PVC: &corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
-					"ReadWriteOnce",
+					corev1.PersistentVolumeAccessMode(instance.Spec.StorageAccessMode),
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
