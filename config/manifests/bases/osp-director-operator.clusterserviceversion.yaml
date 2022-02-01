@@ -70,6 +70,11 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackDeploy is the Schema for the openstackdeploys API
+      displayName: OpenStack Deploy
+      kind: OpenStackDeploy
+      name: openstackdeploys.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
         API
       displayName: OpenStack Ephemeral Heat
@@ -153,6 +158,8 @@ spec:
     name: osp-director-operator-downloader
   - image: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner:1.0
     name: osp-director-operator-provisioner
+  - image: quay.io/openstack-k8s-operators/osp-director-operator-agent:0.0.1
+    name: osp-director-operator-agent
   - image: controller:latest
     name: osp-director-operator
   - image: registry.redhat.io/rhel8/httpd-24:latest

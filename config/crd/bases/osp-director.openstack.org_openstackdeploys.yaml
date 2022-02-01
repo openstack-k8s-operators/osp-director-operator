@@ -1,0 +1,118 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackdeploys.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackDeploy
+    listKind: OpenStackDeployList
+    plural: openstackdeploys
+    shortNames:
+    - osdeploy
+    - osdeploys
+    - osdepl
+    singular: openstackdeploy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.currentState
+      name: Status
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackDeploy is the Schema for the openstackdeploys API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackDeploySpec defines the desired state of OpenStackDeploy
+            properties:
+              configGenerator:
+                description: ConfigGenerator name of the configGenerator
+                type: string
+              configVersion:
+                description: ConfigVersion the config version/git hash of the playbooks
+                  to deploy.
+                type: string
+              imageURL:
+                description: Name of the image
+                type: string
+            required:
+            - configGenerator
+            - imageURL
+            type: object
+          status:
+            description: OpenStackDeployStatus defines the observed state of OpenStackDeploy
+            properties:
+              conditions:
+                description: ConditionList - A list of conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              configVersion:
+                description: ConfigVersion hash that has been deployed
+                type: string
+              currentReason:
+                description: CurrentReason
+                type: string
+              currentState:
+                description: CurrentState
+                type: string
+            required:
+            - configVersion
+            - currentReason
+            - currentState
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -279,6 +279,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.OpenStackDeployReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackDeployReconciler"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackDeploy")
+		os.Exit(1)
+	}
+
 	if enableWebhooks {
 		//
 		// DEFAULTS
@@ -299,6 +309,9 @@ func main() {
 			DownloaderImageURL:        os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
 			ProvisioningAgentImageURL: os.Getenv("PROVISIONING_AGENT_IMAGE_URL_DEFAULT"),
 			ApacheImageURL:            os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
+		}
+		openstackDeployDefaults := ospdirectorv1beta1.OpenStackDeployDefaults{
+			AgentImageURL: os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
 		}
 
 		//
@@ -358,6 +371,11 @@ func main() {
 		}
 		if err = (&ospdirectorv1beta1.OpenStackBackupRequest{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBackupRequest")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackDeploy{}).SetupWebhookWithManager(mgr, openstackDeployDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackDeploy")
 			os.Exit(1)
 		}
 	}
