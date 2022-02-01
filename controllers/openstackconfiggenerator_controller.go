@@ -367,6 +367,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	// Define a new Job object
 	job := openstackconfiggenerator.ConfigJob(instance, configMapHash, OSPVersion)
 
+	var exports string
 	if instance.Status.ConfigHash != configMapHash {
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
 			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
@@ -507,6 +508,17 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
+		// obtain the cltplaneExports from Heat
+		exports, err = openstackconfiggenerator.CtlplaneExports("heat-"+instance.Name, r.Log)
+		if err != nil && !k8s_errors.IsNotFound(err) {
+			cond.Message = err.Error()
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonExportFailed)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	r.setConfigHash(instance, configMapHash)
@@ -539,7 +551,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, gerr
 	}
 
-	if err := r.syncConfigVersions(instance, configVersions); err != nil {
+	if err := r.syncConfigVersions(instance, configVersions, exports); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -572,7 +584,7 @@ func (r *OpenStackConfigGeneratorReconciler) getNormalizedStatus(status *ospdire
 	return s
 }
 
-func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackConfigGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion) error {
+func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackConfigGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion, exports string) error {
 
 	for _, version := range configVersions {
 
@@ -582,6 +594,8 @@ func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdir
 		if err == nil {
 			//FIXME(dprince): update existing?
 		} else if err != nil && k8s_errors.IsNotFound(err) {
+			// we only add the most recent export to new ConfigVersions (just created...)
+			version.Spec.CtlplaneExports = exports
 			r.Log.Info("Creating a ConfigVersion", "ConfigVersion.Namespace", instance.Namespace, "ConfigVersion.Name", version.Name)
 			err = r.Client.Create(context.TODO(), &version)
 			if err != nil {
@@ -841,7 +855,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	//
 	cm := []common.Template{
 		{
-			Name:               "tripleo-deploy-config",
+			Name:               "tripleo-deploy-config-" + instance.Name,
 			Namespace:          instance.Namespace,
 			Type:               common.TemplateTypeConfig,
 			InstanceType:       instance.Kind,
@@ -869,7 +883,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	//
 	// Read the tripleo-deploy-config CM
 	//
-	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config", instance.Namespace)
+	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-"+instance.Name, instance.Namespace)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)

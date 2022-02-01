@@ -104,6 +104,8 @@ const (
 	ConfigGeneratorCondReasonEphemeralHeatLaunch ConfigGeneratorReason = "EphemeralHeatLaunch"
 	// ConfigGeneratorCondReasonEphemeralHeatDelete - Ephemeral heat delete
 	ConfigGeneratorCondReasonEphemeralHeatDelete ConfigGeneratorReason = "EphemeralHeatDelete"
+	// ConfigGeneratorCondReasonExportFailed - Export of Ctlplane Heat Parameters Failed
+	ConfigGeneratorCondReasonExportFailed ConfigGeneratorReason = "CtlplaneExportFailed"
 	// ConfigGeneratorCondReasonJobCreated - created job
 	ConfigGeneratorCondReasonJobCreated ConfigGeneratorReason = "JobCreated"
 	// ConfigGeneratorCondReasonJobDelete - delete job

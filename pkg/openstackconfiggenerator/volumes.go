@@ -26,7 +26,7 @@ import (
 func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.VolumeMount {
 	retVolMounts := []corev1.VolumeMount{
 		{
-			Name:      "tripleo-deploy-config",
+			Name:      "tripleo-deploy-config-" + instance.Name,
 			MountPath: "/home/cloud-admin/config",
 			ReadOnly:  true,
 		},
@@ -74,12 +74,12 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.
 
 	retVolumes := []corev1.Volume{
 		{
-			Name: "tripleo-deploy-config",
+			Name: "tripleo-deploy-config-" + instance.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0644AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "tripleo-deploy-config",
+						Name: "tripleo-deploy-config-" + instance.Name,
 					},
 				},
 			},
