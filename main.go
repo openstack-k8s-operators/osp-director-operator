@@ -282,7 +282,7 @@ func main() {
 	if err = (&controllers.OpenStackDeployReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackBackupRequest"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackDeployReconciler"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackDeploy")
