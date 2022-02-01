@@ -20,8 +20,8 @@ import (
 
 var (
 	startCmd = &cobra.Command{
-		Use:   "start",
-		Short: "Starts Machine Config Daemon",
+		Use:   "provision-ip-discovery",
+		Short: "Start Provision IP Discovery Agent",
 		Long:  "",
 		Run:   runStartCmd,
 	}

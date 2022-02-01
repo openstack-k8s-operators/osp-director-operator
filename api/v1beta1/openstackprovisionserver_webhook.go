@@ -32,9 +32,9 @@ import (
 
 // OpenStackProvisionServerDefaults -
 type OpenStackProvisionServerDefaults struct {
-	DownloaderImageURL        string
-	ProvisioningAgentImageURL string
-	ApacheImageURL            string
+	DownloaderImageURL string
+	AgentImageURL      string
+	ApacheImageURL     string
 }
 
 var openstackProvisionServerDefaults OpenStackProvisionServerDefaults
@@ -109,8 +109,8 @@ func (r *OpenStackProvisionServer) Default() {
 	if r.Spec.DownloaderImageURL == "" {
 		r.Spec.DownloaderImageURL = openstackProvisionServerDefaults.DownloaderImageURL
 	}
-	if r.Spec.ProvisioningAgentImageURL == "" {
-		r.Spec.ProvisioningAgentImageURL = openstackProvisionServerDefaults.ProvisioningAgentImageURL
+	if r.Spec.AgentImageURL == "" {
+		r.Spec.AgentImageURL = openstackProvisionServerDefaults.AgentImageURL
 	}
 	if r.Spec.ApacheImageURL == "" {
 		r.Spec.ApacheImageURL = openstackProvisionServerDefaults.ApacheImageURL
