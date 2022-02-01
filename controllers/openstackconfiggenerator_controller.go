@@ -512,7 +512,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		exports, err = openstackconfiggenerator.CtlplaneExports("heat-"+instance.Name, r.Log)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			cond.Message = err.Error()
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonExportFailed)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -537,7 +537,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	err = r.Client.Delete(context.TODO(), heat)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonExportFailed)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 

@@ -24,12 +24,10 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
 )
 
-func exportNames() map[string]string {
-	return map[string]string{
-		"EndpointMap":  "EndpointMapOverride",
-		"HostsEntry":   "ExtraHostFileEntries",
-		"GlobalConfig": "GlobalConfigExtraMapData",
-	}
+var exportNames = map[string]string{
+	"EndpointMap":  "EndpointMapOverride",
+	"HostsEntry":   "ExtraHostFileEntries",
+	"GlobalConfig": "GlobalConfigExtraMapData",
 }
 
 // CtlplaneExports -
@@ -60,7 +58,7 @@ func CtlplaneExports(heatServiceName string, log logr.Logger) (string, error) {
 	// array of {output_key, output_value, description}
 	for _, m := range overcloudStack.Outputs {
 		outputKey := m["output_key"].(string)
-		if val, ok := exportNames()[outputKey]; ok {
+		if val, ok := exportNames[outputKey]; ok {
 			parameters[val] = m["output_value"]
 		}
 	}
