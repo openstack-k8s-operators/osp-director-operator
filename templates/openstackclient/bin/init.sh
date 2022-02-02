@@ -40,7 +40,6 @@ if [ -d /mnt/ssh-config ]; then
   mkdir -p /home/cloud-admin/.ssh
   cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
   chmod 600 /home/cloud-admin/.ssh/id_rsa
-  chmod 600 /home/cloud-admin/.ssh/git_id_rsa
   chown -R cloud-admin: /home/cloud-admin/.ssh
 fi
 
