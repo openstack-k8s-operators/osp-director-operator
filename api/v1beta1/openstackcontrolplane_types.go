@@ -50,8 +50,6 @@ type OpenStackControlPlaneSpec struct {
 	OpenStackClientStorageClass string `json:"openStackClientStorageClass,omitempty"`
 	// PasswordSecret used to e.g specify root pwd
 	PasswordSecret string `json:"passwordSecret,omitempty"`
-	// GitSecret used to pull playbooks into the openstackclient pod
-	GitSecret string `json:"gitSecret"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={ctlplane,external}

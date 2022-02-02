@@ -138,15 +138,6 @@ func GetInitVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.
 		}...)
 	}
 
-	if instance.Spec.GitSecret != "" {
-		volumes = append(volumes, corev1.VolumeMount{
-			Name:      "git-ssh-config",
-			MountPath: "/mnt/ssh-config/git_id_rsa",
-			SubPath:   "git_id_rsa",
-			ReadOnly:  true})
-
-	}
-
 	if instance.Spec.CAConfigMap != "" {
 		volumes = append(volumes, corev1.VolumeMount{
 			Name:      "ca-certs",
@@ -276,25 +267,6 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 						{
 							Key:  "config",
 							Path: "config",
-						},
-					},
-				},
-			},
-		})
-	}
-
-	if instance.Spec.GitSecret != "" {
-		volumes = append(volumes, corev1.Volume{
-			Name: "git-ssh-config", //ssh key for git repo access
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
-					SecretName:  instance.Spec.GitSecret,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "git_ssh_identity",
-							Path: "git_id_rsa",
-							Mode: &config0600AccessMode,
 						},
 					},
 				},

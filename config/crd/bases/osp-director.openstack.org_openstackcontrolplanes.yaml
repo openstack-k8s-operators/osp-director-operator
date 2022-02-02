@@ -83,10 +83,6 @@ spec:
                   to disable fencing if desired FIXME: Defaulting to false until Kubevirt
                   agent merged into RHEL overcloud image'
                 type: boolean
-              gitSecret:
-                description: GitSecret used to pull playbooks into the openstackclient
-                  pod
-                type: string
               idmSecret:
                 description: Idm secret used to register openstack client in IPA
                 type: string
@@ -211,7 +207,6 @@ spec:
                 type: object
             required:
             - enableFencing
-            - gitSecret
             - virtualMachineRoles
             type: object
           status:

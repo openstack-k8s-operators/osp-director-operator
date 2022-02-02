@@ -30,10 +30,6 @@ type OpenStackClientSpec struct {
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 
 	// +kubebuilder:validation:Optional
-	// GitSecret the name of the secret used to pull Ansible playbooks into the openstackclient pod. This secret should contain an entry for both 'git_url' and 'git_ssh_identity'
-	GitSecret string `json:"gitSecret"`
-
-	// +kubebuilder:validation:Optional
 	// cloudname passed in via OS_CLOUDNAME
 	CloudName string `json:"cloudName"`
 
