@@ -162,6 +162,7 @@ EOF_PYTHON
 
 # with OSP17 the rendered templates get into overcloud directory, create link to have the same dst
 output_dir=$(ls -dtr $HOME/ansible/tripleo-ansible-* | tail -1)
+rm -f $HOME/ansible/overcloud
 ln -sf ${output_dir} $HOME/ansible/overcloud
 
 {{- else }}
