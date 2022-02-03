@@ -295,6 +295,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	for hostname, hostStatus := range instance.Status.VIPStatus {
 		err = openstacknetconfig.WaitOnIPsCreated(
+			r,
 			instance,
 			cond,
 			osnetcfg,
@@ -303,7 +304,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			&hostStatus,
 		)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
 		hostStatus.HostRef = hostname
