@@ -335,6 +335,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	for hostname, hostStatus := range instance.Status.BaremetalHosts {
 		err = openstacknetconfig.WaitOnIPsCreated(
+			r,
 			instance,
 			cond,
 			osnetcfg,
@@ -343,7 +344,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 			&hostStatus,
 		)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
 		// Can not set (like in vmset, osclient, osctlplane) HostRef for BMS to hostname as it references the used BMH host

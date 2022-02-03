@@ -239,10 +239,34 @@ func GetAllIPReservations(
 	reservationList := newReservations
 
 	//
-	// add already dynamic created
+	// add reservation already stored in the osnet.Status.Reservations
 	//
-	for _, roleReservations := range osNet.Spec.RoleReservations {
-		reservationList = append(reservationList, roleReservations.Reservations...)
+	for hostname, res := range osNet.Status.Reservations {
+		reservationList = append(
+			reservationList,
+			ospdirectorv1beta1.IPReservation{
+				IP:       res.IP,
+				Hostname: hostname,
+				Deleted:  res.Deleted,
+			},
+		)
+
+	}
+
+	//
+	// add new staticReservations provided by the osnetcfg CR
+	//
+	for _, staticRes := range staticReservations {
+		found := false
+		for _, res := range reservationList {
+			if res.IP == staticRes.IP {
+				found = true
+				break
+			}
+		}
+		if !found {
+			reservationList = append(reservationList, staticRes)
+		}
 	}
 
 	//
