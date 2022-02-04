@@ -64,6 +64,11 @@ type OpenStackDeploySpec struct {
 
 	// ConfigGenerator name of the configGenerator
 	ConfigGenerator string `json:"configGenerator"`
+
+	Playbook string   `json:"playbook,omitempty"`
+	Limit    string   `json:"limit,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	SkipTags []string `json:"skipTags,omitempty"`
 }
 
 // OpenStackDeployStatus defines the observed state of OpenStackDeploy

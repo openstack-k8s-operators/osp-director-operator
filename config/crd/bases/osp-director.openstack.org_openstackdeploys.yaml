@@ -55,6 +55,18 @@ spec:
               imageURL:
                 description: Name of the image
                 type: string
+              limit:
+                type: string
+              playbook:
+                type: string
+              skipTags:
+                items:
+                  type: string
+                type: array
+              tags:
+                items:
+                  type: string
+                type: array
             required:
             - configGenerator
             - imageURL

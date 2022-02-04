@@ -22,10 +22,20 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 // DeployJob -
-func DeployJob(cr *ospdirectorv1beta1.OpenStackDeploy, openstackClientPod string, configVersion string, gitSecret string) *batchv1.Job {
+func DeployJob(
+	cr *ospdirectorv1beta1.OpenStackDeploy,
+	openstackClientPod string,
+	configVersion string,
+	gitSecret string,
+	playbook string,
+	limit string,
+	tags []string,
+	skipTags []string,
+) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)
@@ -93,6 +103,22 @@ func DeployJob(cr *ospdirectorv1beta1.OpenStackDeploy, openstackClientPod string
 								Key: "git_ssh_identity",
 							},
 						},
+					},
+					{
+						Name:  "PLAYBOOK",
+						Value: playbook,
+					},
+					{
+						Name:  "LIMIT",
+						Value: limit,
+					},
+					{
+						Name:  "TAGS",
+						Value: strings.Join(tags, ","),
+					},
+					{
+						Name:  "SKIP_TAGS",
+						Value: strings.Join(skipTags, ","),
 					},
 				},
 			},

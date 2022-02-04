@@ -82,17 +82,37 @@ play() {
 
   cd tripleo-ansible
 
+  PLAYBOOK_ARG=$WORKDIR/playbooks/tripleo-ansible/${PLAYBOOK:-"deploy_steps_playbook.yaml"}
+  LIMIT_ARG=""
+  if [ -n "${LIMIT:-}" ]; then
+    LIMIT_ARG="--limit ${LIMIT}"
+  fi
+  TAGS_ARG=""
+  if [ -n "${TAGS:-}" ]; then
+    TAGS_ARG="--tags ${TAGS}"
+  fi
   # TODO: for now disable opendev-validation
   # e.g. The check fails because the lvm2 package is not installed in openstackclient container image image
   # and ansible_facts include packages from undercloud.
+  SKIP_TAGS_ARG="--skip-tags opendev-validation"
+  if [ -n "${SKIP_TAGS:-}" ]; then
+    SKIP_TAGS_ARG+=",${SKIP_TAGS}"
+  fi
+
   ansible-playbook \
     -i $WORKDIR/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
-    --skip-tags opendev-validation \
-    $WORKDIR/playbooks/tripleo-ansible/deploy_steps_playbook.yaml
+    ${LIMIT_ARG} \
+    ${TAGS_ARG} \
+    ${SKIP_TAGS_ARG} \
+    ${PLAYBOOK_ARG}
 
-  mkdir -p ~/.config/openstack
-  sudo cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
-  sudo chown cloud-admin: ~/.config/openstack/clouds.yaml
+  # Only created when keystone is deployed
+  if [ -e /etc/openstack/clouds.yaml ]; then
+    mkdir -p ~/.config/openstack
+    sudo cp -f /etc/openstack/clouds.yaml ~/.config/openstack/clouds.yaml
+    sudo chown cloud-admin: ~/.config/openstack/clouds.yaml
+  fi
+
   popd > /dev/null
 
 }
