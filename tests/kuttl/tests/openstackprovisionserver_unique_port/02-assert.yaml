@@ -14,7 +14,7 @@ spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
   downloaderImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader@sha256:dadca151e8712eef8b206b69722c558b2aac035a4a3c52e705bf69c26d649567
   port: 8081
-  provisioningAgentImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner@sha256:77eab3a61ef569236a17575d5e4f1318d2ac13f164af8a2c94b732a4c50af579
+  agentImageUrl: quay.io/openstack-k8s-operators/osp-director-operator-agent:0.0.1
 status:
   conditions:
   - message: ProvisionServer goodprov has been provisioned

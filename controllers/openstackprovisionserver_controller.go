@@ -337,9 +337,8 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(instance *
 				},
 				{
 					Name:            "osp-provision-ip-discovery-agent",
-					Args:            []string{"start"},
-					Command:         []string{"provision-ip-discovery-agent"},
-					Image:           instance.Spec.ProvisioningAgentImageURL,
+					Command:         []string{"/osp-director-operator-agent", "provision-ip-discovery"},
+					Image:           instance.Spec.AgentImageURL,
 					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{

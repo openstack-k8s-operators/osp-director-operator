@@ -36,7 +36,7 @@ type OpenStackProvisionServerSpec struct {
 	// Container image URL for the main container that serves the downloaded RHEL qcow2 image (baseImageUrl)
 	ApacheImageURL string `json:"apacheImageUrl,omitempty"`
 	// Container image URL for the sidecar container that discovers provisioning network IPs
-	ProvisioningAgentImageURL string `json:"provisioningAgentImageUrl,omitempty"`
+	AgentImageURL string `json:"agentImageUrl,omitempty"`
 }
 
 // OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer

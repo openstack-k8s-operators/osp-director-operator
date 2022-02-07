@@ -23,8 +23,6 @@ spec:
           value: registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2
         - name: DOWNLOADER_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader:1.0
-        - name: PROVISIONING_AGENT_IMAGE_URL_DEFAULT
-          value: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner:1.0
         - name: AGENT_IMAGE_URL_DEFAULT
           value: quay.io/openstack-k8s-operators/osp-director-operator-agent:0.0.1
         - name: APACHE_IMAGE_URL_DEFAULT

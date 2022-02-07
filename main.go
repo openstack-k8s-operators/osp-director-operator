@@ -306,9 +306,9 @@ func main() {
 		}
 
 		provisionServerDefaults := ospdirectorv1beta1.OpenStackProvisionServerDefaults{
-			DownloaderImageURL:        os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
-			ProvisioningAgentImageURL: os.Getenv("PROVISIONING_AGENT_IMAGE_URL_DEFAULT"),
-			ApacheImageURL:            os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
+			DownloaderImageURL: os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
+			AgentImageURL:      os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
+			ApacheImageURL:     os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
 		}
 		openstackDeployDefaults := ospdirectorv1beta1.OpenStackDeployDefaults{
 			AgentImageURL: os.Getenv("AGENT_IMAGE_URL_DEFAULT"),

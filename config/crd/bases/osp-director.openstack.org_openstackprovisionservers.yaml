@@ -50,6 +50,10 @@ spec:
             description: OpenStackProvisionServerSpec defines the desired state of
               OpenStackProvisionServer
             properties:
+              agentImageUrl:
+                description: Container image URL for the sidecar container that discovers
+                  provisioning network IPs
+                type: string
               apacheImageUrl:
                 description: Container image URL for the main container that serves
                   the downloaded RHEL qcow2 image (baseImageUrl)
@@ -68,10 +72,6 @@ spec:
               port:
                 description: The port on which the Apache server should listen
                 type: integer
-              provisioningAgentImageUrl:
-                description: Container image URL for the sidecar container that discovers
-                  provisioning network IPs
-                type: string
             required:
             - baseImageUrl
             - port
