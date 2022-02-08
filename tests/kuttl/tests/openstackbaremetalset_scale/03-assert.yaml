@@ -27,9 +27,9 @@ spec:
 status:
   conditions:
   - message: OpenStackBaremetalSet compute OpenStackProvisionServer local image URL not yet available, requeuing and waiting 30 seconds                                                                                                                    
-    reason: Waiting
+    reason: OpenStackProvisionServerCondReasonProvisioning
     status: "False"
-    type: OpenStackProvisionServerNotReady
+    type: Waiting
   - message: No BaremetalHost have been requested
     reason: BaremetalHostCountZero
     status: "True"
