@@ -1,16 +1,20 @@
 #
 # Check for:
 #
-# - 1 OpenStackNetConfig
-# - 2 OpenStackNet
-# - 1 OpenStackVMset
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 1 OpenStackClient
+# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNetConfig
 metadata:
+  finalizers:
+  - openstacknetconfig.osp-director.openstack.org
   name: openstacknetconfig
   namespace: openstack
+spec:
 spec:
   attachConfigurations:
     br-osp:
@@ -62,36 +66,12 @@ spec:
       name: ctlplane
       vlan: 0
     vip: true
-  - isControlPlane: false
-    mtu: 1500
-    name: InternalApi
-    nameLower: internal_api
-    subnets:
-    - attachConfiguration: br-osp
-      ipv4:
-        allocationEnd: 172.17.0.250
-        allocationStart: 172.17.0.10
-        cidr: 172.17.0.0/24
-        gateway: ""
-        routes: []
-      ipv6:
-        allocationEnd: ""
-        allocationStart: ""
-        cidr: ""
-        gateway: ""
-        routes: []
-      name: internal_api
-      vlan: 20
-    vip: true
   ovnBridgeMacMappings:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
+  preserveReservations: false
   reservations:
-    controller-0:
-      ipReservations:
-        ctlplane: 192.168.25.40
-      macReservations: {}
     controller-1:
       ipReservations:
         ctlplane: 192.168.25.41
@@ -110,20 +90,12 @@ spec:
       macReservations: {}
 status:
   hosts:
-    controller-0:
-      ipaddresses: {}
-      ovnBridgeMacAdresses: {}
-    controller-1:
-      ipaddresses: {}
-      ovnBridgeMacAdresses: {}
     controller-2:
       ipaddresses:
         ctlplane: 192.168.25.42/24
-        internal_api: 172.17.0.11/24
     controlplane:
       ipaddresses:
         ctlplane: 192.168.25.10/24
-        internal_api: 172.17.0.10/24
       ovnBridgeMacAdresses: {}
     openstackclient-0:
       ipaddresses:
@@ -132,16 +104,137 @@ status:
   provisioningStatus:
     attachDesiredCount: 1
     attachReadyCount: 1
-    netDesiredCount: 2
-    netReadyCount: 2
+    netDesiredCount: 1
+    netReadyCount: 1
     physNetDesiredCount: 1
     physNetReadyCount: 1
     reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
 ---
 apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  domainName: ostest.test.metalkube.org
+  enableFencing: false
+  gitSecret: git-secret
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  openStackClientNetworks:
+  - ctlplane
+  openStackClientStorageClass: host-nfs-storageclass
+  openStackRelease: "16.2"
+  passwordSecret: userpassword
+  virtualMachineRoles:
+    controller:
+      baseImageVolumeName: controller-base-img
+      cores: 6
+      ctlplaneInterface: enp2s0
+      diskSize: 50
+      isTripleoRole: true
+      memory: 20
+      networks:
+      - ctlplane
+      roleCount: 1
+      roleName: Controller
+      storageClass: host-nfs-storageclass
+status:
+  ospVersion: "16.2"
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+  vipStatus:
+    controlplane:
+      annotatedForDeletion: false
+      hostRef: controlplane
+      hostname: controlplane
+      ipaddresses:
+        ctlplane: 192.168.25.10/24
+      provisioningState: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  domainName: ostest.test.metalkube.org
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  passwordSecret: userpassword
+  roleName: Controller
+  storageClass: host-nfs-storageclass
+  vmCount: 1
+status:
+  baseImageDVReady: true
+  provisioningStatus:
+    readyCount: 1
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
+  vmHosts:
+    controller-2:
+      annotatedForDeletion: false
+      ctlplaneIP: ""
+      hostRef: controller-2
+      hostname: controller-2
+      ipaddresses:
+        ctlplane: 192.168.25.42/24
+      networkDataSecretName: controller-controller-2-networkdata
+      provisioningState: Provisioned
+      userDataSecretName: controller-cloudinit
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackClient
+metadata:
+  name: openstackclient
+  namespace: openstack
+spec:
+  cloudName: overcloud
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  domainName: ostest.test.metalkube.org
+  gitSecret: git-secret
+  imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  networks:
+  - ctlplane
+  runGID: 42401
+  runUID: 42401
+  storageClass: host-nfs-storageclass
+status:
+  netStatus:
+    openstackclient-0:
+      annotatedForDeletion: false
+      hostRef: openstackclient-0
+      hostname: openstackclient-0
+      ipaddresses:
+        ctlplane: 192.168.25.251/24
+      provisioningState: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
 metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "true"
+    ooo-netname: Control
+    ooo-netname-lower: ctlplane
+    ooo-subnetname: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
   name: ctlplane
   namespace: openstack
 spec:
@@ -192,89 +285,3 @@ status:
       deleted: false
       ip: 192.168.25.251
   reservedIpCount: 3
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  name: internalapi
-  namespace: openstack
-spec:
-  allocationEnd: 172.17.0.250
-  allocationStart: 172.17.0.10
-  attachConfiguration: br-osp
-  cidr: 172.17.0.0/24
-  domainName: internalapi.localdomain
-  gateway: ""
-  mtu: 1500
-  name: InternalApi
-  nameLower: internal_api
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controlplane
-        ip: 172.17.0.10
-        vip: true
-    Controller:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controller-2
-        ip: 172.17.0.11
-        vip: false
-  routes: []
-  vip: true
-  vlan: 20
-status:
-  currentState: Configured
-  reservations:
-    controller-2:
-      deleted: false
-      ip: 172.17.0.11
-    controlplane:
-      deleted: false
-      ip: 172.17.0.10
-  reservedIpCount: 2
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackVMSet
-metadata:
-  name: controller
-  namespace: openstack
-spec:
-  baseImageVolumeName: controller-base-img
-  cores: 6
-  ctlplaneInterface: enp2s0
-  deploymentSSHSecret: osp-controlplane-ssh-keys
-  diskSize: 50
-  domainName: ostest.test.metalkube.org
-  isTripleoRole: true
-  memory: 20
-  networks:
-  - ctlplane
-  - internal_api
-  passwordSecret: userpassword
-  roleName: Controller
-  storageAccessMode: ReadWriteMany
-  storageClass: host-nfs-storageclass
-  storageVolumeMode: Filesystem
-  vmCount: 1
-status:
-  baseImageDVReady: true
-  provisioningStatus:
-    readyCount: 1
-    reason: All requested VirtualMachines have been provisioned
-    state: Provisioned
-  vmHosts:
-    controller-2:
-      annotatedForDeletion: false
-      ctlplaneIP: ""
-      hostRef: controller-2
-      hostname: controller-2
-      ipaddresses:
-        ctlplane: 192.168.25.42/24
-        internal_api: 172.17.0.11/24
-      networkDataSecretName: controller-controller-2-networkdata
-      provisioningState: Provisioned
-      userDataSecretName: controller-cloudinit

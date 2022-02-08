@@ -181,7 +181,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
         - macPrefix: fa:16:3b
           name: datacentre2
         # optional: configure static mapping for the networks per nodes. If there is none, a random gets created
-      staticReservations:
+      reservations:
         controller-0:
           macReservations:
             datacentre: fa:16:3a:aa:aa:aa

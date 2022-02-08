@@ -70,12 +70,8 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
-  preserveReservations: false
+  preserveReservations: true
   reservations:
-    controller-0:
-      ipReservations:
-        ctlplane: 192.168.25.40
-      macReservations: {}
     controller-1:
       ipReservations:
         ctlplane: 192.168.25.41
@@ -262,6 +258,14 @@ spec:
     Controller:
       addToPredictableIPs: true
       reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 192.168.25.100
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 192.168.25.41
+        vip: false
       - deleted: false
         hostname: controller-2
         ip: 192.168.25.42
@@ -279,6 +283,12 @@ spec:
 status:
   currentState: Configured
   reservations:
+    controller-0:
+      deleted: true
+      ip: 192.168.25.100
+    controller-1:
+      deleted: true
+      ip: 192.168.25.41
     controller-2:
       deleted: false
       ip: 192.168.25.42
@@ -288,4 +298,4 @@ status:
     openstackclient-0:
       deleted: false
       ip: 192.168.25.251
-  reservedIpCount: 3
+  reservedIpCount: 5

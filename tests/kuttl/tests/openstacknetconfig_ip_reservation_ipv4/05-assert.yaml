@@ -72,11 +72,11 @@ spec:
       name: datacentre
   preserveReservations: true
   reservations:
-    controller-0:
-      ipReservations:
-        ctlplane: 192.168.25.40
-      macReservations: {}
     controller-1:
+      ipReservations:
+        ctlplane: 192.168.25.41
+      macReservations: {}
+    controller-2:
       ipReservations: {}
       macReservations: {}
     openstackclient-0:
@@ -88,6 +88,19 @@ spec:
         ctlplane: 192.168.25.10
       macReservations: {}
 status:
+status:
+  hosts:
+    controller-0:
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+    controlplane:
+      ipaddresses:
+        ctlplane: 192.168.25.10/24
+      ovnBridgeMacAdresses: {}
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 192.168.25.251/24
+      ovnBridgeMacAdresses: {}
   provisioningStatus:
     attachDesiredCount: 1
     attachReadyCount: 1
