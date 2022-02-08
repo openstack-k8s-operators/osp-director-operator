@@ -159,7 +159,7 @@ const (
 	// VMSetCondReasonVirtualMachineDeprovisioning - virtual machine deprovisioning in progress
 	VMSetCondReasonVirtualMachineDeprovisioning ConditionReason = "VirtualMachineDeprovisioning"
 	// VMSetCondReasonVirtualMachineProvisioned - virtual machines provisioned
-	VMSetCondReasonVirtualMachineProvisioned ConditionReason = "VirtualMachineProvisioed"
+	VMSetCondReasonVirtualMachineProvisioned ConditionReason = "VirtualMachineProvisioned"
 	// VMSetCondReasonVirtualMachineCountZero - no virtual machines requested
 	VMSetCondReasonVirtualMachineCountZero ConditionReason = "VirtualMachineCountZero"
 

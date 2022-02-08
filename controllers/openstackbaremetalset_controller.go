@@ -540,8 +540,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			timeout := 10
 
 			cond.Message = fmt.Sprintf("%s %s not found reconcile again in %d seconds", provisionServer.Kind, instance.Spec.ProvisionServerName, timeout)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotFound)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotFound)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 			return provisionServer, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 		} else if err != nil {
@@ -563,8 +563,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			timeout,
 		)
 
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioning)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioning)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 		return provisionServer, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 	}
@@ -1381,8 +1381,8 @@ func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
 			cond.Message = fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretNotFound)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretMissing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 			return passwordSecret, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 		}
