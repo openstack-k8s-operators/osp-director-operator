@@ -1,6 +1,7 @@
 #
 # Check for:
 #
+# - 1 OpenStackNetConfig
 # - 1 OpenStackControlPlane
 # - 1 OpenStackVMSet
 # - 1 OpenStackClient
@@ -72,10 +73,6 @@ spec:
       name: datacentre
   preserveReservations: true
   reservations:
-    controller-0:
-      ipReservations:
-        ctlplane: 192.168.25.40
-      macReservations: {}
     controller-1:
       ipReservations:
         ctlplane: 192.168.25.41
@@ -94,6 +91,12 @@ spec:
       macReservations: {}
 status:
   hosts:
+    controller-0:
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+    controller-1:
+      ipaddresses:
+        ctlplane: 192.168.25.41/24
     controller-2:
       ipaddresses:
         ctlplane: 192.168.25.42/24
@@ -140,7 +143,7 @@ spec:
       memory: 20
       networks:
       - ctlplane
-      roleCount: 1
+      roleCount: 3
       roleName: Controller
       storageClass: host-nfs-storageclass
 status:
@@ -181,14 +184,34 @@ spec:
   passwordSecret: userpassword
   roleName: Controller
   storageClass: host-nfs-storageclass
-  vmCount: 1
+  vmCount: 3
 status:
   baseImageDVReady: true
   provisioningStatus:
-    readyCount: 1
+    readyCount: 3
     reason: All requested VirtualMachines have been provisioned
     state: Provisioned
   vmHosts:
+    controller-0:
+      annotatedForDeletion: false
+      ctlplaneIP: ""
+      hostRef: controller-0
+      hostname: controller-0
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+      networkDataSecretName: controller-controller-0-networkdata
+      provisioningState: Provisioned
+      userDataSecretName: controller-cloudinit
+    controller-1:
+      annotatedForDeletion: false
+      ctlplaneIP: ""
+      hostRef: controller-1
+      hostname: controller-1
+      ipaddresses:
+        ctlplane: 192.168.25.41/24
+      networkDataSecretName: controller-controller-1-networkdata
+      provisioningState: Provisioned
+      userDataSecretName: controller-cloudinit
     controller-2:
       annotatedForDeletion: false
       ctlplaneIP: ""
@@ -262,11 +285,11 @@ spec:
     Controller:
       addToPredictableIPs: true
       reservations:
-      - deleted: true
+      - deleted: false
         hostname: controller-0
-        ip: 192.168.25.40
+        ip: 192.168.25.100
         vip: false
-      - deleted: true
+      - deleted: false
         hostname: controller-1
         ip: 192.168.25.41
         vip: false
@@ -288,10 +311,10 @@ status:
   currentState: Configured
   reservations:
     controller-0:
-      deleted: true
-      ip: 192.168.25.40
+      deleted: false
+      ip: 192.168.25.100
     controller-1:
-      deleted: true
+      deleted: false
       ip: 192.168.25.41
     controller-2:
       deleted: false

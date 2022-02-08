@@ -3,6 +3,7 @@ Q: WHAT IS TESTED HERE?
 A: 
 - create osnetcfg with no static reservation
 - add static reservation for controller-0
+- scale up to 1 controller ctlplane
 - Run webhook fail tests
   - add static reservation with wrong IP format
   - add static reservation with dupe IP

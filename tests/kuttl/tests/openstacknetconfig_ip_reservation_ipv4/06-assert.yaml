@@ -69,10 +69,6 @@ spec:
       name: datacentre
   preserveReservations: true
   reservations:
-    controller-0:
-      ipReservations:
-        ctlplane: 192.168.25.40
-      macReservations: {}
     controller-1:
       ipReservations:
         ctlplane: 192.168.25.41

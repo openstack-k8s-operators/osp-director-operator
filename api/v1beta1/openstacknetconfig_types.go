@@ -104,12 +104,6 @@ type Network struct {
 	// +kubebuilder:default=true
 	// VIP create virtual ip on the network
 	VIP bool `json:"vip"`
-
-	/*
-		// +kubebuilder:validation:Optional
-		// StaticReservations, manual/static IP address reservations per node
-		StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
-	*/
 }
 
 // OpenStackNetConfigSpec defines the desired state of OpenStackNetConfig
