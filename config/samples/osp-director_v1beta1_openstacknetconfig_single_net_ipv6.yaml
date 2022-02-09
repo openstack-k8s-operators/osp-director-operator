@@ -1,0 +1,41 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: openstacknetconfig
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            name: br-osp
+            state: up
+            type: linux-bridge
+            mtu: 1500
+  networks:
+  - name: Control
+    nameLower: ctlplane
+    subnets:
+    - name: ctlplane
+      ipv6:
+        cidr: 2001:db8:fd00:2000::/64
+        gateway: 2001:db8:fd00:2000::1
+        allocationEnd: 2001:db8:fd00:2000:ffff:ffff:ffff:fffe
+        allocationStart: 2001:db8:fd00:2000::100
+      attachConfiguration: br-osp
+  reservations:
+    controlplane:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::10
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::251

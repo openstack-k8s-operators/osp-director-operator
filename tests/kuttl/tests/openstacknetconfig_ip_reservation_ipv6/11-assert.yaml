@@ -1,0 +1,276 @@
+#
+# Check for:
+#
+# - 1 OpenStackNetConfig
+# - 2 OpenStackNet
+# - 1 OpenStackVMset
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            mtu: 1500
+            name: br-osp
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+  dnsServers: []
+  domainName: localdomain
+  networks:
+  - isControlPlane: true
+    mtu: 1500
+    name: Control
+    nameLower: ctlplane
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+        routes: []
+      ipv6:
+        allocationEnd: 2001:db8:fd00:2000:ffff:ffff:ffff:fffe
+        allocationStart: 2001:db8:fd00:2000::100
+        cidr: 2001:db8:fd00:2000::/64
+        gateway: 2001:db8:fd00:2000::1
+        routes: []
+      name: ctlplane
+      vlan: 0
+    vip: true
+  - isControlPlane: false
+    mtu: 1500
+    name: InternalApi
+    nameLower: internal_api
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+        routes: []
+      ipv6:
+        allocationEnd: fd00:fd00:fd00:2000:ffff:ffff:ffff:fffe
+        allocationStart: fd00:fd00:fd00:2000::10
+        cidr: fd00:fd00:fd00:2000::/64
+        gateway: ""
+        routes: []
+      name: internal_api
+      vlan: 20
+    vip: true
+  ovnBridgeMacMappings:
+    physNetworks:
+    - macPrefix: fa:16:3a
+      name: datacentre
+  reservations:
+    controller-1:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::41
+      macReservations: {}
+    controller-2:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::42
+      macReservations: {}
+    controlplane:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::10
+      macReservations: {}
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::251
+      macReservations: {}
+status:
+  hosts:
+    controller-0:
+      ipaddresses: {}
+      ovnBridgeMacAdresses: {}
+    controller-1:
+      ipaddresses: {}
+      ovnBridgeMacAdresses: {}
+    controller-2:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::42/64
+        internal_api: fd00:fd00:fd00:2000::11/64
+    controlplane:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::10/64
+        internal_api: fd00:fd00:fd00:2000::10/64
+      ovnBridgeMacAdresses: {}
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::251/64
+      ovnBridgeMacAdresses: {}
+  provisioningStatus:
+    attachDesiredCount: 1
+    attachReadyCount: 1
+    netDesiredCount: 2
+    netReadyCount: 2
+    physNetDesiredCount: 1
+    physNetReadyCount: 1
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
+    state: Configured
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 2001:db8:fd00:2000:ffff:ffff:ffff:fffe
+  allocationStart: 2001:db8:fd00:2000::100
+  attachConfiguration: br-osp
+  cidr: 2001:db8:fd00:2000::/64
+  domainName: ctlplane.localdomain
+  gateway: 2001:db8:fd00:2000::1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 2001:db8:fd00:2000::10
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-2
+        ip: 2001:db8:fd00:2000::42
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 2001:db8:fd00:2000::251
+        vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservations:
+    controller-2:
+      deleted: false
+      ip: 2001:db8:fd00:2000::42
+    controlplane:
+      deleted: false
+      ip: 2001:db8:fd00:2000::10
+    openstackclient-0:
+      deleted: false
+      ip: 2001:db8:fd00:2000::251
+  reservedIpCount: 3
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  name: internalapi
+  namespace: openstack
+spec:
+  allocationEnd: fd00:fd00:fd00:2000:ffff:ffff:ffff:fffe
+  allocationStart: fd00:fd00:fd00:2000::10
+  attachConfiguration: br-osp
+  cidr: fd00:fd00:fd00:2000::/64
+  domainName: internalapi.localdomain
+  gateway: ""
+  mtu: 1500
+  name: InternalApi
+  nameLower: internal_api
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: fd00:fd00:fd00:2000::10
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-2
+        ip: fd00:fd00:fd00:2000::11
+        vip: false
+  routes: []
+  vip: true
+  vlan: 20
+status:
+  currentState: Configured
+  reservations:
+    controller-2:
+      deleted: false
+      ip: fd00:fd00:fd00:2000::11
+    controlplane:
+      deleted: false
+      ip: fd00:fd00:fd00:2000::10
+  reservedIpCount: 2
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  domainName: ostest.test.metalkube.org
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  - internal_api
+  passwordSecret: userpassword
+  roleName: Controller
+  storageAccessMode: ReadWriteMany
+  storageClass: host-nfs-storageclass
+  storageVolumeMode: Filesystem
+  vmCount: 1
+status:
+  baseImageDVReady: true
+  provisioningStatus:
+    readyCount: 1
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
+  vmHosts:
+    controller-2:
+      annotatedForDeletion: false
+      ctlplaneIP: ""
+      hostRef: controller-2
+      hostname: controller-2
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::42/64
+        internal_api: fd00:fd00:fd00:2000::11/64
+      networkDataSecretName: controller-controller-2-networkdata
+      provisioningState: Provisioned
+      userDataSecretName: controller-cloudinit
