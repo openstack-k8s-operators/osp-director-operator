@@ -1,0 +1,109 @@
+#
+# Check for:
+#
+# - 1 OpenstackNetworkConfig
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  finalizers:
+  - openstacknetconfig.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            mtu: 1500
+            name: br-osp
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+  dnsServers: []
+  domainName: localdomain
+  networks:
+  - isControlPlane: true
+    mtu: 1500
+    name: Control
+    nameLower: ctlplane
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+        routes: []
+      ipv6:
+        allocationEnd: 2001:db8:fd00:2000:ffff:ffff:ffff:fffe
+        allocationStart: 2001:db8:fd00:2000::100
+        cidr: 2001:db8:fd00:2000::/64
+        gateway: 2001:db8:fd00:2000::1
+        routes: []
+      name: ctlplane
+      vlan: 0
+    vip: true
+  ovnBridgeMacMappings:
+    physNetworks:
+    - macPrefix: fa:16:3a
+      name: datacentre
+  preserveReservations: true
+  reservations:
+    controller-1:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::41
+      macReservations: {}
+    controller-2:
+      ipReservations:
+        ctlplane:  2001:db8:fd00:2000::42
+      macReservations: {}
+    controlplane:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::10
+      macReservations: {}
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 2001:db8:fd00:2000::251
+      macReservations: {}
+status:
+  hosts:
+    controller-0:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::101/64
+    controlplane:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::10/64
+      ovnBridgeMacAdresses: {}
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::251/64
+      ovnBridgeMacAdresses: {}
+  provisioningStatus:
+    attachDesiredCount: 1
+    attachReadyCount: 1
+    netDesiredCount: 1
+    netReadyCount: 1
+    physNetDesiredCount: 1
+    physNetReadyCount: 1
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
+    state: Configured
