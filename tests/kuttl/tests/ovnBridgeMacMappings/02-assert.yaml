@@ -71,12 +71,20 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
-    staticReservations:
-      controller-0:
-        deleted: false
-        reservations:
-          datacentre: fa:16:3a:aa:aa:aa
   preserveReservations: true
+  reservations:
+    controller-0:
+      ipReservations: {}
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:aa
+    controlplane:
+      ipReservations:
+        ctlplane: 192.168.25.10
+      macReservations: {}
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 192.168.25.251
+      macReservations: {}
 status:
   provisioningStatus:
     attachDesiredCount: 1

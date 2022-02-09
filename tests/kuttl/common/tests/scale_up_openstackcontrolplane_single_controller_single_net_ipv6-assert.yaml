@@ -1,0 +1,131 @@
+#
+# Check for:
+#
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 1 VirtualMachines
+# - 1 OpenStackNets (IP reservations)
+# - 1 OpenStackMACAddress
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  virtualMachineRoles:
+    controller:
+      roleCount: 1
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  domainName: ostest.test.metalkube.org
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  passwordSecret: userpassword
+  roleName: Controller
+  storageClass: host-nfs-storageclass
+  vmCount: 1
+status:
+  baseImageDVReady: true
+  provisioningStatus:
+    readyCount: 1
+    reason: All requested VirtualMachines have been provisioned
+    state: Provisioned
+  vmHosts:
+    controller-0:
+      annotatedForDeletion: false
+      hostRef: controller-0
+      hostname: controller-0
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::101/64
+      provisioningState: Provisioned
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: controller-0
+  namespace: openstack
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+  created: true
+  ready: true
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+spec:
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 2001:db8:fd00:2000::10
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controller-0
+        ip: 2001:db8:fd00:2000::101
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 2001:db8:fd00:2000::251
+        vip: false
+status:
+  currentState: Configured
+  reservations:
+    controller-0:
+      deleted: false
+      ip: 2001:db8:fd00:2000::101
+    controlplane:
+      deleted: false
+      ip: 2001:db8:fd00:2000::10
+    openstackclient-0:
+      deleted: false
+      ip: 2001:db8:fd00:2000::251
+  reservedIpCount: 3
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  roleReservations:
+    Controller:
+      reservations:
+        controller-0:
+          deleted: false
+status:
+  reservedMACCount: 1

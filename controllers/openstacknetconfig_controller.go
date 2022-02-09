@@ -396,7 +396,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	LabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 		labels := o.GetLabels()
 		//
-		// verify object has ConfigGeneratorInputLabel
+		// verify object has OpenStackNetConfigReconcileLabel
 		//
 		reconcileCR, ok := labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]
 		if !ok {
@@ -1060,8 +1060,8 @@ func (r *OpenStackNetConfigReconciler) ensureMACReservation(
 			//
 			// if there is a static reservation configured for the physnet AND is not "", use it
 			//
-			if res, ok := instance.Spec.OVNBridgeMacMappings.StaticReservations[hostname]; ok && res.Reservations[physnet.Name] != "" {
-				nodeMACReservation.Reservations[physnet.Name] = res.Reservations[physnet.Name]
+			if res, ok := instance.Spec.Reservations[hostname]; ok && res.MACReservations[physnet.Name] != "" {
+				nodeMACReservation.Reservations[physnet.Name] = res.MACReservations[physnet.Name]
 				continue
 			}
 
@@ -1119,8 +1119,16 @@ func (r *OpenStackNetConfigReconciler) allMACReservations(
 ) map[string]ospdirectorv1beta1.OpenStackMACNodeReservation {
 	reservations := macAddress.Status.MACReservations
 
-	for node, res := range instance.Spec.OVNBridgeMacMappings.StaticReservations {
-		reservations[node] = res
+	for node, res := range instance.Spec.Reservations {
+		if currentRes, ok := reservations[node]; !ok {
+			reservations[node] = ospdirectorv1beta1.OpenStackMACNodeReservation{
+				Reservations: res.MACReservations,
+			}
+		} else {
+			currentRes.Reservations = res.MACReservations
+			reservations[node] = currentRes
+
+		}
 	}
 
 	return reservations
@@ -1326,6 +1334,29 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 
 	reservations := []ospdirectorv1beta1.IPReservation{}
 
+	//
+	// Get static IP reservations from CR for this osNet
+	//
+	currentReservations := osNet.Status.Reservations
+	staticReservations := []ospdirectorv1beta1.IPReservation{}
+	if len(instance.Spec.Reservations) > 0 {
+		for nodeName, nodeReservations := range instance.Spec.Reservations {
+			if nodeNetIPReservation, ok := nodeReservations.IPReservations[osNet.Spec.NameLower]; ok {
+				currentReservations[nodeName] = ospdirectorv1beta1.NodeIPReservation{
+					IP: nodeNetIPReservation,
+				}
+				staticReservations = append(
+					staticReservations,
+					ospdirectorv1beta1.IPReservation{
+						IP:       nodeNetIPReservation,
+						Hostname: nodeName,
+						VIP:      vip,
+					},
+				)
+			}
+		}
+	}
+
 	_, cidr, err := net.ParseCIDR(osNet.Spec.Cidr)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to parse CIDR %s", osNet.Spec.Cidr)
@@ -1346,7 +1377,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 		//
 		// Do we already have a reservation for this hostname on the network?
 		//
-		if reservation, ok := osNet.Status.Reservations[hostname]; ok {
+		if reservation, ok := currentReservations[hostname]; ok {
 
 			nodeReservation := ospdirectorv1beta1.IPReservation{
 				IP:       reservation.IP,
@@ -1385,11 +1416,15 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 				RangeStart:      start,
 				RangeEnd:        end,
 				RoleReservelist: reservations,
-				Reservelist:     openstacknet.GetAllIPReservations(osNet, reservations),
-				ExcludeRanges:   []string{},
-				Hostname:        hostname,
-				VIP:             vip,
-				Deleted:         false,
+				Reservelist: openstacknet.GetAllIPReservations(
+					osNet,
+					reservations,
+					staticReservations,
+				),
+				ExcludeRanges: []string{},
+				Hostname:      hostname,
+				VIP:           vip,
+				Deleted:       false,
 			})
 			if err != nil {
 				cond.Message = fmt.Sprintf("Failed to do ip reservation: %s", hostname)

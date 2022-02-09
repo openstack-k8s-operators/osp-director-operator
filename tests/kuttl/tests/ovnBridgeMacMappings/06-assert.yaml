@@ -1,6 +1,7 @@
 #
 # Check for:
 #
+# - 1 OpenStackNetConfig
 # - 1 OpenStackControlPlane
 # - 1 OpenStackVMSet
 # - 1 OpenStackClient
@@ -9,6 +10,126 @@
 # - 1 OpenStackMACAddress
 #
 
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  finalizers:
+  - openstacknetconfig.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            mtu: 1500
+            name: br-osp
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
+  dnsServers: []
+  domainName: localdomain
+  networks:
+  - isControlPlane: true
+    mtu: 1500
+    name: Control
+    nameLower: ctlplane
+    subnets:
+    - attachConfiguration: br-osp
+      ipv4:
+        allocationEnd: 192.168.25.250
+        allocationStart: 192.168.25.100
+        cidr: 192.168.25.0/24
+        gateway: 192.168.25.1
+        routes: []
+      ipv6:
+        allocationEnd: ""
+        allocationStart: ""
+        cidr: ""
+        gateway: ""
+        routes: []
+      name: ctlplane
+      vlan: 0
+    vip: true
+  ovnBridgeMacMappings:
+    physNetworks:
+    - macPrefix: fa:16:3a
+      name: datacentre
+  preserveReservations: true
+  reservations:
+    controller-0:
+      ipReservations: {}
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:aa
+    controller-1:
+      ipReservations: {}
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:bb
+    controller-2:
+      ipReservations: {}
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:cc
+    controlplane:
+      ipReservations:
+        ctlplane: 192.168.25.10
+      macReservations: {}
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 192.168.25.251
+      macReservations: {}
+status:
+  hosts:
+    controller-0:
+      ipaddresses:
+        ctlplane: 192.168.25.100/24
+      ovnBridgeMacAdresses:
+        datacentre: fa:16:3a:aa:aa:aa
+    controller-1:
+      ipaddresses:
+        ctlplane: 192.168.25.101/24
+      ovnBridgeMacAdresses:
+        datacentre: fa:16:3a:aa:aa:bb
+    controller-2:
+      ipaddresses:
+        ctlplane: 192.168.25.102/24
+      ovnBridgeMacAdresses:
+        datacentre: fa:16:3a:aa:aa:cc
+    controlplane:
+      ipaddresses:
+        ctlplane: 192.168.25.10/24
+      ovnBridgeMacAdresses: {}
+    openstackclient-0:
+      ipaddresses:
+        ctlplane: 192.168.25.251/24
+      ovnBridgeMacAdresses: {}
+  provisioningStatus:
+    attachDesiredCount: 1
+    attachReadyCount: 1
+    netDesiredCount: 1
+    netReadyCount: 1
+    physNetDesiredCount: 1
+    physNetReadyCount: 1
+    reason: OpenStackNetConfig openstacknetconfig all resources configured
+    state: Configured
+---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackControlPlane
 metadata:
@@ -51,7 +172,7 @@ status:
       hostRef: controlplane
       hostname: controlplane
       ipaddresses:
-        ctlplane: 192.168.25.100/24
+        ctlplane: 192.168.25.10/24
       provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -89,7 +210,7 @@ status:
       hostRef: controller-0
       hostname: controller-0
       ipaddresses:
-        ctlplane: 192.168.25.102/24
+        ctlplane: 192.168.25.100/24
       networkDataSecretName: controller-controller-0-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
@@ -99,7 +220,7 @@ status:
       hostRef: controller-1
       hostname: controller-1
       ipaddresses:
-        ctlplane: 192.168.25.103/24
+        ctlplane: 192.168.25.101/24
       networkDataSecretName: controller-controller-1-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
@@ -109,7 +230,7 @@ status:
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:
-        ctlplane: 192.168.25.104/24
+        ctlplane: 192.168.25.102/24
       networkDataSecretName: controller-controller-2-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
@@ -137,7 +258,7 @@ status:
       hostRef: openstackclient-0
       hostname: openstackclient-0
       ipaddresses:
-        ctlplane: 192.168.25.101/24
+        ctlplane: 192.168.25.251/24
       provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -171,29 +292,29 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.100
+        ip: 192.168.25.10
         vip: true
     Controller:
       addToPredictableIPs: true
       reservations:
       - deleted: false
         hostname: controller-0
-        ip: 192.168.25.102
+        ip: 192.168.25.100
         vip: false
       - deleted: false
         hostname: controller-1
-        ip: 192.168.25.103
+        ip: 192.168.25.101
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 192.168.25.104
+        ip: 192.168.25.102
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.101
+        ip: 192.168.25.251
         vip: false
   routes: []
   vip: true
@@ -203,19 +324,19 @@ status:
   reservations:
     controller-0:
       deleted: false
-      ip: 192.168.25.102
+      ip: 192.168.25.100
     controller-1:
       deleted: false
-      ip: 192.168.25.103
+      ip: 192.168.25.101
     controller-2:
       deleted: false
-      ip: 192.168.25.104
+      ip: 192.168.25.102
     controlplane:
       deleted: false
-      ip: 192.168.25.100
+      ip: 192.168.25.10
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.101
+      ip: 192.168.25.251
   reservedIpCount: 5
 ---
 apiVersion: v1

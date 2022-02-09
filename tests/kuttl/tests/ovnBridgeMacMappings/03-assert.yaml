@@ -16,7 +16,6 @@ metadata:
   name: openstacknetconfig
   namespace: openstack
 spec:
-spec:
   attachConfigurations:
     br-osp:
       nodeNetworkConfigurationPolicy:
@@ -71,15 +70,23 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
-    staticReservations:
-      controller-0:
-        deleted: false
-        reservations:
-          datacentre: fa:16:3a:aa:aa:aa
-      controller-1:
-        deleted: false
-        reservations: {}
   preserveReservations: true
+  reservations:
+    controller-0:
+      ipReservations: {}
+      macReservations:
+        datacentre: fa:16:3a:aa:aa:aa
+    controller-1:
+      ipReservations: {}
+      macReservations: {}
+    openstackclient-0:
+      ipReservations:
+        ctlplane: 192.168.25.251
+      macReservations: {}
+    controlplane:
+      ipReservations:
+        ctlplane: 192.168.25.10
+      macReservations: {}
 status:
   provisioningStatus:
     attachDesiredCount: 1

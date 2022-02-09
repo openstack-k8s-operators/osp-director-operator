@@ -181,15 +181,15 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
         - macPrefix: fa:16:3b
           name: datacentre2
         # optional: configure static mapping for the networks per nodes. If there is none, a random gets created
-        staticReservations:
-          controller-0:
-            reservations:
-              datacentre: fa:16:3a:aa:aa:aa
-              datacentre2: fa:16:3b:aa:aa:aa
-          compute-0:
-            reservations:
-              datacentre: fa:16:3a:bb:bb:bb
-              datacentre2: fa:16:3b:bb:bb:bb
+      reservations:
+        controller-0:
+          macReservations:
+            datacentre: fa:16:3a:aa:aa:aa
+            datacentre2: fa:16:3b:aa:aa:aa
+        compute-0:
+          macReservations:
+            datacentre: fa:16:3a:bb:bb:bb
+            datacentre2: fa:16:3b:bb:bb:bb
     ```
 
     If you write the above YAML into a file called networkconfig.yaml you can create the OpenStackNetConfig via this command:
@@ -1557,7 +1557,7 @@ If required it is possible to change CPU/RAM of an openstackvmset configured via
 
 * change/patch the virtualMachineRole within the virtualMachineRoles list of the openstackcontrolplane CR
 
-E.g. to change the controller virtualMachineRole to have 8 cores and 21GB of RAM:
+E.g. to change the controller virtualMachineRole to have 8 cores and 22GB of RAM:
 
 ```bash
 oc patch -n openstack osctlplane overcloud --type='json' -p='[{"op": "add", "path": "/spec/virtualMachineRoles/controller/cores", "value": 8 }]'
