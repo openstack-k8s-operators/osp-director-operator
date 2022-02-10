@@ -69,17 +69,29 @@ const (
 	ProvisionServerCondTypeError ProvisioningState = "Error"
 
 	//
-	// condition reasones
+	// condition reasons
 	//
 
 	// OpenStackProvisionServerCondReasonListError - osprovserver list objects error
 	OpenStackProvisionServerCondReasonListError ConditionReason = "OpenStackProvisionServerListError"
+	// OpenStackProvisionServerCondReasonGetError - osprovserver list objects error
+	OpenStackProvisionServerCondReasonGetError ConditionReason = "OpenStackProvisionServerCondReasonGetError"
 	// OpenStackProvisionServerCondReasonNotFound - osprovserver object not found
 	OpenStackProvisionServerCondReasonNotFound ConditionReason = "OpenStackProvisionServerNotFound"
-	// OpenStackProvisionServerCondReasonNotReady - osprovserver not yet ready
-	OpenStackProvisionServerCondReasonNotReady ConditionReason = "OpenStackProvisionServerNotReady"
-	// OpenStackProvisionServerCondReasonReady - osprovserver ready
-	OpenStackProvisionServerCondReasonReady ConditionReason = "OpenStackProvisionServerReady"
+	// OpenStackProvisionServerCondReasonInterfaceAcquireError - osprovserver hit an error while finding provisioning interface name
+	OpenStackProvisionServerCondReasonInterfaceAcquireError ConditionReason = "OpenStackProvisionServerCondReasonInterfaceAcquireError"
+	// OpenStackProvisionServerCondReasonInterfaceNotFound - osprovserver unable to find provisioning interface name
+	OpenStackProvisionServerCondReasonInterfaceNotFound ConditionReason = "OpenStackProvisionServerCondReasonInterfaceNotFound"
+	// OpenStackProvisionServerCondReasonDeploymentError - osprovserver associated deployment failed to create/update
+	OpenStackProvisionServerCondReasonDeploymentError ConditionReason = "OpenStackProvisionServerCondReasonDeploymentError"
+	// OpenStackProvisionServerCondReasonDeploymentCreated - osprovserver associated deployment has been created/update
+	OpenStackProvisionServerCondReasonDeploymentCreated ConditionReason = "OpenStackProvisionServerCondReasonDeploymentCreated"
+	// OpenStackProvisionServerCondReasonProvisioning - osprovserver associated pod is provisioning
+	OpenStackProvisionServerCondReasonProvisioning ConditionReason = "OpenStackProvisionServerCondReasonProvisioning"
+	// OpenStackProvisionServerCondReasonLocalImageURLParseError - osprovserver was unable to parse its received local image URL
+	OpenStackProvisionServerCondReasonLocalImageURLParseError ConditionReason = "OpenStackProvisionServerCondReasonLocalImageURLParseError"
+	// OpenStackProvisionServerCondReasonProvisioned - osprovserver associated pod is provisioned
+	OpenStackProvisionServerCondReasonProvisioned ConditionReason = "OpenStackProvisionServerCondReasonProvisioned"
 	// OpenStackProvisionServerCondReasonCreateError - error creating osprov server object
 	OpenStackProvisionServerCondReasonCreateError ConditionReason = "OpenStackProvisionServerCreateError"
 	// OpenStackProvisionServerCondReasonCreated - osprov server object created

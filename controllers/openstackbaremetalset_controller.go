@@ -564,7 +564,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 		)
 
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotReady)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioning)
 
 		return provisionServer, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 	}
@@ -577,7 +577,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 	)
 
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeProvisioning)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonReady)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioned)
 
 	return provisionServer, ctrl.Result{}, nil
 }
