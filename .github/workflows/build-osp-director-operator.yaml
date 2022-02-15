@@ -95,8 +95,8 @@ jobs:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-  build-osp-director-provisioner:
-    name: Build provision-ip-discovery-agent image using buildah
+  build-osp-director-agent:
+    name: Build agent image using buildah
     runs-on: ubuntu-latest
 
     steps:
@@ -112,25 +112,25 @@ jobs:
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
     - name: Buildah Action
-      id: build-osp-director-provisioner
+      id: build-osp-director-agent
       uses: redhat-actions/buildah-build@v2
       with:
-        image: provision-ip-discovery-agent
+        image: osp-director-operator-agent
         tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
-          ./Dockerfile.provision-ip-discovery-agent
+          ./Dockerfile.agent
 
-    - name: Push provision-ip-discovery-agent To ${{ env.imageregistry }}
+    - name: Push agent To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: ${{ steps.build-osp-director-provisioner.outputs.image }}
-        tags: ${{ steps.build-osp-director-provisioner.outputs.tags }}
+        image: ${{ steps.build-osp-director-agent.outputs.image }}
+        tags: ${{ steps.build-osp-director-agent.outputs.tags }}
         registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
   build-osp-director-operator-bundle:
-    needs: [ build-osp-director-operator, build-osp-director-downloader, build-osp-director-provisioner ]
+    needs: [ build-osp-director-operator, build-osp-director-downloader, build-osp-director-agent ]
     name: osp-director-operator-bundle
     runs-on: ubuntu-latest
 
@@ -168,6 +168,7 @@ jobs:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
         BASE_IMAGE: osp-director-operator
+        AGENT_IMAGE: osp-director-operator-agent
 
     - name: Get branch name
       id: branch-name

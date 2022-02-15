@@ -29,7 +29,7 @@ ARG DEST_ROOT=/dest-root
 ARG WHAT=osp-director-operator-agent
 
 ARG IMAGE_COMPONENT="osp-director-operator-agent-container"
-ARG IMAGE_NAME="osp-director-agent-container-container"
+ARG IMAGE_NAME="osp-director-operator-agent"
 ARG IMAGE_VERSION="1.0.0"
 ARG IMAGE_SUMMARY="OSP-Director-Operator-agent"
 ARG IMAGE_DESC="This is agent that works with the OSP Director Operator"

@@ -7,6 +7,7 @@ echo "Creating OSP director operator bundle"
 cd ..
 echo "${GITHUB_SHA}"
 echo "${BASE_IMAGE}"
+echo "${AGENT_IMAGE}"
 skopeo --version
 
 echo "Calculating image digest for docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA}"
@@ -29,8 +30,16 @@ echo "Applying work-arounds..."
 sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' "${CLUSTER_BUNDLE_FILE}"
 sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' "${CLUSTER_BUNDLE_FILE}"
 
+# Replace AGENT_IMAGE_URL_DEFAULT in CSV
+
+AGENT_IMG_BASE="${REGISTRY}/${AGENT_IMAGE}"
+AGENT_IMG="${AGENT_IMG_BASE}:${GITHUB_SHA}"
+AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@"$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
+sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+
 echo "Bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
+grep -A1 "${CLUSTER_BUNDLE_FILE}" IMAGE_URL_DEFAULT
 
 # We do not want to exit here. Some images are in different registries, so
 # error will be reported to the console.
@@ -52,6 +61,9 @@ for csv_image in $(cat "${CLUSTER_BUNDLE_FILE}" | grep "image:" | sed -e "s|.*im
   if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
     echo "$base_image:$tag_image becomes $OPERATOR_IMG_WITH_DIGEST"
     sed -e "s|$base_image:$tag_image|$OPERATOR_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+  elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
+    echo "$base_image:$tag_image becomes $AGENT_IMG_WITH_DIGEST"
+    sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
   else
     digest_image=$(skopeo inspect docker://${base_image}${delimeter}${tag_image} | jq '.Digest' -r)
 
@@ -65,3 +77,4 @@ done
 
 echo "Resulting bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
+grep -A1 "${CLUSTER_BUNDLE_FILE}" IMAGE_URL_DEFAULT
