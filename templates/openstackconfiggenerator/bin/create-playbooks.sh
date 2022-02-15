@@ -39,10 +39,6 @@ mkdir -p $TEMPLATES_DIR
 
 cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 
-# temporary fix for multiple subnets - https://review.opendev.org/c/openstack/tripleo-heat-templates/+/817966
-sed -i "s/network\.subnets\[subnet\]\[routes\]/network\.subnets\[subnet\]\['routes'\]/" $TEMPLATES_DIR/environments/network-environment.j2.yaml
-sed -i "s/network\.subnets\[subnet\]\[routes_ipv6\]/network\.subnets\[subnet\]\['routes_ipv6'\]/" $TEMPLATES_DIR/environments/network-environment.j2.yaml
-
 # copy to editable dir config-tmp
 rm -Rf $HOME/config-tmp
 mkdir -p $HOME/config-tmp
