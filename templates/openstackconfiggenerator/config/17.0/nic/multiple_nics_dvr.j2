@@ -13,7 +13,7 @@ network_config:
     next_hop: 10.0.2.1
 - type: interface
   name: nic2
-{{` -
+{{- `
   mtu: {{ ctlplane_mtu }}
   dns_servers: {{ ctlplane_dns_nameservers }}
   domain: {{ dns_search_domains }}
@@ -66,4 +66,4 @@ network_config:
     primary: true
 {% endif %}
 {% endfor %}
-- `}}
+` -}}

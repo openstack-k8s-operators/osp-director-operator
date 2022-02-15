@@ -39,7 +39,7 @@ parameter_defaults:
   # VM NIC templates
 {{- range $roleid, $role := .RolesMap }}
 {{- if and $role.IsVMType $role.IsTripleoRole }}
-  {{ $role.Name }}NetworkConfigTemplate: '/home/cloud-admin/playbooks/tarball/multiple_nics_dvr.j2'
+  {{ $role.Name }}NetworkConfigTemplate: '{{ $role.NameLower }}-nic-template.j2'
 {{- end }}
 {{- end }}
   #

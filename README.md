@@ -366,7 +366,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     - [Net-Config environment](https://github.com/openstack-k8s-operators/osp-director-dev-tools/blob/master/ansible/templates/osp/tripleo_deploy/vlan/network-environment.yaml.j2)
 
-        **NOTE**: Net-Config files for the virtual machines get created by the operator, but can be overwritten using the "Tarball Config Map". To overwrite a pre-rendered Net-Config use the `<role lowercase>-nic-template.yaml` file name.
+        **NOTE**: Net-Config files for the virtual machines get created by the operator, but can be overwritten using the "Tarball Config Map". To overwrite a pre-rendered Net-Config use the `<role lowercase>-nic-template.yaml` file name for OSP16.2 or `<role lowercase>-nic-template.j2` for OSP17.
         **NOTE**: network interface names for the VMs created by the OpenStackVMSet controller are alphabetically ordered by the network names assigned to the VM role. An exception is the `default` network interface of the VM pod which will always is the first interface. The resulting inteface section of the virtual machine definition will look like this:
 
         ```yaml
