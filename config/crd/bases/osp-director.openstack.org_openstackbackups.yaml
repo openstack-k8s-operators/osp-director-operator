@@ -608,7 +608,9 @@ spec:
                                     client in IPA
                                   type: string
                                 imageURL:
-                                  description: Name of the image
+                                  description: OpenStackClient image. If missing will
+                                    be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT
+                                    in the CSV for the OSP Director Operator.
                                   type: string
                                 networks:
                                   default:
@@ -632,7 +634,6 @@ spec:
                                     persistent storage
                                   type: string
                               required:
-                              - imageURL
                               - networks
                               - runGID
                               - runUID

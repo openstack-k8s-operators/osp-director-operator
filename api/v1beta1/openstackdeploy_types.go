@@ -54,10 +54,27 @@ const (
 	DeployCondReasonConfigCreate ConditionReason = "ConfigCreate"
 )
 
+// OpenStackAnsibleSettingsSpec defines advanced ansible-playbook settings
+type OpenStackAnsibleSettingsSpec struct {
+	// +kubebuilder:validation:Optional
+	// Playbook to run from config-download
+	Playbook string `json:"playbook,omitempty"`
+	// +kubebuilder:validation:Optional
+	// Ansible inventory limit
+	Limit string `json:"limit,omitempty"`
+	// +kubebuilder:validation:Optional
+	// Ansible include tags
+	Tags []string `json:"tags,omitempty"`
+	// +kubebuilder:validation:Optional
+	// Ansible exclude tags
+	SkipTags []string `json:"skipTags,omitempty"`
+}
+
 // OpenStackDeploySpec defines the desired state of OpenStackDeploy
 type OpenStackDeploySpec struct {
+	// +kubebuilder:validation:Optional
 	// Name of the image
-	ImageURL string `json:"imageURL"`
+	ImageURL string `json:"imageURL,omitempty"`
 
 	// ConfigVersion the config version/git hash of the playbooks to deploy.
 	ConfigVersion string `json:"configVersion,omitempty"`
@@ -65,10 +82,15 @@ type OpenStackDeploySpec struct {
 	// ConfigGenerator name of the configGenerator
 	ConfigGenerator string `json:"configGenerator"`
 
-	Playbook string   `json:"playbook,omitempty"`
-	Limit    string   `json:"limit,omitempty"`
-	Tags     []string `json:"tags,omitempty"`
-	SkipTags []string `json:"skipTags,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=deploy
+	// +kubebuilder:validation:Enum={"deploy","update","externalUpdate"}
+	// Deployment mode
+	Mode string `json:"mode,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// Advanced ansible-playbook setting
+	AnsibleSettings OpenStackAnsibleSettingsSpec `json:"ansibleSettings,omitempty"`
 }
 
 // OpenStackDeployStatus defines the observed state of OpenStackDeploy

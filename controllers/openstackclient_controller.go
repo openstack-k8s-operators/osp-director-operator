@@ -81,7 +81,7 @@ func (r *OpenStackClientReconciler) GetScheme() *runtime.Scheme {
 func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackclient", req.NamespacedName)
 
-	// Fetch the controller VM instance
+	// Fetch the OpenStackClient instance
 	instance := &ospdirectorv1beta1.OpenStackClient{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {

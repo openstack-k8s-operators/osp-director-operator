@@ -45,6 +45,26 @@ spec:
           spec:
             description: OpenStackDeploySpec defines the desired state of OpenStackDeploy
             properties:
+              ansibleSettings:
+                description: Advanced ansible-playbook setting
+                properties:
+                  limit:
+                    description: Ansible inventory limit
+                    type: string
+                  playbook:
+                    description: Playbook to run from config-download
+                    type: string
+                  skipTags:
+                    description: Ansible exclude tags
+                    items:
+                      type: string
+                    type: array
+                  tags:
+                    description: Ansible include tags
+                    items:
+                      type: string
+                    type: array
+                type: object
               configGenerator:
                 description: ConfigGenerator name of the configGenerator
                 type: string
@@ -55,21 +75,16 @@ spec:
               imageURL:
                 description: Name of the image
                 type: string
-              limit:
+              mode:
+                default: deploy
+                description: Deployment mode
+                enum:
+                - deploy
+                - update
+                - externalUpdate
                 type: string
-              playbook:
-                type: string
-              skipTags:
-                items:
-                  type: string
-                type: array
-              tags:
-                items:
-                  type: string
-                type: array
             required:
             - configGenerator
-            - imageURL
             type: object
           status:
             description: OpenStackDeployStatus defines the observed state of OpenStackDeploy

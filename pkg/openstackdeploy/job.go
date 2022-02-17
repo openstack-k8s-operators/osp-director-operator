@@ -31,10 +31,7 @@ func DeployJob(
 	openstackClientPod string,
 	configVersion string,
 	gitSecret string,
-	playbook string,
-	limit string,
-	tags []string,
-	skipTags []string,
+	ansibleSettings *ospdirectorv1beta1.OpenStackAnsibleSettingsSpec,
 ) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
@@ -106,19 +103,19 @@ func DeployJob(
 					},
 					{
 						Name:  "PLAYBOOK",
-						Value: playbook,
+						Value: ansibleSettings.Playbook,
 					},
 					{
 						Name:  "LIMIT",
-						Value: limit,
+						Value: ansibleSettings.Limit,
 					},
 					{
 						Name:  "TAGS",
-						Value: strings.Join(tags, ","),
+						Value: strings.Join(ansibleSettings.Tags, ","),
 					},
 					{
 						Name:  "SKIP_TAGS",
-						Value: strings.Join(skipTags, ","),
+						Value: strings.Join(ansibleSettings.SkipTags, ","),
 					},
 				},
 			},

@@ -294,8 +294,11 @@ func main() {
 		// DEFAULTS
 		//
 		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
-			OpenStackClientImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
-			OpenStackRelease:        os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
+			OpenStackRelease: os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
+		}
+
+		openstackClientDefaults := ospdirectorv1beta1.OpenStackClientDefaults{
+			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
 		}
 
 		ephemeralHeatDefaults := ospdirectorv1beta1.OpenStackEphemeralHeatDefaults{
@@ -310,17 +313,18 @@ func main() {
 			AgentImageURL:      os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
 			ApacheImageURL:     os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
 		}
+
 		openstackDeployDefaults := ospdirectorv1beta1.OpenStackDeployDefaults{
 			AgentImageURL: os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
+		}
+
+		openstackConfigGeneratorDefaults := ospdirectorv1beta1.OpenStackConfigGeneratorDefaults{
+			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
 		}
 
 		//
 		// Register webhooks
 		//
-		openstackConfigGeneratorDefaults := ospdirectorv1beta1.OpenStackConfigGeneratorDefaults{
-			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
-		}
-
 		if err = (&ospdirectorv1beta1.OpenStackBaremetalSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBaremetalSet")
 			os.Exit(1)
@@ -376,6 +380,11 @@ func main() {
 
 		if err = (&ospdirectorv1beta1.OpenStackDeploy{}).SetupWebhookWithManager(mgr, openstackDeployDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackDeploy")
+			os.Exit(1)
+		}
+
+		if err = (&ospdirectorv1beta1.OpenStackClient{}).SetupWebhookWithManager(mgr, openstackClientDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackClient")
 			os.Exit(1)
 		}
 	}
