@@ -169,6 +169,7 @@ jobs:
         GITHUB_SHA: ${{ github.sha }}
         BASE_IMAGE: osp-director-operator
         AGENT_IMAGE: osp-director-operator-agent
+        DOWNLOADER_IMAGE: osp-director-downloader
 
     - name: Get branch name
       id: branch-name

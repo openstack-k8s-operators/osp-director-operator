@@ -8,6 +8,7 @@ cd ..
 echo "${GITHUB_SHA}"
 echo "${BASE_IMAGE}"
 echo "${AGENT_IMAGE}"
+echo "${DOWNLOADER_IMAGE}"
 skopeo --version
 
 echo "Calculating image digest for docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA}"
@@ -37,6 +38,13 @@ AGENT_IMG="${AGENT_IMG_BASE}:${GITHUB_SHA}"
 AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@"$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
 sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
 
+# Replace DOWNLOADER_IMAGE_URL_DEFAULT in CSV
+
+DOWNLOADER_IMG_BASE="${REGISTRY}/${DOWNLOADER_IMAGE}"
+DOWNLOADER_IMG="${DOWNLOADER_IMG_BASE}:${GITHUB_SHA}"
+DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@"$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
+sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+
 echo "Bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
 grep -A1 IMAGE_URL_DEFAULT "${CLUSTER_BUNDLE_FILE}"
@@ -64,6 +72,9 @@ for csv_image in $(cat "${CLUSTER_BUNDLE_FILE}" | grep "image:" | sed -e "s|.*im
   elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
     echo "$base_image:$tag_image becomes $AGENT_IMG_WITH_DIGEST"
     sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+  elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
+    echo "$base_image:$tag_image becomes $DOWNLOADER_IMG_WITH_DIGEST"
+    sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
   else
     digest_image=$(skopeo inspect docker://${base_image}${delimeter}${tag_image} | jq '.Digest' -r)
 

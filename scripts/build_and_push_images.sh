@@ -25,6 +25,10 @@ AGENT_IMAGE="$OP_NAME-agent"
 AGENT_IMG_BASE="$REPO/$AGENT_IMAGE"
 AGENT_IMG="$AGENT_IMG_BASE:$VERSION"
 
+DOWNLOADER_IMAGE="osp-director-downloader"
+DOWNLOADER_IMG_BASE="$REPO/$DOWNLOADER_IMAGE"
+DOWNLOADER_IMG="$DOWNLOADER_IMG_BASE:$VERSION"
+
 CLUSTER_BUNDLE_FILE="bundle/manifests/osp-director-operator.clusterserviceversion.yaml"
 
 # Base operator image
@@ -36,6 +40,8 @@ make IMG=${IMG} docker-build docker-push
 # Agent image
 make IMG=${AGENT_IMG} DOCKERFILE="Dockerfile.agent" docker-build docker-push
 
+# Downloader image
+make IMG=${DOWNLOADER_IMG} DOCKERFILE="containers/image_downloader/Dockerfile" docker-build docker-push
 
 rm -Rf bundle
 rm -Rf bundle.Dockerfile
@@ -46,6 +52,10 @@ VERSION=${VERSION} IMG=${IMG} make bundle
 # Replace AGENT_IMAGE_URL_DEFAULT in CSV
 AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@"$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
 sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+
+# Replace DOWNLOADER_IMAGE_URL_DEFAULT in CSV
+DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@"$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
+sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
 
 # HACKs for webhook deployment to work around: https://bugzilla.redhat.com/show_bug.cgi?id=1921000
 # TODO: Figure out how to do this via Kustomize so that it's automatically rolled into the make
@@ -61,6 +71,8 @@ for csv_image in $(cat ${CLUSTER_BUNDLE_FILE} | grep "image:" | sed -e "s|.*imag
     sed -e "s|$base_image:$tag_image|$IMG|g" -i ${CLUSTER_BUNDLE_FILE}
   elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
     sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+  elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
+    sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
   else
     digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
     if [[ "$digest_image" == "" ]]; then
