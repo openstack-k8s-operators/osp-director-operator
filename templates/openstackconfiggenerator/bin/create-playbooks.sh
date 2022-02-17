@@ -204,7 +204,7 @@ git checkout -b $ConfigHash
 mkdir tripleo-ansible
 cp -a $HOME/ansible/overcloud/* tripleo-ansible
 # add j2 nic template files from 1) rendered configs and 2) extracted tarball to rendered ansible dir
-cp $HOME/config-tmp/*.j2 tripleo-ansible
+find $HOME/config-tmp -name '*.j2' -exec cp -a $i tripleo-ansible \;
 
 # add directory for templates
 mkdir source-templates
