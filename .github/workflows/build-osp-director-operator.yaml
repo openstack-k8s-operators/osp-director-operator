@@ -25,9 +25,22 @@ env:
   latesttag: latest
 
 jobs:
+
+  check-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets are set
+        id: have-secrets
+        if: "${{ env.imagenamespace != '' }}"
+        run: echo "::set-output name=ok::true"
+    outputs:
+      have-secrets: ${{ steps.have-secrets.outputs.ok }}
+
   build-osp-director-operator:
     name: Build osp-director-operator image using buildah
     runs-on: ubuntu-latest
+    needs: [check-secrets]
+    if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
     - uses: actions/checkout@v2
@@ -62,6 +75,8 @@ jobs:
   build-osp-director-downloader:
     name: Build osp-director-downloader image using buildah
     runs-on: ubuntu-latest
+    needs: [check-secrets]
+    if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
     - uses: actions/checkout@v2
@@ -98,6 +113,8 @@ jobs:
   build-osp-director-agent:
     name: Build agent image using buildah
     runs-on: ubuntu-latest
+    needs: [check-secrets]
+    if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
     - uses: actions/checkout@v2
@@ -130,9 +147,10 @@ jobs:
         password: ${{ secrets.QUAY_PASSWORD }}
 
   build-osp-director-operator-bundle:
-    needs: [ build-osp-director-operator, build-osp-director-downloader, build-osp-director-agent ]
+    needs: [ check-secrets, build-osp-director-operator, build-osp-director-downloader, build-osp-director-agent ]
     name: osp-director-operator-bundle
     runs-on: ubuntu-latest
+    if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
     - name: Checkout osp-director-operator repository
@@ -199,9 +217,10 @@ jobs:
         password: ${{ secrets.QUAY_PASSWORD }}
 
   build-osp-director-operator-index:
-    needs: [ build-osp-director-operator-bundle ]
+    needs: [ check-secrets, build-osp-director-operator-bundle ]
     name: osp-director-operator-index
     runs-on: ubuntu-latest
+    if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
     - name: Checkout osp-director-operator repository
