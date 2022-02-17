@@ -41,7 +41,7 @@ make IMG=${IMG} docker-build docker-push
 make IMG=${AGENT_IMG} DOCKERFILE="Dockerfile.agent" docker-build docker-push
 
 # Downloader image
-make IMG=${DOWNLOADER_IMG} DOCKERFILE="containers/image_downloader/Dockerfile" docker-build docker-push
+make IMG=${DOWNLOADER_IMG} DOCKERFILE="containers/image_downloader/Dockerfile" DOCKER_BUILD_DIR="containers/image_downloader" docker-build docker-push
 
 rm -Rf bundle
 rm -Rf bundle.Dockerfile

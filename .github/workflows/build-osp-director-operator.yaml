@@ -60,7 +60,7 @@ jobs:
         password: ${{ secrets.QUAY_PASSWORD }}
 
   build-osp-director-downloader:
-    name: Build rhel-downloader image using buildah
+    name: Build osp-director-downloader image using buildah
     runs-on: ubuntu-latest
 
     steps:
@@ -79,14 +79,14 @@ jobs:
       id: build-osp-director-downloader
       uses: redhat-actions/buildah-build@v2
       with:
-        image: rhel-downloader
+        image: osp-director-downloader
         tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./containers/image_downloader/Dockerfile
         build-args: |
           REMOTE_SOURCE=containers/image_downloader
 
-    - name: Push rhel-downloader To ${{ env.imageregistry }}
+    - name: Push osp-director-downloader To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-downloader.outputs.image }}

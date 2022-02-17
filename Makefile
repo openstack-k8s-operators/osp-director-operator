@@ -106,8 +106,9 @@ generate: controller-gen
 
 # Build the docker image
 DOCKERFILE := "Dockerfile"
+DOCKER_BUILD_DIR := .
 docker-build: test
-	podman build -t ${IMG} -f ${DOCKERFILE} .
+	podman build -t ${IMG} -f ${DOCKERFILE} ${DOCKER_BUILD_DIR}
 
 # Push the docker image
 docker-push:
