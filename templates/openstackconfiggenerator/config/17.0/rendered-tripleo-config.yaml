@@ -46,14 +46,12 @@ parameter_defaults:
   # HostnameMap
   HostnameMap:
 {{- range $roleid, $role := .RolesMap }}
+{{- if not $role.IsControlPlane }}
 {{- range $nodeid, $node := $role.Nodes }}
-{{- if and (not $node.VIP) }}
     {{ $role.NameLower }}-{{ $node.Index }}: {{ $node.Hostname }}
 {{- end }}
 {{- end }}
 {{- end }}
-  #
-  # DeployedServerPortMap
   # https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/custom_networks.html
   # https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/deployed_server.html
   # https://specs.openstack.org/openstack/tripleo-specs/specs/wallaby/triplo-network-data-v2-node-ports.html
@@ -73,8 +71,8 @@ parameter_defaults:
   # NodePortMap
   NodePortMap:
 {{- range $roleid, $role := .RolesMap }}
+{{- if not $role.IsControlPlane }}
 {{- range $nodeid, $node := $role.Nodes }}
-{{- if not $node.VIP }}
     {{ $node.Hostname }}:
 {{- range $netname, $ip := $node.IPaddr }}
       {{ $ip.Network.NameLower }}:
@@ -85,12 +83,12 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
-  # VipPortMap and ControlPlaneVipData usually gets created by `openstack overcloud network vip provision`
-{{- range $roleid, $role := .RolesMap }}
-{{- range $nodeid, $node := $role.Nodes }}
-{{- if $node.VIP }}
   #
   # VipPortMap
+{{- range $roleid, $role := .RolesMap }}
+{{- if $role.IsControlPlane }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- if $node.VIP }}
   VipPortMap:
 {{- range $netname, $ip := $node.IPaddr }}
 {{- if not $ip.Network.IsControlPlane }}
@@ -98,6 +96,7 @@ parameter_defaults:
       ip_address: {{ $ip.IPaddr }}
       ip_address_uri: '{{ $ip.IPAddrURI }}'
       ip_subnet: {{ $ip.IPAddrSubnet }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -125,11 +124,24 @@ parameter_defaults:
 {{- end }}
 {{- end }}
   #
+  # Set VIP's for redis and OVN
+{{- range $roleid, $role := .RolesMap }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if $node.ServiceVIP }}
+  {{ $role.Name }}VirtualFixedIPs:
+    - ip_address: {{ $ip.IPaddr }}
+      use_neutron: false
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
   # OVNStaticBridgeMacMappings
   OVNStaticBridgeMacMappings:
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
-{{- if not $node.VIP }}
+{{- if and (not $node.VIP) (not $node.ServiceVIP) }}
     {{ $node.Hostname }}:
 {{- range $netname, $mac := $node.OVNStaticBridgeMappings }}
       {{ $netname }}: {{ $mac }}
@@ -260,22 +272,3 @@ parameter_defaults:
     {{- end }}
     {{- end }}
     {{- end }}
-{{/*
-# Set VIP's for redis and OVN
-{{- range $roleid, $role := .RolesMap }}
-{{- if $role.IsControlPlane }}
-{{- range $nodeid, $node := $role.Nodes }}
-{{- range $netname, $ip := $node.IPaddr }}
-{{- if and ($node.VIP) (eq $netname "internal_api") }}
-  RedisVirtualFixedIPs:
-    - ip_address: {{ $ip.IPaddr }}
-      use_neutron: false
-  OVNDBsVirtualFixedIPs:
-    - ip_address: {{ $ip.IPaddr }}
-      use_neutron: false
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-*/}}

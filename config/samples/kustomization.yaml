@@ -10,6 +10,7 @@ resources:
 - osp-director_v1beta1_openstacknetconfig.yaml
 - osp-director_v1beta1_openstacknetattachment.yaml
 - osp-director_v1beta1_openstackdeploy.yaml
+- osp-director_v1beta1_openstackipset.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
 # These patches will "correct" some values for samples injected into the CSV,
 # but leave the samples as-is for functional testing purposes

@@ -20,6 +20,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 192.168.25.10
+        serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -27,6 +28,7 @@ spec:
       - deleted: false
         hostname: openstackclient-0
         ip: 192.168.25.251
+        serviceVIP: false
         vip: false
 status:
   conditions:
@@ -59,6 +61,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.17.0.10
+        serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -66,6 +69,7 @@ spec:
       - deleted: false
         hostname: openstackclient-0
         ip: 172.17.0.251
+        serviceVIP: false
         vip: false
 status:
   conditions:

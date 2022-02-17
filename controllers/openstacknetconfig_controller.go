@@ -43,7 +43,6 @@ import (
 	"github.com/go-logr/logr"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstackcontrolplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
@@ -261,29 +260,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	instance.SetLabels(labels.Merge(instance.GetLabels(), common.GetLabels(instance, openstacknetconfig.AppLabel, map[string]string{})))
 
 	//
-	// 1) Create or update the MACAddress CR object
-	//
-	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.OVNBridgeMacMappings.PhysNetworks)
-	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
-	macAddress, err := r.createOrUpdateOpenStackMACAddress(
-		instance,
-		cond,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
-	// Update CR status from OSmac status
-	//
-	r.getMACStatus(
-		instance,
-		cond,
-		macAddress,
-	)
-
-	//
-	// 2) create all OpenStackNetworkAttachments
+	// 1) create all OpenStackNetworkAttachments
 	//
 	instance.Status.ProvisioningStatus.AttachDesiredCount = len(instance.Spec.AttachConfigurations)
 	instance.Status.ProvisioningStatus.AttachReadyCount = 0
@@ -319,7 +296,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	//
-	// 3) create all OpenStackNetworks
+	// 2) create all OpenStackNetworks
 	//
 	instance.Status.ProvisioningStatus.NetDesiredCount = len(instance.Spec.Networks)
 	instance.Status.ProvisioningStatus.NetReadyCount = 0
@@ -358,6 +335,28 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			instance.Status.ProvisioningStatus.NetReadyCount++
 		}
 	}
+
+	//
+	// 3) Create or update the MACAddress CR object
+	//
+	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.OVNBridgeMacMappings.PhysNetworks)
+	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
+	macAddress, err := r.createOrUpdateOpenStackMACAddress(
+		instance,
+		cond,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// Update CR status from OSmac status
+	//
+	r.getMACStatus(
+		instance,
+		cond,
+		macAddress,
+	)
 
 	if instance.IsReady() {
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigConfigured
@@ -416,10 +415,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackBaremetalSet{}}, LabelWatcher).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackClient{}}, LabelWatcher).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackControlPlane{}}, LabelWatcher).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackVMSet{}}, LabelWatcher).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackIPSet{}}, LabelWatcher).
 		Complete(r)
 }
 
@@ -819,14 +815,41 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	}
 
 	//
-	// get all VMset
+	// get all IPsets
 	//
-	labelSelector := map[string]string{}
+	labelSelector := map[string]string{
+		openstacknetconfig.OpenStackNetConfigReconcileLabel: instance.Name,
+	}
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labelSelector),
 	}
 
+	ipSetList := &ospdirectorv1beta1.OpenStackIPSetList{}
+	if err := r.GetClient().List(
+		context.Background(),
+		ipSetList,
+		listOpts...,
+	); err != nil && !k8s_errors.IsNotFound(err) {
+		return macAddress, err
+	}
+
+	//
+	// create map of ipSet referenced by owner UID
+	//
+	ipSetOwnerUIDRefMap := map[string]ospdirectorv1beta1.OpenStackIPSet{}
+	for idx, ipSet := range ipSetList.Items {
+		ipSetOwnerUIDRefMap[ipSet.Labels[common.OwnerUIDLabelSelector]] = ipSetList.Items[idx]
+	}
+
+	//
+	// get all VMset
+	//
+	labelSelector = map[string]string{}
+	listOpts = []client.ListOption{
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labelSelector),
+	}
 	vmSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
 	if err := r.GetClient().List(
 		context.Background(),
@@ -849,24 +872,40 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	}
 
 	//
-	// create MAC reservations for all VMset/BMset
+	// Create list of all ipSets from VMset and BMset which are tripleo Roles
+	//
+	ipSetCreateMACList := []ospdirectorv1beta1.OpenStackIPSet{}
+	for _, vmSet := range vmSetList.Items {
+		if ipSet, ok := ipSetOwnerUIDRefMap[string(vmSet.GetUID())]; ok && vmSet.Spec.IsTripleoRole {
+			ipSetCreateMACList = append(ipSetCreateMACList, ipSet)
+		}
+	}
+
+	// Note: (mschuppert) bmSet does not yet have a IsTripleoRole parameter, but we discussed it
+	for _, bmSet := range bmSetList.Items {
+		if ipSet, ok := ipSetOwnerUIDRefMap[string(bmSet.GetUID())]; ok {
+			ipSetCreateMACList = append(ipSetCreateMACList, ipSet)
+		}
+	}
+
+	//
+	// create MAC reservations for all entries in ipSetCreateMACList
 	//
 	reservations := map[string]ospdirectorv1beta1.OpenStackMACRoleReservation{}
 
-	// VMset
-	for _, vmSet := range vmSetList.Items {
+	for _, ipSet := range ipSetCreateMACList {
 		roleMACReservation := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
 
-		for _, vmHost := range vmSet.Status.VMHosts {
+		for _, host := range ipSet.Status.Hosts {
 
-			roleMACReservation[vmHost.Hostname], err = r.ensureMACReservation(
+			roleMACReservation[host.Hostname], err = r.ensureMACReservation(
 				instance,
 				cond,
 				macAddress,
 				macAddress.Spec.RoleReservations,
-				vmSet.Spec.RoleName,
-				vmHost.Hostname,
-				vmHost.AnnotatedForDeletion,
+				ipSet.Spec.RoleName,
+				host.Hostname,
+				host.AnnotatedForDeletion,
 			)
 			if err != nil {
 				return macAddress, err
@@ -880,49 +919,14 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 			r.preserveMACReservations(
 				macAddress,
 				&roleMACReservation,
-				vmSet.Spec.RoleName,
+				ipSet.Spec.RoleName,
 			)
 		}
 
-		reservations[vmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
+		reservations[ipSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
 			Reservations: roleMACReservation,
 		}
-	}
 
-	// bmset
-	for _, bmSet := range bmSetList.Items {
-		roleMACReservation := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
-
-		for _, bmHost := range bmSet.Status.BaremetalHosts {
-
-			roleMACReservation[bmHost.Hostname], err = r.ensureMACReservation(
-				instance,
-				cond,
-				macAddress,
-				macAddress.Spec.RoleReservations,
-				bmSet.Spec.RoleName,
-				bmHost.Hostname,
-				bmHost.AnnotatedForDeletion,
-			)
-			if err != nil {
-				return macAddress, err
-			}
-		}
-
-		//
-		// add reservations from deleted nodes if Spec.PreserveReservations
-		//
-		if *instance.Spec.PreserveReservations {
-			r.preserveMACReservations(
-				macAddress,
-				&roleMACReservation,
-				bmSet.Spec.RoleName,
-			)
-		}
-
-		reservations[bmSet.Spec.RoleName] = ospdirectorv1beta1.OpenStackMACRoleReservation{
-			Reservations: roleMACReservation,
-		}
 	}
 
 	//
@@ -1184,122 +1188,59 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 		client.MatchingLabels(labelSelector),
 	}
 
+	allRoles := map[string]bool{}
+
 	//
-	// get all OSClients
+	// get all OSIPsets
 	//
-	osClientList := &ospdirectorv1beta1.OpenStackClientList{}
+	osIPsetList := &ospdirectorv1beta1.OpenStackIPSetList{}
 	if err := r.GetClient().List(
 		ctx,
-		osClientList,
+		osIPsetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	allRoles := map[string]bool{}
+	for _, osIPset := range osIPsetList.Items {
 
-	for _, osClient := range osClientList.Items {
-		roleName := fmt.Sprintf("%s%s", openstackclient.Role, osClient.Name)
+		roleName := osIPset.Spec.RoleName
+
+		//
+		// For backward compatability check if owning object is osClient and set Role to <openstackclient.Role><instance.Name>
+		//
+		osClient := &ospdirectorv1beta1.OpenStackClient{}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{
+			Name:      osIPset.Labels[common.OwnerNameLabelSelector],
+			Namespace: osIPset.Namespace},
+			osClient)
+		if err != nil {
+			if !k8s_errors.IsNotFound(err) {
+				cond.Message = fmt.Sprintf("Failed to get %s %s ", osClient.Kind, osClient.Name)
+				cond.Reason = ospdirectorv1beta1.OsClientCondReasonError
+				cond.Type = ospdirectorv1beta1.CommonCondTypeError
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return nil, err
+			}
+		} else {
+			roleName = fmt.Sprintf("%s%s", openstackclient.Role, osIPset.Spec.RoleName)
+		}
+
 		allRoles[roleName] = true
 
 		//
 		// are there new networks added to the CR?
 		//
-		err := r.ensureIPs(
+		err = r.ensureIPs(
 			instance,
 			cond,
 			osNet,
 			roleName,
-			common.SortMapByValue(osClient.GetHostnames()),
-			false,
-			false,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	//
-	// get all OSCtlplane
-	//
-	osCtlPlaneList := &ospdirectorv1beta1.OpenStackControlPlaneList{}
-	if err := r.GetClient().List(
-		ctx,
-		osCtlPlaneList,
-		listOpts...,
-	); err != nil && !k8s_errors.IsNotFound(err) {
-		return nil, err
-	}
-
-	for _, osCtlPlane := range osCtlPlaneList.Items {
-		allRoles[openstackcontrolplane.Role] = true
-
-		err := r.ensureIPs(
-			instance,
-			cond,
-			osNet,
-			openstackcontrolplane.Role,
-			common.SortMapByValue(osCtlPlane.GetHostnames()),
-			true,
-			true,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	//
-	// get all OSVMSet
-	//
-	osVMSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
-	if err := r.GetClient().List(
-		ctx,
-		osVMSetList,
-		listOpts...,
-	); err != nil && !k8s_errors.IsNotFound(err) {
-		return nil, err
-	}
-
-	for _, osVMSet := range osVMSetList.Items {
-		allRoles[osVMSet.Spec.RoleName] = true
-
-		err := r.ensureIPs(
-			instance,
-			cond,
-			osNet,
-			osVMSet.Spec.RoleName,
-			common.SortMapByValue(osVMSet.GetHostnames()),
-			false,
-			osVMSet.Spec.IsTripleoRole,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	//
-	// get all OSBMSet
-	//
-	osBMSetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
-	if err := r.GetClient().List(
-		ctx,
-		osBMSetList,
-		listOpts...,
-	); err != nil && !k8s_errors.IsNotFound(err) {
-		return nil, err
-	}
-
-	for _, osBMSet := range osBMSetList.Items {
-		allRoles[osBMSet.Spec.RoleName] = true
-
-		err := r.ensureIPs(
-			instance,
-			cond,
-			osNet,
-			osBMSet.Spec.RoleName,
-			common.SortMapByValue(osBMSet.GetHostnames()),
-			false,
-			true,
+			common.SortMapByValue(osIPset.GetHostnames()),
+			osIPset.Spec.VIP,
+			osIPset.Spec.ServiceVIP,
+			osIPset.Spec.AddToPredictableIPs,
 		)
 		if err != nil {
 			return nil, err
@@ -1329,6 +1270,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 	roleName string,
 	allRoleHosts common.List,
 	vip bool,
+	serviceVIP bool,
 	addToPredictableIPs bool,
 ) error {
 
@@ -1348,9 +1290,10 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 				staticReservations = append(
 					staticReservations,
 					ospdirectorv1beta1.IPReservation{
-						IP:       nodeNetIPReservation,
-						Hostname: nodeName,
-						VIP:      vip,
+						IP:         nodeNetIPReservation,
+						Hostname:   nodeName,
+						ServiceVIP: serviceVIP,
+						VIP:        vip,
 					},
 				)
 			}
@@ -1380,10 +1323,11 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 		if reservation, ok := currentReservations[hostname]; ok {
 
 			nodeReservation := ospdirectorv1beta1.IPReservation{
-				IP:       reservation.IP,
-				Hostname: hostname,
-				VIP:      vip,
-				Deleted:  false,
+				IP:         reservation.IP,
+				Hostname:   hostname,
+				VIP:        vip,
+				ServiceVIP: serviceVIP,
+				Deleted:    false,
 			}
 
 			found := false

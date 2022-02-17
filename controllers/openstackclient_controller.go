@@ -19,17 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,6 +33,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -259,74 +256,28 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	//
-	// create hostnames for the requested number of systems
+	// create openstackclient IPs for all networks
 	//
-	_, err = r.createNewHostnames(
+	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		r,
 		instance,
 		cond,
-		// right now there can only be one
-		1-len(instance.Status.OpenStackClientNetStatus),
+		instance.Name,
+		instance.Spec.Networks,
+		1,
+		false,
+		false,
+		[]string{},
+		false,
 	)
-	if err != nil {
-		return ctrl.Result{}, err
+
+	for _, status := range ipsetStatus {
+		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.OpenStackClientNetStatus, status)
+		instance.Status.OpenStackClientNetStatus[status.Hostname] = hostStatus
 	}
 
-	// right now there can only be one
-	hostnameValue := reflect.ValueOf(instance.GetHostnames()).MapKeys()[0]
-	hostname := hostnameValue.String()
-
-	//
-	// get OSNetCfg object
-	//
-	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
-		Namespace: instance.Namespace},
-		osnetcfg)
-	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
-		return ctrl.Result{}, err
-	}
-
-	//
-	// Wait for IPs created on all configured networks
-	//
-	for hostname, hostStatus := range instance.Status.OpenStackClientNetStatus {
-		err = openstacknetconfig.WaitOnIPsCreated(
-			r,
-			instance,
-			cond,
-			osnetcfg,
-			instance.Spec.Networks,
-			hostname,
-			&hostStatus,
-		)
-		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-		}
-
-		hostStatus.HostRef = hostname
-		instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
-	}
-
-	// Log network status if changed
-	if !reflect.DeepEqual(currentStatus.OpenStackClientNetStatus, instance.Status.OpenStackClientNetStatus) {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("%s network status for Hostname: %s - %s",
-				instance.Kind,
-				instance.Status.OpenStackClientNetStatus[hostname].Hostname,
-				diff.ObjectReflectDiff(
-					currentStatus.OpenStackClientNetStatus,
-					instance.Status.OpenStackClientNetStatus,
-				),
-			),
-			instance,
-		)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
@@ -371,22 +322,25 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	//
-	// Create or update the pod object
-	//
-	err = r.podCreateOrUpdate(
-		instance,
-		cond,
-		hostname,
-		&envVars,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 
-	hostStatus := instance.Status.OpenStackClientNetStatus[hostname]
-	hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
-	instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
+	for hostname := range instance.Status.OpenStackClientNetStatus {
+		//
+		// Create or update the pod object
+		//
+		err = r.podCreateOrUpdate(
+			instance,
+			cond,
+			hostname,
+			&envVars,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		hostStatus := instance.Status.OpenStackClientNetStatus[hostname]
+		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.OpenStackClientNetStatus[hostname] = hostStatus
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -397,6 +351,7 @@ func (r *OpenStackClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&ospdirectorv1beta1.OpenStackClient{}).
 		Owns(&corev1.Pod{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Complete(r)
 }
 
@@ -717,79 +672,6 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
 
 	return ctrl.Result{}, nil
-}
-
-//
-// create hostnames for the requested number of systems
-//
-func (r *OpenStackClientReconciler) createNewHostnames(
-	instance *ospdirectorv1beta1.OpenStackClient,
-	cond *ospdirectorv1beta1.Condition,
-	newCount int,
-) ([]string, error) {
-	newHostnames := []string{}
-
-	//
-	//   create hostnames for the newCount
-	//
-	currentNetStatus := instance.Status.DeepCopy().OpenStackClientNetStatus
-	for i := 0; i < newCount; i++ {
-		hostnameDetails := common.Hostname{
-			Basename: instance.Name,
-			VIP:      false,
-		}
-
-		err := common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-
-		if hostnameDetails.Hostname != "" {
-			if _, ok := instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname]; !ok {
-				instance.Status.OpenStackClientNetStatus[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-					Hostname:             hostnameDetails.Hostname,
-					HostRef:              hostnameDetails.HostRef,
-					AnnotatedForDeletion: false,
-					IPAddresses:          map[string]string{},
-				}
-				newHostnames = append(newHostnames, hostnameDetails.Hostname)
-			}
-
-			common.LogForObject(
-				r,
-				fmt.Sprintf("%s hostname created: %s", instance.Kind, hostnameDetails.Hostname),
-				instance,
-			)
-		}
-	}
-
-	if !reflect.DeepEqual(currentNetStatus, instance.Status.OpenStackClientNetStatus) {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newHostnames),
-				diff.ObjectReflectDiff(currentNetStatus, instance.Status.OpenStackClientNetStatus),
-			),
-			instance,
-		)
-
-		err := r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			cond.Message = "Failed to update CR status for new hostnames"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-	}
-
-	return newHostnames, nil
 }
 
 //

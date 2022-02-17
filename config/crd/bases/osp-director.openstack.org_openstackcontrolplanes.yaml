@@ -61,6 +61,16 @@ spec:
           spec:
             description: OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
             properties:
+              additionalServiceVIPs:
+                additionalProperties:
+                  type: string
+                description: 'AdditionalServiceVIPs - Map of service name <-> subnet
+                  nameLower for which a IP should get reserved on These are used to
+                  create the <Service>VirtualFixedIPs environment parameters starting
+                  wallaby/OSP17.0. Default "Redis":  "internal_api",         "OVNDBs":
+                  "internal_api", https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
+                  Note: OSP17 networkv2 only'
+                type: object
               caConfigMap:
                 description: Name of the config map containing custom CA certificates
                   to trust

@@ -1,0 +1,188 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackipsets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackIPSet
+    listKind: OpenStackIPSetList
+    plural: openstackipsets
+    shortNames:
+    - osipset
+    - osipsets
+    - osips
+    singular: openstackipset
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Desired
+      jsonPath: .spec.hostCount
+      name: Desired
+      type: integer
+    - description: Reserved
+      jsonPath: .status.reserved
+      name: Reserved
+      type: integer
+    - description: Networks
+      jsonPath: .status.networks
+      name: Networks
+      type: integer
+    - description: Status
+      jsonPath: .status.conditions[?(@.status=="True")].type
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].message
+      name: Reason
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackIPSet is the Schema for the openstackipsets API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackIPSetSpec defines the desired state of OpenStackIPSet
+            properties:
+              addToPredictableIPs:
+                default: true
+                description: AddToPredictableIPs add/ignore IPs to be added to Predictable
+                  IPs list
+                type: boolean
+              deletedHosts:
+                description: DeletedHosts List of hosts which got deleted
+                items:
+                  type: string
+                type: array
+              hostCount:
+                default: 0
+                description: HostCount Host count
+                type: integer
+              networks:
+                default:
+                - ctlplane
+                description: Networks the name(s) of the OpenStackNetworks used to
+                  generate IPs
+                items:
+                  type: string
+                type: array
+              roleName:
+                description: RoleName the name of the role this VM Spec is associated
+                  with. If it is a TripleO role, the name must match.
+                type: string
+              serviceVIP:
+                default: false
+                description: ServiceVIP flag to indicate ipset is a request for a
+                  VirtualFixedIPs entry
+                type: boolean
+              vip:
+                default: false
+                description: VIP flag to indicate ipset is a request for a VIP
+                type: boolean
+            required:
+            - roleName
+            type: object
+          status:
+            description: OpenStackIPSetStatus defines the observed state of OpenStackIPSet
+            properties:
+              conditions:
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              hosts:
+                additionalProperties:
+                  description: HostStatus represents the hostname and IP info for
+                    a specific host
+                  properties:
+                    annotatedForDeletion:
+                      default: false
+                      description: Host annotated for deletion
+                      type: boolean
+                    ctlplaneIP:
+                      type: string
+                    hostRef:
+                      default: unassigned
+                      type: string
+                    hostname:
+                      type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    networkDataSecretName:
+                      type: string
+                    provisioningState:
+                      description: ProvisioningState - the overall state of all VMs
+                        in this OpenStackVmSet
+                      type: string
+                    userDataSecretName:
+                      type: string
+                  required:
+                  - annotatedForDeletion
+                  - ctlplaneIP
+                  - hostRef
+                  - hostname
+                  - networkDataSecretName
+                  - provisioningState
+                  - userDataSecretName
+                  type: object
+                type: object
+              networks:
+                type: integer
+              reserved:
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

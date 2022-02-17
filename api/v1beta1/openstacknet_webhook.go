@@ -86,6 +86,42 @@ func (r *OpenStackNet) ValidateCreate() error {
 func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 	openstacknetlog.Info("validate update", "name", r.Name)
 
+	// Get the old bridge name, if any
+	var ok bool
+	var oldInstance *OpenStackNet
+
+	if oldInstance, ok = old.(*OpenStackNet); !ok {
+		return fmt.Errorf("runtime object is not an OpenStackNet")
+	}
+
+	//
+	// create map with ip <-> hostname of the spec.RoleReservations
+	//
+	netReservations := map[string]string{}
+	for _, role := range oldInstance.Spec.RoleReservations {
+		for _, res := range role.Reservations {
+			netReservations[res.IP] = res.Hostname
+		}
+	}
+
+	//
+	// verify that there is not a duplicate ip reservation in spec.RoleReservations
+	//
+	for _, role := range r.Spec.RoleReservations {
+		for _, res := range role.Reservations {
+			if hostname, ok := netReservations[res.IP]; ok &&
+				res.Hostname != hostname {
+				return fmt.Errorf("duplicate ip reservation for %s (%s,%s) on %s %s",
+					res.IP,
+					res.Hostname,
+					hostname,
+					r.Kind,
+					r.Spec.NameLower,
+				)
+			}
+		}
+	}
+
 	return nil
 }
 

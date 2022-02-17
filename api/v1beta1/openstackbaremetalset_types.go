@@ -105,6 +105,8 @@ const (
 	// osbms
 	//
 
+	// BaremetalSetCondReasonError - General error getting the OSBms object
+	BaremetalSetCondReasonError ConditionReason = "BaremetalSetError"
 	// BaremetalSetCondReasonBaremetalHostStatusNotFound - bare metal host status not found
 	BaremetalSetCondReasonBaremetalHostStatusNotFound ConditionReason = "BaremetalHostStatusNotFound"
 	// BaremetalSetCondReasonUserDataSecretDeleteError - error deleting user data secret

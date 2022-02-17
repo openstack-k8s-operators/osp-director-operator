@@ -46,6 +46,7 @@ import (
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
@@ -312,22 +313,9 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
-	// create hostnames for the requested number of systems
+	// check/update instance status for annotated for deletion marged BMHs
 	//
-	_, err = r.createNewHostnames(
-		instance,
-		cond,
-		instance.Spec.Count-len(instance.Status.BaremetalHosts),
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
-	//   check/update instance status for annotated for deletion marged BMHs
-	//
-
-	err = r.checkVMsAnnotatedForDeletion(
+	deletionAnnotatedBMHs, err := r.checkBMHsAnnotatedForDeletion(
 		instance,
 		cond,
 	)
@@ -336,41 +324,40 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
-	// get OSNetCfg object
+	// Handle BMHM removal from BMSet
 	//
-	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
-		Namespace: instance.Namespace},
-		osnetcfg)
+	deletedHosts, err := r.doBMHDelete(
+		instance,
+		cond,
+		deletionAnnotatedBMHs,
+	)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
 		return ctrl.Result{}, err
 	}
 
 	//
-	// Wait for IPs created on all configured networks
+	// create openstackclient IPs for all networks
 	//
-	for hostname, hostStatus := range instance.Status.BaremetalHosts {
-		err = openstacknetconfig.WaitOnIPsCreated(
-			r,
-			instance,
-			cond,
-			osnetcfg,
-			instance.Spec.Networks,
-			hostname,
-			&hostStatus,
-		)
-		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-		}
+	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		r,
+		instance,
+		cond,
+		instance.Spec.RoleName,
+		instance.Spec.Networks,
+		instance.Spec.Count,
+		false,
+		false,
+		deletedHosts,
+		true,
+	)
 
-		// Can not set (like in vmset, osclient, osctlplane) HostRef for BMS to hostname as it references the used BMH host
-		instance.Status.BaremetalHosts[hostname] = hostStatus
+	for _, status := range ipsetStatus {
+		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.BaremetalHosts, status)
+		instance.Status.BaremetalHosts[status.Hostname] = hostStatus
+	}
+
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
@@ -485,6 +472,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
@@ -604,60 +592,29 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 	return provisionServer, ctrl.Result{}, nil
 }
 
-// Provision or deprovision BaremetalHost resources based on replica count
-func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
+// Deprovision BaremetalHost resources based on replica count
+func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
-	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
-	provisionServer *ospdirectorv1beta1.OpenStackProvisionServer,
-	sshSecret string,
-	passwordSecret *corev1.Secret,
-) error {
+	removalAnnotatedBaremetalHosts []string,
+) ([]string, error) {
+	deletedHosts := []string{}
+
 	// Get all openshift-machine-api BaremetalHosts
-	baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
-	listOpts := []client.ListOption{
-		client.InNamespace("openshift-machine-api"),
-	}
-
-	if len(instance.Spec.BmhLabelSelector) > 0 {
-		labels := client.MatchingLabels(instance.Spec.BmhLabelSelector)
-		listOpts = append(listOpts, labels)
-	}
-
-	err := r.Client.List(context.TODO(), baremetalHostsList, listOpts...)
+	baremetalHostsList, err := common.GetBmhHosts(
+		r,
+		"openshift-machine-api",
+		map[string]string{
+			common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
+			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+		},
+	)
 	if err != nil {
 		cond.Message = "Failed to get list of all BareMetalHost(s)"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonListError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeError)
 
-		return err
-	}
-
-	existingBaremetalHosts := map[string]string{}
-	removalAnnotatedBaremetalHosts := []string{}
-
-	// Find the current BaremetalHosts belonging to this OpenStackBaremetalSet
-	for _, baremetalHost := range baremetalHostsList.Items {
-		if baremetalHost.Spec.ConsumerRef != nil &&
-			(baremetalHost.Spec.ConsumerRef.Kind == instance.Kind &&
-				baremetalHost.Spec.ConsumerRef.Name == instance.Name &&
-				baremetalHost.Spec.ConsumerRef.Namespace == instance.Namespace) {
-
-			common.LogForObject(
-				r,
-				fmt.Sprintf("Existing BaremetalHost belong to %s: %s",
-					baremetalHost.ObjectMeta.Name,
-					instance.Name),
-				instance,
-			)
-			// Storing the existing BaremetalHosts in a map like this just makes selected replica scale-down easier below
-			existingBaremetalHosts[baremetalHost.ObjectMeta.Name] = baremetalHost.ObjectMeta.Name
-
-			// Prep for possible replica scale-down below
-			if val, ok := baremetalHost.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
-				removalAnnotatedBaremetalHosts = append(removalAnnotatedBaremetalHosts, baremetalHost.ObjectMeta.Name)
-			}
-		}
+		return deletedHosts, err
 	}
 
 	// Deallocate existing BaremetalHosts to match the requested replica count, if necessary.  First we
@@ -667,12 +624,12 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	// scale-down.
 
 	// How many new BaremetalHost de-allocations do we need (if any)?
-	oldBmhsToRemoveCount := len(existingBaremetalHosts) - instance.Spec.Count
+	bmhsToRemoveCount := len(baremetalHostsList.Items) - instance.Spec.Count
 
-	if oldBmhsToRemoveCount > 0 {
-		oldBmhsRemovedCount := 0
+	if bmhsToRemoveCount > 0 {
+		bmhsRemovedCount := 0
 
-		for i := 0; i < oldBmhsToRemoveCount; i++ {
+		for i := 0; i < bmhsToRemoveCount; i++ {
 			// First choose BaremetalHosts to remove from the prepared list of BaremetalHosts
 			// that have the "osp-director.openstack.org/delete-host=true" annotation
 
@@ -680,16 +637,19 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 				// get OSBms status corresponding to bmh
 				bmhStatus, err := r.getBmhHostRefStatus(instance, cond, removalAnnotatedBaremetalHosts[0])
 				if err != nil && k8s_errors.IsNotFound(err) {
-					return err
+					return deletedHosts, err
 				}
 
-				err = r.baremetalHostDeprovision(instance, cond, bmhStatus)
+				deletedHost, err := r.baremetalHostDeprovision(
+					instance,
+					cond,
+					bmhStatus,
+				)
 				if err != nil {
-					return err
+					return deletedHosts, err
 				}
 
-				// Remove the removal-annotated BaremetalHost from the existingBaremetalHosts map
-				delete(existingBaremetalHosts, removalAnnotatedBaremetalHosts[0])
+				deletedHosts = append(deletedHosts, deletedHost)
 
 				// Remove the removal-annotated BaremetalHost from the removalAnnotatedBaremetalHosts list
 				if len(removalAnnotatedBaremetalHosts) > 1 {
@@ -699,7 +659,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 				}
 
 				// We removed a removal-annotated BaremetalHost, so increment the removed count
-				oldBmhsRemovedCount++
+				bmhsRemovedCount++
 			} else {
 				// Just break, as any further iterations of the loop have nothing upon
 				// which to operate (we'll report this as a warning just below)
@@ -708,8 +668,8 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 		}
 
 		// If we can't satisfy the requested scale-down, explicitly state so
-		if oldBmhsRemovedCount < oldBmhsToRemoveCount {
-			cond.Message = fmt.Sprintf("Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found and removed, %d requested)", oldBmhsRemovedCount, oldBmhsToRemoveCount)
+		if bmhsRemovedCount < bmhsToRemoveCount {
+			cond.Message = fmt.Sprintf("Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found and removed, %d requested)", bmhsRemovedCount, bmhsToRemoveCount)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondReasonScaleDownInsufficientAnnotatedHosts)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeInsufficient)
 
@@ -721,8 +681,54 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 		}
 	}
 
+	sort.Strings(deletedHosts)
+
+	return deletedHosts, nil
+}
+
+// Provision BaremetalHost resources based on replica count
+func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
+	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
+	cond *ospdirectorv1beta1.Condition,
+	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	provisionServer *ospdirectorv1beta1.OpenStackProvisionServer,
+	sshSecret string,
+	passwordSecret *corev1.Secret,
+) error {
+
+	// Get all openshift-machine-api BaremetalHosts
+	baremetalHostsList, err := common.GetBmhHosts(
+		r,
+		"openshift-machine-api",
+		instance.Spec.BmhLabelSelector,
+	)
+	if err != nil {
+		cond.Message = "Failed to get list of all BareMetalHost(s)"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonListError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeError)
+
+		return err
+	}
+
+	// Get all existing BaremetalHosts of this CR
+	existingBaremetalHosts, err := common.GetBmhHosts(
+		r,
+		"openshift-machine-api",
+		map[string]string{
+			common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
+			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+		},
+	)
+	if err != nil {
+		cond.Message = "Failed to get list of all existing BareMetalHost(s)"
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonListError)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeError)
+
+		return err
+	}
+
 	// How many new BaremetalHost allocations do we need (if any)?
-	newBmhsNeededCount := instance.Spec.Count - len(existingBaremetalHosts)
+	newBmhsNeededCount := instance.Spec.Count - len(existingBaremetalHosts.Items)
 
 	if newBmhsNeededCount > 0 {
 		// We have new replicas requested, so search for baremetalhosts that don't have consumerRef or Online set
@@ -762,7 +768,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
 			cond.Message = fmt.Sprintf("Unable to find %d requested BaremetalHost count (%d in use, %d available)",
 				instance.Spec.Count,
-				len(existingBaremetalHosts),
+				len(existingBaremetalHosts.Items),
 				len(availableBaremetalHosts))
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondReasonScaleUpInsufficientHosts)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeInsufficient)
@@ -799,12 +805,12 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	}
 
 	// Now reconcile existing BaremetalHosts for this OpenStackBaremetalSet
-	for bmhName := range existingBaremetalHosts {
+	for _, bmh := range existingBaremetalHosts.Items {
 		err := r.baremetalHostProvision(
 			instance,
 			cond,
 			controlPlane,
-			bmhName,
+			bmh.GetName(),
 			provisionServer.Status.LocalImageURL,
 			sshSecret,
 			passwordSecret,
@@ -860,7 +866,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	//
 	if err != nil && k8s_errors.IsNotFound(err) {
 		for _, bmhStatus = range instance.Status.BaremetalHosts {
-
 			if bmhStatus.HostRef == ospdirectorv1beta1.HostRefInitState {
 
 				bmhStatus.HostRef = bmh
@@ -1088,7 +1093,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	bmh ospdirectorv1beta1.HostStatus,
-) error {
+) (string, error) {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
 	if err != nil {
@@ -1096,7 +1101,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonGetError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 
-		return err
+		return "", err
 	}
 
 	common.LogForObject(
@@ -1107,8 +1112,9 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 
 	// Remove our ownership labels
 	labels := baremetalHost.GetObjectMeta().GetLabels()
+	ospHostname := labels[common.OSPHostnameLabelSelector]
 	labelSelector := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
-		common.OSPHostnameLabelSelector: baremetalHost.GetObjectMeta().GetLabels()[common.OSPHostnameLabelSelector],
+		common.OSPHostnameLabelSelector: labels[common.OSPHostnameLabelSelector],
 	})
 	for key := range labelSelector {
 		delete(labels, key)
@@ -1132,8 +1138,9 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonUpdateError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 
-		return err
+		return ospHostname, err
 	}
+	r.Log.Info(fmt.Sprintf("BaremetalHost deleted: bmh %s - osp name %s", baremetalHost.Name, ospHostname))
 
 	// Also remove userdata and networkdata secrets
 	for _, secret := range []string{
@@ -1147,14 +1154,16 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 			"openshift-machine-api",
 		)
 		if err != nil {
-			return err
+			return ospHostname, err
 		}
+
+		r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret))
 	}
 
 	// Set status (remove this BaremetalHost entry)
 	delete(instance.Status.BaremetalHosts, bmh.Hostname)
 
-	return nil
+	return ospHostname, nil
 }
 
 // Deprovision all associated BaremetalHosts for this OpenStackBaremetalSet via Metal3
@@ -1164,7 +1173,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(
 ) error {
 	if instance.Status.BaremetalHosts != nil {
 		for _, bmh := range instance.Status.BaremetalHosts {
-			err := r.baremetalHostDeprovision(instance, cond, bmh)
+			_, err := r.baremetalHostDeprovision(instance, cond, bmh)
 
 			if err != nil {
 				return err
@@ -1422,97 +1431,25 @@ func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
 }
 
 //
-// create hostnames for the requested number of systems
-//
-func (r *OpenStackBaremetalSetReconciler) createNewHostnames(
-	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
-	cond *ospdirectorv1beta1.Condition,
-	newCount int,
-) ([]string, error) {
-	newHostnames := []string{}
-
-	//
-	//   create hostnames for the newCount
-	//
-	currentNetStatus := instance.Status.DeepCopy().BaremetalHosts
-	for i := 0; i < newCount; i++ {
-		hostnameDetails := common.Hostname{
-			Basename: instance.Spec.RoleName,
-			VIP:      false,
-		}
-
-		err := common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-
-		if hostnameDetails.Hostname != "" {
-			if _, ok := instance.Status.BaremetalHosts[hostnameDetails.Hostname]; !ok {
-				instance.Status.BaremetalHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-					Hostname:             hostnameDetails.Hostname,
-					HostRef:              hostnameDetails.HostRef,
-					AnnotatedForDeletion: false,
-					// TODO (mschuppert): update ipaddresses for bmh
-					//    1) add ipaddress information for all networks
-					//    2) remove ctlplaneip from status and use info from ipaddress list
-					IPAddresses: map[string]string{},
-				}
-				newHostnames = append(newHostnames, hostnameDetails.Hostname)
-			}
-
-			common.LogForObject(
-				r,
-				fmt.Sprintf("%s hostname created: %s", instance.Kind, hostnameDetails.Hostname),
-				instance,
-			)
-		}
-	}
-
-	if !reflect.DeepEqual(currentNetStatus, instance.Status.BaremetalHosts) {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newHostnames),
-				diff.ObjectReflectDiff(currentNetStatus, instance.Status.BaremetalHosts),
-			),
-			instance,
-		)
-
-		err := r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			cond.Message = "Failed to update CR status for new hostnames"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-	}
-
-	return newHostnames, nil
-}
-
-//
 //   check/update instance status for annotated for deletion marked BMs
 //
-func (r *OpenStackBaremetalSetReconciler) checkVMsAnnotatedForDeletion(
+func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
-) error {
+) ([]string, error) {
 
 	// check for deletion marked BMH
 	currentBMHostsStatus := instance.Status.DeepCopy().BaremetalHosts
-	deletionAnnotatedBMHs, err := common.GetDeletionAnnotatedBmhHosts(r, "openshift-machine-api", map[string]string{
-		common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
-		common.OwnerUIDLabelSelector:            string(instance.GetUID()),
-	})
+	deletionAnnotatedBMHs, err := common.GetDeletionAnnotatedBmhHosts(
+		r,
+		"openshift-machine-api",
+		map[string]string{
+			common.OwnerControllerNameLabelSelector: baremetalset.AppLabel,
+			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+		},
+	)
 	if err != nil {
-		return err
+		return deletionAnnotatedBMHs, err
 	}
 
 	for hostname, bmhStatus := range instance.Status.DeepCopy().BaremetalHosts {
@@ -1559,9 +1496,9 @@ func (r *OpenStackBaremetalSetReconciler) checkVMsAnnotatedForDeletion(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-			return err
+			return deletionAnnotatedBMHs, err
 		}
 	}
 
-	return nil
+	return deletionAnnotatedBMHs, nil
 }

@@ -482,6 +482,32 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
+  - openstackipsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackipsets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackipsets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
   - openstackmacaddresses
   verbs:
   - create

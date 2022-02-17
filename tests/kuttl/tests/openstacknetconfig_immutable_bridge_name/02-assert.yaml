@@ -40,6 +40,10 @@ status:
   attachType: bridge
   bridgeName: br-osp
   conditions:
+  - message: NodeNetworkConfigurationPolicy br-osp is configuring targeted node(s)
+    reason: NodeNetworkConfigurationPolicy br-osp is configuring targeted node(s)
+    status: "False"
+    type: Configuring
   - message: 'NodeNetworkConfigurationPolicy br-osp: 3/3 nodes successfully configured'
     reason: 'NodeNetworkConfigurationPolicy br-osp: 3/3 nodes successfully configured'
     status: "True"

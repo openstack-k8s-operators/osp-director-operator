@@ -52,7 +52,7 @@ status:
       hostname: controlplane
       ipaddresses:
         ctlplane: 192.168.25.10/24
-      provisioningState: Provisioned
+      provisioningState: Created
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet

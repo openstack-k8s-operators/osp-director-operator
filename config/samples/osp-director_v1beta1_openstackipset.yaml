@@ -1,0 +1,13 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackIPSet
+metadata:
+  name: openstackipset-sample
+spec:
+  addToPredictableIPs: true
+  deletedHosts: []
+  hostCount: 1
+  networks:
+  - internal_api
+  roleName: Redis
+  serviceVIP: true
+  vip: false

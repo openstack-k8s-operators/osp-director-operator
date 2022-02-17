@@ -16,7 +16,9 @@ limitations under the License.
 
 package common
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // Functions available for all templates
 

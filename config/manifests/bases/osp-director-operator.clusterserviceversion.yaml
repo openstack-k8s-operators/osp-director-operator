@@ -81,6 +81,11 @@ spec:
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackIPSet is the Schema for the openstackipsets API
+      displayName: OpenStack IPSet
+      kind: OpenStackIPSet
+      name: openstackipsets.osp-director.openstack.org
+      version: v1beta1
     - description: OpenStackMACAddress is the Schema for the openstackmacaddresses
         API
       displayName: OpenStack MACAddress
