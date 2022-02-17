@@ -21,7 +21,7 @@ on:
 
 env:
   imageregistry: 'quay.io'
-  imagenamespace: 'openstack-k8s-operators'
+  imagenamespace: ${{ secrets.IMAGENAMESPACE || secrets.QUAY_USERNAME }}
   latesttag: latest
 
 jobs:

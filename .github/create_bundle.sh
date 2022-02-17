@@ -39,7 +39,7 @@ sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DI
 
 echo "Bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
-grep -A1 "${CLUSTER_BUNDLE_FILE}" IMAGE_URL_DEFAULT
+grep -A1 IMAGE_URL_DEFAULT "${CLUSTER_BUNDLE_FILE}"
 
 # We do not want to exit here. Some images are in different registries, so
 # error will be reported to the console.
@@ -77,4 +77,4 @@ done
 
 echo "Resulting bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
-grep -A1 "${CLUSTER_BUNDLE_FILE}" IMAGE_URL_DEFAULT
+grep -A1 IMAGE_URL_DEFAULT "${CLUSTER_BUNDLE_FILE}"
