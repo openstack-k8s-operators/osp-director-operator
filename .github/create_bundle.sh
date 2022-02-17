@@ -7,6 +7,8 @@ echo "Creating OSP director operator bundle"
 cd ..
 echo "${GITHUB_SHA}"
 echo "${BASE_IMAGE}"
+echo "${AGENT_IMAGE}"
+echo "${DOWNLOADER_IMAGE}"
 skopeo --version
 
 echo "Calculating image digest for docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA}"
@@ -25,12 +27,37 @@ echo "Release Version: $RELEASE_VERSION"
 echo "Creating bundle image..."
 VERSION=$RELEASE_VERSION IMG=$OPERATOR_IMG_WITH_DIGEST make bundle
 
+echo "Bundle file images:"
+cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
+grep -A1 IMAGE_URL_DEFAULT "${CLUSTER_BUNDLE_FILE}"
+
+# Replace AGENT_IMAGE_URL_DEFAULT in CSV
+
+AGENT_IMG_BASE="${REGISTRY}/${AGENT_IMAGE}"
+AGENT_IMG="${AGENT_IMG_BASE}:${GITHUB_SHA}"
+AGENT_DIGEST=$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
+if [[ -z "$AGENT_DIGEST" ]]; then
+  echo "ERROR: skopeo inspect failed for ${AGENT_IMG}"
+  exit 1
+fi
+AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@${AGENT_DIGEST}"
+sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+
+# Replace DOWNLOADER_IMAGE_URL_DEFAULT in CSV
+
+DOWNLOADER_IMG_BASE="${REGISTRY}/${DOWNLOADER_IMAGE}"
+DOWNLOADER_IMG="${DOWNLOADER_IMG_BASE}:${GITHUB_SHA}"
+DOWNLOADER_DIGEST=$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
+if [[ -z "$DOWNLOADER_DIGEST" ]]; then
+  echo "ERROR: skopeo inspect failed for ${DOWNLOADER_IMG}"
+  exit 1
+fi
+DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@${DOWNLOADER_DIGEST}"
+sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+
 echo "Applying work-arounds..."
 sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' "${CLUSTER_BUNDLE_FILE}"
 sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' "${CLUSTER_BUNDLE_FILE}"
-
-echo "Bundle file images:"
-cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
 
 # We do not want to exit here. Some images are in different registries, so
 # error will be reported to the console.
@@ -52,16 +79,24 @@ for csv_image in $(cat "${CLUSTER_BUNDLE_FILE}" | grep "image:" | sed -e "s|.*im
   if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
     echo "$base_image:$tag_image becomes $OPERATOR_IMG_WITH_DIGEST"
     sed -e "s|$base_image:$tag_image|$OPERATOR_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+  elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
+    echo "$base_image:$tag_image becomes $AGENT_IMG_WITH_DIGEST"
+    sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+  elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
+    echo "$base_image:$tag_image becomes $DOWNLOADER_IMG_WITH_DIGEST"
+    sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
   else
     digest_image=$(skopeo inspect docker://${base_image}${delimeter}${tag_image} | jq '.Digest' -r)
-
-    if [ ! -z "$digest_image" ]; then
-      echo "Base image: $base_image"
+    echo "Base image: $base_image"
+    if [ -n "$digest_image" ]; then
       echo "$base_image${delimeter}$tag_image becomes $base_image@$digest_image"
       sed -i "s|$base_image$delimeter$tag_image|$base_image@$digest_image|g" "${CLUSTER_BUNDLE_FILE}"
+    else
+      echo "$base_image${delimeter}$tag_image not changed"
     fi
   fi
 done
 
 echo "Resulting bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
+grep -A1 IMAGE_URL_DEFAULT "${CLUSTER_BUNDLE_FILE}"
