@@ -230,11 +230,17 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	secretLabels := common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 	var ctrlResult ctrl.Result
 
+	currentLabels := instance.DeepCopy().Labels
 	//
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		r,
+		instance,
+		cond,
+		instance.Spec.Networks[0],
+	)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -242,9 +248,25 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	// add labels of all networks used by this CR
 	//
-	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
-	if err != nil {
-		return ctrl.Result{}, err
+	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+
+	//
+	// update instance to sync labels if changed
+	//
+	if !equality.Semantic.DeepEqual(
+		currentLabels,
+		instance.Labels,
+	) {
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
 	}
 
 	//
@@ -1174,10 +1196,6 @@ func (r *OpenStackVMSetReconciler) createNewHostnames(
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newHostnames, err
-		}
-
-		if instance.Status.VMHosts == nil {
-			instance.Status.VMHosts = map[string]ospdirectorv1beta1.HostStatus{}
 		}
 
 		if hostnameDetails.Hostname != "" {
