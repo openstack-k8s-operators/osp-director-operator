@@ -13,9 +13,7 @@ import (
 	openstacknetattachment "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetOpenStackNetsBindingMap - Returns map of OpenStackNet name to binding type
@@ -124,11 +122,11 @@ func AddOSNetNameLowerLabels(
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
 	networkNameLowerNames []string,
-) error {
+) map[string]string {
 
-	currentLabels := obj.GetLabels()
-	if currentLabels == nil {
-		currentLabels = map[string]string{}
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
 	}
 
 	osNetLabels := map[string]string{}
@@ -144,19 +142,19 @@ func AddOSNetNameLowerLabels(
 	//
 	// get current osNet Labels and verify if nets got removed
 	//
-	for _, label := range reflect.ValueOf(currentLabels).MapKeys() {
+	for _, label := range reflect.ValueOf(labels).MapKeys() {
 		//
 		// has label key SubNetNameLabelSelector string included?
 		//
 		if strings.HasSuffix(label.String(), SubNetNameLabelSelector) {
 			l := label.String()
-			osNetLabels[l] = currentLabels[l]
+			osNetLabels[l] = labels[l]
 
 			//
 			// if l is not in networkNameLowerNamesMap it got removed
 			//
 			if _, ok := networkNameLowerNamesMap[l]; !ok {
-				delete(currentLabels, l)
+				delete(labels, l)
 				removedOsNets[l] = true
 
 			}
@@ -183,7 +181,7 @@ func AddOSNetNameLowerLabels(
 		// if label is not in osNetLabels its a new one
 		//
 		if _, ok := osNetLabels[label]; !ok {
-			currentLabels[label] = strconv.FormatBool(true)
+			labels[label] = strconv.FormatBool(true)
 			newOsNets[label] = true
 		}
 
@@ -201,28 +199,7 @@ func AddOSNetNameLowerLabels(
 		)
 	}
 
-	//
-	// update labels on obj
-	//
-	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), obj, func() error {
-		obj.SetLabels(
-			labels.Merge(
-				obj.GetLabels(),
-				currentLabels,
-			))
-
-		return nil
-	})
-	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to update %s labels on %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, obj, err)
-
-		return err
-	}
-
-	return nil
+	return labels
 }
 
 //
