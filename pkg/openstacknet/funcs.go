@@ -254,6 +254,31 @@ func GetAllIPReservations(
 	}
 
 	//
+	// add new reservations from osnet.Spec.Reservations which are not yet synced to osnet.Status.Reservations
+	//
+	for _, role := range osNet.Spec.RoleReservations {
+		for _, res := range role.Reservations {
+			found := false
+			for _, resList := range reservationList {
+				if res.IP == resList.IP {
+					found = true
+					break
+				}
+			}
+			if !found {
+				reservationList = append(
+					reservationList,
+					ospdirectorv1beta1.IPReservation{
+						IP:       res.IP,
+						Hostname: res.Hostname,
+						Deleted:  res.Deleted,
+					},
+				)
+			}
+		}
+	}
+
+	//
 	// add new staticReservations provided by the osnetcfg CR
 	//
 	for _, staticRes := range staticReservations {
