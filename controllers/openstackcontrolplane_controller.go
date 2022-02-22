@@ -256,11 +256,17 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
+	currentLabels := instance.DeepCopy().Labels
 	//
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, vipNetworksList[0])
+	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		r,
+		instance,
+		cond,
+		vipNetworksList[0],
+	)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -268,9 +274,25 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// add labels of all networks used by this CR
 	//
-	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, vipNetworksList)
-	if err != nil {
-		return ctrl.Result{}, err
+	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, vipNetworksList)
+
+	//
+	// update instance to sync labels if changed
+	//
+	if !equality.Semantic.DeepEqual(
+		currentLabels,
+		instance.Labels,
+	) {
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
 	}
 
 	//
@@ -295,6 +317,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	for hostname, hostStatus := range instance.Status.VIPStatus {
 		err = openstacknetconfig.WaitOnIPsCreated(
+			r,
 			instance,
 			cond,
 			osnetcfg,
@@ -303,7 +326,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 			&hostStatus,
 		)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
 		hostStatus.HostRef = hostname
@@ -762,10 +785,6 @@ func (r *OpenStackControlPlaneReconciler) createNewHostnames(
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newVMs, err
-		}
-
-		if instance.Status.VIPStatus == nil {
-			instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
 		}
 
 		if hostnameDetails.Hostname != "" {

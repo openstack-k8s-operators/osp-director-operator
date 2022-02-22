@@ -34,16 +34,6 @@ type AssignIPDetails struct {
 	Deleted       bool
 }
 
-// IPSet - ipset details
-type IPSet struct {
-	Networks            []string
-	Role                string
-	HostCount           int
-	AddToPredictableIPs bool
-	VIP                 bool
-	HostNameRefs        map[string]string
-}
-
 func (a AssignmentError) Error() string {
 	return fmt.Sprintf("Could not allocate IP in range: ip: %v / - %v / range: %#v", a.firstIP, a.lastIP, a.ipnet)
 }

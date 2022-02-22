@@ -232,11 +232,17 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	var ctrlResult reconcile.Result
+	currentLabels := instance.DeepCopy().Labels
 	//
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		r,
+		instance,
+		cond,
+		instance.Spec.Networks[0],
+	)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -244,9 +250,25 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// add labels of all networks used by this CR
 	//
-	err = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
-	if err != nil {
-		return ctrl.Result{}, err
+	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+
+	//
+	// update instance to sync labels if changed
+	//
+	if !equality.Semantic.DeepEqual(
+		currentLabels,
+		instance.Labels,
+	) {
+		err = r.Client.Update(context.TODO(), instance)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
 	}
 
 	//
@@ -335,6 +357,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	for hostname, hostStatus := range instance.Status.BaremetalHosts {
 		err = openstacknetconfig.WaitOnIPsCreated(
+			r,
 			instance,
 			cond,
 			osnetcfg,
@@ -343,7 +366,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 			&hostStatus,
 		)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
 		// Can not set (like in vmset, osclient, osctlplane) HostRef for BMS to hostname as it references the used BMH host
@@ -539,8 +562,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			timeout := 10
 
 			cond.Message = fmt.Sprintf("%s %s not found reconcile again in %d seconds", provisionServer.Kind, instance.Spec.ProvisionServerName, timeout)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotFound)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotFound)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 			return provisionServer, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 		} else if err != nil {
@@ -562,8 +585,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			timeout,
 		)
 
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonNotReady)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioning)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 		return provisionServer, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 	}
@@ -576,7 +599,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 	)
 
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeProvisioning)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonReady)
+	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioned)
 
 	return provisionServer, ctrl.Result{}, nil
 }
@@ -1380,8 +1403,8 @@ func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
 			cond.Message = fmt.Sprintf("PasswordSecret %s not found but specified in CR, next reconcile in %d s", instance.Spec.PasswordSecret, timeout)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretNotFound)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretMissing)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeWaiting)
 
 			return passwordSecret, ctrl.Result{RequeueAfter: time.Duration(timeout) * time.Second}, nil
 		}
@@ -1426,10 +1449,6 @@ func (r *OpenStackBaremetalSetReconciler) createNewHostnames(
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newHostnames, err
-		}
-
-		if instance.Status.BaremetalHosts == nil {
-			instance.Status.BaremetalHosts = map[string]ospdirectorv1beta1.HostStatus{}
 		}
 
 		if hostnameDetails.Hostname != "" {

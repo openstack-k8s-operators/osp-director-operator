@@ -254,7 +254,7 @@ func (conditions ConditionList) InitCondition() *Condition {
 		}
 	}
 
-	return cond
+	return cond.DeepCopy()
 }
 
 // GetCurrentCondition - Get current condition with status == corev1.ConditionTrue

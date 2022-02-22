@@ -1,7 +1,6 @@
 package openstacknetconfig
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -12,9 +11,7 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -27,7 +24,8 @@ func AddOSNetConfigRefLabel(
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
 	networkNameLower string,
-) (reconcile.Result, error) {
+) (map[string]string, reconcile.Result, error) {
+	labels := obj.GetLabels()
 
 	//
 	// only add label if it is not already there
@@ -50,14 +48,14 @@ func AddOSNetConfigRefLabel(
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 			common.LogForObject(r, cond.Message, obj)
 
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+			return labels, ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		} else if err != nil {
 			cond.Message = fmt.Sprintf("Failed to get OpenStackNet %s ", networkNameLower)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
 			err = common.WrapErrorForObject(cond.Message, obj, err)
 
-			return ctrl.Result{}, err
+			return labels, ctrl.Result{}, err
 		}
 
 		//
@@ -66,50 +64,37 @@ func AddOSNetConfigRefLabel(
 		for _, ownerRef := range osnet.ObjectMeta.OwnerReferences {
 			if ownerRef.Kind == "OpenStackNetConfig" {
 				//
-				// update labels on obj
+				// merge with obj labels
 				//
-				op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), obj, func() error {
-					obj.SetLabels(
-						labels.Merge(
-							obj.GetLabels(),
-							map[string]string{
-								OpenStackNetConfigReconcileLabel: ownerRef.Name,
-							},
-						))
+				labels = common.MergeStringMaps(
+					labels,
+					map[string]string{
+						OpenStackNetConfigReconcileLabel: ownerRef.Name,
+					},
+				)
 
-					return nil
-				})
-				if err != nil {
-					cond.Message = fmt.Sprintf("Failed to update RefLabel label on %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddRefLabelError)
-					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
-					err = common.WrapErrorForObject(cond.Message, obj, err)
-
-					return ctrl.Result{}, err
-				}
 				common.LogForObject(
 					r,
-					fmt.Sprintf("%s updated with %s:%s label: %s",
+					fmt.Sprintf("%s updated with %s:%s label",
 						obj.GetName(),
 						OpenStackNetConfigReconcileLabel,
 						ownerRef.Name,
-						op,
 					),
 					obj,
 				)
-
-				return ctrl.Result{}, nil
+				break
 			}
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return labels, ctrl.Result{}, nil
 }
 
 //
 // WaitOnIPsCreated - Wait for IPs created on all configured networks
 //
 func WaitOnIPsCreated(
+	r common.ReconcilerCommon,
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
 	osnetcfg *ospdirectorv1beta1.OpenStackNetConfig,
@@ -118,18 +103,27 @@ func WaitOnIPsCreated(
 	hostStatus *ospdirectorv1beta1.HostStatus,
 ) error {
 	//
-	// If verify that we have the hosts entry on the status if the osnetcfg object
+	// verify that we have the host entry on the status of the osnetcfg object
 	//
 	var osnetcfgHostStatus ospdirectorv1beta1.OpenStackHostStatus
 	var ok bool
 	if osnetcfgHostStatus, ok = osnetcfg.Status.Hosts[hostname]; !ok {
-		cond.Message = fmt.Sprintf("%s %s waiting on node %s to be added to %s config %s",
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s %s waiting on node %s to be added to %s config %s",
+				obj.GetObjectKind().GroupVersionKind().Kind,
+				obj.GetName(),
+				hostname,
+				osnetcfg.Kind,
+				osnetcfg.Name,
+			),
+			obj,
+		)
+		cond.Message = fmt.Sprintf("%s %s waiting on IPs to be created for all nodes and networks",
 			obj.GetObjectKind().GroupVersionKind().Kind,
 			obj.GetName(),
-			hostname,
-			osnetcfg.Kind,
-			osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnHost)
+		)
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnIPsForHost)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
 		return k8s_errors.NewNotFound(v1.Resource(obj.GetObjectKind().GroupVersionKind().Kind), cond.Message)
@@ -143,12 +137,21 @@ func WaitOnIPsCreated(
 			hostStatus.IPAddresses[osNet] = ip
 			continue
 		}
+		common.LogForObject(
+			r,
+			fmt.Sprintf("%s %s waiting on IP address for node %s on network %s to be available",
+				obj.GetObjectKind().GroupVersionKind().Kind,
+				obj.GetName(),
+				hostname,
+				osNet,
+			),
+			obj,
+		)
 
-		cond.Message = fmt.Sprintf("%s %s waiting on IP address for node %s on network %s to be available",
+		cond.Message = fmt.Sprintf("%s %s waiting on IPs to be created for all nodes and networks",
 			obj.GetObjectKind().GroupVersionKind().Kind,
 			obj.GetName(),
-			hostname,
-			osNet)
+		)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnIPsForHost)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 

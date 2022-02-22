@@ -104,12 +104,6 @@ type Network struct {
 	// +kubebuilder:default=true
 	// VIP create virtual ip on the network
 	VIP bool `json:"vip"`
-
-	/*
-		// +kubebuilder:validation:Optional
-		// StaticReservations, manual/static IP address reservations per node
-		StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
-	*/
 }
 
 // OpenStackNetConfigSpec defines the desired state of OpenStackNetConfig
@@ -151,6 +145,21 @@ type OpenStackNetConfigSpec struct {
 	// but the role itself is not deleted. The reservations of all nodes in the role get deleted when the full node
 	// role is being deleted. (default: true)
 	PreserveReservations *bool `json:"preserveReservations"`
+
+	// +kubebuilder:validation:Optional
+	// Reservations, manual/static MAC/IP address reservations per node
+	Reservations map[string]OpenStackNetStaticNodeReservations `json:"reservations"`
+}
+
+// OpenStackNetStaticNodeReservations defines the static reservations of the nodes
+type OpenStackNetStaticNodeReservations struct {
+	// +kubebuilder:validation:Optional
+	// IPReservations, manual/static IP address reservations per network
+	IPReservations map[string]string `json:"ipReservations"`
+
+	// +kubebuilder:validation:Optional
+	// MACReservations, manual/static MAC address reservations per physnet
+	MACReservations map[string]string `json:"macReservations"`
 }
 
 // OVNBridgeMacMappingConfig defines the desired state of OpenStackMACAddress
@@ -158,10 +167,6 @@ type OVNBridgeMacMappingConfig struct {
 	// +kubebuilder:validation:MinItems=1
 	// PhysNetworks - physical networks list to create MAC addresses per physnet per node to create OVNStaticBridgeMacMappings
 	PhysNetworks []Physnet `json:"physNetworks"`
-
-	// +kubebuilder:validation:Optional
-	// StaticReservations, manual/static MAC address reservations per node
-	StaticReservations map[string]OpenStackMACNodeReservation `json:"staticReservations"`
 }
 
 // OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig

@@ -1,0 +1,10 @@
+#
+# Add new network definition to spec.networks
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/networks/-", "value": {"name": "InternalApi", "nameLower": "internal_api","subnets": [{"name": "internal_api", "vlan": 20, "attachConfiguration": "br-osp", "ipv4": {"allocationEnd": "172.17.0.250", "allocationStart": "172.17.0.10", "cidr": "172.17.0.0/24"}}]}}]'
+    namespaced: true

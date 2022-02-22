@@ -33,12 +33,12 @@ status:
   baremetalHosts:
     compute-0:
       annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.102/24
+      ctlplaneIP: 192.168.25.40/24
       hostname: compute-0
       provisioningState: provisioned
     compute-1:
       annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.103/24
+      ctlplaneIP: 192.168.25.100/24
       hostname: compute-1
       provisioningState: provisioned
   provisioningStatus:
@@ -134,25 +134,25 @@ spec:
       reservations:
       - deleted: false
         hostname: compute-0
-        ip: 192.168.25.102
+        ip: 192.168.25.40
         vip: false
       - deleted: false
         hostname: compute-1
-        ip: 192.168.25.103
+        ip: 192.168.25.100
         vip: false
     ControlPlane:
       addToPredictableIPs: true
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.100
+        ip: 192.168.25.10
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.101
+        ip: 192.168.25.251
         vip: false
 status:
   conditions:
@@ -164,16 +164,16 @@ status:
   reservations:
     compute-0:
       deleted: false
-      ip: 192.168.25.102
+      ip: 192.168.25.40
     compute-1:
       deleted: false
-      ip: 192.168.25.103
+      ip: 192.168.25.100
     controlplane:
       deleted: false
-      ip: 192.168.25.100
+      ip: 192.168.25.10
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.101
+      ip: 192.168.25.251
   reservedIpCount: 4
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -190,11 +190,11 @@ spec:
       reservations:
       - deleted: false
         hostname: compute-0
-        ip: 172.17.0.12
+        ip: 172.17.0.40
         vip: false
       - deleted: false
         hostname: compute-1
-        ip: 172.17.0.13
+        ip: 172.17.0.11
         vip: false
     ControlPlane:
       addToPredictableIPs: true
@@ -208,7 +208,7 @@ spec:
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 172.17.0.11
+        ip: 172.17.0.251
         vip: false
 status:
   conditions:
@@ -220,16 +220,16 @@ status:
   reservations:
     compute-0:
       deleted: false
-      ip: 172.17.0.12
+      ip: 172.17.0.40
     compute-1:
       deleted: false
-      ip: 172.17.0.13
+      ip: 172.17.0.11
     controlplane:
       deleted: false
       ip: 172.17.0.10
     openstackclient-0:
       deleted: false
-      ip: 172.17.0.11
+      ip: 172.17.0.251
   reservedIpCount: 4
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -246,11 +246,11 @@ spec:
       reservations:
       - deleted: false
         hostname: compute-0
-        ip: 172.20.0.10
+        ip: 172.20.0.40
         vip: false
       - deleted: false
         hostname: compute-1
-        ip: 172.20.0.11
+        ip: 172.20.0.10
         vip: false
 status:
   conditions:
@@ -262,10 +262,10 @@ status:
   reservations:
     compute-0:
       deleted: false
-      ip: 172.20.0.10
+      ip: 172.20.0.40
     compute-1:
       deleted: false
-      ip: 172.20.0.11
+      ip: 172.20.0.10
   reservedIpCount: 2
 ---
 apiVersion: osp-director.openstack.org/v1beta1

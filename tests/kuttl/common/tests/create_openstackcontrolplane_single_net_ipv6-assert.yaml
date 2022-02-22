@@ -1,0 +1,191 @@
+#
+# Check for:
+#
+# - 1 OpenStackControlPlane
+# - 1 OpenStackVMSet
+# - 1 OpenStackClient
+# - 6 OpenStackNet (IP reservations for OpenStackControlPlane and OpenStackClient)
+# - 1 Secret (TripleO passwords)
+# - 1 OpenStackMACAddress
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack
+spec:
+  domainName: ostest.test.metalkube.org
+  enableFencing: false
+  gitSecret: git-secret
+  openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  openStackClientNetworks:
+  - ctlplane
+  openStackClientStorageClass: host-nfs-storageclass
+  openStackRelease: "16.2"
+  passwordSecret: userpassword
+  virtualMachineRoles:
+    controller:
+      baseImageVolumeName: controller-base-img
+      cores: 6
+      ctlplaneInterface: enp2s0
+      diskSize: 50
+      isTripleoRole: true
+      memory: 20
+      networks:
+      - ctlplane
+      roleCount: 0
+      roleName: Controller
+      storageClass: host-nfs-storageclass
+status:
+  ospVersion: "16.2"
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+  vipStatus:
+    controlplane:
+      annotatedForDeletion: false
+      hostRef: controlplane
+      hostname: controlplane
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::10/64
+      provisioningState: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackVMSet
+metadata:
+  finalizers:
+  - openstackvmsets.osp-director.openstack.org/virtualmachine
+  name: controller
+  namespace: openstack
+spec:
+  baseImageVolumeName: controller-base-img
+  cores: 6
+  ctlplaneInterface: enp2s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  diskSize: 50
+  domainName: ostest.test.metalkube.org
+  isTripleoRole: true
+  memory: 20
+  networks:
+  - ctlplane
+  passwordSecret: userpassword
+  roleName: Controller
+  storageClass: host-nfs-storageclass
+  vmCount: 0
+status:
+  baseImageDVReady: true
+  provisioningStatus:
+    reason: No VirtualMachines have been requested
+    state: Empty
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackClient
+metadata:
+  name: openstackclient
+  namespace: openstack
+spec:
+  cloudName: overcloud
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  domainName: ostest.test.metalkube.org
+  gitSecret: git-secret
+  imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+  networks:
+  - ctlplane
+  runGID: 42401
+  runUID: 42401
+  storageClass: host-nfs-storageclass
+status:
+  netStatus:
+    openstackclient-0:
+      annotatedForDeletion: false
+      hostRef: openstackclient-0
+      hostname: openstackclient-0
+      ipaddresses:
+        ctlplane: 2001:db8:fd00:2000::251/64
+      provisioningState: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  labels:
+    ooo-ctlplane-network: "true"
+    ooo-netname: Control
+    ooo-netname-lower: ctlplane
+    ooo-subnetname: ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: ctlplane
+  namespace: openstack
+spec:
+  allocationEnd: 2001:db8:fd00:2000:ffff:ffff:ffff:fffe
+  allocationStart: 2001:db8:fd00:2000::100
+  attachConfiguration: br-osp
+  cidr: 2001:db8:fd00:2000::/64
+  domainName: ctlplane.localdomain
+  gateway: 2001:db8:fd00:2000::1
+  mtu: 1500
+  name: Control
+  nameLower: ctlplane
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 2001:db8:fd00:2000::10
+        vip: true
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 2001:db8:fd00:2000::251
+        vip: false
+  routes: []
+  vip: true
+  vlan: 0
+status:
+  currentState: Configured
+  reservations:
+    controlplane:
+      deleted: false
+      ip: 2001:db8:fd00:2000::10
+    openstackclient-0:
+      deleted: false
+      ip: 2001:db8:fd00:2000::251
+  reservedIpCount: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    osp-director.openstack.org/controller: osp-controlplane
+    osp-director.openstack.org/name: overcloud
+    osp-director.openstack.org/namespace: openstack
+  name: tripleo-passwords
+  namespace: openstack
+type: Opaque
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  roleReservations:
+    Controller:
+      reservations: {}
+status:
+  currentState: Created
+  macReservations: {}
+  reservedMACCount: 0
