@@ -44,7 +44,7 @@ func DeployJob(
 		},
 	}
 
-	var terminationGracePeriodSeconds int64 = 0
+	var terminationGracePeriodSeconds int64 = 60
 	var backoffLimit int32 = 0
 
 	cmd := []string{"/osp-director-operator-agent", "deploy"}

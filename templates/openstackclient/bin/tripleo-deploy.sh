@@ -4,6 +4,18 @@ umask 022
 
 export PWD=/home/cloud-admin
 CONFIG_VERSION=${CONFIG_VERSION:?"Please set CONFIG_VERSION."}
+sudo bash -c 'mkdir -p /var/run/tripleo-deploy && chown '$(whoami)' /var/run/tripleo-deploy'
+RUNDIR="/var/run/tripleo-deploy/$CONFIG_VERSION"
+mkdir -p $RUNDIR
+PGIDFILE=$RUNDIR/pgid
+trap "rm -f $PGIDFILE" EXIT
+# Assume PGID==$PPID which is the case when run via oc exec
+# Alternatively could do something like:
+# PGID=$(python3 -c 'import os; print(os.getpgid(os.getpid()))')
+PGID=$PPID
+echo $PGID > $PGIDFILE
+
+
 WORKDIR="/home/cloud-admin/work/$CONFIG_VERSION"
 mkdir -p $WORKDIR
 
