@@ -40,7 +40,7 @@ jobs:
     - name: Tag agent image
       uses: tinact/docker.image-retag@1.0.2
       with:
-        image_name: ${{ env.imagenamespace }}/osp-director-operator-agent
+        image_name: ${{ env.imagenamespace }}/osp-director-agent
         image_old_tag: ${{ github.sha }}
         image_new_tag: ${{ github.event.release.tag_name }}
         registry: ${{ env.imageregistry }}

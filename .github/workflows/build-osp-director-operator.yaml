@@ -132,7 +132,7 @@ jobs:
       id: build-osp-director-agent
       uses: redhat-actions/buildah-build@v2
       with:
-        image: osp-director-operator-agent
+        image: osp-director-agent
         tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./Dockerfile.agent
@@ -186,7 +186,7 @@ jobs:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
         BASE_IMAGE: osp-director-operator
-        AGENT_IMAGE: osp-director-operator-agent
+        AGENT_IMAGE: osp-director-agent
         DOWNLOADER_IMAGE: osp-director-downloader
 
     - name: Get branch name

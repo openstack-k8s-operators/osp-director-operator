@@ -40,7 +40,7 @@ func DeployJob(cr *ospdirectorv1beta1.OpenStackDeploy, openstackClientPod string
 	var terminationGracePeriodSeconds int64 = 0
 	var backoffLimit int32 = 0
 
-	cmd := []string{"/osp-director-operator-agent", "deploy"}
+	cmd := []string{"/osp-director-agent", "deploy"}
 	restartPolicy := corev1.RestartPolicyNever
 
 	job.Spec.BackoffLimit = &backoffLimit
