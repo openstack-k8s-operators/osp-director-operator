@@ -68,9 +68,14 @@ func DeployJob(
 				ImagePullPolicy: corev1.PullAlways,
 				Command:         cmd,
 				Env: []corev1.EnvVar{
+					// NOTE: CONFIG_VERSION must be the first ENV due to logic in openstackdeploy_controller
 					{
 						Name:  "CONFIG_VERSION",
 						Value: configVersion,
+					},
+					{
+						Name:  "DEPLOY_NAME",
+						Value: cr.Name,
 					},
 					{
 						Name:  "OSP_DIRECTOR_OPERATOR_NAMESPACE",

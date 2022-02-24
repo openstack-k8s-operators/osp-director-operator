@@ -21,7 +21,7 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: Config Generator Name
-      jsonPath: .spec.ConfigGeneratorName
+      jsonPath: .spec.configGeneratorName
       name: Generator
       type: string
     name: v1beta1

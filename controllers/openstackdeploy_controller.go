@@ -76,7 +76,7 @@ func (r *OpenStackDeployReconciler) GetScheme() *runtime.Scheme {
 func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// Fetch the ProvisionServer instance
+	// Fetch the OpenStackDeploy instance
 	instance := &ospdirectorv1beta1.OpenStackDeploy{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -190,7 +190,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 
-		// configVersion Hash changed while job was running (NOTE: configVersion is only ENV in the job)
+		// configVersion Hash changed while job was running (NOTE: configVersion is the 1st ENV in the job)
 		common.LogForObject(r, fmt.Sprintf("Job Hash : %s", job.Spec.Template.Spec.Containers[0].Env[0].Value), instance)
 		if instance.Spec.ConfigVersion != job.Spec.Template.Spec.Containers[0].Env[0].Value {
 			_, err = common.DeleteJob(ctx, job, r.Kclient, r.Log)
@@ -237,6 +237,12 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonJobFinished)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeFinished)
 	common.LogForObject(r, cond.Message, instance)
+
+	// set ownership on the ConfigMap created by our Deployment container
+	err = openstackdeploy.SetConfigMapOwner(r, instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
