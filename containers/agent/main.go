@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	componentName = "osp-director-operator-agent"
+	componentName = "osp-director-agent"
 )
 
 var (
