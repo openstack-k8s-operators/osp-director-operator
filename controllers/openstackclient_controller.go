@@ -488,22 +488,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
 
-	if instance.Spec.GitSecret != "" {
-		env = common.MergeEnvs([]corev1.EnvVar{
-			{
-				Name: "GIT_URL",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.GitSecret,
-						},
-						Key: "git_url",
-					},
-				},
-			},
-		}, *envVars)
-	}
-
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,

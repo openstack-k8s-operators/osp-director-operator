@@ -276,21 +276,11 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 				return *secretList, err
 			}
 		}
-		if item.Spec.GitSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.GitSecret, secretList); err != nil {
-				return *secretList, err
-			}
-		}
 	}
 
 	for _, item := range desiredCrs.OpenStackClients.Items {
 		if item.Spec.DeploymentSSHSecret != "" {
 			if err := addSecretToList(r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
-				return *secretList, err
-			}
-		}
-		if item.Spec.GitSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.GitSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}

@@ -597,12 +597,6 @@ spec:
                                 domainName:
                                   description: Domain name used to build fqdn
                                   type: string
-                                gitSecret:
-                                  description: GitSecret the name of the secret used
-                                    to pull Ansible playbooks into the openstackclient
-                                    pod. This secret should contain an entry for both
-                                    'git_url' and 'git_ssh_identity'
-                                  type: string
                                 idmSecret:
                                   description: Idm secret used to register openstack
                                     client in IPA
@@ -844,10 +838,6 @@ spec:
                                     FIXME: Defaulting to false until Kubevirt agent
                                     merged into RHEL overcloud image'
                                   type: boolean
-                                gitSecret:
-                                  description: GitSecret used to pull playbooks into
-                                    the openstackclient pod
-                                  type: string
                                 idmSecret:
                                   description: Idm secret used to register openstack
                                     client in IPA
@@ -985,7 +975,6 @@ spec:
                                   type: object
                               required:
                               - enableFencing
-                              - gitSecret
                               - virtualMachineRoles
                               type: object
                             status:

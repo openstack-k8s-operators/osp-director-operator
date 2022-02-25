@@ -40,25 +40,7 @@ if [ -d /mnt/ssh-config ]; then
   mkdir -p /home/cloud-admin/.ssh
   cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
   chmod 600 /home/cloud-admin/.ssh/id_rsa
-  chmod 600 /home/cloud-admin/.ssh/git_id_rsa
   chown -R cloud-admin: /home/cloud-admin/.ssh
-fi
-
-if [ -v GIT_URL ]; then
-  GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
-  GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
-
-  cat <<EOF >> /home/cloud-admin/.ssh/config
-
-
-Host $GIT_HOST
-    User $GIT_USER
-    IdentityFile /home/cloud-admin/.ssh/git_id_rsa
-    StrictHostKeyChecking no
-EOF
-
-  git config --global user.email "dev@null.io"
-  git config --global user.name "OSP Director Operator"
 fi
 
 if [ -d /mnt/ca-certs ]; then

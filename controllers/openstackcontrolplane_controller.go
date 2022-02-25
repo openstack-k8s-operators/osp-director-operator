@@ -935,7 +935,6 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 		osc.Spec.DeploymentSSHSecret = deploymentSecret.Name
 		osc.Spec.CloudName = instance.Name
 		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
-		osc.Spec.GitSecret = instance.Spec.GitSecret
 		osc.Spec.RunUID = openstackclient.CloudAdminUID
 		osc.Spec.RunGID = openstackclient.CloudAdminGID
 		if instance.Spec.DomainName != "" {
