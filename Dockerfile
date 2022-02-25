@@ -1,7 +1,7 @@
 ARG GOLANG_BUILDER=golang:1.16
 ARG OPERATOR_BASE_IMAGE=gcr.io/distroless/static:nonroot
 
-# Build the manager binary
+# uild the manager binary
 FROM $GOLANG_BUILDER AS builder
 
 #Arguments required by OSBS build system
