@@ -30,7 +30,7 @@ ARG WHAT=osp-director-agent
 
 ARG IMAGE_COMPONENT="osp-director-agent-container"
 ARG IMAGE_NAME="osp-director-agent"
-ARG IMAGE_VERSION="1.0.0"
+ARG IMAGE_VERSION="1.3.0"
 ARG IMAGE_SUMMARY="OSP-Director-Operator-agent"
 ARG IMAGE_DESC="This is agent that works with the OSP Director Operator"
 ARG IMAGE_TAGS="openstack director"
