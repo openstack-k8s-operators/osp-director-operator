@@ -236,10 +236,6 @@ func getHeatVolumes(name string) []corev1.Volume {
 							Key:  "heat_token.json",
 							Path: "token.json",
 						},
-						{
-							Key:  "heat_noauth.policy",
-							Path: "noauth.policy",
-						},
 					},
 				},
 			},
