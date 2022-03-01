@@ -44,6 +44,7 @@ const (
 type OpenStackControlPlaneSpec struct {
 	// List of VirtualMachine roles
 	VirtualMachineRoles map[string]OpenStackVirtualMachineRoleSpec `json:"virtualMachineRoles"`
+	// +kubebuilder:validation:Optional
 	// OpenstackClient image. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
 	OpenStackClientImageURL string `json:"openStackClientImageURL,omitempty"`
 	// OpenStackClientStorageClass storage class

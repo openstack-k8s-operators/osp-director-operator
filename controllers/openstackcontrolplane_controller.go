@@ -931,7 +931,9 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, osc, func() error {
-		osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
+		if instance.Spec.OpenStackClientImageURL != "" {
+			osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
+		}
 		osc.Spec.DeploymentSSHSecret = deploymentSecret.Name
 		osc.Spec.CloudName = instance.Name
 		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass

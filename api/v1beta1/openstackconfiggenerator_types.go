@@ -22,6 +22,7 @@ import (
 
 // OpenStackConfigGeneratorSpec defines the desired state of OpenStackConfigGenerator
 type OpenStackConfigGeneratorSpec struct {
+	// +kubebuilder:validation:Optional
 	// Name of the image used to generate configs. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
 	ImageURL string `json:"imageURL,omitempty"`
 	// +kubebuilder:validation:Optional

@@ -22,8 +22,9 @@ import (
 
 // OpenStackClientSpec defines the desired state of OpenStackClient
 type OpenStackClientSpec struct {
-	// Name of the image
-	ImageURL string `json:"imageURL"`
+	// +kubebuilder:validation:Optional
+	// OpenStackClient image. If missing will be set to the configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the OSP Director Operator.
+	ImageURL string `json:"imageURL,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// name of secret holding the stack-admin ssh keys

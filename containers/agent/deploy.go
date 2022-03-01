@@ -34,6 +34,10 @@ var (
 		configVersion  string
 		gitURL         string
 		gitSSHIdentity string
+		playbook       string
+		limit          string
+		tags           string
+		skipTags       string
 	}
 )
 
@@ -44,6 +48,10 @@ func init() {
 	deployCmd.PersistentFlags().StringVar(&deployOpts.configVersion, "configVersion", "", "Config version to use when executing the deployment.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitURL, "gitURL", "", "Git URL to use when downloading playbooks.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitSSHIdentity, "gitSSHIdentity", "", "Git SSH Identity to use when downloading playbooks.")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "playbook", "", "Playbook to deploy")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "limit", "", "Playbook inventory limit")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "tags", "", "Playbook include tags")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "skipTags", "", "Playbook exclude tags")
 }
 
 // ExecPodCommand -
@@ -131,6 +139,26 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		deployOpts.gitSSHIdentity = gitSSHIdentity
 	}
 
+	if deployOpts.playbook == "" {
+		playbook, _ := os.LookupEnv("PLAYBOOK")
+		deployOpts.playbook = playbook
+	}
+
+	if deployOpts.limit == "" {
+		limit, _ := os.LookupEnv("LIMIT")
+		deployOpts.limit = limit
+	}
+
+	if deployOpts.tags == "" {
+		tags, _ := os.LookupEnv("TAGS")
+		deployOpts.tags = tags
+	}
+
+	if deployOpts.skipTags == "" {
+		skipTags, _ := os.LookupEnv("SKIP_TAGS")
+		deployOpts.skipTags = skipTags
+	}
+
 	var config *rest.Config
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig != "" {
@@ -157,7 +185,18 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		panic(err.Error())
 	}
 
-	execErr := ExecPodCommand(*kclient, *pod, "openstackclient", "CONFIG_VERSION="+deployOpts.configVersion+" GIT_ID_RSA='"+deployOpts.gitSSHIdentity+"' GIT_URL='"+deployOpts.gitURL+"' "+"/usr/bin/bash /usr/local/bin/tripleo-deploy.sh")
+	execErr := ExecPodCommand(
+		*kclient,
+		*pod,
+		"openstackclient",
+		"CONFIG_VERSION='"+deployOpts.configVersion+"' "+
+			"GIT_ID_RSA='"+deployOpts.gitSSHIdentity+"' "+
+			"GIT_URL='"+deployOpts.gitURL+"' "+
+			"PLAYBOOK='"+deployOpts.playbook+"' "+
+			"LIMIT='"+deployOpts.limit+"' "+
+			"TAGS='"+deployOpts.tags+"' "+
+			"SKIP_TAGS='"+deployOpts.skipTags+"' "+
+			"/usr/bin/bash /usr/local/bin/tripleo-deploy.sh")
 	if execErr != nil {
 		panic(execErr.Error())
 	}

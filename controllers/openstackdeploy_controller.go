@@ -143,9 +143,30 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	ansibleSettings := instance.Spec.AnsibleSettings.DeepCopy()
+	if ansibleSettings.Playbook == "" {
+		switch instance.Spec.Mode {
+		case "update":
+			ansibleSettings.Playbook = "update_steps_playbook.yaml"
+		case "externalUpdate":
+			ansibleSettings.Playbook = "external_update_steps_playbook.yaml"
+		default:
+			ansibleSettings.Playbook = "deploy_steps_playbook.yaml"
+		}
+	}
+
+	// FIXME: is ConfigVersion set on the status?
+	// Should changing ansible settings restart a job
+	// Need to make interrupting a job safe
 	if instance.Status.ConfigVersion != instance.Spec.ConfigVersion {
 		// Define a new Job object
-		job := openstackdeploy.DeployJob(instance, "openstackclient", instance.Spec.ConfigVersion, configGenerator.Spec.GitSecret)
+		job := openstackdeploy.DeployJob(
+			instance,
+			"openstackclient",
+			instance.Spec.ConfigVersion,
+			configGenerator.Spec.GitSecret,
+			ansibleSettings,
+		)
 
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
