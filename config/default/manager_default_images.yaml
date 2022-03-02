@@ -28,4 +28,4 @@ spec:
         - name: APACHE_IMAGE_URL_DEFAULT
           value: registry.redhat.io/rhel8/httpd-24:latest
         - name: OPENSTACK_RELEASE_DEFAULT
-          value: 16.2
+          value: "16.2"
