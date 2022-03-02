@@ -45,7 +45,6 @@ func (r *OpenStackNetConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstacknetconfig,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknetconfigs,verbs=create;update,versions=v1beta1,name=mopenstacknetconfig.kb.io,admissionReviewVersions={v1,v1beta1}
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=vopenstackprovisionserver.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &OpenStackNetConfig{}
 
