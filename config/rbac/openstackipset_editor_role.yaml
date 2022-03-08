@@ -1,0 +1,24 @@
+# permissions for end users to edit openstackipsets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openstackipset-editor-role
+rules:
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackipsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - osp-director.openstack.org
+  resources:
+  - openstackipsets/status
+  verbs:
+  - get

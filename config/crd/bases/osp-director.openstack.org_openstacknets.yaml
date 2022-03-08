@@ -122,12 +122,15 @@ spec:
                             type: string
                           ip:
                             type: string
+                          serviceVIP:
+                            type: boolean
                           vip:
                             type: boolean
                         required:
                         - deleted
                         - hostname
                         - ip
+                        - serviceVIP
                         - vip
                         type: object
                       type: array

@@ -69,6 +69,7 @@ type roleNodeType struct {
 	IPaddr                  map[string]*roleIPType
 	Hostname                string
 	VIP                     bool
+	ServiceVIP              bool
 	OVNStaticBridgeMappings map[string]string
 }
 
@@ -377,6 +378,14 @@ func createRolesMap(
 			//
 			// create map of all roles with Name and Count
 			//
+			// the role is ControlPlane if its either vip or serviceVIP
+			isControlPlane := false
+			for _, res := range roleReservation.Reservations {
+				if res.VIP || res.ServiceVIP {
+					isControlPlane = true
+				}
+			}
+
 			if rolesMap[roleName] == nil {
 				rolesMap[roleName] = &RoleType{
 					Name:           roleName,
@@ -385,7 +394,7 @@ func createRolesMap(
 					Nodes:          map[string]*roleNodeType{},
 					IsVMType:       isVMType,
 					IsTripleoRole:  isTripleoRole,
-					IsControlPlane: osnet.Spec.VIP,
+					IsControlPlane: isControlPlane,
 				}
 			}
 
@@ -447,6 +456,7 @@ func createRolesMap(
 							IPaddr:                  map[string]*roleIPType{},
 							Hostname:                reservation.Hostname,
 							VIP:                     reservation.VIP,
+							ServiceVIP:              reservation.ServiceVIP,
 							OVNStaticBridgeMappings: ovnStaticBridgeMappings,
 						}
 					}
@@ -465,11 +475,6 @@ func createRolesMap(
 						}
 					}
 
-					//
-					// There reservation.VIP is only true for controplane VIPs, so ther role is the
-					// operator internal ControlPlane role which is used to do the VIP reservations.
-					//
-					rolesMap[roleName].IsControlPlane = reservation.VIP
 					hostnameMapIndex++
 				}
 			}

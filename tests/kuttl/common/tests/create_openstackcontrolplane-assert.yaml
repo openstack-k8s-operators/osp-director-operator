@@ -63,7 +63,7 @@ status:
         internal_api: 172.17.0.10/24
         storage: 172.18.0.10/24
         storage_mgmt: 172.19.0.10/24
-      provisioningState: Provisioned
+      provisioningState: Created
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -160,6 +160,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 192.168.25.10
+        serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -167,6 +168,7 @@ spec:
       - deleted: false
         hostname: openstackclient-0
         ip: 192.168.25.251
+        serviceVIP: false
         vip: false
   routes: []
   vip: true
@@ -214,6 +216,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 10.0.0.10
+        serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -221,6 +224,7 @@ spec:
       - deleted: false
         hostname: openstackclient-0
         ip: 10.0.0.251
+        serviceVIP: false
         vip: false
   routes: []
   vip: true
@@ -268,6 +272,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.17.0.10
+        serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -275,6 +280,7 @@ spec:
       - deleted: false
         hostname: openstackclient-0
         ip: 172.17.0.251
+        serviceVIP: false
         vip: false
   routes: []
   vip: true
@@ -322,6 +328,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.18.0.10
+        serviceVIP: false
         vip: true
   routes: []
   vip: true
@@ -366,6 +373,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.19.0.10
+        serviceVIP: false
         vip: true
   routes: []
   vip: true

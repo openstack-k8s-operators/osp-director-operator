@@ -17,6 +17,7 @@ Hardware Provisioning CRDs
 - openstackbaremetalset: create sets of baremetal hosts for a specific TripleO role (Compute, Storage, etc.)
 - openstackcontrolplane: A CRD used to create the OpenStack control plane and manage associated openstackvmsets
 - openstacknet: Create networks which are used to assign IPs to the vmset and baremetalset resources below
+- openstackipset: Contains a set of IPs for a given network and role. Used internally to manage IP addresses.
 - openstackprovisionservers: used to serve custom images for baremetal provisioning with Metal3
 - openstackvmset: create sets of VMs using OpenShift Virtualization for a specific TripleO role (Controller, Database, NetworkController, etc.)
 

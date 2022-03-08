@@ -209,6 +209,8 @@ const (
 	// NetConfigError - the network configuration hit a generic error
 	NetConfigError ProvisioningState = "Error"
 
+	// NetConfigCondReasonnError - error creating osnetcfg
+	NetConfigCondReasonnError ConditionReason = "OpenStackNetConfigError"
 	// NetConfigCondReasonWaitingOnIPsForHost - waiting on IPs for all configured networks to be created
 	NetConfigCondReasonWaitingOnIPsForHost ConditionReason = "WaitingOnIPsForHost"
 	// NetConfigCondReasonWaitingOnHost - waiting on host to be added to osnetcfg

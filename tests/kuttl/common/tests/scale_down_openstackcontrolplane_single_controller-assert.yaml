@@ -219,6 +219,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.17.0.10
+        serviceVIP: false
         vip: true
     Controller:
       addToPredictableIPs: true
@@ -226,14 +227,17 @@ spec:
       - deleted: true
         hostname: controller-0
         ip: 172.17.0.20
+        serviceVIP: false
         vip: false
       - deleted: true
         hostname: controller-1
         ip: 172.17.0.21
+        serviceVIP: false
         vip: false
       - deleted: false
         hostname: controller-2
         ip: 172.17.0.22
+        serviceVIP: false
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
@@ -277,6 +281,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.18.0.10
+        serviceVIP: false
         vip: true
     Controller:
       addToPredictableIPs: true
@@ -284,14 +289,17 @@ spec:
       - deleted: true
         hostname: controller-0
         ip: 172.18.0.20
+        serviceVIP: false
         vip: false
       - deleted: true
         hostname: controller-1
         ip: 172.18.0.21
+        serviceVIP: false
         vip: false
       - deleted: false
         hostname: controller-2
         ip: 172.18.0.22
+        serviceVIP: false
         vip: false
 status:
   currentState: Configured
@@ -325,6 +333,7 @@ spec:
       - deleted: false
         hostname: controlplane
         ip: 172.19.0.10
+        serviceVIP: false
         vip: true
     Controller:
       addToPredictableIPs: true
@@ -332,14 +341,17 @@ spec:
       - deleted: true
         hostname: controller-0
         ip: 172.19.0.20
+        serviceVIP: false
         vip: false
       - deleted: true
         hostname: controller-1
         ip: 172.19.0.21
+        serviceVIP: false
         vip: false
       - deleted: false
         hostname: controller-2
         ip: 172.19.0.22
+        serviceVIP: false
         vip: false
 status:
   currentState: Configured
@@ -373,14 +385,17 @@ spec:
       - deleted: true
         hostname: controller-0
         ip: 172.20.0.20
+        serviceVIP: false
         vip: false
       - deleted: true
         hostname: controller-1
         ip: 172.20.0.21
+        serviceVIP: false
         vip: false
       - deleted: false
         hostname: controller-2
         ip: 172.20.0.22
+        serviceVIP: false
         vip: false
 status:
   currentState: Configured

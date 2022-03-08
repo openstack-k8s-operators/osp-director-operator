@@ -79,6 +79,15 @@ type OpenStackControlPlaneSpec struct {
 
 	// Name of the config map containing custom CA certificates to trust
 	CAConfigMap string `json:"caConfigMap,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// AdditionalServiceVIPs - Map of service name <-> subnet nameLower for which a IP should get reserved on
+	// These are used to create the <Service>VirtualFixedIPs environment parameters starting wallaby/OSP17.0.
+	// Default "Redis":  "internal_api",
+	//         "OVNDBs": "internal_api",
+	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
+	// Note: OSP17 networkv2 only
+	AdditionalServiceVIPs map[string]string `json:"additionalServiceVIPs,omitempty"`
 }
 
 // OpenStackVirtualMachineRoleSpec - defines the desired state of VMs

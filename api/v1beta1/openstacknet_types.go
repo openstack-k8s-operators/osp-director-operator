@@ -22,10 +22,11 @@ import (
 
 // IPReservation contains an IP, Hostname, and a VIP flag
 type IPReservation struct {
-	IP       string `json:"ip"`
-	Hostname string `json:"hostname"`
-	VIP      bool   `json:"vip"`
-	Deleted  bool   `json:"deleted"`
+	IP         string `json:"ip"`
+	Hostname   string `json:"hostname"`
+	VIP        bool   `json:"vip"`
+	ServiceVIP bool   `json:"serviceVIP"`
+	Deleted    bool   `json:"deleted"`
 }
 
 // NodeIPReservation contains an IP and Deleted flag

@@ -282,10 +282,20 @@ func main() {
 	if err = (&controllers.OpenStackDeployReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackDeployReconciler"),
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackDeploy"),
 		Scheme:  mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackDeploy")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.OpenStackIPSetReconciler{
+		Client:  mgr.GetClient(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackIPSet"),
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackIPSet")
 		os.Exit(1)
 	}
 

@@ -40,6 +40,7 @@ import (
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
@@ -362,21 +363,8 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	// create hostnames for the requested number of systems
-	//
-	newVMs, err := r.createNewHostnames(
-		instance,
-		cond,
-		instance.Spec.VMCount-len(instance.Status.VMHosts),
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
 	//   check/update instance status for annotated for deletion marged VMs
 	//
-
 	err = r.checkVMsAnnotatedForDeletion(
 		instance,
 		cond,
@@ -386,41 +374,44 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	// get OSNetCfg object
+	//   Handle VM removal from VMSet
 	//
-	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
-		Namespace: instance.Namespace},
-		osnetcfg)
+	deletedHosts, err := r.doVMDelete(
+		instance,
+		cond,
+		virtualMachineList,
+	)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-		err = common.WrapErrorForObject(cond.Message, instance, err)
-
 		return ctrl.Result{}, err
 	}
 
 	//
-	// Wait for IPs created on all configured networks
+	// create IPs for all networks
 	//
-	for hostname, hostStatus := range instance.Status.VMHosts {
-		err = openstacknetconfig.WaitOnIPsCreated(
-			r,
-			instance,
-			cond,
-			osnetcfg,
-			instance.Spec.Networks,
-			hostname,
-			&hostStatus,
-		)
-		if err != nil {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-		}
+	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		r,
+		instance,
+		cond,
+		instance.Spec.RoleName,
+		instance.Spec.Networks,
+		instance.Spec.VMCount,
+		false,
+		false,
+		deletedHosts,
+		instance.Spec.IsTripleoRole,
+	)
 
-		hostStatus.HostRef = hostname
-		instance.Status.VMHosts[hostname] = hostStatus
+	for _, hostname := range deletedHosts {
+		delete(instance.Status.VMHosts, hostname)
+	}
+
+	for _, status := range ipsetStatus {
+		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.VMHosts, status)
+		instance.Status.VMHosts[status.Hostname] = hostStatus
+	}
+
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	//
@@ -435,24 +426,11 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
-	//   Handle VM removal from VMSet
-	//
-	err = r.doVMDelete(
-		instance,
-		cond,
-		virtualMachineList,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
 	//   Create/Update NetworkData
 	//
 	vmDetails, err := r.createNetworkData(
 		instance,
 		cond,
-		newVMs,
 		nadMap,
 		envVars,
 		templateParameters,
@@ -708,6 +686,7 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&virtv1.VirtualMachine{}).
+		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
 		Complete(r)
 }
 
@@ -1003,9 +982,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	hostStatus := instance.Status.VMHosts[ctl.Hostname]
 
 	if vm.Status.Ready {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned)
+		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioned
 	} else if vm.Status.Created {
-		hostStatus.ProvisioningState = ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioning)
+		hostStatus.ProvisioningState = ospdirectorv1beta1.VMSetCondTypeProvisioning
 	}
 
 	instance.Status.VMHosts[ctl.Hostname] = hostStatus
@@ -1166,79 +1145,6 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 	}
 
 	return nadMap, ctrl.Result{}, nil
-}
-
-//
-// create hostnames for the requested number of systems
-//
-func (r *OpenStackVMSetReconciler) createNewHostnames(
-	instance *ospdirectorv1beta1.OpenStackVMSet,
-	cond *ospdirectorv1beta1.Condition,
-	newCount int,
-) ([]string, error) {
-	newHostnames := []string{}
-
-	//
-	//   create hostnames for the newCount
-	//
-	currentNetStatus := instance.Status.DeepCopy().VMHosts
-	for i := 0; i < newCount; i++ {
-		hostnameDetails := common.Hostname{
-			Basename: instance.Spec.RoleName,
-			VIP:      false,
-		}
-
-		err := common.CreateOrGetHostname(instance, &hostnameDetails)
-		if err != nil {
-			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-
-		if hostnameDetails.Hostname != "" {
-			if _, ok := instance.Status.VMHosts[hostnameDetails.Hostname]; !ok {
-				instance.Status.VMHosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-					Hostname:             hostnameDetails.Hostname,
-					HostRef:              hostnameDetails.HostRef,
-					AnnotatedForDeletion: false,
-					IPAddresses:          map[string]string{},
-				}
-				newHostnames = append(newHostnames, hostnameDetails.Hostname)
-			}
-
-			common.LogForObject(
-				r,
-				fmt.Sprintf("%s hostname created: %s", instance.Kind, hostnameDetails.Hostname),
-				instance,
-			)
-		}
-	}
-
-	if !reflect.DeepEqual(currentNetStatus, instance.Status.VMHosts) {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("Updating CR status with new hostname information, %d new - %s",
-				len(newHostnames),
-				diff.ObjectReflectDiff(currentNetStatus, instance.Status.VMHosts),
-			),
-			instance,
-		)
-
-		err := r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			cond.Message = "Failed to update CR status for new hostnames"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return newHostnames, err
-		}
-	}
-
-	return newHostnames, nil
 }
 
 //
@@ -1406,9 +1312,10 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	virtualMachineList *virtv1.VirtualMachineList,
-) error {
+) ([]string, error) {
 	existingVirtualMachines := map[string]string{}
 	removalAnnotatedVirtualMachines := []virtv1.VirtualMachine{}
+	deletedHosts := []string{}
 
 	// Generate a map of existing VMs and also store those annotated for potential removal
 	for _, virtualMachine := range virtualMachineList.Items {
@@ -1427,15 +1334,16 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 			for i := 0; i < oldVmsToRemoveCount; i++ {
 				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
 				// that have the common.HostRemovalAnnotation annotation
-				err := r.virtualMachineDeprovision(
+				deletedHost, err := r.virtualMachineDeprovision(
 					instance,
 					cond,
 					&removalAnnotatedVirtualMachines[0],
 				)
 
 				if err != nil {
-					return err
+					return deletedHosts, err
 				}
+				deletedHosts = append(deletedHosts, deletedHost)
 
 				// Remove the removal-annotated VirtualMachine from the existingVirtualMachines map
 				delete(existingVirtualMachines, removalAnnotatedVirtualMachines[0].Name)
@@ -1457,14 +1365,16 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 		}
 	}
 
-	return nil
+	sort.Strings(deletedHosts)
+
+	return deletedHosts, nil
 }
 
 func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	virtualMachine *virtv1.VirtualMachine,
-) error {
+) (string, error) {
 	r.Log.Info(fmt.Sprintf("Deallocating VirtualMachine: %s", virtualMachine.Name))
 
 	// First check if the finalizer is still there and remove it if so
@@ -1472,35 +1382,34 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 		err := r.virtualMachineFinalizerCleanup(virtualMachine, cond)
 
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	// Delete the VirtualMachine
 	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
 	if err != nil {
-		return err
+		return virtualMachine.Name, err
 	}
 	r.Log.Info(fmt.Sprintf("VirtualMachine deleted: name %s", virtualMachine.Name))
 
 	// Also remove networkdata secret
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name),
-			Namespace: instance.Namespace,
-		},
-	}
-
-	err = r.Client.Delete(context.TODO(), secret, &client.DeleteOptions{})
+	secret := fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name)
+	err = common.DeleteSecretsWithName(
+		r,
+		cond,
+		secret,
+		instance.Namespace,
+	)
 	if err != nil {
-		return err
+		return virtualMachine.Name, err
 	}
-	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret.Name))
+	r.Log.Info(fmt.Sprintf("Network data secret deleted: name %s", secret))
 
 	// Set status (remove this VMHost entry)
 	delete(instance.Status.VMHosts, virtualMachine.Name)
 
-	return nil
+	return virtualMachine.Name, nil
 }
 
 //
@@ -1509,7 +1418,6 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 func (r *OpenStackVMSetReconciler) createNetworkData(
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
-	newVMs []string,
 	nadMap map[string]networkv1.NetworkAttachmentDefinition,
 	envVars map[string]common.EnvSetter,
 	templateParameters map[string]interface{},
@@ -1562,35 +1470,10 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 		return nil
 	}
 
-	// Generate new host NetworkData first, if necessary
-	for _, hostname := range newVMs {
-		actualStatus := instance.Status.DeepCopy().VMHosts[hostname]
-
-		if hostname != "" {
-			if err := generateNetworkData(instance, &actualStatus); err != nil {
-				return vmDetails, err
-			}
-			currentStatus := instance.Status.VMHosts[hostname]
-			if !reflect.DeepEqual(currentStatus, actualStatus) {
-				instance.Status.VMHosts[hostname] = actualStatus
-				common.LogForObject(
-					r,
-					fmt.Sprintf("Changed Host NetStatus, updating CR status current - %s: %v / new: %v",
-						hostname,
-						actualStatus,
-						diff.ObjectReflectDiff(currentStatus, actualStatus)),
-					instance,
-				)
-
-			}
-		}
-
-	}
-
-	// Generate existing host NetworkData next
+	// Generate host NetworkData
 	for hostname, actualStatus := range instance.Status.DeepCopy().VMHosts {
 
-		if !common.StringInSlice(hostname, newVMs) && hostname != "" {
+		if hostname != "" {
 			if err := generateNetworkData(instance, &actualStatus); err != nil {
 				return vmDetails, err
 			}
@@ -1636,7 +1519,7 @@ func (r *OpenStackVMSetReconciler) createVMs(
 		// Calculate provisioning status
 		readyCount := 0
 		for _, host := range instance.Status.VMHosts {
-			if host.ProvisioningState == ospdirectorv1beta1.ProvisioningState(ospdirectorv1beta1.VMSetCondTypeProvisioned) {
+			if host.ProvisioningState == ospdirectorv1beta1.VMSetCondTypeProvisioned {
 				readyCount++
 			}
 		}
