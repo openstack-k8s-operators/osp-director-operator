@@ -23,7 +23,7 @@ func AddOSNetConfigRefLabel(
 	r common.ReconcilerCommon,
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
-	networkNameLower string,
+	subnetName string,
 ) (map[string]string, reconcile.Result, error) {
 	labels := obj.GetLabels()
 
@@ -33,24 +33,21 @@ func AddOSNetConfigRefLabel(
 	//
 	if _, ok := obj.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
 		//
-		// Get first OSnet from instance.Spec.Networks list
+		// Get OSnet with SubNetNameLabelSelector: subnetName
 		//
 		labelSelector := map[string]string{
-			//
-			// just use the first network in the list to get the ownerReferences
-			//
-			openstacknet.NetworkNameLowerLabelSelector: networkNameLower,
+			openstacknet.SubNetNameLabelSelector: subnetName,
 		}
 		osnet, err := openstacknet.GetOpenStackNetWithLabel(r, obj.GetNamespace(), labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", networkNameLower)
+			cond.Message = fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 			common.LogForObject(r, cond.Message, obj)
 
 			return labels, ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		} else if err != nil {
-			cond.Message = fmt.Sprintf("Failed to get OpenStackNet %s ", networkNameLower)
+			cond.Message = fmt.Sprintf("Failed to get OpenStackNet %s ", subnetName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
 			err = common.WrapErrorForObject(cond.Message, obj, err)
