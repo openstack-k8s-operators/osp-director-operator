@@ -60,6 +60,14 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  {{ $net.Name }}Routes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
 {{- end }}
 {{- end }}
   DnsServers: # Override this via parameter_defaults
@@ -128,6 +136,7 @@ resources:
                     get_param: {{ $net.Name }}IpSubnet
                 routes:
                   list_concat_unique:
+                    - get_param: {{ $net.Name }}Routes
                     - get_param: {{ $net.Name }}InterfaceRoutes
 {{- else if ne $net.NameLower "ctlplane" }}
 {{- $nic_counter = add $nic_counter 1 }}
@@ -147,6 +156,7 @@ resources:
                     get_param: {{ $net.Name }}IpSubnet
                 routes:
                   list_concat_unique:
+                    - get_param: {{ $net.Name }}Routes
                     - get_param: {{ $net.Name }}InterfaceRoutes
                     - - default: true
                         next_hop:
