@@ -1227,6 +1227,30 @@ Update the `tarballConfigMap` configmap to add the `roles_data.yaml` file to the
 
 ## Create NIC templates for the new roles
 
+### Default network routes
+The OSP 16.2 tripleo nic templates have the <netName>InterfaceRoutes parameter per default included. The routes parameter rendered in environments/network-environment.yaml which are named <netName>Routes get usually set on the neutron network host_routes property and get added to the role <netName>InterfaceRoutes parameter. Since there is no neutron it is required to add the {{network.name}}Routes to the nic template where needed and concat the two lists:
+
+~~~
+parameters:
+  ...
+  {{ $net.Name }}Routes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  ...
+              - type: interface
+                ...
+                routes:
+                  list_concat_unique:
+                    - get_param: {{ $net.Name }}Routes
+                    - get_param: {{ $net.Name }}InterfaceRoutes
+~~~
+
+### Subnet routes
 Routes subnet information gets auto rendered to the tripleo environment file `environments/network-environment.yaml` which is used in the script rendering the ansible playbooks. In the NIC templates therefore use <NetName>Routes_<subnet_name>, e.g. StorageRoutes_storage_leaf1 to set the correct routing on the host.
 
 ### OSP16.2/train NIC templates modification

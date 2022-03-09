@@ -38,7 +38,7 @@
       gateway_ipv6: '{{ $subnet.IPv6.Gateway }}'
 {{- end }}
 {{- if not (eq (len $subnet.IPv6.Routes) 0) }}
-      routes:
+      routes_ipv6:
 {{- range $netname, $route := $subnet.IPv6.Routes }}
       - destination: '{{ $route.Destination }}'
         nexthop: '{{ $route.Nexthop }}'
