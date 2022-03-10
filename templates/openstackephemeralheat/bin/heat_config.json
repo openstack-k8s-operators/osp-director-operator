@@ -18,12 +18,6 @@
             "dest": "/etc/heat/token.json",
             "owner": "heat",
             "perm": "0600"
-        },
-        {
-            "source": "/var/lib/config-data/noauth.policy",
-            "dest": "/etc/heat/noauth.policy",
-            "owner": "heat",
-            "perm": "0600"
         }
     ]
 }
