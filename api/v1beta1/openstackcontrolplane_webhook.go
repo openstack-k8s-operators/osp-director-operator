@@ -68,15 +68,23 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// validate OSP version, right now only 16.2/train and 17.0/wallaby are supported
+	//
+	if r.Spec.OpenStackRelease != "" {
+		var err error
+		if r.Status.OSPVersion, err = GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
+			return err
+		}
+	}
+
 	controlPlaneList := &OpenStackControlPlaneList{}
 
 	listOpts := []client.ListOption{
 		client.InNamespace(r.Namespace),
 	}
 
-	err := webhookClient.List(context.TODO(), controlPlaneList, listOpts...)
-
-	if err != nil {
+	if err := webhookClient.List(context.TODO(), controlPlaneList, listOpts...); err != nil {
 		return err
 	}
 
@@ -84,9 +92,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		return fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
 	}
 
-	err = checkDomainName(r.Spec.DomainName)
-
-	if err != nil {
+	if err := checkDomainName(r.Spec.DomainName); err != nil {
 		return err
 	}
 
@@ -96,6 +102,16 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	controlplanelog.Info("validate update", "name", r.Name)
+
+	//
+	// validate OSP version, right now only 16.2/train and 17.0/wallaby are supported
+	//
+	if r.Spec.OpenStackRelease != "" {
+		var err error
+		if r.Status.OSPVersion, err = GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
+			return err
+		}
+	}
 
 	oldControlPlane := old.(*OpenStackControlPlane)
 	if r.Spec.DomainName != oldControlPlane.Spec.DomainName {
@@ -121,13 +137,14 @@ func (r *OpenStackControlPlane) Default() {
 	//
 	if r.Spec.OpenStackRelease == "" {
 		r.Spec.OpenStackRelease = openstackControlPlaneDefaults.OpenStackRelease
+		r.Status.OSPVersion = OSPVersion(openstackControlPlaneDefaults.OpenStackRelease)
 	}
 
 	//
 	// set default for AdditionalServiceVIPs if non provided in ctlplane spec
 	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
 	//
-	if r.Spec.OpenStackRelease == string(TemplateVersion17_0) && r.Spec.AdditionalServiceVIPs == nil {
+	if r.Status.OSPVersion == TemplateVersion17_0 && r.Spec.AdditionalServiceVIPs == nil {
 		r.Spec.AdditionalServiceVIPs = map[string]string{
 			"Redis":  "internal_api",
 			"OVNDBs": "internal_api",
