@@ -298,7 +298,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	//
 	// 2) create all OpenStackNetworks
 	//
-	instance.Status.ProvisioningStatus.NetDesiredCount = len(instance.Spec.Networks)
+	instance.Status.ProvisioningStatus.NetDesiredCount = r.getNetDesiredCount(instance.Spec.Networks)
 	instance.Status.ProvisioningStatus.NetReadyCount = 0
 	for _, net := range instance.Spec.Networks {
 
@@ -1429,4 +1429,18 @@ func (r *OpenStackNetConfigReconciler) ensureIPs(
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
 
 	return nil
+}
+
+//
+// getNetDesiredCount - get the total of all networks subnets
+//
+func (r *OpenStackNetConfigReconciler) getNetDesiredCount(
+	networks []ospdirectorv1beta1.Network,
+) int {
+	desiredCount := 0
+	for _, net := range networks {
+		desiredCount += len(net.Subnets)
+	}
+
+	return desiredCount
 }
