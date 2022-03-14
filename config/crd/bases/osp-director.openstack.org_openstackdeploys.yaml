@@ -72,6 +72,9 @@ spec:
                 description: ConfigVersion the config version/git hash of the playbooks
                   to deploy.
                 type: string
+              deployIndentifer:
+                description: DeployIndentifier unique identifier for deployment run
+                type: string
               imageURL:
                 description: Name of the image
                 type: string

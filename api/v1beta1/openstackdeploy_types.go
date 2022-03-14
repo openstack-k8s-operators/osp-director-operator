@@ -82,6 +82,9 @@ type OpenStackDeploySpec struct {
 	// ConfigGenerator name of the configGenerator
 	ConfigGenerator string `json:"configGenerator"`
 
+	// DeployIndentifier unique identifier for deployment run
+	DeployIndentifier string `json:"deployIndentifer,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=deploy
 	// +kubebuilder:validation:Enum={"deploy","update","externalUpdate"}

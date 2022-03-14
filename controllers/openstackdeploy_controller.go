@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"os/exec"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -76,7 +77,7 @@ func (r *OpenStackDeployReconciler) GetScheme() *runtime.Scheme {
 func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// Fetch the ProvisionServer instance
+	// Fetch the OpenStackDeploy instance
 	instance := &ospdirectorv1beta1.OpenStackDeploy{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
@@ -104,6 +105,12 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			r.getNormalizedStatus(&instance.Status),
 			r.getNormalizedStatus(currentStatus),
 		)
+	}
+
+	uuid, _ := exec.Command("uuidgen").Output()
+
+	if instance.Spec.DeployIndentifier == "" {
+		instance.Spec.DeployIndentifier = string(uuid)
 	}
 
 	defer func(cond *ospdirectorv1beta1.Condition) {
