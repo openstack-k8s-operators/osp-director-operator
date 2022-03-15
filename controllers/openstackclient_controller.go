@@ -386,6 +386,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
 	volumes := openstackclient.GetVolumes(instance)
 
+	// Get env vars
 	(*envVars)["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
 
 	if instance.Spec.CloudName != "" {
@@ -396,6 +397,60 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
 
 	}
+	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
+
+	initEnvVars := make(map[string]common.EnvSetter)
+	for k, v := range *envVars {
+		initEnvVars[k] = v
+	}
+	if instance.Spec.IdmSecret != "" {
+		initEnvVars["IPA_SERVER"] = func(env *corev1.EnvVar) {
+			env.Value = ""
+			env.ValueFrom = &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.Spec.IdmSecret,
+					},
+					Key: "IdMServer",
+				},
+			}
+		}
+		initEnvVars["IPA_SERVER_USER"] = func(env *corev1.EnvVar) {
+			env.Value = ""
+			env.ValueFrom = &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.Spec.IdmSecret,
+					},
+					Key: "IdMAdminUser",
+				},
+			}
+		}
+		initEnvVars["IPA_SERVER_PASSWORD"] = func(env *corev1.EnvVar) {
+			env.Value = ""
+			env.ValueFrom = &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.Spec.IdmSecret,
+					},
+					Key: "IdMAdminPassword",
+				},
+			}
+		}
+		initEnvVars["IPA_REALM"] = func(env *corev1.EnvVar) {
+			env.Value = ""
+			env.ValueFrom = &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.Spec.IdmSecret,
+					},
+					Key: "IdMRealm",
+				},
+			}
+		}
+		initEnvVars["IPA_DOMAIN"] = common.EnvValue(instance.Spec.DomainName)
+	}
+	initEnv := common.MergeEnvs([]corev1.EnvVar{}, initEnvVars)
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotations := ""
@@ -441,120 +496,83 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	}
 	annotation := fmt.Sprintf("[%s]", annotations)
 
-	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
-
+	// Create a (mostly) empty pod spec
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.Namespace,
-			Annotations: map[string]string{
-				"k8s.v1.cni.cncf.io/networks": annotation,
-			},
+			Name:        instance.Name,
+			Namespace:   instance.Namespace,
+			Annotations: map[string]string{},
 		},
 	}
-	pod.Spec = corev1.PodSpec{
-		ServiceAccountName: openstackclient.ServiceAccount,
-		SecurityContext: &corev1.PodSecurityContext{
-			RunAsUser:  &runAsUser,
-			RunAsGroup: &runAsGroup,
-			FSGroup:    &runAsGroup,
+	common.InitMap(&pod.Labels)
+	pod.Spec = corev1.PodSpec{}
+	pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	pod.Spec.DNSConfig = &corev1.PodDNSConfig{}
+	pod.Spec.Containers = []corev1.Container{
+		{
+			Name: "openstackclient",
 		},
-		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-		Volumes:                       volumes,
-		Containers: []corev1.Container{
-			{
-				Name:            "openstackclient",
-				Image:           instance.Spec.ImageURL,
-				ImagePullPolicy: corev1.PullAlways,
-				Env:             env,
-				VolumeMounts:    volumeMounts,
-			},
+	}
+	pod.Spec.InitContainers = []corev1.Container{
+		{
+			Name: "init-0",
 		},
 	}
 
-	if len(instance.Spec.DNSServers) != 0 {
-		pod.Spec.DNSPolicy = corev1.DNSNone
-		pod.Spec.DNSConfig = &corev1.PodDNSConfig{
-			Nameservers: instance.Spec.DNSServers,
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
+		// Note: initialize the pod structs above then only reconcile individual fields here
+		// Can not add/replace new structs in the pod here as that will drop the defaults that
+		// are set/added when the pod is created.
+
+		isPodUpdate := !pod.ObjectMeta.CreationTimestamp.IsZero()
+
+		pod.ObjectMeta.Annotations["k8s.v1.cni.cncf.io/networks"] = annotation
+		for k, v := range common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}) {
+			pod.Labels[k] = v
+		}
+
+		if isPodUpdate {
+			// must merge envs/volumes etc... when the pod already exists
+			env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
+			initEnv = common.MergeEnvs(pod.Spec.InitContainers[0].Env, initEnvVars)
+			volumeMounts = common.MergeVolumeMounts(pod.Spec.Containers[0].VolumeMounts, volumeMounts)
+			initVolumeMounts = common.MergeVolumeMounts(pod.Spec.InitContainers[0].VolumeMounts, initVolumeMounts)
+			volumes = common.MergeVolumes(pod.Spec.Volumes, volumes)
+		}
+
+		pod.Spec.SecurityContext.RunAsUser = &runAsUser
+		pod.Spec.SecurityContext.RunAsGroup = &runAsGroup
+		pod.Spec.SecurityContext.FSGroup = &runAsGroup
+		pod.Spec.ServiceAccountName = openstackclient.ServiceAccount
+		pod.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+		pod.Spec.Volumes = volumes
+		pod.Spec.Containers[0].Image = instance.Spec.ImageURL
+		pod.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+		pod.Spec.Containers[0].Env = env
+		pod.Spec.Containers[0].VolumeMounts = volumeMounts
+		pod.Spec.InitContainers[0].Image = instance.Spec.ImageURL
+		pod.Spec.InitContainers[0].ImagePullPolicy = corev1.PullAlways
+		pod.Spec.InitContainers[0].Env = initEnv
+		pod.Spec.InitContainers[0].VolumeMounts = initVolumeMounts
+
+		if len(instance.Spec.DNSServers) != 0 {
+			pod.Spec.DNSPolicy = corev1.DNSNone
+			pod.Spec.DNSConfig.Nameservers = instance.Spec.DNSServers
+		} else {
+			pod.Spec.DNSPolicy = corev1.DNSClusterFirst
+			pod.Spec.DNSConfig.Nameservers = []string{}
 		}
 		if len(instance.Spec.DNSSearchDomains) != 0 {
 			pod.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+		} else {
+			pod.Spec.DNSConfig.Searches = []string{}
 		}
-	}
 
-	initEnv := env
-	if instance.Spec.IdmSecret != "" {
-		idmEnv := []corev1.EnvVar{
-			{
-				Name: "IPA_SERVER",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.IdmSecret,
-						},
-						Key: "IdMServer",
-					},
-				},
-			},
-			{
-				Name: "IPA_SERVER_USER",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.IdmSecret,
-						},
-						Key: "IdMAdminUser",
-					},
-				},
-			},
-			{
-				Name: "IPA_SERVER_PASSWORD",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.IdmSecret,
-						},
-						Key: "IdMAdminPassword",
-					},
-				},
-			},
-			{
-				Name: "IPA_REALM",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: instance.Spec.IdmSecret,
-						},
-						Key: "IdMRealm",
-					},
-				},
-			},
-			{
-				Name:  "IPA_DOMAIN",
-				Value: instance.Spec.DomainName,
-			},
-		}
-		initEnv = append(initEnv, idmEnv...)
-	}
-
-	initContainerDetails := []openstackclient.InitContainer{
-		{
-			ContainerImage: instance.Spec.ImageURL,
-			Env:            initEnv,
-			Privileged:     false,
-			VolumeMounts:   initVolumeMounts,
-		},
-	}
-
-	pod.Spec.InitContainers = openstackclient.GetInitContainers(initContainerDetails)
-
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
-		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
-
-		// labels
-		common.InitMap(&pod.Labels)
-		for k, v := range common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}) {
-			pod.Labels[k] = v
+		if isPodUpdate && len(pod.Status.InitContainerStatuses) > 0 {
+			if pod.Status.InitContainerStatuses[0].Image != pod.Spec.InitContainers[0].Image {
+				// init container image is mutable but does nothing so force a delete
+				return &common.ForbiddenPodSpecChangeError{Field: "Spec.InitContainers[0].Image"}
+			}
 		}
 
 		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
@@ -570,7 +588,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		return nil
 	})
 	if err != nil {
-		if k8s_errors.IsInvalid(err) {
+		if common.IsForbiddenPodSpecChangeError(err) {
 			// Delete pod when an unsupported change was requested, like
 			// e.g. additional controller VM got up. We just re-create the
 			// openstackclient pod
@@ -590,7 +608,9 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 				return err
 			}
 
-			r.Log.Info("openstackclient pod deleted due to spec change")
+			cond.Message = fmt.Sprintf("%s %s pod deleted", instance.Kind, instance.Name)
+			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodDeleted)
+			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 			return nil
 		}
 
@@ -606,6 +626,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		cond.Message = fmt.Sprintf("%s %s %s", instance.Kind, instance.Name, op)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodProvisioned)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+		return nil
 	}
 
 	cond.Message = fmt.Sprintf("%s %s provisioned", instance.Kind, instance.Name)

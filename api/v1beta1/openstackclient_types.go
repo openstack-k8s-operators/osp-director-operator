@@ -82,6 +82,8 @@ const (
 	OsClientCondReasonPodError ConditionReason = "PodError"
 	// OsClientCondReasonPodProvisioned - pod created
 	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientPodProvisioned"
+	// OsClientCondReasonPodDeleted - pod deleted
+	OsClientCondReasonPodDeleted ConditionReason = "OpenStackClientPodDeleted"
 	// OsClientCondReasonPodDeleteError - pod delete error
 	OsClientCondReasonPodDeleteError ConditionReason = "PodDeleteError"
 	// OsClientCondReasonPodMissing - openstackclient pod missing
