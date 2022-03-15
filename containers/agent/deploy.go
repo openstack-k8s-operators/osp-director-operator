@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
@@ -56,6 +58,7 @@ func init() {
 
 // ExecPodCommand -
 func ExecPodCommand(kclient kubernetes.Clientset, pod corev1.Pod, containerName string, command string) error {
+	//FIXME: what to do when the openstackclient exists but isn't in a running state yet?
 	req := kclient.CoreV1().RESTClient().Post().
 		Namespace(pod.Namespace).
 		Resource("pods").
@@ -185,6 +188,31 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		panic(err.Error())
 	}
 
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGTERM)
+
+	go func() {
+		sigTerm := <-signalChannel
+		if sigTerm == syscall.SIGTERM {
+			glog.V(0).Info("Terminating deploy agent")
+			execErr := ExecPodCommand(
+				*kclient,
+				*pod,
+				"openstackclient",
+				"CONFIG_VERSION='"+deployOpts.configVersion+"' "+
+					"GIT_ID_RSA='"+deployOpts.gitSSHIdentity+"' "+
+					"GIT_URL='"+deployOpts.gitURL+"' "+
+					"PLAYBOOK='"+deployOpts.playbook+"' "+
+					"LIMIT='"+deployOpts.limit+"' "+
+					"TAGS='"+deployOpts.tags+"' "+
+					"SKIP_TAGS='"+deployOpts.skipTags+"' "+
+					"/usr/local/bin/tripleo-deploy-term.sh")
+			if execErr != nil {
+				panic(execErr.Error())
+			}
+		}
+	}()
+
 	execErr := ExecPodCommand(
 		*kclient,
 		*pod,
@@ -196,7 +224,7 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 			"LIMIT='"+deployOpts.limit+"' "+
 			"TAGS='"+deployOpts.tags+"' "+
 			"SKIP_TAGS='"+deployOpts.skipTags+"' "+
-			"/usr/bin/bash /usr/local/bin/tripleo-deploy.sh")
+			"/usr/local/bin/tripleo-deploy.sh")
 	if execErr != nil {
 		panic(execErr.Error())
 	}
