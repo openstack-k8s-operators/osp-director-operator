@@ -307,7 +307,11 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	}
 
 	// render CNIConfigTemplate
-	CNIConfig := common.ExecuteTemplateData(openstacknetattachment.CniConfigTemplate, templateData)
+	CNIConfig, err := common.ExecuteTemplateData(openstacknetattachment.CniConfigTemplate, templateData)
+	if err != nil {
+		return err
+	}
+
 	if err := common.IsJSON(CNIConfig); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s failure rendering CNIConfig for NetworkAttachmentDefinition", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)

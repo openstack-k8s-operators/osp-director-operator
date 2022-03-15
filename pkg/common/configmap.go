@@ -52,7 +52,11 @@ func createOrUpdateConfigMap(r ReconcilerCommon, obj metav1.Object, cm Template)
 
 		configMap.Labels = cm.Labels
 		// add data from templates
-		configMap.Data = GetTemplateData(cm)
+		renderedTemplateData, err := GetTemplateData(cm)
+		if err != nil {
+			return err
+		}
+		configMap.Data = renderedTemplateData
 		// add provided custom data to configMap.Data
 		// Note: this can overwrite data rendered from GetTemplateData() if key is same
 		if len(cm.CustomData) > 0 {

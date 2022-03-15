@@ -94,15 +94,19 @@ func GetAllTemplates(path string, kind string, templateType string, version stri
 
 // ExecuteTemplate creates a template from the file and
 // execute it with the specified data
-func ExecuteTemplate(templateFile string, data interface{}) string {
+func ExecuteTemplate(templateFile string, data interface{}) (string, error) {
 
 	b, err := ioutil.ReadFile(templateFile)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	file := string(b)
 
-	return ExecuteTemplateData(file, data)
+	renderedTemplate, err := ExecuteTemplateData(file, data)
+	if err != nil {
+		return "", err
+	}
+	return renderedTemplate, nil
 }
 
 // template function to increment an int
@@ -117,7 +121,7 @@ func lower(s string) string {
 
 // ExecuteTemplateData creates a template from string and
 // execute it with the specified data
-func ExecuteTemplateData(templateData string, data interface{}) string {
+func ExecuteTemplateData(templateData string, data interface{}) (string, error) {
 
 	var buff bytes.Buffer
 	funcs := template.FuncMap{
@@ -126,20 +130,20 @@ func ExecuteTemplateData(templateData string, data interface{}) string {
 	}
 	tmpl, err := template.New("tmp").Funcs(funcs).Parse(templateData)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	err = tmpl.Execute(&buff, data)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return buff.String()
+	return buff.String(), nil
 }
 
 // ExecuteTemplateFile creates a template from the file and
 // execute it with the specified data
 // Note: mschuppert - can be removed when all operators switched
 //       to the above ones.
-func ExecuteTemplateFile(filename string, data interface{}) string {
+func ExecuteTemplateFile(filename string, data interface{}) (string, error) {
 
 	templates := os.Getenv("OPERATOR_TEMPLATES")
 	filepath := ""
@@ -154,7 +158,7 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 
 	b, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	file := string(b)
 	var buff bytes.Buffer
@@ -164,17 +168,17 @@ func ExecuteTemplateFile(filename string, data interface{}) string {
 	}
 	tmpl, err := template.New("tmp").Funcs(funcs).Parse(file)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	err = tmpl.Execute(&buff, data)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return buff.String()
+	return buff.String(), nil
 }
 
 // GetTemplateData -
-func GetTemplateData(t Template) map[string]string {
+func GetTemplateData(t Template) (map[string]string, error) {
 	opts := t.ConfigOptions
 
 	// get templates base path, either running local or deployed as container
@@ -188,14 +192,22 @@ func GetTemplateData(t Template) map[string]string {
 
 		// render all template files
 		for _, file := range templatesFiles {
-			data[filepath.Base(file)] = ExecuteTemplate(file, opts)
+			renderedData, err := ExecuteTemplate(file, opts)
+			if err != nil {
+				return data, err
+			}
+			data[filepath.Base(file)] = renderedData
 		}
 	}
 	// add additional template files from different directory, which
 	// e.g. can be common to multiple controllers
 	for filename, file := range t.AdditionalTemplate {
-		data[filename] = ExecuteTemplateFile(file, opts)
+		renderedTemplate, err := ExecuteTemplateFile(file, opts)
+		if err != nil {
+			return nil, err
+		}
+		data[filename] = renderedTemplate
 	}
 
-	return data
+	return data, nil
 }
