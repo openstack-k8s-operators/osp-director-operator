@@ -774,9 +774,12 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 		ConfigOptions: templateParameters,
 	}
 
-	common.GetTemplateData(fencingTemplate)
+	renderedFencingTemplate, err := common.GetTemplateData(fencingTemplate)
+	if err != nil {
+		return nil, err
+	}
 
-	return common.GetTemplateData(fencingTemplate), nil
+	return renderedFencingTemplate, nil
 }
 
 //
@@ -828,13 +831,16 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	//
 	// Render VM role nic templates, but only for tripleo roles
 	//
-	roleNicTemplates := r.createVMRoleNicTemplates(
+	roleNicTemplates, err := r.createVMRoleNicTemplates(
 		instance,
 		ospVersion,
 		rolesMap,
 		clusterServiceIP,
 		cmLabels,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	//
 	// Render fencing template
@@ -933,7 +939,7 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 	rolesMap map[string]*openstackconfiggenerator.RoleType,
 	clusterServiceIP string,
 	cmLabels map[string]string,
-) map[string]string {
+) (map[string]string, error) {
 	roleNicTemplates := map[string]string{}
 
 	for _, role := range rolesMap {
@@ -969,13 +975,18 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 				Version:       ospVersion,
 			}
 
-			for k, v := range common.GetTemplateData(roleTemplate) {
+			renderedTemplates, err := common.GetTemplateData(roleTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			for k, v := range renderedTemplates {
 				roleNicTemplates[k] = v
 			}
 		}
 	}
 
-	return roleNicTemplates
+	return roleNicTemplates, nil
 }
 
 //
