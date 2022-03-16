@@ -22,9 +22,10 @@ import (
 
 // OpenStackConfigVersionSpec defines the desired state of OpenStackConfigVersion
 type OpenStackConfigVersionSpec struct {
-	Hash            string `json:"hash"`
-	Diff            string `json:"diff"`
-	CtlplaneExports string `json:"ctlplaneExports"`
+	Hash                string `json:"hash"`
+	Diff                string `json:"diff"`
+	CtlplaneExports     string `json:"ctlplaneExports"`
+	ConfigGeneratorName string `json:"configGeneratorName"`
 }
 
 // OpenStackConfigVersionStatus defines the observed state of OpenStackConfigVersion
@@ -35,6 +36,7 @@ type OpenStackConfigVersionStatus struct {
 //+kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osconfigversion;osconfigversions
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Version"
+// +kubebuilder:printcolumn:name="Generator",type="string",JSONPath=".spec.ConfigGeneratorName",description="Config Generator Name"
 
 // OpenStackConfigVersion is the Schema for the openstackconfigversions API
 type OpenStackConfigVersion struct {

@@ -202,14 +202,14 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Cl
 							Name:      m1.Split(ref.Name().String(), -1)[2],
 							Namespace: inst.Namespace,
 						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String()}}
+						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String(), ConfigGeneratorName: inst.Name}}
 				} else {
 					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      m1.Split(ref.Name().String(), -1)[2],
 							Namespace: inst.Namespace,
 						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: ""}}
+						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: "", ConfigGeneratorName: inst.Name}}
 				}
 				configVersions[ref.Hash().String()] = configVersion
 			}
