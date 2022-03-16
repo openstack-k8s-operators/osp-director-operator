@@ -146,6 +146,38 @@ func main() {
 		srv.Port = WebhookPort
 	}
 
+	//
+	// DEFAULTS
+	//
+	openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
+		OpenStackRelease: os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
+	}
+
+	openstackClientDefaults := ospdirectorv1beta1.OpenStackClientDefaults{
+		ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+	}
+
+	ephemeralHeatDefaults := ospdirectorv1beta1.OpenStackEphemeralHeatDefaults{
+		HeatAPIImageURL:    os.Getenv("HEAT_API_IMAGE_URL_DEFAULT"),
+		HeatEngineImageURL: os.Getenv("HEAT_ENGINE_IMAGE_URL_DEFAULT"),
+		MariaDBImageURL:    os.Getenv("MARIADB_IMAGE_URL_DEFAULT"),
+		RabbitImageURL:     os.Getenv("RABBITMQ_IMAGE_URL_DEFAULT"),
+	}
+
+	provisionServerDefaults := ospdirectorv1beta1.OpenStackProvisionServerDefaults{
+		DownloaderImageURL: os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
+		AgentImageURL:      os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
+		ApacheImageURL:     os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
+	}
+
+	openstackDeployDefaults := ospdirectorv1beta1.OpenStackDeployDefaults{
+		AgentImageURL: os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
+	}
+
+	openstackConfigGeneratorDefaults := ospdirectorv1beta1.OpenStackConfigGeneratorDefaults{
+		ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
+	}
+
 	if err = (&controllers.OpenStackControlPlaneReconciler{
 		Client:  mgr.GetClient(),
 		Kclient: kclient,
@@ -165,10 +197,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackProvisionServerReconciler{
-		Client:  mgr.GetClient(),
-		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackProvisionServer"),
-		Scheme:  mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Kclient:  kclient,
+		Log:      ctrl.Log.WithName("controllers").WithName("OpenStackProvisionServer"),
+		Scheme:   mgr.GetScheme(),
+		Defaults: provisionServerDefaults,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackProvisionServer")
 		os.Exit(1)
@@ -300,38 +333,6 @@ func main() {
 	}
 
 	if enableWebhooks {
-		//
-		// DEFAULTS
-		//
-		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
-			OpenStackRelease: os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
-		}
-
-		openstackClientDefaults := ospdirectorv1beta1.OpenStackClientDefaults{
-			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
-		}
-
-		ephemeralHeatDefaults := ospdirectorv1beta1.OpenStackEphemeralHeatDefaults{
-			HeatAPIImageURL:    os.Getenv("HEAT_API_IMAGE_URL_DEFAULT"),
-			HeatEngineImageURL: os.Getenv("HEAT_ENGINE_IMAGE_URL_DEFAULT"),
-			MariaDBImageURL:    os.Getenv("MARIADB_IMAGE_URL_DEFAULT"),
-			RabbitImageURL:     os.Getenv("RABBITMQ_IMAGE_URL_DEFAULT"),
-		}
-
-		provisionServerDefaults := ospdirectorv1beta1.OpenStackProvisionServerDefaults{
-			DownloaderImageURL: os.Getenv("DOWNLOADER_IMAGE_URL_DEFAULT"),
-			AgentImageURL:      os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
-			ApacheImageURL:     os.Getenv("APACHE_IMAGE_URL_DEFAULT"),
-		}
-
-		openstackDeployDefaults := ospdirectorv1beta1.OpenStackDeployDefaults{
-			AgentImageURL: os.Getenv("AGENT_IMAGE_URL_DEFAULT"),
-		}
-
-		openstackConfigGeneratorDefaults := ospdirectorv1beta1.OpenStackConfigGeneratorDefaults{
-			ImageURL: os.Getenv("OPENSTACKCLIENT_IMAGE_URL_DEFAULT"),
-		}
-
 		//
 		// Register webhooks
 		//

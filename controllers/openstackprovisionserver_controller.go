@@ -55,9 +55,10 @@ var (
 // OpenStackProvisionServerReconciler reconciles a ProvisionServer object
 type OpenStackProvisionServerReconciler struct {
 	client.Client
-	Kclient kubernetes.Interface
-	Log     logr.Logger
-	Scheme  *runtime.Scheme
+	Kclient  kubernetes.Interface
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	Defaults ospdirectorv1beta1.OpenStackProvisionServerDefaults
 }
 
 // GetClient -
@@ -402,7 +403,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 			Containers: []corev1.Container{
 				{
 					Name:            "osp-httpd",
-					Image:           instance.Spec.ApacheImageURL,
+					Image:           r.Defaults.ApacheImageURL,
 					ImagePullPolicy: corev1.PullAlways,
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: &trueValue,
@@ -420,7 +421,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 				{
 					Name:            "osp-provision-ip-discovery-agent",
 					Command:         []string{"/osp-director-agent", "provision-ip-discovery"},
-					Image:           instance.Spec.AgentImageURL,
+					Image:           r.Defaults.AgentImageURL,
 					ImagePullPolicy: corev1.PullAlways,
 					Env: []corev1.EnvVar{
 						{
@@ -442,7 +443,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 
 		initContainerDetails := []provisionserver.InitContainer{
 			{
-				ContainerImage: instance.Spec.DownloaderImageURL,
+				ContainerImage: r.Defaults.DownloaderImageURL,
 				Env: []corev1.EnvVar{
 					{
 						Name:  "RHEL_IMAGE_URL",

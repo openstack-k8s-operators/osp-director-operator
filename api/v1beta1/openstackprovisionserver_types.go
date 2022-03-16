@@ -31,12 +31,6 @@ type OpenStackProvisionServerSpec struct {
 	Interface string `json:"interface,omitempty"`
 	// URL for RHEL qcow2 image (compressed as gz, or uncompressed)
 	BaseImageURL string `json:"baseImageUrl"`
-	// Container image URL for init container that downloads the RHEL qcow2 image (baseImageUrl)
-	DownloaderImageURL string `json:"downloaderImageUrl,omitempty"`
-	// Container image URL for the main container that serves the downloaded RHEL qcow2 image (baseImageUrl)
-	ApacheImageURL string `json:"apacheImageUrl,omitempty"`
-	// Container image URL for the sidecar container that discovers provisioning network IPs
-	AgentImageURL string `json:"agentImageUrl,omitempty"`
 }
 
 // OpenStackProvisionServerStatus defines the observed state of OpenStackProvisionServer
@@ -56,6 +50,13 @@ type OpenStackProvisionServerStatus struct {
 type OpenStackProvisionServerProvisioningStatus struct {
 	State  ProvisioningState `json:"state,omitempty"`
 	Reason string            `json:"reason,omitempty"`
+}
+
+// OpenStackProvisionServerDefaults -
+type OpenStackProvisionServerDefaults struct {
+	DownloaderImageURL string
+	AgentImageURL      string
+	ApacheImageURL     string
 }
 
 const (

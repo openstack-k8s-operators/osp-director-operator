@@ -50,20 +50,8 @@ spec:
             description: OpenStackProvisionServerSpec defines the desired state of
               OpenStackProvisionServer
             properties:
-              agentImageUrl:
-                description: Container image URL for the sidecar container that discovers
-                  provisioning network IPs
-                type: string
-              apacheImageUrl:
-                description: Container image URL for the main container that serves
-                  the downloaded RHEL qcow2 image (baseImageUrl)
-                type: string
               baseImageUrl:
                 description: URL for RHEL qcow2 image (compressed as gz, or uncompressed)
-                type: string
-              downloaderImageUrl:
-                description: Container image URL for init container that downloads
-                  the RHEL qcow2 image (baseImageUrl)
                 type: string
               interface:
                 description: An optional interface to use instead of the cluster's
