@@ -19,7 +19,12 @@ spec:
     singular: openstackconfigversion
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Config Generator Name
+      jsonPath: .spec.ConfigGeneratorName
+      name: Generator
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenStackConfigVersion is the Schema for the openstackconfigversions
@@ -40,6 +45,8 @@ spec:
           spec:
             description: OpenStackConfigVersionSpec defines the desired state of OpenStackConfigVersion
             properties:
+              configGeneratorName:
+                type: string
               ctlplaneExports:
                 type: string
               diff:
@@ -47,6 +54,7 @@ spec:
               hash:
                 type: string
             required:
+            - configGeneratorName
             - ctlplaneExports
             - diff
             - hash
