@@ -37,8 +37,11 @@ require (
 replace (
 	// required by Microsoft/hcsshim, containers/storage, sriov-network-operator
 	// Not used within this Operator.
-	// Bump to avoid CVE detection with earlier versions (v1.3.2). https://bugzilla.redhat.com/show_bug.cgi?id=1899487, https://bugzilla.redhat.com/show_bug.cgi?id=1982681
-	github.com/containerd/containerd => github.com/containerd/containerd v1.5.4
+	// Bump to avoid CVE detection with earlier versions (v1.5.4).
+	// * https://bugzilla.redhat.com/show_bug.cgi?id=1899487
+	// * https://bugzilla.redhat.com/show_bug.cgi?id=1982681
+	// * https://bugzilla.redhat.com/show_bug.cgi?id=2011007
+	github.com/containerd/containerd => github.com/containerd/containerd v1.5.7
 	// dependabot fixes
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
