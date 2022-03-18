@@ -639,7 +639,10 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     ```
 
     As the deployment runs it will create a Kubernetes Job to execute the Ansible playbooks. You can
-    tail the logs of this job/pod to watch the Ansible playbooks run.
+    tail the logs of this job/pod to watch the Ansible playbooks run. Additionally, you can manually
+    access the executed Ansible playbooks by logging into the 'openstackclient' pod, going into the
+    /home/cloud-admin/work/<config version digest>/ directory. There you will find the ansible
+    playbooks along with the ansible.log file for the running deployment.
 
 Deploy Ceph via tripleo using ComputeHCI
 ----------------------------------------
@@ -744,13 +747,6 @@ Once you customize the above template/examples for your environment, create/upda
 * Wait for the OpenStackConfigGenerator to finish the playbook rendering job.
 
 * Obtain the hash/digest of the latest OpenStackConfigVersion.
-
-* Install the pre-requisites on overcloud systems for ceph-ansible
-
-```bash
-cd /home/cloud-admin
-ansible -i /home/cloud-admin/ctlplane-ansible-inventory overcloud -a "sudo dnf -y install python3 lvm2"
-```
 
 * Create an OpenStackDeploy for the specified OpenStackConfigVersion. This will deploy the Ansible playbooks.
 
