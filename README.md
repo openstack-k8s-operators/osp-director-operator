@@ -24,6 +24,8 @@ Hardware Provisioning CRDs
 Software Configuration CRDs
 ---------------------------
 - openstackconfiggenerator: automatically generate Ansible playbooks for deployment when you scale up or make changes to custom ConfigMaps for deployment
+- openstackconfigversion: represents a set of executable Ansible playbooks
+- openstackdeploy: executes a set of Ansible playbooks (openstackconfigversion)
 - openstackclient: creates a pod used to run TripleO deployment commands
 
 Installation
@@ -610,36 +612,37 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     The osconfiggenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osconfiggenerator's status condition for it to finish.
 
-9) Login to the 'openstackclient' pod and deploy the OSP software via the rendered ansible playbooks. At this point all baremetal and virtualmachine resources have been provisioned within the OCP cluster.
-
-    The `tripleo-deploy.sh` script supports three actions:
-    * `-d` - show the `git diff` of the playbooks to the previous accepted
-    * `-a` - accept the new available rendered playbooks and tag them as `latest`
-    * `-p` - run the ansible driven OpenStack deployment
-
-    a) check for new version of rendered playbooks and accept them
+9) Obtain the latest OsConfigVersion (Ansible Playbooks). Select the hash/digest of the latest osconfigversion for use in the next step.
 
     ```bash
-    oc rsh openstackclient
-    bash
-    cd /home/cloud-admin
-
-    # (optional) show the `git diff` of the playbooks to the previous accepted
-    ./tripleo-deploy.sh -d
-
-    # accept the new available rendered playbooks (if available) and tag them as `latest`
-    ./tripleo-deploy.sh -a
+    oc get -n openstack --sort-by {.metadata.creationTimestamp} osconfigversions -o json
     ```
-    b) run ansible driven OpenStack deployment
+
+   NOTE: OsConfigVersion objects also have a 'git diff' attribute that can be used to easily compare the changes between Ansible playbook versions.
+
+10) Create an OsDeploy (executes Ansible playbooks)
+
+    ```yaml
+    apiVersion: osp-director.openstack.org/v1beta1
+    kind: OpenStackDeploy
+    metadata:
+      name: default
+    spec:
+      configVersion: n5fch96h548h75hf4hbdhb8hfdh676h57bh96h5c5h59hf4h88h...
+      configGenerator: default
+    ```
+
+    If you write the above YAML into a file called deploy.yaml you can create the OpenStackDeploy via this command:
 
     ```bash
-    oc rsh openstackclient
-    bash
-    cd /home/cloud-admin
-
-    # run ansible driven OpenStack deployment
-    ./tripleo-deploy.sh -p
+    oc create -f deploy.yaml
     ```
+
+    As the deployment runs it will create a Kubernetes Job to execute the Ansible playbooks. You can
+    tail the logs of this job/pod to watch the Ansible playbooks run. Additionally, you can manually
+    access the executed Ansible playbooks by logging into the 'openstackclient' pod, going into the
+    /home/cloud-admin/work/<config version digest>/ directory. There you will find the ansible
+    playbooks along with the ansible.log file for the running deployment.
 
 Deploy Ceph via tripleo using ComputeHCI
 ----------------------------------------
@@ -741,43 +744,11 @@ Once you customize the above template/examples for your environment, create/upda
 
 ## Run the software deployment
 
-* Wait for the OpenStackConfigGenerator to finish the playbook rendering job
+* Wait for the OpenStackConfigGenerator to finish the playbook rendering job.
 
-* In the openstackclient pod
+* Obtain the hash/digest of the latest OpenStackConfigVersion.
 
-a) check for new version of rendered playbooks and accept them
-
-```bash
-oc rsh openstackclient
-bash
-cd /home/cloud-admin
-
-# (optional) show the `git diff` of the playbooks to the previous accepted
-./tripleo-deploy.sh -d
-
-# (optional) accept the new available rendered playbooks (if available) and tag them as `latest`
-./tripleo-deploy.sh -a
-```
-
-b) Install the pre-requisites on overcloud systems for ceph-ansible
-
-```bash
-cd /home/cloud-admin
-ansible -i /home/cloud-admin/playbooks/tripleo-ansible/inventory.yaml overcloud -a "sudo dnf -y install python3 lvm2"
-```
-
-d) run ansible driven OpenStack deployment
-
-**NOTE**: for now the validation for ceph get skipped by adding `--skip-tags opendev-validation-ceph` when run ansible playbooks
-
-```bash
-oc rsh openstackclient
-bash
-cd /home/cloud-admin
-
-# run ansible driven OpenStack deployment
-./tripleo-deploy.sh -p
-```
+* Create an OpenStackDeploy for the specified OpenStackConfigVersion. This will deploy the Ansible playbooks.
 
 Remove a baremetal compute host
 -------------------------------
