@@ -54,8 +54,8 @@ const (
 	DeployCondReasonConfigCreate ConditionReason = "ConfigCreate"
 )
 
-// OpenStackAnsibleSettingsSpec defines advanced ansible-playbook settings
-type OpenStackAnsibleSettingsSpec struct {
+// OpenStackDeployAdvancedSettingsSpec defines advanced deployment settings
+type OpenStackDeployAdvancedSettingsSpec struct {
 	// +kubebuilder:validation:Optional
 	// Playbook to run from config-download
 	Playbook string `json:"playbook,omitempty"`
@@ -68,6 +68,10 @@ type OpenStackAnsibleSettingsSpec struct {
 	// +kubebuilder:validation:Optional
 	// Ansible exclude tags
 	SkipTags []string `json:"skipTags,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// Skip setting a unique deploy identifier
+	SkipDeployIdentifier bool `json:"skipDeployIdentifier"`
 }
 
 // OpenStackDeploySpec defines the desired state of OpenStackDeploy
@@ -89,8 +93,8 @@ type OpenStackDeploySpec struct {
 	Mode string `json:"mode,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// Advanced ansible-playbook setting
-	AnsibleSettings OpenStackAnsibleSettingsSpec `json:"ansibleSettings,omitempty"`
+	// Advanced deployment settings
+	AdvancedSettings OpenStackDeployAdvancedSettingsSpec `json:"advancedSettings,omitempty"`
 }
 
 // OpenStackDeployStatus defines the observed state of OpenStackDeploy

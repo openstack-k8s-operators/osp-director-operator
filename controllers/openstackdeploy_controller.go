@@ -143,15 +143,15 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	ansibleSettings := instance.Spec.AnsibleSettings.DeepCopy()
-	if ansibleSettings.Playbook == "" {
+	advancedSettings := instance.Spec.AdvancedSettings.DeepCopy()
+	if advancedSettings.Playbook == "" {
 		switch instance.Spec.Mode {
 		case "update":
-			ansibleSettings.Playbook = "update_steps_playbook.yaml"
+			advancedSettings.Playbook = "update_steps_playbook.yaml"
 		case "externalUpdate":
-			ansibleSettings.Playbook = "external_update_steps_playbook.yaml"
+			advancedSettings.Playbook = "external_update_steps_playbook.yaml"
 		default:
-			ansibleSettings.Playbook = "deploy_steps_playbook.yaml"
+			advancedSettings.Playbook = "deploy_steps_playbook.yaml"
 		}
 	}
 
@@ -165,7 +165,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			"openstackclient",
 			instance.Spec.ConfigVersion,
 			configGenerator.Spec.GitSecret,
-			ansibleSettings,
+			advancedSettings,
 		)
 
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
