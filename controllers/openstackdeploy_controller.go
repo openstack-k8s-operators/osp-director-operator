@@ -78,7 +78,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Fetch the ProvisionServer instance
 	instance := &ospdirectorv1beta1.OpenStackDeploy{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -120,20 +120,15 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject("Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
-
 	}(cond)
 
 	// look up the git secret from the configGenerator
 	configGenerator := &ospdirectorv1beta1.OpenStackConfigGenerator{}
-	err = r.GetClient().Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
+	err = r.GetClient().Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
 	if err != nil && errors.IsNotFound(err) {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonConfigVersionNotFound)
@@ -168,7 +163,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			ansibleSettings,
 		)
 
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
 
@@ -198,7 +193,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// configVersion Hash changed while job was running (NOTE: configVersion is only ENV in the job)
 		common.LogForObject(r, fmt.Sprintf("Job Hash : %s", job.Spec.Template.Spec.Containers[0].Env[0].Value), instance)
 		if instance.Spec.ConfigVersion != job.Spec.Template.Spec.Containers[0].Env[0].Value {
-			_, err = common.DeleteJob(job, r.Kclient, r.Log)
+			_, err = common.DeleteJob(ctx, job, r.Kclient, r.Log)
 			if err != nil {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonJobDelete)
@@ -217,7 +212,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		}
 
-		requeue, err := common.WaitOnJob(job, r.Client, r.Log)
+		requeue, err := common.WaitOnJob(ctx, job, r.Client, r.Log)
 		common.LogForObject(r, "Deploying OpenStack...", instance)
 
 		if err != nil {

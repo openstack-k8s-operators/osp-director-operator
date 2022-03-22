@@ -37,13 +37,13 @@ type Pvc struct {
 }
 
 // CreateOrUpdatePvc -
-func CreateOrUpdatePvc(r ReconcilerCommon, obj metav1.Object, pv *Pvc) (*corev1.PersistentVolumeClaim, controllerutil.OperationResult, error) {
+func CreateOrUpdatePvc(ctx context.Context, r ReconcilerCommon, obj metav1.Object, pv *Pvc) (*corev1.PersistentVolumeClaim, controllerutil.OperationResult, error) {
 
 	pvc := &corev1.PersistentVolumeClaim{}
 	pvc.Name = pv.Name
 	pvc.Namespace = pv.Namespace
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), pvc, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), pvc, func() error {
 
 		pvc.Labels = pv.Labels
 

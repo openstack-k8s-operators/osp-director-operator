@@ -115,6 +115,7 @@ type networkType struct {
 
 // CreateConfigMapParams - creates a map of parameters to render the required overcloud parameter files
 func CreateConfigMapParams(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
@@ -131,7 +132,7 @@ func CreateConfigMapParams(
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
 	}
-	err := r.GetClient().List(context.TODO(), osNetList, osNetListOpts...)
+	err := r.GetClient().List(ctx, osNetList, osNetListOpts...)
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSNets", instance.Kind, instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonNetNotFound)
@@ -149,7 +150,7 @@ func CreateConfigMapParams(
 		client.InNamespace(instance.Namespace),
 		client.Limit(1000),
 	}
-	err = r.GetClient().List(context.TODO(), osMACList, osMACListOpts...)
+	err = r.GetClient().List(ctx, osMACList, osMACListOpts...)
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSMACs", instance.Kind, instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonMACNotFound)
@@ -162,7 +163,7 @@ func CreateConfigMapParams(
 	//
 	// get OSPVersion from ControlPlane CR
 	//
-	controlPlane, _, err := common.GetControlPlane(r, &instance.ObjectMeta)
+	controlPlane, _, err := common.GetControlPlane(ctx, r, &instance.ObjectMeta)
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
@@ -180,7 +181,7 @@ func CreateConfigMapParams(
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labelSelector),
 	}
-	if err := r.GetClient().List(context.Background(), netConfigList, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, netConfigList, listOpts...); err != nil {
 		return templateParameters, rolesMap, err
 	}
 
@@ -210,6 +211,7 @@ func CreateConfigMapParams(
 	// Create rolesMap
 	//
 	err = createRolesMap(
+		ctx,
 		r,
 		instance,
 		osNetList,
@@ -352,6 +354,7 @@ func createNetworksMap(
 // createRolesMap - create map with all roles
 //
 func createRolesMap(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	osNetList *ospdirectorv1beta1.OpenStackNetList,
@@ -366,7 +369,7 @@ func createRolesMap(
 			//
 			// check if role is VM
 			//
-			isVMType, isTripleoRole, err := isVMRole(r, strings.ToLower(roleName), instance.Namespace)
+			isVMType, isTripleoRole, err := isVMRole(ctx, r, strings.ToLower(roleName), instance.Namespace)
 			if err != nil {
 				return err
 			}
@@ -487,11 +490,16 @@ func createRolesMap(
 //
 // isVMRole - check if role is VMset and tripleo role
 //
-func isVMRole(r common.ReconcilerCommon, roleName string, namespace string) (bool, bool, error) {
+func isVMRole(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	roleName string,
+	namespace string,
+) (bool, bool, error) {
 
 	vmset := &ospdirectorv1beta1.OpenStackVMSet{}
 
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: roleName, Namespace: namespace}, vmset)
+	err := r.GetClient().Get(ctx, types.NamespacedName{Name: roleName, Namespace: namespace}, vmset)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return false, false, err
 	}

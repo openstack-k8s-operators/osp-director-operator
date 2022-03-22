@@ -98,7 +98,7 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackBackupRequest{}
-	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
 			// request.  Owned objects are automatically garbage collected.  For
@@ -114,9 +114,9 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 	if instance.Spec.Mode == ospdirectorv1beta1.BackupSave &&
 		(instance.Status.CurrentState != ospdirectorv1beta1.BackupSaveError &&
 			instance.Status.CurrentState != ospdirectorv1beta1.BackupSaved) {
-		if err := r.saveBackup(instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
+		if err := r.saveBackup(ctx, instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
 			instance.Status.CurrentState = ospdirectorv1beta1.BackupSaveError
-			_ = r.setStatus(instance, oldStatus, err.Error())
+			_ = r.setStatus(ctx, instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
@@ -124,9 +124,9 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 		instance.Spec.Mode == ospdirectorv1beta1.BackupCleanRestore) &&
 		(instance.Status.CurrentState != ospdirectorv1beta1.BackupRestoreError &&
 			instance.Status.CurrentState != ospdirectorv1beta1.BackupRestored) {
-		if err := r.restoreBackup(instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
+		if err := r.restoreBackup(ctx, instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
 			instance.Status.CurrentState = ospdirectorv1beta1.BackupRestoreError
-			_ = r.setStatus(instance, oldStatus, err.Error())
+			_ = r.setStatus(ctx, instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
@@ -152,7 +152,12 @@ func (r *OpenStackBackupRequestReconciler) SetupWithManager(mgr ctrl.Manager) er
 		Complete(r)
 }
 
-func (r *OpenStackBackupRequestReconciler) setStatus(instance *ospdirectorv1beta1.OpenStackBackupRequest, oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus, msg string) error {
+func (r *OpenStackBackupRequestReconciler) setStatus(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
+	msg string,
+) error {
 
 	if msg != "" {
 		r.Log.Info(msg)
@@ -160,7 +165,7 @@ func (r *OpenStackBackupRequestReconciler) setStatus(instance *ospdirectorv1beta
 
 	if !reflect.DeepEqual(instance.Status, oldStatus) {
 		instance.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(instance.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
-		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+		if err := r.Status().Update(ctx, instance); err != nil {
 			r.Log.Error(err, "OpenStackBackupRequest update status error: %v")
 			return err
 		}
@@ -168,10 +173,14 @@ func (r *OpenStackBackupRequestReconciler) setStatus(instance *ospdirectorv1beta
 	return nil
 }
 
-func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1beta1.OpenStackBackupRequest, oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus) error {
+func (r *OpenStackBackupRequestReconciler) saveBackup(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
+) error {
 	// We always need all the OSP-D operator CRs if we get here, regardless of whether we are
 	// actually saving or just quiescing for the moment
-	crLists, err := openstackbackup.GetCRLists(r, instance.Namespace)
+	crLists, err := openstackbackup.GetCRLists(ctx, r, instance.Namespace)
 
 	if err != nil {
 		return err
@@ -184,7 +193,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 		// associated webhooks from allowing certain actions.
 		instance.Status.CurrentState = ospdirectorv1beta1.BackupQuiescing
 
-		if err := r.setStatus(instance, oldStatus, "OpenStackBackupRequest is waiting for other controllers to quiesce"); err != nil {
+		if err := r.setStatus(ctx, instance, oldStatus, "OpenStackBackupRequest is waiting for other controllers to quiesce"); err != nil {
 			return err
 		}
 	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupQuiescing {
@@ -212,13 +221,13 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 			// of an OpenStackBackup instance
 
 			// Get config maps and secrets we want to save
-			cmList, err := openstackbackup.GetConfigMapList(r, instance, &crLists)
+			cmList, err := openstackbackup.GetConfigMapList(ctx, r, instance, &crLists)
 
 			if err != nil {
 				return err
 			}
 
-			secretList, err := openstackbackup.GetSecretList(r, instance, &crLists)
+			secretList, err := openstackbackup.GetSecretList(ctx, r, instance, &crLists)
 
 			if err != nil {
 				return err
@@ -231,7 +240,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 				},
 			}
 
-			op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, backup, func() error {
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, backup, func() error {
 				backup.Spec.Crs = crLists
 				backup.Spec.ConfigMaps = cmList
 				backup.Spec.Secrets = secretList
@@ -241,7 +250,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 			if err != nil {
 				instance.Status.CurrentState = ospdirectorv1beta1.BackupSaveError
 
-				_ = r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackup %s save failed: %s", instance.Name, err))
+				_ = r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s save failed: %s", instance.Name, err))
 				return err
 			}
 			if op != controllerutil.OperationResultNone {
@@ -249,7 +258,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 
 				instance.Status.CompletionTimestamp = metav1.Now()
 				instance.Status.CurrentState = ospdirectorv1beta1.BackupSaved
-				if err := r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been saved", instance.Name)); err != nil {
+				if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been saved", instance.Name)); err != nil {
 					return err
 				}
 			}
@@ -259,11 +268,15 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(instance *ospdirectorv1bet
 	return nil
 }
 
-func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1beta1.OpenStackBackupRequest, oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus) error {
+func (r *OpenStackBackupRequestReconciler) restoreBackup(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
+) error {
 	// Get the backup we are restoring
 	backup := &ospdirectorv1beta1.OpenStackBackup{}
 
-	if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: instance.Spec.RestoreSource, Namespace: instance.Namespace}, backup); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.RestoreSource, Namespace: instance.Namespace}, backup); err != nil {
 		return err
 	}
 
@@ -283,26 +296,26 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1
 			action = "cleaning to prepare for loading"
 		}
 
-		if err := r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is %s OpenStackBackup %s", instance.Name, action, backup.Name)); err != nil {
+		if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is %s OpenStackBackup %s", instance.Name, action, backup.Name)); err != nil {
 			return err
 		}
 	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupCleaning {
 		// Delete all OSP-D-operator-generated resources in the namespace
 
 		// Get CRs, config maps and secrets we want to delete
-		crLists, err := openstackbackup.GetCRLists(r, instance.Namespace)
+		crLists, err := openstackbackup.GetCRLists(ctx, r, instance.Namespace)
 
 		if err != nil {
 			return err
 		}
 
-		cmList, err := openstackbackup.GetConfigMapList(r, instance, &crLists)
+		cmList, err := openstackbackup.GetConfigMapList(ctx, r, instance, &crLists)
 
 		if err != nil {
 			return err
 		}
 
-		secretList, err := openstackbackup.GetSecretList(r, instance, &crLists)
+		secretList, err := openstackbackup.GetSecretList(ctx, r, instance, &crLists)
 
 		if err != nil {
 			return err
@@ -310,7 +323,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1
 
 		// If all lists are empty, set the state to restoring to indicate to other controllers that they should pause all
 		// reconcile activity
-		clean, err := openstackbackup.CleanNamespace(r, instance.Namespace, crLists, cmList, secretList)
+		clean, err := openstackbackup.CleanNamespace(ctx, r, instance.Namespace, crLists, cmList, secretList)
 
 		if err != nil {
 			return err
@@ -319,13 +332,13 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1
 		if clean {
 			instance.Status.CurrentState = ospdirectorv1beta1.BackupLoading
 
-			if err := r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is loading OpenStackBackup %s", instance.Name, backup.Name)); err != nil {
+			if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is loading OpenStackBackup %s", instance.Name, backup.Name)); err != nil {
 				return err
 			}
 		}
 	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupLoading {
 		// Attempt to restore the backup (apply CRs, ConfigMaps and Secrets)
-		if err := r.ensureLoadBackup(instance, oldStatus, backup); err != nil {
+		if err := r.ensureLoadBackup(ctx, instance, oldStatus, backup); err != nil {
 			// Ignore "object has been modified errors"
 			if !k8s_errors.IsConflict(err) {
 				return err
@@ -333,7 +346,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1
 		}
 	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupReconciling {
 		// Check status of all the backup's resources that are now reconciling
-		if err := r.ensureReconcileBackup(instance, oldStatus, backup); err != nil {
+		if err := r.ensureReconcileBackup(ctx, instance, oldStatus, backup); err != nil {
 			return err
 		}
 	}
@@ -341,42 +354,47 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(instance *ospdirectorv1
 	return nil
 }
 
-func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirectorv1beta1.OpenStackBackupRequest, oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus, backup *ospdirectorv1beta1.OpenStackBackup) error {
+func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
+	backup *ospdirectorv1beta1.OpenStackBackup,
+) error {
 	// Create all CRs in the spec first, and set their status to some initial state
 
 	msg := fmt.Sprintf("OpenStackBackup %s initial load", backup.Name)
 
 	// OpenStackNets
 	for _, item := range backup.Spec.Crs.OpenStackNets.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.NetWaiting
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackNetAttachments
 	for _, item := range backup.Spec.Crs.OpenStackNetAttachments.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.NetAttachWaiting
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackNetConfigs
 	for _, item := range backup.Spec.Crs.OpenStackNetConfigs.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
@@ -384,28 +402,28 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackMACAddresses
 	for _, item := range backup.Spec.Crs.OpenStackMACAddresses.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
 		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeWaiting
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackProvisionServers
 	for _, item := range backup.Spec.Crs.OpenStackProvisionServers.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
@@ -413,14 +431,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackBaremetalSets
 	for _, item := range backup.Spec.Crs.OpenStackBaremetalSets.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
@@ -428,27 +446,27 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackClients
 	for _, item := range backup.Spec.Crs.OpenStackClients.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackVMSets
 	for _, item := range backup.Spec.Crs.OpenStackVMSets.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
@@ -456,14 +474,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetCondTypeWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// OpenStackControlPlanes
 	for _, item := range backup.Spec.Crs.OpenStackControlPlanes.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
@@ -471,35 +489,35 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(instance *ospdirecto
 		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
-		if err := r.Client.Status().Update(context.TODO(), &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	// Now create ConfigMaps and Secrets
 	for _, item := range backup.Spec.ConfigMaps.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 	}
 
 	for _, item := range backup.Spec.Secrets.Items {
-		if err := r.ensureLoadBackupResource(&item); err != nil {
+		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 	}
 
 	// If we get here, everything has been loaded and we can transition to the reconciliation phase
 	instance.Status.CurrentState = ospdirectorv1beta1.BackupReconciling
-	if err := r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackup %s is now reconciling", instance.Name)); err != nil {
+	if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s is now reconciling", instance.Name)); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *OpenStackBackupRequestReconciler) ensureLoadBackupResource(item client.Object) error {
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, item, func() error {
+func (r *OpenStackBackupRequestReconciler) ensureLoadBackupResource(ctx context.Context, item client.Object) error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, item, func() error {
 		return nil
 	})
 
@@ -514,11 +532,16 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackupResource(item client.
 	return nil
 }
 
-func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(instance *ospdirectorv1beta1.OpenStackBackupRequest, oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus, backup *ospdirectorv1beta1.OpenStackBackup) error {
+func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
+	backup *ospdirectorv1beta1.OpenStackBackup,
+) error {
 	// Check each CR in the OpenStackBackup spec that has a state and wait for the "finished" equivalent for that CRD
 
 	// Get all existing CRs
-	crLists, err := openstackbackup.GetCRLists(r, instance.Namespace)
+	crLists, err := openstackbackup.GetCRLists(ctx, r, instance.Namespace)
 
 	if err != nil {
 		return err
@@ -542,7 +565,7 @@ func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(instance *ospdi
 		// If we reach this point, all CRs from the backup have been successfully restored/configured
 		instance.Status.CompletionTimestamp = metav1.Now()
 		instance.Status.CurrentState = ospdirectorv1beta1.BackupRestored
-		if err := r.setStatus(instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been successfully restored", backup.Name)); err != nil {
+		if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been successfully restored", backup.Name)); err != nil {
 			return err
 		}
 	}

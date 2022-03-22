@@ -90,7 +90,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 
 	// Fetch the OpenStackNetAttachment instance
 	instance := &ospdirectorv1beta1.OpenStackNetAttachment{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -132,7 +132,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -148,7 +148,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, openstacknetattachment.FinalizerName) {
 			controllerutil.AddFinalizer(instance, openstacknetattachment.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -167,14 +167,14 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		// 2. Clean up resources used by the operator
 		///
 		// NNCP resources
-		ctrlResult, err := r.cleanupNodeNetworkConfigurationPolicy(instance, cond)
+		ctrlResult, err := r.cleanupNodeNetworkConfigurationPolicy(ctx, instance, cond)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
 			return ctrlResult, nil
 		}
 		// SRIOV resources
-		err = r.sriovResourceCleanup(instance)
+		err = r.sriovResourceCleanup(ctx, instance)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
@@ -183,7 +183,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		// 3. as last step remove the finalizer on the operator CR to finish delete
 		//
 		controllerutil.RemoveFinalizer(instance, openstacknetattachment.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -215,7 +215,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		//
 		// SRIOV
 		//
-		if err := r.ensureSriov(instance); err != nil {
+		if err := r.ensureSriov(ctx, instance); err != nil {
 			cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeSriovConfigurationPolicy", instance.Name)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 			return ctrl.Result{}, err
@@ -226,7 +226,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		//
 		// Set/update CR status from NNCP status
 		//
-		if err = r.getNodeNetworkConfigurationPolicyStatus(instance, cond); err != nil && !k8s_errors.IsNotFound(err) {
+		if err = r.getNodeNetworkConfigurationPolicyStatus(ctx, instance, cond); err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 
@@ -238,7 +238,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 			//
 			// Create/update Bridge
 			//
-			if err := r.createOrUpdateNodeNetworkConfigurationPolicy(instance, cond); err != nil {
+			if err := r.createOrUpdateNodeNetworkConfigurationPolicy(ctx, instance, cond); err != nil {
 				cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeNetworkConfigurationPolicy", instance.Name)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
 
@@ -307,6 +307,7 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 // createOrUpdateNetworkConfigurationPolicy - create or update NetworkConfigurationPolicy
 func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfigurationPolicy(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
@@ -342,7 +343,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 		return nil
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkConfigurationPolicy, apply)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkConfigurationPolicy, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
@@ -363,7 +364,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName) {
 			controllerutil.AddFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName)
-			if err := r.Update(context.Background(), networkConfigurationPolicy); err != nil {
+			if err := r.Update(ctx, networkConfigurationPolicy); err != nil {
 				return err
 			}
 			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to %s", openstacknetattachment.FinalizerName, networkConfigurationPolicy.Name), instance)
@@ -374,12 +375,13 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 }
 
 func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStatus(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s ", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNNCPError)
@@ -416,12 +418,13 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 }
 
 func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -429,7 +432,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 	//
 	// Set/update CR status from NNCP status
 	//
-	err = r.getNodeNetworkConfigurationPolicyStatus(instance, cond)
+	err = r.getNodeNetworkConfigurationPolicyStatus(ctx, instance, cond)
 
 	// in case of nncp cond.Reason == FailedToConfigure, still continue to try to
 	// cleanup and delete the nncp
@@ -472,7 +475,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		//
 		// 1) Update nncp desired state to down to unconfigure the device on the worker nodes
 		//
-		op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkConfigurationPolicy, apply)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkConfigurationPolicy, apply)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", instance.Status.BridgeName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
@@ -489,7 +492,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		//
 		// 2) Delete nncp that DeletionTimestamp get set
 		//
-		if err := r.Client.Delete(context.TODO(), networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
+		if err := r.Delete(ctx, networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 
@@ -507,7 +510,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 				condition.Reason == "SuccessfullyConfigured" {
 
 				controllerutil.RemoveFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName)
-				if err := r.Client.Update(context.TODO(), networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
+				if err := r.Update(ctx, networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
 					cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
 					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
@@ -530,7 +533,10 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 	return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 }
 
-func (r *OpenStackNetAttachmentReconciler) ensureSriov(instance *ospdirectorv1beta1.OpenStackNetAttachment) error {
+func (r *OpenStackNetAttachmentReconciler) ensureSriov(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackNetAttachment,
+) error {
 	// Labels for all SRIOV objects
 	labelSelector := common.GetLabels(instance, openstacknetattachment.AppLabel, map[string]string{})
 
@@ -542,7 +548,7 @@ func (r *OpenStackNetAttachmentReconciler) ensureSriov(instance *ospdirectorv1be
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovNet, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, sriovNet, func() error {
 		sriovNet.Labels = common.GetLabels(instance, openstacknetattachment.AppLabel, map[string]string{})
 		sriovNet.Spec = sriovnetworkv1.SriovNetworkSpec{
 			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
@@ -574,7 +580,7 @@ func (r *OpenStackNetAttachmentReconciler) ensureSriov(instance *ospdirectorv1be
 		sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
 	}
 
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, sriovPolicy, func() error {
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, sriovPolicy, func() error {
 		sriovPolicy.Labels = common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})
 		sriovPolicy.Spec = sriovnetworkv1.SriovNetworkNodePolicySpec{
 			DeviceType: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.DeviceType,
@@ -607,6 +613,7 @@ func (r *OpenStackNetAttachmentReconciler) ensureSriov(instance *ospdirectorv1be
 }
 
 func (r *OpenStackNetAttachmentReconciler) sriovResourceCleanup(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 ) error {
 	labelSelectorMap := map[string]string{
@@ -616,13 +623,13 @@ func (r *OpenStackNetAttachmentReconciler) sriovResourceCleanup(
 	}
 
 	// Delete sriovnetworks in openshift-sriov-network-operator namespace
-	sriovNetworks, err := openstacknetattachment.GetSriovNetworksWithLabel(r, labelSelectorMap, "openshift-sriov-network-operator")
+	sriovNetworks, err := openstacknetattachment.GetSriovNetworksWithLabel(ctx, r, labelSelectorMap, "openshift-sriov-network-operator")
 	if err != nil {
 		return err
 	}
 
 	for _, sn := range sriovNetworks {
-		err = r.Client.Delete(context.Background(), &sn, &client.DeleteOptions{})
+		err = r.Delete(ctx, &sn, &client.DeleteOptions{})
 
 		if err != nil {
 			return err
@@ -632,13 +639,13 @@ func (r *OpenStackNetAttachmentReconciler) sriovResourceCleanup(
 	}
 
 	// Delete sriovnetworknodepolicies in openshift-sriov-network-operator namespace
-	sriovNetworkNodePolicies, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, labelSelectorMap, "openshift-sriov-network-operator")
+	sriovNetworkNodePolicies, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(ctx, r, labelSelectorMap, "openshift-sriov-network-operator")
 	if err != nil {
 		return err
 	}
 
 	for _, snnp := range sriovNetworkNodePolicies {
-		err = r.Client.Delete(context.Background(), &snnp, &client.DeleteOptions{})
+		err = r.Delete(ctx, &snnp, &client.DeleteOptions{})
 
 		if err != nil {
 			return err

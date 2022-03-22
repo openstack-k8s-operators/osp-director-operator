@@ -67,7 +67,7 @@ func (r *OpenStackBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackBackup{}
-	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
 			// request.  Owned objects are automatically garbage collected.  For

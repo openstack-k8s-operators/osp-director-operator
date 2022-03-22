@@ -21,6 +21,7 @@ import (
 // EnsureIPs - Creates IPSet and verify/wait for IPs created
 //
 func EnsureIPs(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
@@ -39,6 +40,7 @@ func EnsureIPs(
 	// create IPSet to request IPs for all networks
 	//
 	_, err := createOrUpdateIPSet(
+		ctx,
 		r,
 		obj,
 		cond,
@@ -58,7 +60,7 @@ func EnsureIPs(
 	// get ipset and verify all IPs got created
 	//
 	ipSet := &ospdirectorv1beta1.OpenStackIPSet{}
-	err = r.GetClient().Get(context.TODO(), types.NamespacedName{
+	err = r.GetClient().Get(ctx, types.NamespacedName{
 		Name:      strings.ToLower(name),
 		Namespace: obj.GetNamespace()},
 		ipSet)
@@ -97,7 +99,7 @@ func EnsureIPs(
 	// get OSNetCfg object
 	//
 	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.GetClient().Get(context.TODO(), types.NamespacedName{
+	err = r.GetClient().Get(ctx, types.NamespacedName{
 		Name:      strings.ToLower(obj.GetLabels()[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
 		Namespace: obj.GetNamespace()},
 		osnetcfg)
@@ -134,6 +136,7 @@ func EnsureIPs(
 // createOrUpdateIPSet - Creates or updates IPSet
 //
 func createOrUpdateIPSet(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
@@ -153,7 +156,7 @@ func createOrUpdateIPSet(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), ipSet, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), ipSet, func() error {
 		ipSet.Labels = common.MergeStringMaps(
 			ipSet.Labels,
 			common.GetLabels(obj, controlplane.AppLabel, map[string]string{}),

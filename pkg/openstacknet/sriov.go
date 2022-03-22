@@ -9,13 +9,18 @@ import (
 )
 
 // GetSriovNetworksWithLabel - Returns list of sriovnetworks labeled with labelSelector
-func GetSriovNetworksWithLabel(r common.ReconcilerCommon, labelSelector map[string]string, namespace string) (map[string]sriovnetworkv1.SriovNetwork, error) {
+func GetSriovNetworksWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	labelSelector map[string]string,
+	namespace string,
+) (map[string]sriovnetworkv1.SriovNetwork, error) {
 	sriovNetworks := &sriovnetworkv1.SriovNetworkList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels(labelSelector),
 	}
-	if err := r.GetClient().List(context.Background(), sriovNetworks, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, sriovNetworks, listOpts...); err != nil {
 		return nil, err
 	}
 
@@ -29,13 +34,18 @@ func GetSriovNetworksWithLabel(r common.ReconcilerCommon, labelSelector map[stri
 }
 
 // GetSriovNetworkNodePoliciesWithLabel - Returns list of sriovnetworknodepolicies labeled with labelSelector
-func GetSriovNetworkNodePoliciesWithLabel(r common.ReconcilerCommon, labelSelector map[string]string, namespace string) (map[string]sriovnetworkv1.SriovNetworkNodePolicy, error) {
+func GetSriovNetworkNodePoliciesWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	labelSelector map[string]string,
+	namespace string,
+) (map[string]sriovnetworkv1.SriovNetworkNodePolicy, error) {
 	sriovNetworkNodePolicies := &sriovnetworkv1.SriovNetworkNodePolicyList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels(labelSelector),
 	}
-	if err := r.GetClient().List(context.Background(), sriovNetworkNodePolicies, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, sriovNetworkNodePolicies, listOpts...); err != nil {
 		return nil, err
 	}
 

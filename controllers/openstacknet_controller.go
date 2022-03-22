@@ -81,7 +81,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Fetch the OpenStackNet instance
 	instance := &ospdirectorv1beta1.OpenStackNet{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -128,7 +128,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -144,7 +144,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, openstacknet.FinalizerName) {
 			controllerutil.AddFinalizer(instance, openstacknet.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to CR %s", openstacknet.FinalizerName, instance.Name), instance)
@@ -161,7 +161,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// 2. Clean up resources used by the operator
 		//
 		// osnet resources
-		err := r.cleanupNetworkAttachmentDefinition(instance, cond)
+		err := r.cleanupNetworkAttachmentDefinition(ctx, instance, cond)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -170,7 +170,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// 3. as last step remove the finalizer on the operator CR to finish delete
 		//
 		controllerutil.RemoveFinalizer(instance, openstacknet.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -200,7 +200,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	// Create/update NetworkAttachmentDefinition
 	//
-	if err := r.createOrUpdateNetworkAttachmentDefinition(instance, false, cond); err != nil {
+	if err := r.createOrUpdateNetworkAttachmentDefinition(ctx, instance, false, cond); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s encountered an error configuring NetworkAttachmentDefinition", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
 		return ctrl.Result{}, err
@@ -209,7 +209,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	// Create/update static NetworkAttachmentDefinition used for openstackclient
 	//
-	if err := r.createOrUpdateNetworkAttachmentDefinition(instance, true, cond); err != nil {
+	if err := r.createOrUpdateNetworkAttachmentDefinition(ctx, instance, true, cond); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s encountered an error configuring static NetworkAttachmentDefinition", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
 		return ctrl.Result{}, err
@@ -268,6 +268,7 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // createOrUpdateNetworkAttachmentDefinition - create or update NetworkAttachmentDefinition
 //
 func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNet,
 	nadStatic bool,
 	cond *ospdirectorv1beta1.Condition,
@@ -279,6 +280,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	// get bridge name from referenced osnetattach CR status
 	//
 	bridgeName, err := openstacknetattachment.GetOpenStackNetAttachmentBridgeName(
+		ctx,
 		r,
 		instance.Namespace,
 		instance.Spec.AttachConfiguration,
@@ -348,7 +350,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 		return controllerutil.SetControllerReference(instance, networkAttachmentDefinition, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, networkAttachmentDefinition, apply)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkAttachmentDefinition, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkAttachmentDefinition", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
@@ -370,7 +372,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(networkAttachmentDefinition, openstacknet.FinalizerName) {
 			controllerutil.AddFinalizer(networkAttachmentDefinition, openstacknet.FinalizerName)
-			if err := r.Update(context.Background(), networkAttachmentDefinition); err != nil {
+			if err := r.Update(ctx, networkAttachmentDefinition); err != nil {
 				return err
 			}
 			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to %s", openstacknet.FinalizerName, networkAttachmentDefinition.Name), instance)
@@ -382,6 +384,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 }
 
 func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
@@ -397,7 +400,7 @@ func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 		client.MatchingLabels(labelSelector),
 	}
 
-	if err := r.GetClient().List(context.Background(), networkAttachmentDefinitionList, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, networkAttachmentDefinitionList, listOpts...); err != nil {
 		return err
 	}
 
@@ -406,7 +409,7 @@ func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 	//
 	for _, nad := range networkAttachmentDefinitionList.Items {
 		controllerutil.RemoveFinalizer(&nad, openstacknet.FinalizerName)
-		if err := r.Client.Update(context.TODO(), &nad); err != nil && !k8s_errors.IsNotFound(err) {
+		if err := r.Update(ctx, &nad); err != nil && !k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
 			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
@@ -421,7 +424,7 @@ func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 	// Delete NADs
 	//
 	if err := r.GetClient().DeleteAllOf(
-		context.TODO(),
+		ctx,
 		&networkv1.NetworkAttachmentDefinition{},
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(map[string]string{

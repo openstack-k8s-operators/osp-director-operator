@@ -28,11 +28,16 @@ import (
 )
 
 // GetAllPodsWithLabel - get all pods from namespace with a specific label
-func GetAllPodsWithLabel(r ReconcilerCommon, labelSelectorMap map[string]string, namespace string) (*corev1.PodList, error) {
+func GetAllPodsWithLabel(
+	ctx context.Context,
+	r ReconcilerCommon,
+	labelSelectorMap map[string]string,
+	namespace string,
+) (*corev1.PodList, error) {
 	labelSelectorString := labels.Set(labelSelectorMap).String()
 
 	podList, err := r.GetKClient().CoreV1().Pods(namespace).List(
-		context.TODO(),
+		ctx,
 		metav1.ListOptions{
 			LabelSelector: labelSelectorString,
 		},
@@ -45,9 +50,14 @@ func GetAllPodsWithLabel(r ReconcilerCommon, labelSelectorMap map[string]string,
 }
 
 // DeletePodsWithLabel - Delete all pods in namespace of the obj matching label selector
-func DeletePodsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+func DeletePodsWithLabel(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	labelSelectorMap map[string]string,
+) error {
 	err := r.GetClient().DeleteAllOf(
-		context.TODO(),
+		ctx,
 		&corev1.Pod{},
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(labelSelectorMap),

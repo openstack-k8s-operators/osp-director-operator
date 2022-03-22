@@ -87,7 +87,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 
 	// Fetch the controller VM instance
 	instance := &ospdirectorv1beta1.OpenStackEphemeralHeat{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -126,7 +126,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -142,7 +142,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, openstackephemeralheat.FinalizerName) {
 			controllerutil.AddFinalizer(instance, openstackephemeralheat.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 			r.Log.Info(fmt.Sprintf("Finalizer %s added to CR %s", openstackephemeralheat.FinalizerName, instance.Name))
@@ -155,14 +155,14 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		}
 
 		// 2. Clean up resources used by the operator
-		err = r.resourceCleanup(instance)
+		err = r.resourceCleanup(ctx, instance)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		// 3. as last step remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, openstackephemeralheat.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -171,35 +171,35 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// Generate a random password secret
-	passwordSecret, res, err := r.generatePasswordSecret(instance, cond)
+	passwordSecret, res, err := r.generatePasswordSecret(ctx, instance, cond)
 
 	if (res != ctrl.Result{}) || err != nil {
 		return res, err
 	}
 
 	// Generate the config maps for the various services
-	err = r.generateServiceConfigMaps(instance, passwordSecret, cond)
+	err = r.generateServiceConfigMaps(ctx, instance, passwordSecret, cond)
 
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// MariaDB pod and service
-	res, err = r.ensureMariaDB(instance, cond)
+	res, err = r.ensureMariaDB(ctx, instance, cond)
 
 	if (res != ctrl.Result{}) || err != nil {
 		return res, err
 	}
 
 	// RabbitMQ pod and service
-	res, err = r.ensureRabbitMQ(instance, cond)
+	res, err = r.ensureRabbitMQ(ctx, instance, cond)
 
 	if (res != ctrl.Result{}) || err != nil {
 		return res, err
 	}
 
 	// Heat API (this creates the Heat Database and runs DBsync)
-	res, err = r.ensureHeat(instance, cond)
+	res, err = r.ensureHeat(ctx, instance, cond)
 
 	if (res != ctrl.Result{}) || err != nil {
 		return res, err
@@ -241,18 +241,19 @@ func (r *OpenStackEphemeralHeatReconciler) getNormalizedStatus(status *ospdirect
 
 // Generate a password secret for this OpenStackEphemeralHeat if not already present
 func (r *OpenStackEphemeralHeatReconciler) generatePasswordSecret(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	cond *ospdirectorv1beta1.Condition,
 ) (*corev1.Secret, ctrl.Result, error) {
 	cmLabels := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 
 	// only generate the password secret once
-	passwordSecret, _, err := common.GetSecret(r, "ephemeral-heat-"+instance.Name, instance.Namespace)
+	passwordSecret, _, err := common.GetSecret(ctx, r, "ephemeral-heat-"+instance.Name, instance.Namespace)
 
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			passwordSecret = openstackephemeralheat.PasswordSecret("ephemeral-heat-"+instance.Name, instance.Namespace, cmLabels, k8s_rand.String(10))
-			_, op, err := common.CreateOrUpdateSecret(r, instance, passwordSecret)
+			_, op, err := common.CreateOrUpdateSecret(ctx, r, instance, passwordSecret)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error creating password secret for %s %s", instance.Kind, instance.Name)
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretError)
@@ -287,6 +288,7 @@ func (r *OpenStackEphemeralHeatReconciler) generatePasswordSecret(
 }
 
 func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	passwordSecret *corev1.Secret,
 	cond *ospdirectorv1beta1.Condition,
@@ -312,7 +314,7 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 		},
 	}
 
-	err := common.EnsureConfigMaps(r, instance, cms, &envVars)
+	err := common.EnsureConfigMaps(ctx, r, instance, cms, &envVars)
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating service config maps for %s %s", instance.Kind, instance.Name)
@@ -327,13 +329,14 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 }
 
 func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 	// MariaDB Pod
 	mariadbPod := openstackephemeralheat.MariadbPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbPod, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, mariadbPod, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbPod, r.Scheme)
 		if err != nil {
 			return err
@@ -369,7 +372,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 	// MariaDB Service
 	mariadbService := openstackephemeralheat.MariadbService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, mariadbService, func() error {
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, mariadbService, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbService, r.Scheme)
 		if err != nil {
 			return err
@@ -398,13 +401,14 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 }
 
 func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 	// RabbitMQ Pod
 	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitmqPod, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, rabbitmqPod, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqPod, r.Scheme)
 		if err != nil {
 			return err
@@ -440,7 +444,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 	// RabbitMQ Service
 	rabbitmqService := openstackephemeralheat.RabbitmqService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, rabbitmqService, func() error {
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, rabbitmqService, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqService, r.Scheme)
 		if err != nil {
 			return err
@@ -469,13 +473,14 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 }
 
 func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 	// Heat Pod
 	heatPod := openstackephemeralheat.HeatAPIPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatPod, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, heatPod, func() error {
 		err := controllerutil.SetControllerReference(instance, heatPod, r.Scheme)
 		if err != nil {
 			return err
@@ -511,7 +516,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	// Heat Service
 	heatService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatService, func() error {
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, heatService, func() error {
 		err := controllerutil.SetControllerReference(instance, heatService, r.Scheme)
 		if err != nil {
 			return err
@@ -539,7 +544,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	// Heat Engine Replicaset
 	heatEngineReplicaset := openstackephemeralheat.HeatEngineReplicaSet(instance)
 
-	op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, heatEngineReplicaset, func() error {
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, heatEngineReplicaset, func() error {
 		err := controllerutil.SetControllerReference(instance, heatEngineReplicaset, r.Scheme)
 		if err != nil {
 			return err
@@ -575,24 +580,27 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	return ctrl.Result{}, nil
 }
 
-func (r *OpenStackEphemeralHeatReconciler) resourceCleanup(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) error {
+func (r *OpenStackEphemeralHeatReconciler) resourceCleanup(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
+) error {
 
 	labelSelector := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 
 	// delete pods
-	if err := common.DeletePodsWithLabel(r, instance, labelSelector); err != nil {
+	if err := common.DeletePodsWithLabel(ctx, r, instance, labelSelector); err != nil {
 		return err
 	}
 	// delete secret
-	if err := common.DeleteSecretsWithLabel(r, instance, labelSelector); err != nil {
+	if err := common.DeleteSecretsWithLabel(ctx, r, instance, labelSelector); err != nil {
 		return err
 	}
 	// delete service
-	if err := common.DeleteServicesWithLabel(r, instance, labelSelector); err != nil {
+	if err := common.DeleteServicesWithLabel(ctx, r, instance, labelSelector); err != nil {
 		return err
 	}
 	// delete replicaset
-	if err := common.DeleteReplicasetsWithLabel(r, instance, labelSelector); err != nil {
+	if err := common.DeleteReplicasetsWithLabel(ctx, r, instance, labelSelector); err != nil {
 		return err
 	}
 

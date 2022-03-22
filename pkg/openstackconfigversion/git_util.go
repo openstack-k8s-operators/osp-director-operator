@@ -109,13 +109,18 @@ func filterPatches(filePatches []diff.FilePatch) []diff.FilePatch {
 }
 
 // SyncGit func
-func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Client, log logr.Logger) (map[string]ospdirectorv1beta1.OpenStackConfigVersion, error) {
+func SyncGit(
+	ctx context.Context,
+	inst *ospdirectorv1beta1.OpenStackConfigGenerator,
+	client client.Client,
+	log logr.Logger,
+) (map[string]ospdirectorv1beta1.OpenStackConfigVersion, error) {
 
 	configVersions := make(map[string]ospdirectorv1beta1.OpenStackConfigVersion)
 
 	// Check if this Secret already exists
 	foundSecret := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: inst.Spec.GitSecret, Namespace: inst.Namespace}, foundSecret)
+	err := client.Get(ctx, types.NamespacedName{Name: inst.Spec.GitSecret, Namespace: inst.Namespace}, foundSecret)
 	if err != nil {
 		log.Error(err, "GitRepo secret was not found.")
 		return nil, err
@@ -181,7 +186,7 @@ func SyncGit(inst *ospdirectorv1beta1.OpenStackConfigGenerator, client client.Cl
 					if err != nil {
 						return nil, err
 					}
-					patch, err := commit.PatchContext(context.TODO(), commitLatest)
+					patch, err := commit.PatchContext(ctx, commitLatest)
 
 					filterPatch := Patch{
 						message:     patch.Message(),

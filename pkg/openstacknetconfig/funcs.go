@@ -1,6 +1,7 @@
 package openstacknetconfig
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 // the in the osnetcfg controller to watch this resource and reconcile
 //
 func AddOSNetConfigRefLabel(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	obj client.Object,
 	cond *ospdirectorv1beta1.Condition,
@@ -38,7 +40,7 @@ func AddOSNetConfigRefLabel(
 		labelSelector := map[string]string{
 			openstacknet.SubNetNameLabelSelector: subnetName,
 		}
-		osnet, err := openstacknet.GetOpenStackNetWithLabel(r, obj.GetNamespace(), labelSelector)
+		osnet, err := openstacknet.GetOpenStackNetWithLabel(ctx, r, obj.GetNamespace(), labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)

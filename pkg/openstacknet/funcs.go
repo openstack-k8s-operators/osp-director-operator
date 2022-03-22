@@ -17,12 +17,16 @@ import (
 )
 
 // GetOpenStackNetsBindingMap - Returns map of OpenStackNet name to binding type
-func GetOpenStackNetsBindingMap(r common.ReconcilerCommon, namespace string) (map[string]ospdirectorv1beta1.AttachType, error) {
+func GetOpenStackNetsBindingMap(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+) (map[string]ospdirectorv1beta1.AttachType, error) {
 
 	//
 	// Acquire a list and map of all OpenStackNetworks available in this namespace
 	//
-	osNetList, err := GetOpenStackNetsWithLabel(r, namespace, map[string]string{})
+	osNetList, err := GetOpenStackNetsWithLabel(ctx, r, namespace, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +41,7 @@ func GetOpenStackNetsBindingMap(r common.ReconcilerCommon, namespace string) (ma
 		// get osnetattachment used by this network
 		//
 		attachType, err := openstacknetattachment.GetOpenStackNetAttachmentType(
+			ctx,
 			r,
 			namespace,
 			osNet.Spec.AttachConfiguration,
@@ -52,7 +57,12 @@ func GetOpenStackNetsBindingMap(r common.ReconcilerCommon, namespace string) (ma
 }
 
 // GetOpenStackNetsWithLabel - Return a list of all OpenStackNets in the namespace that have (optional) labels
-func GetOpenStackNetsWithLabel(r common.ReconcilerCommon, namespace string, labelSelector map[string]string) (*ospdirectorv1beta1.OpenStackNetList, error) {
+func GetOpenStackNetsWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) (*ospdirectorv1beta1.OpenStackNetList, error) {
 	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
 
 	listOpts := []client.ListOption{
@@ -64,7 +74,7 @@ func GetOpenStackNetsWithLabel(r common.ReconcilerCommon, namespace string, labe
 		listOpts = append(listOpts, labels)
 	}
 
-	if err := r.GetClient().List(context.Background(), osNetList, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, osNetList, listOpts...); err != nil {
 		return nil, err
 	}
 
@@ -72,9 +82,15 @@ func GetOpenStackNetsWithLabel(r common.ReconcilerCommon, namespace string, labe
 }
 
 // GetOpenStackNetWithLabel - Return OpenStackNet with labels
-func GetOpenStackNetWithLabel(r common.ReconcilerCommon, namespace string, labelSelector map[string]string) (*ospdirectorv1beta1.OpenStackNet, error) {
+func GetOpenStackNetWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) (*ospdirectorv1beta1.OpenStackNet, error) {
 
 	osNetList, err := GetOpenStackNetsWithLabel(
+		ctx,
 		r,
 		namespace,
 		labelSelector,
@@ -92,11 +108,13 @@ func GetOpenStackNetWithLabel(r common.ReconcilerCommon, namespace string, label
 
 // GetOpenStackNetsMapWithLabel - Return a map[NameLower] of all OpenStackNets in the namespace that have (optional) labels
 func GetOpenStackNetsMapWithLabel(
+	ctx context.Context,
 	r common.ReconcilerCommon,
 	namespace string,
 	labelSelector map[string]string,
 ) (map[string]ospdirectorv1beta1.OpenStackNet, error) {
 	osNetList, err := GetOpenStackNetsWithLabel(
+		ctx,
 		r,
 		namespace,
 		labelSelector,

@@ -100,7 +100,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 	// Fetch the ProvisionServer instance
 	instance := &ospdirectorv1beta1.OpenStackProvisionServer{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -142,7 +142,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -183,7 +183,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		},
 	}
 
-	err = common.EnsureConfigMaps(r, instance, cm, &envVars)
+	err = common.EnsureConfigMaps(ctx, r, instance, cm, &envVars)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -191,14 +191,14 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 
 	// Get the provisioning interface of the cluster worker nodes from either Metal3
 	// or from the instance spec itself if it was provided there
-	provInterfaceName, err := r.getProvisioningInterfaceName(instance, cond)
+	provInterfaceName, err := r.getProvisioningInterfaceName(ctx, instance, cond)
 
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create or update the Deployment object
-	err = r.deploymentCreateOrUpdate(instance, cond, provInterfaceName)
+	err = r.deploymentCreateOrUpdate(ctx, instance, cond, provInterfaceName)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -232,7 +232,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		}
 
 		// Now check the associated pod's status
-		podList, err := r.Kclient.CoreV1().Pods(instance.Namespace).List(context.TODO(), metav1.ListOptions{
+		podList, err := r.Kclient.CoreV1().Pods(instance.Namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("deployment=%s-provisionserver-deployment", instance.Name),
 		})
 
@@ -299,6 +299,7 @@ func (r *OpenStackProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) 
 }
 
 func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackProvisionServer,
 	cond *ospdirectorv1beta1.Condition,
 ) (string, error) {
@@ -312,7 +313,7 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 	} else {
 		r.Log.Info("Provisioning interface name not yet discovered, checking Metal3...")
 
-		provInterfaceName, err = r.getProvisioningInterface(instance)
+		provInterfaceName, err = r.getProvisioningInterface(ctx, instance)
 
 		if err != nil {
 			cond.Message = "Unable to acquire provisioning interface!"
@@ -339,6 +340,7 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 }
 
 func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackProvisionServer,
 	cond *ospdirectorv1beta1.Condition,
 	provInterfaceName string,
@@ -371,7 +373,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 
 		replicas := int32(1)
 
@@ -495,6 +497,7 @@ func (r *OpenStackProvisionServerReconciler) getLocalImageURL(instance *ospdirec
 }
 
 func (r *OpenStackProvisionServerReconciler) getProvisioningInterface(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackProvisionServer,
 ) (string, error) {
 	cfg, err := config.GetConfig()
@@ -511,7 +514,7 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterface(
 
 	provisioningsClient := dynClient.Resource(provisioningsGVR)
 
-	provisioning, err := provisioningsClient.Get(context.TODO(), "provisioning-configuration", metav1.GetOptions{})
+	provisioning, err := provisioningsClient.Get(ctx, "provisioning-configuration", metav1.GetOptions{})
 
 	if err != nil {
 		return "", err

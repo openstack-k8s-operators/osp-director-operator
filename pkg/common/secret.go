@@ -43,10 +43,15 @@ const (
 )
 
 // GetSecret -
-func GetSecret(r ReconcilerCommon, secretName string, secretNamespace string) (*corev1.Secret, string, error) {
+func GetSecret(
+	ctx context.Context,
+	r ReconcilerCommon,
+	secretName string,
+	secretNamespace string,
+) (*corev1.Secret, string, error) {
 	secret := &corev1.Secret{}
 
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: secretNamespace}, secret)
+	err := r.GetClient().Get(ctx, types.NamespacedName{Name: secretName, Namespace: secretNamespace}, secret)
 	if err != nil {
 		return nil, "", err
 	}
@@ -59,10 +64,15 @@ func GetSecret(r ReconcilerCommon, secretName string, secretNamespace string) (*
 }
 
 // GetSecrets -
-func GetSecrets(r ReconcilerCommon, secretNamespace string, labelSelectorMap map[string]string) (*corev1.SecretList, error) {
+func GetSecrets(
+	ctx context.Context,
+	r ReconcilerCommon,
+	secretNamespace string,
+	labelSelectorMap map[string]string,
+) (*corev1.SecretList, error) {
 	var secrets *corev1.SecretList
 
-	secrets, err := r.GetKClient().CoreV1().Secrets(secretNamespace).List(context.TODO(), metav1.ListOptions{
+	secrets, err := r.GetKClient().CoreV1().Secrets(secretNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.FormatLabels(labelSelectorMap),
 	})
 
@@ -74,9 +84,14 @@ func GetSecrets(r ReconcilerCommon, secretNamespace string, labelSelectorMap map
 }
 
 // CreateOrUpdateSecret -
-func CreateOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, secret *corev1.Secret) (string, controllerutil.OperationResult, error) {
+func CreateOrUpdateSecret(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	secret *corev1.Secret,
+) (string, controllerutil.OperationResult, error) {
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), secret, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), secret, func() error {
 
 		err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
 		if err != nil {
@@ -129,7 +144,12 @@ func SSHKeySecret(name string, namespace string, labels map[string]string) (*cor
 }
 
 // createOrUpdateSecret -
-func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (string, controllerutil.OperationResult, error) {
+func createOrUpdateSecret(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	st Template,
+) (string, controllerutil.OperationResult, error) {
 	data := make(map[string][]byte)
 
 	secret := &corev1.Secret{
@@ -146,7 +166,7 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 	}
 
 	// create or update the CM
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), secret, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), secret, func() error {
 		secret.Labels = st.Labels
 		// add data from templates
 		renderedTemplateData, err := GetTemplateData(st)
@@ -204,7 +224,12 @@ func createOrUpdateSecret(r ReconcilerCommon, obj metav1.Object, st Template) (s
 }
 
 // createOrGetCustomSecret -
-func createOrGetCustomSecret(r ReconcilerCommon, obj metav1.Object, st Template) (string, error) {
+func createOrGetCustomSecret(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	st Template,
+) (string, error) {
 	// Check if this secret already exists
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -221,7 +246,7 @@ func createOrGetCustomSecret(r ReconcilerCommon, obj metav1.Object, st Template)
 	}
 
 	foundSecret := &corev1.Secret{}
-	err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: st.Name, Namespace: st.Namespace}, foundSecret)
+	err := r.GetClient().Get(ctx, types.NamespacedName{Name: st.Name, Namespace: st.Namespace}, foundSecret)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		err := controllerutil.SetControllerReference(obj, secret, r.GetScheme())
 		if err != nil {
@@ -229,7 +254,7 @@ func createOrGetCustomSecret(r ReconcilerCommon, obj metav1.Object, st Template)
 		}
 
 		r.GetLogger().Info(fmt.Sprintf("Creating a new Secret %s in namespace %s", st.Namespace, st.Name))
-		err = r.GetClient().Create(context.TODO(), secret)
+		err = r.GetClient().Create(ctx, secret)
 		if err != nil {
 			return "", err
 		}
@@ -247,7 +272,13 @@ func createOrGetCustomSecret(r ReconcilerCommon, obj metav1.Object, st Template)
 }
 
 // EnsureSecrets - get all secrets required, verify they exist and add the hash to env and status
-func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVars *map[string]EnvSetter) error {
+func EnsureSecrets(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	sts []Template,
+	envVars *map[string]EnvSetter,
+) error {
 	var err error
 
 	for _, s := range sts {
@@ -255,9 +286,9 @@ func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVar
 		var op controllerutil.OperationResult
 
 		if s.Type != TemplateTypeCustom {
-			hash, op, err = createOrUpdateSecret(r, obj, s)
+			hash, op, err = createOrUpdateSecret(ctx, r, obj, s)
 		} else {
-			hash, err = createOrGetCustomSecret(r, obj, s)
+			hash, err = createOrGetCustomSecret(ctx, r, obj, s)
 			// set op to OperationResultNone because createOrGetCustomSecret does not return an op
 			// and it will add log entries bellow with none operation
 			op = controllerutil.OperationResult(controllerutil.OperationResultNone)
@@ -277,9 +308,14 @@ func EnsureSecrets(r ReconcilerCommon, obj metav1.Object, sts []Template, envVar
 }
 
 // DeleteSecretsWithLabel - Delete all secrets in namespace of the obj matching label selector
-func DeleteSecretsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+func DeleteSecretsWithLabel(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	labelSelectorMap map[string]string,
+) error {
 	err := r.GetClient().DeleteAllOf(
-		context.TODO(),
+		ctx,
 		&corev1.Secret{},
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(labelSelectorMap),
@@ -296,6 +332,7 @@ func DeleteSecretsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelector
 // DeleteSecretsWithName - Delete names secret object in namespace
 //
 func DeleteSecretsWithName(
+	ctx context.Context,
 	r ReconcilerCommon,
 	cond *ospdirectorv1beta1.Condition,
 	name string,
@@ -308,7 +345,7 @@ func DeleteSecretsWithName(
 		},
 	}
 
-	err := r.GetClient().Delete(context.Background(), secret, &client.DeleteOptions{})
+	err := r.GetClient().Delete(ctx, secret, &client.DeleteOptions{})
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = fmt.Sprintf("Failed to delete %s %s", secret.Kind, secret.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretDeleteError)
@@ -331,6 +368,7 @@ func DeleteSecretsWithName(
 //
 // if the secret or data is not found, requeue after requeueTimeout in seconds
 func GetDataFromSecret(
+	ctx context.Context,
 	r ReconcilerCommon,
 	object client.Object,
 	cond *ospdirectorv1beta1.Condition,
@@ -342,7 +380,7 @@ func GetDataFromSecret(
 
 	data := ""
 
-	secret, _, err := GetSecret(r, secretName, object.GetNamespace())
+	secret, _, err := GetSecret(ctx, r, secretName, object.GetNamespace())
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("%s secret does not exist: %v", secretName, err)

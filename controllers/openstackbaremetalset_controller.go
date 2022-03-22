@@ -99,7 +99,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackBaremetalSet{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
@@ -145,7 +145,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -162,7 +162,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, finalizerName) {
 			controllerutil.AddFinalizer(instance, finalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return reconcile.Result{}, err
 			}
 			common.LogForObject(
@@ -180,7 +180,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 		// 2. Clean up resources used by the operator
 		// BareMetalHost resources in the openshift-machine-api namespace (don't delete, just deprovision)
-		err := r.baremetalHostCleanup(instance, cond)
+		err := r.baremetalHostCleanup(ctx, instance, cond)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
@@ -189,7 +189,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		// 3. cleanup resources created by operator
 		// a. Delete objects in non openstack namespace which have the owner reference label
 		//    - secret objects in openshift-machine-api namespace
-		err = r.deleteOwnerRefLabeledObjects(instance, cond)
+		err = r.deleteOwnerRefLabeledObjects(ctx, instance, cond)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
@@ -197,7 +197,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 		// 4. as last step remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, finalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -239,6 +239,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// controller to watch this resource and reconcile
 	//
 	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -260,7 +261,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		currentLabels,
 		instance.Labels,
 	) {
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
@@ -277,7 +278,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	var passwordSecret *corev1.Secret
 	if instance.Spec.PasswordSecret != "" {
-		passwordSecret, ctrlResult, err = r.getPasswordSecret(instance, cond)
+		passwordSecret, ctrlResult, err = r.getPasswordSecret(ctx, instance, cond)
 		if (err != nil) || (ctrlResult != ctrl.Result{}) {
 			return ctrlResult, err
 		}
@@ -286,7 +287,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// get, create or wait for provision server
 	//
-	provisionServer, ctrlResult, err := r.provisionServerCreateOrUpdate(instance, cond)
+	provisionServer, ctrlResult, err := r.provisionServerCreateOrUpdate(ctx, instance, cond)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -295,6 +296,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// check for DeploymentSSHSecret and get pub key from DeploymentSSHSecret
 	//
 	sshSecret, ctrlResult, err := common.GetDataFromSecret(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -316,6 +318,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// check/update instance status for annotated for deletion marged BMHs
 	//
 	deletionAnnotatedBMHs, err := r.checkBMHsAnnotatedForDeletion(
+		ctx,
 		instance,
 		cond,
 	)
@@ -327,6 +330,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// Handle BMHM removal from BMSet
 	//
 	deletedHosts, err := r.doBMHDelete(
+		ctx,
 		instance,
 		cond,
 		deletionAnnotatedBMHs,
@@ -339,6 +343,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	// create openstackclient IPs for all networks
 	//
 	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -363,7 +368,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	//   Get domain name and dns servers from controlplane spec
 	//
-	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
+	controlPlane, ctrlResult, err := common.GetControlPlane(ctx, r, instance)
 	if err != nil {
 		return ctrlResult, err
 	}
@@ -372,6 +377,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//   Provision / deprovision requested replicas
 	//
 	if err := r.ensureBaremetalHosts(
+		ctx,
 		instance,
 		cond,
 		&controlPlane,
@@ -478,6 +484,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 }
 
 func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 ) (*ospdirectorv1beta1.OpenStackProvisionServer, reconcile.Result, error) {
@@ -493,7 +500,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			},
 		}
 
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, provisionServer, func() error {
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, provisionServer, func() error {
 			// Assign the prov server its existing port if this is an update, otherwise pick a new one
 			// based on what is available
 			err := provisionServer.AssignProvisionServerPort(
@@ -545,7 +552,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
 
 	} else {
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
+		err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.ProvisionServerName, Namespace: instance.Namespace}, provisionServer)
 		if err != nil && k8s_errors.IsNotFound(err) {
 			timeout := 10
 
@@ -594,6 +601,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 
 // Deprovision BaremetalHost resources based on replica count
 func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	removalAnnotatedBaremetalHosts []string,
@@ -602,6 +610,7 @@ func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
 
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList, err := common.GetBmhHosts(
+		ctx,
 		r,
 		"openshift-machine-api",
 		map[string]string{
@@ -641,6 +650,7 @@ func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
 				}
 
 				deletedHost, err := r.baremetalHostDeprovision(
+					ctx,
 					instance,
 					cond,
 					bmhStatus,
@@ -688,6 +698,7 @@ func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
 
 // Provision BaremetalHost resources based on replica count
 func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
@@ -698,6 +709,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 
 	// Get all openshift-machine-api BaremetalHosts
 	baremetalHostsList, err := common.GetBmhHosts(
+		ctx,
 		r,
 		"openshift-machine-api",
 		instance.Spec.BmhLabelSelector,
@@ -712,6 +724,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 
 	// Get all existing BaremetalHosts of this CR
 	existingBaremetalHosts, err := common.GetBmhHosts(
+		ctx,
 		r,
 		"openshift-machine-api",
 		map[string]string{
@@ -789,6 +802,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 		// IP and BMH power status for the particular worker
 		for i := 0; i < len(availableBaremetalHosts) && i < newBmhsNeededCount; i++ {
 			err := r.baremetalHostProvision(
+				ctx,
 				instance,
 				cond,
 				controlPlane,
@@ -807,6 +821,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	// Now reconcile existing BaremetalHosts for this OpenStackBaremetalSet
 	for _, bmh := range existingBaremetalHosts.Items {
 		err := r.baremetalHostProvision(
+			ctx,
 			instance,
 			cond,
 			controlPlane,
@@ -845,6 +860,7 @@ func (r *OpenStackBaremetalSetReconciler) getBmhHostRefStatus(
 
 // Provision a BaremetalHost via Metal3 (and create its bootstrapping secret)
 func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
@@ -872,7 +888,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 				instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus
 
 				// update status with host assignment
-				if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+				if err := r.Status().Update(context.Background(), instance); err != nil {
 					cond.Message = fmt.Sprintf("Failed to update CR status %v", err)
 					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
 					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
@@ -945,6 +961,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 
 	// get ctlplane network
 	ctlPlaneNetwork, err := openstacknet.GetOpenStackNetWithLabel(
+		ctx,
 		r,
 		instance.Namespace,
 		labelSelector,
@@ -992,7 +1009,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 
 	sts = append(sts, networkDataSt)
 
-	err = common.EnsureSecrets(r, instance, sts, &map[string]common.EnvSetter{})
+	err = common.EnsureSecrets(ctx, r, instance, sts, &map[string]common.EnvSetter{})
 	if err != nil {
 		cond.Message = "Error creating metal3 cloud-init secrets"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonCloudInitSecretError)
@@ -1006,7 +1023,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	// Provision the BaremetalHost
 	//
 	foundBaremetalHost := &metal3v1alpha1.BareMetalHost{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, foundBaremetalHost)
+	err = r.Get(ctx, types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, foundBaremetalHost)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s", foundBaremetalHost.Kind, foundBaremetalHost.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonGetError)
@@ -1054,7 +1071,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 			fmt.Sprintf("Allocating/Updating BaremetalHost: %s", foundBaremetalHost.Name),
 			instance)
 
-		err = r.Client.Update(context.TODO(), foundBaremetalHost)
+		err = r.Update(ctx, foundBaremetalHost)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", foundBaremetalHost.Kind, foundBaremetalHost.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonUpdateError)
@@ -1090,12 +1107,13 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 
 // Deprovision a BaremetalHost via Metal3 (and delete its bootstrapping secret)
 func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 	bmh ospdirectorv1beta1.HostStatus,
 ) (string, error) {
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
+	err := r.Get(ctx, types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s", baremetalHost.Kind, baremetalHost.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonGetError)
@@ -1132,7 +1150,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 	baremetalHost.Spec.Image = nil
 	baremetalHost.Spec.UserData = nil
 	baremetalHost.Spec.NetworkData = nil
-	err = r.Client.Update(context.TODO(), baremetalHost)
+	err = r.Update(ctx, baremetalHost)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to update %s %s", baremetalHost.Kind, baremetalHost.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonUpdateError)
@@ -1148,6 +1166,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 		fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh.HostRef),
 	} {
 		err = common.DeleteSecretsWithName(
+			ctx,
 			r,
 			cond,
 			secret,
@@ -1168,12 +1187,13 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 
 // Deprovision all associated BaremetalHosts for this OpenStackBaremetalSet via Metal3
 func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
 	if instance.Status.BaremetalHosts != nil {
 		for _, bmh := range instance.Status.BaremetalHosts {
-			_, err := r.baremetalHostDeprovision(instance, cond, bmh)
+			_, err := r.baremetalHostDeprovision(ctx, instance, cond, bmh)
 
 			if err != nil {
 				return err
@@ -1190,6 +1210,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(
    - user-data secret, openshift-machine-api namespace
 */
 func (r *OpenStackBaremetalSetReconciler) deleteOwnerRefLabeledObjects(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
@@ -1197,14 +1218,14 @@ func (r *OpenStackBaremetalSetReconciler) deleteOwnerRefLabeledObjects(
 	labelSelectorMap := common.GetLabels(instance, baremetalset.AppLabel, map[string]string{})
 
 	// delete secrets in openshift-machine-api namespace
-	secrets, err := common.GetSecrets(r, "openshift-machine-api", labelSelectorMap)
+	secrets, err := common.GetSecrets(ctx, r, "openshift-machine-api", labelSelectorMap)
 	if err != nil {
 		return err
 	}
 	for idx := range secrets.Items {
 		secret := &secrets.Items[idx]
 
-		err = r.Client.Delete(context.Background(), secret, &client.DeleteOptions{})
+		err = r.Delete(ctx, secret, &client.DeleteOptions{})
 		if err != nil {
 			cond.Message = fmt.Sprintf("Error deleting OwnerRefLabeledObjects %s", secret.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOwnerRefLabeledObjectsDeleteError)
@@ -1403,11 +1424,12 @@ func (r *OpenStackBaremetalSetReconciler) verifyHardwareMatch(
 }
 
 func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 ) (*corev1.Secret, reconcile.Result, error) {
 	// check if specified password secret exists before creating the computes
-	passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+	passwordSecret, _, err := common.GetSecret(ctx, r, instance.Spec.PasswordSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
@@ -1434,6 +1456,7 @@ func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
 //   check/update instance status for annotated for deletion marked BMs
 //
 func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
 ) ([]string, error) {
@@ -1441,6 +1464,7 @@ func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 	// check for deletion marked BMH
 	currentBMHostsStatus := instance.Status.DeepCopy().BaremetalHosts
 	deletionAnnotatedBMHs, err := common.GetDeletionAnnotatedBmhHosts(
+		ctx,
 		r,
 		"openshift-machine-api",
 		map[string]string{
@@ -1489,7 +1513,7 @@ func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 			instance,
 		)
 
-		err = r.Client.Status().Update(context.TODO(), instance)
+		err = r.Status().Update(context.Background(), instance)
 		if err != nil {
 			cond.Message = "Failed to update CR status for annotated for deletion marked VMs"
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
