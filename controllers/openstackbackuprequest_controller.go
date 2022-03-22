@@ -240,7 +240,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 				},
 			}
 
-			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, backup, func() error {
+			op, err := controllerutil.CreateOrPatch(ctx, r.Client, backup, func() error {
 				backup.Spec.Crs = crLists
 				backup.Spec.ConfigMaps = cmList
 				backup.Spec.Secrets = secretList
@@ -517,7 +517,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 }
 
 func (r *OpenStackBackupRequestReconciler) ensureLoadBackupResource(ctx context.Context, item client.Object) error {
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, item, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, item, func() error {
 		return nil
 	})
 

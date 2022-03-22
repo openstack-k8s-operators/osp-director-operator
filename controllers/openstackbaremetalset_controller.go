@@ -500,7 +500,7 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 			},
 		}
 
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, provisionServer, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, provisionServer, func() error {
 			// Assign the prov server its existing port if this is an update, otherwise pick a new one
 			// based on what is available
 			err := provisionServer.AssignProvisionServerPort(

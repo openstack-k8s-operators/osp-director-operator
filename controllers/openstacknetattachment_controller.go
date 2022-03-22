@@ -343,7 +343,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 		return nil
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkConfigurationPolicy, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkConfigurationPolicy, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
@@ -475,7 +475,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		//
 		// 1) Update nncp desired state to down to unconfigure the device on the worker nodes
 		//
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkConfigurationPolicy, apply)
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkConfigurationPolicy, apply)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", instance.Status.BridgeName)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
@@ -548,7 +548,7 @@ func (r *OpenStackNetAttachmentReconciler) ensureSriov(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, sriovNet, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, sriovNet, func() error {
 		sriovNet.Labels = common.GetLabels(instance, openstacknetattachment.AppLabel, map[string]string{})
 		sriovNet.Spec = sriovnetworkv1.SriovNetworkSpec{
 			SpoofChk:         instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.SpoofCheck,
@@ -580,7 +580,7 @@ func (r *OpenStackNetAttachmentReconciler) ensureSriov(
 		sriovPolicy.Spec.NicSelector.RootDevices = []string{instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.RootDevice}
 	}
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, sriovPolicy, func() error {
+	op, err = controllerutil.CreateOrPatch(ctx, r.Client, sriovPolicy, func() error {
 		sriovPolicy.Labels = common.GetLabels(instance, openstacknet.AppLabel, map[string]string{})
 		sriovPolicy.Spec = sriovnetworkv1.SriovNetworkNodePolicySpec{
 			DeviceType: instance.Spec.AttachConfiguration.NodeSriovConfigurationPolicy.DesiredState.DeviceType,

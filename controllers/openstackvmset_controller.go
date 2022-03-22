@@ -901,7 +901,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, vm, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, vm, func() error {
 
 		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 

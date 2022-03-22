@@ -463,7 +463,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 		return controllerutil.SetControllerReference(instance, attachConfig, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, attachConfig, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, attachConfig, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", attachConfig.Kind, attachConfig.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetAttachCondReasonCreateError)
@@ -653,7 +653,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 		return controllerutil.SetControllerReference(instance, osNet, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, osNet, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, osNet, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osNet.Kind, osNet.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonCreateError)
@@ -940,7 +940,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	//
 	// create/update OSMACAddress
 	//
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, macAddress, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, macAddress, func() error {
 		if len(instance.Spec.OVNBridgeMacMappings.PhysNetworks) == 0 {
 			macAddress.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
 				{

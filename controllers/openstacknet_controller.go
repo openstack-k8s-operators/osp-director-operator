@@ -350,7 +350,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 		return controllerutil.SetControllerReference(instance, networkAttachmentDefinition, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, networkAttachmentDefinition, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkAttachmentDefinition, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkAttachmentDefinition", instance.Name)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)

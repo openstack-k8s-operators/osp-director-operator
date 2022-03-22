@@ -370,7 +370,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 	var exports string
 	if instance.Status.ConfigHash != configMapHash {
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, heat, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, heat, func() error {
 			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
 			if err != nil {
 				return err
@@ -434,7 +434,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			return ctrl.Result{RequeueAfter: time.Second * 20}, err
 		}
 
-		op, err = controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
+		op, err = controllerutil.CreateOrPatch(ctx, r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
 				return err
@@ -1019,7 +1019,7 @@ func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
 	}
 
 	if _, ok := cm.Labels[openstackconfiggenerator.ConfigGeneratorInputLabel]; !ok {
-		op, err := controllerutil.CreateOrUpdate(ctx, r.GetClient(), cm, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), cm, func() error {
 			cm.SetLabels(labels.Merge(cm.GetLabels(), labelSelector))
 
 			return nil

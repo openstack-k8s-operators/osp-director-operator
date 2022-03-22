@@ -163,7 +163,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			ansibleSettings,
 		)
 
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
 

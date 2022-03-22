@@ -85,7 +85,7 @@ func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackprovisionservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=configmaps/finalizers,verbs=get;list;create;update;delete;watch;
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;watch;
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;patch;watch;
 // +kubebuilder:rbac:groups=core,resources=volumes,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
@@ -373,7 +373,7 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, deployment, func() error {
 
 		replicas := int32(1)
 

@@ -336,7 +336,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 	// MariaDB Pod
 	mariadbPod := openstackephemeralheat.MariadbPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, mariadbPod, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, mariadbPod, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbPod, r.Scheme)
 		if err != nil {
 			return err
@@ -372,7 +372,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 	// MariaDB Service
 	mariadbService := openstackephemeralheat.MariadbService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, mariadbService, func() error {
+	op, err = controllerutil.CreateOrPatch(ctx, r.Client, mariadbService, func() error {
 		err := controllerutil.SetControllerReference(instance, mariadbService, r.Scheme)
 		if err != nil {
 			return err
@@ -408,7 +408,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 	// RabbitMQ Pod
 	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, rabbitmqPod, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, rabbitmqPod, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqPod, r.Scheme)
 		if err != nil {
 			return err
@@ -444,7 +444,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 	// RabbitMQ Service
 	rabbitmqService := openstackephemeralheat.RabbitmqService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, rabbitmqService, func() error {
+	op, err = controllerutil.CreateOrPatch(ctx, r.Client, rabbitmqService, func() error {
 		err := controllerutil.SetControllerReference(instance, rabbitmqService, r.Scheme)
 		if err != nil {
 			return err
@@ -480,7 +480,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	// Heat Pod
 	heatPod := openstackephemeralheat.HeatAPIPod(instance)
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, heatPod, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, heatPod, func() error {
 		err := controllerutil.SetControllerReference(instance, heatPod, r.Scheme)
 		if err != nil {
 			return err
@@ -516,7 +516,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	// Heat Service
 	heatService := openstackephemeralheat.HeatAPIService(instance, r.Scheme)
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, heatService, func() error {
+	op, err = controllerutil.CreateOrPatch(ctx, r.Client, heatService, func() error {
 		err := controllerutil.SetControllerReference(instance, heatService, r.Scheme)
 		if err != nil {
 			return err
@@ -544,7 +544,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	// Heat Engine Replicaset
 	heatEngineReplicaset := openstackephemeralheat.HeatEngineReplicaSet(instance)
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, heatEngineReplicaset, func() error {
+	op, err = controllerutil.CreateOrPatch(ctx, r.Client, heatEngineReplicaset, func() error {
 		err := controllerutil.SetControllerReference(instance, heatEngineReplicaset, r.Scheme)
 		if err != nil {
 			return err

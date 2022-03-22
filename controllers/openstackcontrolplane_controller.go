@@ -690,7 +690,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			},
 		}
 
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, vmSet, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, vmSet, func() error {
 			vmSet.Spec.VMCount = vmRole.RoleCount
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
@@ -768,7 +768,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 			Namespace: instance.Namespace,
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, osc, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, osc, func() error {
 		if instance.Spec.OpenStackClientImageURL != "" {
 			osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		}

@@ -529,7 +529,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pod, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, pod, func() error {
 		// Note: initialize the pod structs above then only reconcile individual fields here
 		// Can not add/replace new structs in the pod here as that will drop the defaults that
 		// are set/added when the pod is created.
