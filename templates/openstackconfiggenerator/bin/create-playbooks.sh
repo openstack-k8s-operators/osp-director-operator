@@ -85,14 +85,13 @@ openstack tripleo container image prepare $PREPARE_ENV_ARGS -r roles_data.yaml -
 mkdir -p $HOME/tripleo-deploy
 rm -rf $HOME/tripleo-deploy/overcloud-ansible*
 
-time openstack stack create --wait \
+HEAT_ENVIRONMENT_FILES="
     -e $TEMPLATES_DIR/overcloud-resource-registry-puppet.yaml \
     -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/network-environment.yaml \
-    -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
 {{- range $i, $value := .TripleoEnvironmentFiles }}
     -e $TEMPLATES_DIR/{{ $value }} \
 {{- end }}
@@ -102,6 +101,17 @@ time openstack stack create --wait \
 {{- range $key, $value := .TripleoCustomDeployFiles }}
     -e {{ $key }} \
 {{- end }}
+"
+
+{{- if eq .OSPVersion "16.2" }}
+# Replicate the (undocumented) heat client merging of map parameters
+# STF, Contrail, Trilio and presumably others currently rely on it
+/home/cloud-admin/process-heat-environment.py ${HEAT_ENVIRONMENT_FILES}
+{{- end }}
+
+time openstack stack create --wait \
+    -e ~/config-passwords/tripleo-overcloud-passwords.yaml \
+    ${HEAT_ENVIRONMENT_FILES} \
     -t overcloud.yaml overcloud
 
 mkdir -p $HOME/ansible
