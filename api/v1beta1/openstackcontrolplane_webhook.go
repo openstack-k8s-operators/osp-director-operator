@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,6 +97,18 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// validate that for all configured subnets an osnet exists
+	//
+	for _, vmspec := range r.Spec.VirtualMachineRoles {
+		//
+		// validate that for all configured subnets an osnet exists
+		//
+		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -117,6 +130,19 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	if r.Spec.DomainName != oldControlPlane.Spec.DomainName {
 		return fmt.Errorf("domainName cannot be modified")
 	}
+
+	//
+	// validate that for all configured subnets an osnet exists
+	//
+	for _, vmspec := range r.Spec.VirtualMachineRoles {
+		//
+		// validate that for all configured subnets an osnet exists
+		//
+		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -131,14 +157,17 @@ func (r *OpenStackControlPlane) ValidateDelete() error {
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackControlPlane) Default() {
-	openstackephemeralheatlog.Info("default", "name", r.Name)
+	controlplanelog.Info("default", "name", r.Name)
 	//
 	// set OpenStackRelease if non provided
 	//
 	if r.Spec.OpenStackRelease == "" {
 		r.Spec.OpenStackRelease = openstackControlPlaneDefaults.OpenStackRelease
 		r.Status.OSPVersion = OSPVersion(openstackControlPlaneDefaults.OpenStackRelease)
+	} else {
+		r.Status.OSPVersion = OSPVersion(r.Spec.OpenStackRelease)
 	}
+	controlplanelog.Info(fmt.Sprintf("%s %s using OSP release %s", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.Status.OSPVersion))
 
 	//
 	// set default for AdditionalServiceVIPs if non provided in ctlplane spec
@@ -149,5 +178,57 @@ func (r *OpenStackControlPlane) Default() {
 			"Redis":  "internal_api",
 			"OVNDBs": "internal_api",
 		}
+
+		controlplanelog.Info(fmt.Sprintf("%s %s AdditionalServiceVIPs set %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.Spec.AdditionalServiceVIPs))
 	}
+
+	//
+	// set OpenStackNetConfig reference label if not already there
+	// Note, any rename of the osnetcfg won't be reflected
+	//
+	if _, ok := r.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
+		var subnetName string
+		for _, vmRole := range r.Spec.VirtualMachineRoles {
+			subnetName = vmRole.Networks[0]
+			break
+		}
+
+		labels, err := AddOSNetConfigRefLabel(
+			r.Namespace,
+			subnetName,
+			r.DeepCopy().GetLabels(),
+		)
+		if err != nil {
+			controlplanelog.Error(err, fmt.Sprintf("error adding OpenStackNetConfig reference label on %s - %s: %s", r.Kind, r.Name, err))
+		}
+		if !equality.Semantic.DeepEqual(
+			labels,
+			r.GetLabels(),
+		) {
+			r.SetLabels(labels)
+			controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
+		}
+	}
+
+	//
+	// add labels of all networks used by this CR
+	//
+	vipNetList, err := CreateVIPNetworkList(r)
+	if err != nil {
+		controlplanelog.Error(err, fmt.Sprintf("error creating VIP network list: %s", err))
+	}
+
+	labels := AddOSNetNameLowerLabels(
+		controlplanelog,
+		r.DeepCopy().GetLabels(),
+		vipNetList,
+	)
+	if !equality.Semantic.DeepEqual(
+		labels,
+		r.GetLabels(),
+	) {
+		r.SetLabels(labels)
+		controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
+	}
+
 }

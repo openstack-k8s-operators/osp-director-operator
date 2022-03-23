@@ -122,6 +122,22 @@ const (
 	CommonCondReasonCIDRParseError ConditionReason = "CIDRParseError"
 	// CommonCondReasonServiceNotFound - service not found
 	CommonCondReasonServiceNotFound ConditionReason = "ServiceNotFound"
+
+	//
+	// LabelSelectors
+	//
+
+	// NetworkNameLabelSelector -
+	NetworkNameLabelSelector = "ooo-netname"
+	// NetworkNameLowerLabelSelector -
+	NetworkNameLowerLabelSelector = "ooo-netname-lower"
+	// SubNetNameLabelSelector -
+	SubNetNameLabelSelector = "ooo-subnetname"
+	// ControlPlaneNetworkLabelSelector - is the network a ctlplane network?
+	ControlPlaneNetworkLabelSelector = "ooo-ctlplane-network"
+	// OpenStackNetConfigReconcileLabel - label set on objects on which change
+	// trigger a reconcile of the osnetconfig
+	OpenStackNetConfigReconcileLabel = "osnetconfig-reconcile-dep"
 )
 
 // Hash - struct to add hashes to status

@@ -18,28 +18,8 @@ package common
 
 import "sort"
 
-// InitMap - Inititialise a map to an empty map if it is nil.
-func InitMap(m *map[string]string) {
-	if *m == nil {
-		*m = make(map[string]string)
-	}
-}
-
 // MergeMaps - merge two or more maps
 func MergeMaps(baseMap map[string]interface{}, extraMaps ...map[string]interface{}) map[string]interface{} {
-	for _, extraMap := range extraMaps {
-		for key, value := range extraMap {
-			baseMap[key] = value
-		}
-	}
-
-	return baseMap
-}
-
-// MergeStringMaps - merge two or more string->map maps
-func MergeStringMaps(baseMap map[string]string, extraMaps ...map[string]string) map[string]string {
-	InitMap(&baseMap)
-
 	for _, extraMap := range extraMaps {
 		for key, value := range extraMap {
 			baseMap[key] = value

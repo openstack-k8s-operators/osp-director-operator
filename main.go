@@ -397,6 +397,11 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackClient")
 			os.Exit(1)
 		}
+
+		if err = (&ospdirectorv1beta1.OpenStackIPSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackIPSet")
+			os.Exit(1)
+		}
 	}
 
 	// +kubebuilder:scaffold:builder

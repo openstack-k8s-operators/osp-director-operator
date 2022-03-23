@@ -23,6 +23,7 @@ resources:
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
   webhooks:
+    defaulting: true
     validation: true
     webhookVersion: v1
 - controller: true
@@ -42,6 +43,7 @@ resources:
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
   webhooks:
+    defaulting: true
     validation: true
     webhookVersion: v1
 - controller: true
@@ -177,4 +179,8 @@ resources:
   kind: OpenStackIPSet
   path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1
   version: v1beta1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

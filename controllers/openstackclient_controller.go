@@ -34,8 +34,6 @@ import (
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
-	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -144,27 +142,30 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, err
 	}
 
+	var ctrlResult ctrl.Result
+	currentLabels := instance.DeepCopy().Labels
+
 	//
+	// Only kept for running local
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	var ctrlResult ctrl.Result
-	currentLabels := instance.DeepCopy().Labels
-	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
-		ctx,
-		r,
-		instance,
-		cond,
-		instance.Spec.Networks[0],
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
+		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
+		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			instance.Namespace,
+			instance.Spec.Networks[0],
+			currentLabels,
+		)
+		if err != nil {
+			return ctrlResult, err
+		}
 	}
 
 	//
 	// add labels of all networks used by this CR
 	//
-	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	instance.Labels = ospdirectorv1beta1.AddOSNetNameLowerLabels(r.GetLogger(), instance.Labels, instance.Spec.Networks)
 
 	//
 	// update instance to sync labels if changed
@@ -466,13 +467,11 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	for id, netNameLower := range instance.Spec.Networks {
 		// get network with name_lower label
 		labelSelector := map[string]string{
-			openstacknet.SubNetNameLabelSelector: netNameLower,
+			ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 		}
 
 		// get network with name_lower label
-		network, err := openstacknet.GetOpenStackNetWithLabel(
-			ctx,
-			r,
+		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 			instance.Namespace,
 			labelSelector,
 		)
@@ -514,7 +513,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 			Annotations: map[string]string{},
 		},
 	}
-	common.InitMap(&pod.Labels)
+	ospdirectorv1beta1.InitMap(&pod.Labels)
 	pod.Spec = corev1.PodSpec{}
 	pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
 	pod.Spec.DNSConfig = &corev1.PodDNSConfig{}
@@ -664,12 +663,10 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 		timeout := 10
 
 		// get network with name_lower label
-		network, err := openstacknet.GetOpenStackNetWithLabel(
-			ctx,
-			r,
+		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 			instance.Namespace,
 			map[string]string{
-				openstacknet.SubNetNameLabelSelector: netNameLower,
+				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 			},
 		)
 		if err != nil {

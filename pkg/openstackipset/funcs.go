@@ -100,7 +100,7 @@ func EnsureIPs(
 	//
 	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
 	err = r.GetClient().Get(ctx, types.NamespacedName{
-		Name:      strings.ToLower(obj.GetLabels()[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
+		Name:      strings.ToLower(obj.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]),
 		Namespace: obj.GetNamespace()},
 		osnetcfg)
 	if err != nil {
@@ -157,7 +157,7 @@ func createOrUpdateIPSet(
 	}
 
 	op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), ipSet, func() error {
-		ipSet.Labels = common.MergeStringMaps(
+		ipSet.Labels = ospdirectorv1beta1.MergeStringMaps(
 			ipSet.Labels,
 			common.GetLabels(obj, controlplane.AppLabel, map[string]string{}),
 		)

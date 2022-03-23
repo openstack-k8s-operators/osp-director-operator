@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -114,4 +115,24 @@ func IsUniqMAC(macNodeStatus map[string]OpenStackMACNodeReservation, mac string)
 		return true
 	}
 	return false
+}
+
+// validateNetworks - validate that for all configured subnets an osnet exists
+func validateNetworks(namespace string, networks []string) error {
+	for _, subnetName := range networks {
+		//
+		// Get OSnet with SubNetNameLabelSelector: subnetName
+		//
+		labelSelector := map[string]string{
+			SubNetNameLabelSelector: subnetName,
+		}
+		osnet, err := GetOpenStackNetWithLabel(namespace, labelSelector)
+		if err != nil && k8s_errors.IsNotFound(err) {
+			return fmt.Errorf(fmt.Sprintf("%s %s instance is supported at this time", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
+		} else if err != nil {
+			return fmt.Errorf(fmt.Sprintf("Failed to get %s %s", osnet.Kind, subnetName))
+		}
+	}
+
+	return nil
 }

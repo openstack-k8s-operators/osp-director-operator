@@ -2,18 +2,11 @@ package openstacknet
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknetattachment "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetattachment"
-	v1 "k8s.io/api/apps/v1"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetOpenStackNetsBindingMap - Returns map of OpenStackNet name to binding type
@@ -26,7 +19,7 @@ func GetOpenStackNetsBindingMap(
 	//
 	// Acquire a list and map of all OpenStackNetworks available in this namespace
 	//
-	osNetList, err := GetOpenStackNetsWithLabel(ctx, r, namespace, map[string]string{})
+	osNetList, err := ospdirectorv1beta1.GetOpenStackNetsWithLabel(namespace, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -54,170 +47,6 @@ func GetOpenStackNetsBindingMap(
 	}
 
 	return osNetBindings, nil
-}
-
-// GetOpenStackNetsWithLabel - Return a list of all OpenStackNets in the namespace that have (optional) labels
-func GetOpenStackNetsWithLabel(
-	ctx context.Context,
-	r common.ReconcilerCommon,
-	namespace string,
-	labelSelector map[string]string,
-) (*ospdirectorv1beta1.OpenStackNetList, error) {
-	osNetList := &ospdirectorv1beta1.OpenStackNetList{}
-
-	listOpts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-
-	if len(labelSelector) > 0 {
-		labels := client.MatchingLabels(labelSelector)
-		listOpts = append(listOpts, labels)
-	}
-
-	if err := r.GetClient().List(ctx, osNetList, listOpts...); err != nil {
-		return nil, err
-	}
-
-	return osNetList, nil
-}
-
-// GetOpenStackNetWithLabel - Return OpenStackNet with labels
-func GetOpenStackNetWithLabel(
-	ctx context.Context,
-	r common.ReconcilerCommon,
-	namespace string,
-	labelSelector map[string]string,
-) (*ospdirectorv1beta1.OpenStackNet, error) {
-
-	osNetList, err := GetOpenStackNetsWithLabel(
-		ctx,
-		r,
-		namespace,
-		labelSelector,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(osNetList.Items) == 0 {
-		return nil, k8s_errors.NewNotFound(v1.Resource("openstacknet"), fmt.Sprint(labelSelector))
-	} else if len(osNetList.Items) > 1 {
-		return nil, fmt.Errorf("multiple OpenStackNet with label %v not found", labelSelector)
-	}
-	return &osNetList.Items[0], nil
-}
-
-// GetOpenStackNetsMapWithLabel - Return a map[NameLower] of all OpenStackNets in the namespace that have (optional) labels
-func GetOpenStackNetsMapWithLabel(
-	ctx context.Context,
-	r common.ReconcilerCommon,
-	namespace string,
-	labelSelector map[string]string,
-) (map[string]ospdirectorv1beta1.OpenStackNet, error) {
-	osNetList, err := GetOpenStackNetsWithLabel(
-		ctx,
-		r,
-		namespace,
-		labelSelector,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	osNetMap := map[string]ospdirectorv1beta1.OpenStackNet{}
-	for _, osNet := range osNetList.Items {
-		osNetMap[osNet.Spec.NameLower] = osNet
-	}
-
-	return osNetMap, nil
-}
-
-//
-// AddOSNetNameLowerLabels - add osnetcfg CR label reference which is used in
-// the in the osnetcfg controller to watch this resource and reconcile
-//
-func AddOSNetNameLowerLabels(
-	r common.ReconcilerCommon,
-	obj client.Object,
-	cond *ospdirectorv1beta1.Condition,
-	networkNameLowerNames []string,
-) map[string]string {
-
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-
-	osNetLabels := map[string]string{}
-	removedOsNets := map[string]bool{}
-	newOsNets := map[string]bool{}
-	networkNameLowerNamesMap := map[string]bool{}
-
-	for _, n := range networkNameLowerNames {
-		label := fmt.Sprintf("%s/%s", SubNetNameLabelSelector, n)
-		networkNameLowerNamesMap[label] = true
-	}
-
-	//
-	// get current osNet Labels and verify if nets got removed
-	//
-	for _, label := range reflect.ValueOf(labels).MapKeys() {
-		//
-		// has label key SubNetNameLabelSelector string included?
-		//
-		if strings.HasSuffix(label.String(), SubNetNameLabelSelector) {
-			l := label.String()
-			osNetLabels[l] = labels[l]
-
-			//
-			// if l is not in networkNameLowerNamesMap it got removed
-			//
-			if _, ok := networkNameLowerNamesMap[l]; !ok {
-				delete(labels, l)
-				removedOsNets[l] = true
-
-			}
-		}
-	}
-
-	if len(newOsNets) > 0 {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("%s %s removing network labels: %v",
-				obj.GetObjectKind().GroupVersionKind().Kind,
-				obj.GetName(),
-				removedOsNets,
-			),
-			obj,
-		)
-	}
-
-	//
-	// identify if nets got added
-	//
-	for label := range networkNameLowerNamesMap {
-		//
-		// if label is not in osNetLabels its a new one
-		//
-		if _, ok := osNetLabels[label]; !ok {
-			labels[label] = strconv.FormatBool(true)
-			newOsNets[label] = true
-		}
-
-	}
-
-	if len(newOsNets) > 0 {
-		common.LogForObject(
-			r,
-			fmt.Sprintf("%s %s adding network labels: %v",
-				obj.GetObjectKind().GroupVersionKind().Kind,
-				obj.GetName(),
-				newOsNets,
-			),
-			obj,
-		)
-	}
-
-	return labels
 }
 
 //

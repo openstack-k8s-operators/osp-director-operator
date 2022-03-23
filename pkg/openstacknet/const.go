@@ -22,13 +22,4 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstacknet.osp-director.openstack.org"
-
-	// NetworkNameLabelSelector -
-	NetworkNameLabelSelector = "ooo-netname"
-	// NetworkNameLowerLabelSelector -
-	NetworkNameLowerLabelSelector = "ooo-netname-lower"
-	// SubNetNameLabelSelector -
-	SubNetNameLabelSelector = "ooo-subnetname"
-	// ControlPlaneNetworkLabelSelector - is the network a ctlplane network?
-	ControlPlaneNetworkLabelSelector = "ooo-ctlplane-network"
 )
