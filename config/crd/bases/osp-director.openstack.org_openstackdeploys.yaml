@@ -45,8 +45,8 @@ spec:
           spec:
             description: OpenStackDeploySpec defines the desired state of OpenStackDeploy
             properties:
-              ansibleSettings:
-                description: Advanced ansible-playbook setting
+              advancedSettings:
+                description: Advanced deployment settings
                 properties:
                   limit:
                     description: Ansible inventory limit
@@ -54,6 +54,10 @@ spec:
                   playbook:
                     description: Playbook to run from config-download
                     type: string
+                  skipDeployIdentifier:
+                    default: false
+                    description: Skip setting a unique deploy identifier
+                    type: boolean
                   skipTags:
                     description: Ansible exclude tags
                     items:

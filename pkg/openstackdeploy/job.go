@@ -22,6 +22,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strconv"
 	"strings"
 )
 
@@ -31,7 +32,7 @@ func DeployJob(
 	openstackClientPod string,
 	configVersion string,
 	gitSecret string,
-	ansibleSettings *ospdirectorv1beta1.OpenStackAnsibleSettingsSpec,
+	advancedSettings *ospdirectorv1beta1.OpenStackDeployAdvancedSettingsSpec,
 ) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
@@ -103,19 +104,23 @@ func DeployJob(
 					},
 					{
 						Name:  "PLAYBOOK",
-						Value: ansibleSettings.Playbook,
+						Value: advancedSettings.Playbook,
 					},
 					{
 						Name:  "LIMIT",
-						Value: ansibleSettings.Limit,
+						Value: advancedSettings.Limit,
 					},
 					{
 						Name:  "TAGS",
-						Value: strings.Join(ansibleSettings.Tags, ","),
+						Value: strings.Join(advancedSettings.Tags, ","),
 					},
 					{
 						Name:  "SKIP_TAGS",
-						Value: strings.Join(ansibleSettings.SkipTags, ","),
+						Value: strings.Join(advancedSettings.SkipTags, ","),
+					},
+					{
+						Name:  "SKIP_DEPLOY_IDENTIFIER",
+						Value: strconv.FormatBool(advancedSettings.SkipDeployIdentifier),
 					},
 				},
 			},

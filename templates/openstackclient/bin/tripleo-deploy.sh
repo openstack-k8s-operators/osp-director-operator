@@ -111,6 +111,15 @@ play() {
     SKIP_TAGS_ARG+=",${SKIP_TAGS}"
   fi
 
+  # Replace deploy identifier with unique value unless SKIP_DEPOY_IDENTIFIER set
+  DEPLOY_IDENTIFIER=""
+  if [ "${SKIP_DEPLOY_IDENTIFIER:-false}" != "true" ]; then
+    DEPLOY_IDENTIFIER=deploy_$(date +%s%N)
+  fi
+  for i in $(grep -rH 'OSP_DIRECTOR_OPERATOR_DEPLOY_IDENTIFIER' $WORKDIR/playbooks/tripleo-ansible/ | cut -d : -f 1 | sort -u); do
+    sed -i -e 's/OSP_DIRECTOR_OPERATOR_DEPLOY_IDENTIFIER/'${DEPLOY_IDENTIFIER}'/g' $i
+  done
+
   ansible-playbook \
     -i $WORKDIR/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
     ${LIMIT_ARG} \

@@ -22,7 +22,7 @@ resource_registry:
 # Parameter Defaults
 parameter_defaults:
   StackAction: CREATE
-  DeployIdentifier: DeployIdentifier
+  DeployIdentifier: OSP_DIRECTOR_OPERATOR_DEPLOY_IDENTIFIER
   SoftwareConfigTransport: POLL_SERVER_HEAT
   RootStackName: overcloud
   ManageNetworks: False
