@@ -21,7 +21,7 @@ set -e
 TMP_DIR=$(mktemp -d)
 mkdir -p "$TMP_DIR"
 cd $TMP_DIR
-wget https://github.com/operator-framework/operator-sdk/releases/download/v1.13.1/operator-sdk_linux_amd64
+wget https://github.com/operator-framework/operator-sdk/releases/download/v1.14.0/operator-sdk_linux_amd64
 mv operator-sdk_linux_amd64 operator-sdk
 chmod 755 operator-sdk
 export PATH=$TMP_DIR/:$PATH

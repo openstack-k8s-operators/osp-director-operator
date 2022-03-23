@@ -42,7 +42,7 @@ func (r *OpenStackConfigGenerator) SetupWebhookWithManager(mgr ctrl.Manager, def
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackconfiggenerator,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackconfiggenerators,verbs=create;update,versions=v1beta1,name=mopenstackconfiggenerator.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackconfiggenerator,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackconfiggenerators,verbs=create;update,versions=v1beta1,name=mopenstackconfiggenerator.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackConfigGenerator{}
 

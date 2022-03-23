@@ -45,7 +45,7 @@ func (r *OpenStackVMSet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackVMSet{}
 

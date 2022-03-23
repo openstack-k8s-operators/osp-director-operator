@@ -46,7 +46,7 @@ func (r *OpenStackClient) SetupWebhookWithManager(mgr ctrl.Manager, defaults Ope
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,verbs=create;update,versions=v1beta1,name=mopenstackclient.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,verbs=create;update,versions=v1beta1,name=mopenstackclient.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackClient{}
 
