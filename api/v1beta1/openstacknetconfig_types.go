@@ -241,7 +241,7 @@ func (instance *OpenStackNetConfig) IsReady() bool {
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
 //+kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
-// OpenStackNetConfig is the Schema for the openstacknetconfigs API
+// OpenStackNetConfig high level CRD to specify openstacknetattachments and openstacknets to describe the full network configuration
 type OpenStackNetConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

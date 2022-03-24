@@ -77,7 +77,7 @@ const (
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Ephemeral Heat"
 // +kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.active`
 
-// OpenStackEphemeralHeat is the Schema for the openstackephemeralheats API
+// OpenStackEphemeralHeat an ephermeral OpenStack Heat deployment used internally by the OSConfigGenerator to generate Ansible playbooks
 type OpenStackEphemeralHeat struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

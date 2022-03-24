@@ -65,7 +65,7 @@ type OpenStackBackupRequestStatus struct {
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 // +kubebuilder:printcolumn:name="Completion Timestamp",type=string,JSONPath=`.status.completionTimestamp`,description="Completion Timestamp"
 
-// OpenStackBackupRequest is the Schema for the openstackbackuprequests API
+// OpenStackBackupRequest a request to backup the OpenStack Director Operator
 type OpenStackBackupRequest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

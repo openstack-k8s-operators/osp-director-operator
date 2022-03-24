@@ -129,7 +129,7 @@ func (instance *OpenStackMACAddress) IsReady() bool {
 // +kubebuilder:printcolumn:name="Reserved MACs",type="integer",JSONPath=".status.reservedMACCount"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
-// OpenStackMACAddress is the Schema for the openstackmacaddresses API
+// OpenStackMACAddress represents Mac address reservations for static OVN bridge mappings
 type OpenStackMACAddress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

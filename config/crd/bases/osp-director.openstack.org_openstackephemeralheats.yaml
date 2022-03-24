@@ -26,8 +26,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
-          API
+        description: OpenStackEphemeralHeat an ephermeral OpenStack Heat deployment
+          used internally by the OSConfigGenerator to generate Ansible playbooks
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

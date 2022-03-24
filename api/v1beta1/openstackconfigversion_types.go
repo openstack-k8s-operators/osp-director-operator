@@ -38,7 +38,7 @@ type OpenStackConfigVersionStatus struct {
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Version"
 // +kubebuilder:printcolumn:name="Generator",type="string",JSONPath=".spec.ConfigGeneratorName",description="Config Generator Name"
 
-// OpenStackConfigVersion is the Schema for the openstackconfigversions API
+// OpenStackConfigVersion represents a set of executable Ansible playbooks
 type OpenStackConfigVersion struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

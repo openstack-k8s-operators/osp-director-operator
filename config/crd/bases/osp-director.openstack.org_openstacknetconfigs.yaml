@@ -57,8 +57,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackNetConfig is the Schema for the openstacknetconfigs
-          API
+        description: OpenStackNetConfig high level CRD to specify openstacknetattachments
+          and openstacknets to describe the full network configuration
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

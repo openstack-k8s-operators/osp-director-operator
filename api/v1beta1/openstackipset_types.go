@@ -91,7 +91,7 @@ const (
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
 //+kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].message",description="Reason"
 
-// OpenStackIPSet is the Schema for the openstackipsets API
+// OpenStackIPSet a resource to request a set of IPs for the given networks
 type OpenStackIPSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
