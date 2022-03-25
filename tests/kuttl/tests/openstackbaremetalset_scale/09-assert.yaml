@@ -19,7 +19,7 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.10
+        ip: 172.22.0.110
         serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
@@ -27,7 +27,7 @@ spec:
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.251
+        ip: 172.22.0.251
         serviceVIP: false
         vip: false
 status:
@@ -40,10 +40,10 @@ status:
   reservations:
     controlplane:
       deleted: false
-      ip: 192.168.25.10
+      ip: 172.22.0.110
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.251
+      ip: 172.22.0.251
   reservedIpCount: 2
 ---
 apiVersion: osp-director.openstack.org/v1beta1

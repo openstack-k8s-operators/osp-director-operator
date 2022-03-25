@@ -17,7 +17,6 @@ metadata:
 spec:
   domainName: ostest.test.metalkube.org
   enableFencing: false
-  gitSecret: git-secret
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
@@ -51,7 +50,7 @@ status:
       hostRef: controlplane
       hostname: controlplane
       ipaddresses:
-        ctlplane: 192.168.25.10/24
+        ctlplane: 172.22.0.110/24
       provisioningState: Created
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -91,7 +90,6 @@ spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
   domainName: ostest.test.metalkube.org
-  gitSecret: git-secret
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
@@ -105,7 +103,7 @@ status:
       hostRef: openstackclient-0
       hostname: openstackclient-0
       ipaddresses:
-        ctlplane: 192.168.25.251/24
+        ctlplane: 172.22.0.251/24
       provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -124,12 +122,12 @@ metadata:
   name: ctlplane
   namespace: openstack
 spec:
-  allocationEnd: 192.168.25.250
-  allocationStart: 192.168.25.100
+  allocationEnd: 172.22.0.250
+  allocationStart: 172.22.0.100
   attachConfiguration: br-osp
-  cidr: 192.168.25.0/24
+  cidr: 172.22.0.0/24
   domainName: ctlplane.localdomain
-  gateway: 192.168.25.1
+  gateway: 172.22.0.1
   mtu: 1500
   name: Control
   nameLower: ctlplane
@@ -139,14 +137,14 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.10
+        ip: 172.22.0.110
         vip: true
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.251
+        ip: 172.22.0.251
         vip: false
   routes: []
   vip: true
@@ -156,10 +154,10 @@ status:
   reservations:
     controlplane:
       deleted: false
-      ip: 192.168.25.10
+      ip: 172.22.0.110
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.251
+      ip: 172.22.0.251
   reservedIpCount: 2
 ---
 apiVersion: v1

@@ -54,10 +54,10 @@ spec:
     subnets:
     - attachConfiguration: br-osp
       ipv4:
-        allocationEnd: 192.168.25.250
-        allocationStart: 192.168.25.100
-        cidr: 192.168.25.0/24
-        gateway: 192.168.25.1
+        allocationEnd: 172.22.0.250
+        allocationStart: 172.22.0.100
+        cidr: 172.22.0.0/24
+        gateway: 172.22.0.1
         routes: []
       ipv6:
         allocationEnd: ""
@@ -88,26 +88,26 @@ spec:
         datacentre: fa:16:3a:aa:aa:cc
     controlplane:
       ipReservations:
-        ctlplane: 192.168.25.10
+        ctlplane: 172.22.0.110
       macReservations: {}
     openstackclient-0:
       ipReservations:
-        ctlplane: 192.168.25.251
+        ctlplane: 172.22.0.251
       macReservations: {}
 status:
   hosts:
     controller-2:
       ipaddresses:
-        ctlplane: 192.168.25.102/24
+        ctlplane: 172.22.0.102/24
       ovnBridgeMacAdresses:
         datacentre: fa:16:3a:aa:aa:cc
     controlplane:
       ipaddresses:
-        ctlplane: 192.168.25.10/24
+        ctlplane: 172.22.0.110/24
       ovnBridgeMacAdresses: {}
     openstackclient-0:
       ipaddresses:
-        ctlplane: 192.168.25.251/24
+        ctlplane: 172.22.0.251/24
       ovnBridgeMacAdresses: {}
   provisioningStatus:
     attachDesiredCount: 1
@@ -127,7 +127,6 @@ metadata:
 spec:
   domainName: ostest.test.metalkube.org
   enableFencing: false
-  gitSecret: git-secret
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
@@ -161,8 +160,8 @@ status:
       hostRef: controlplane
       hostname: controlplane
       ipaddresses:
-        ctlplane: 192.168.25.10/24
-      provisioningState: Provisioned
+        ctlplane: 172.22.0.110/24
+      provisioningState: Created
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -199,7 +198,7 @@ status:
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:
-        ctlplane: 192.168.25.102/24
+        ctlplane: 172.22.0.102/24
       networkDataSecretName: controller-controller-2-networkdata
       provisioningState: Provisioned
       userDataSecretName: controller-cloudinit
@@ -213,7 +212,6 @@ spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
   domainName: ostest.test.metalkube.org
-  gitSecret: git-secret
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
@@ -227,7 +225,7 @@ status:
       hostRef: openstackclient-0
       hostname: openstackclient-0
       ipaddresses:
-        ctlplane: 192.168.25.251/24
+        ctlplane: 172.22.0.251/24
       provisioningState: Provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1
@@ -246,12 +244,12 @@ metadata:
   name: ctlplane
   namespace: openstack
 spec:
-  allocationEnd: 192.168.25.250
-  allocationStart: 192.168.25.100
+  allocationEnd: 172.22.0.250
+  allocationStart: 172.22.0.100
   attachConfiguration: br-osp
-  cidr: 192.168.25.0/24
+  cidr: 172.22.0.0/24
   domainName: ctlplane.localdomain
-  gateway: 192.168.25.1
+  gateway: 172.22.0.1
   mtu: 1500
   name: Control
   nameLower: ctlplane
@@ -261,29 +259,29 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.10
+        ip: 172.22.0.110
         vip: true
     Controller:
       addToPredictableIPs: true
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 192.168.25.100
+        ip: 172.22.0.100
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 192.168.25.101
+        ip: 172.22.0.101
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 192.168.25.102
+        ip: 172.22.0.102
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.251
+        ip: 172.22.0.251
         vip: false
   routes: []
   vip: true
@@ -293,19 +291,19 @@ status:
   reservations:
     controller-0:
       deleted: true
-      ip: 192.168.25.100
+      ip: 172.22.0.100
     controller-1:
       deleted: true
-      ip: 192.168.25.101
+      ip: 172.22.0.101
     controller-2:
       deleted: false
-      ip: 192.168.25.102
+      ip: 172.22.0.102
     controlplane:
       deleted: false
-      ip: 192.168.25.10
+      ip: 172.22.0.110
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.251
+      ip: 172.22.0.251
   reservedIpCount: 5
 ---
 apiVersion: v1

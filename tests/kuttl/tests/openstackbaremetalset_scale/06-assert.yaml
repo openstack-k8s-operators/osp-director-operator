@@ -17,7 +17,7 @@ metadata:
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
   count: 1
-  ctlplaneInterface: enp7s0
+  ctlplaneInterface: enp1s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   networks:
   - ctlplane
@@ -29,7 +29,7 @@ status:
   baremetalHosts:
     compute-1:
       annotatedForDeletion: false
-      ctlplaneIP: 192.168.25.100/24
+      ctlplaneIP: 172.22.0.100/24
       hostname: compute-1
       provisioningState: provisioned
   provisioningStatus:
@@ -104,12 +104,12 @@ spec:
       reservations:
       - deleted: true
         hostname: compute-0
-        ip: 192.168.25.40
+        ip: 172.22.0.140
         serviceVIP: false
         vip: false
       - deleted: false
         hostname: compute-1
-        ip: 192.168.25.100
+        ip: 172.22.0.100
         serviceVIP: false
         vip: false
     ControlPlane:
@@ -117,7 +117,7 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.10
+        ip: 172.22.0.110
         serviceVIP: false
         vip: true
     OpenstackClientopenstackclient:
@@ -125,7 +125,7 @@ spec:
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.251
+        ip: 172.22.0.251
         serviceVIP: false
         vip: false
 status:
@@ -138,16 +138,16 @@ status:
   reservations:
     compute-0:
       deleted: true
-      ip: 192.168.25.40
+      ip: 172.22.0.140
     compute-1:
       deleted: false
-      ip: 192.168.25.100
+      ip: 172.22.0.100
     controlplane:
       deleted: false
-      ip: 192.168.25.10
+      ip: 172.22.0.110
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.251
+      ip: 172.22.0.251
   reservedIpCount: 4
 ---
 apiVersion: osp-director.openstack.org/v1beta1

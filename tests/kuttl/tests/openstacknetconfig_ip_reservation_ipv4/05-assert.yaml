@@ -52,10 +52,10 @@ spec:
     subnets:
     - attachConfiguration: br-osp
       ipv4:
-        allocationEnd: 192.168.25.250
-        allocationStart: 192.168.25.100
-        cidr: 192.168.25.0/24
-        gateway: 192.168.25.1
+        allocationEnd: 172.22.0.250
+        allocationStart: 172.22.0.100
+        cidr: 172.22.0.0/24
+        gateway: 172.22.0.1
         routes: []
       ipv6:
         allocationEnd: ""
@@ -74,32 +74,32 @@ spec:
   reservations:
     controller-1:
       ipReservations:
-        ctlplane: 192.168.25.41
+        ctlplane: 172.22.0.121
       macReservations: {}
     controller-2:
       ipReservations: {}
       macReservations: {}
     openstackclient-0:
       ipReservations:
-        ctlplane: 192.168.25.251
+        ctlplane: 172.22.0.251
       macReservations: {}
     controlplane:
       ipReservations:
-        ctlplane: 192.168.25.10
+        ctlplane: 172.22.0.110
       macReservations: {}
 status:
 status:
   hosts:
     controller-0:
       ipaddresses:
-        ctlplane: 192.168.25.100/24
+        ctlplane: 172.22.0.100/24
     controlplane:
       ipaddresses:
-        ctlplane: 192.168.25.10/24
+        ctlplane: 172.22.0.110/24
       ovnBridgeMacAdresses: {}
     openstackclient-0:
       ipaddresses:
-        ctlplane: 192.168.25.251/24
+        ctlplane: 172.22.0.251/24
       ovnBridgeMacAdresses: {}
   provisioningStatus:
     attachDesiredCount: 1

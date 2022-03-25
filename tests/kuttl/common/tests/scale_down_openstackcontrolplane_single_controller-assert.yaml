@@ -24,7 +24,7 @@ status:
       hostRef: controlplane
       hostname: controlplane
       ipaddresses:
-        ctlplane: 192.168.25.10/24
+        ctlplane: 172.22.0.110/24
         external: 10.0.0.10/24
         internal_api: 172.17.0.10/24
         storage: 172.18.0.10/24
@@ -68,7 +68,7 @@ status:
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:
-        ctlplane: 192.168.25.22/24
+        ctlplane: 172.22.0.122/24
         external: 10.0.0.22/24
         internal_api: 172.17.0.22/24
         storage: 172.18.0.22/24
@@ -102,48 +102,48 @@ spec:
       reservations:
       - deleted: false
         hostname: controlplane
-        ip: 192.168.25.10
+        ip: 172.22.0.110
         vip: true
     Controller:
       addToPredictableIPs: true
       reservations:
       - deleted: true
         hostname: controller-0
-        ip: 192.168.25.20
+        ip: 172.22.0.120
         vip: false
       - deleted: true
         hostname: controller-1
-        ip: 192.168.25.21
+        ip: 172.22.0.121
         vip: false
       - deleted: false
         hostname: controller-2
-        ip: 192.168.25.22
+        ip: 172.22.0.122
         vip: false
     OpenstackClientopenstackclient:
       addToPredictableIPs: false
       reservations:
       - deleted: false
         hostname: openstackclient-0
-        ip: 192.168.25.251
+        ip: 172.22.0.251
         vip: false
 status:
   currentState: Configured
   reservations:
     controller-0:
       deleted: true
-      ip: 192.168.25.20
+      ip: 172.22.0.120
     controller-1:
       deleted: true
-      ip: 192.168.25.21
+      ip: 172.22.0.121
     controller-2:
       deleted: false
-      ip: 192.168.25.22
+      ip: 172.22.0.122
     controlplane:
       deleted: false
-      ip: 192.168.25.10
+      ip: 172.22.0.110
     openstackclient-0:
       deleted: false
-      ip: 192.168.25.251
+      ip: 172.22.0.251
   reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
