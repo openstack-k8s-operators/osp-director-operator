@@ -103,7 +103,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Fetch the controller VM instance
 	instance := &ospdirectorv1beta1.OpenStackVMSet{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -150,7 +150,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -160,7 +160,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}(cond)
 
 	// What VMs do we currently have for this OpenStackVMSet?
-	virtualMachineList, err := common.GetVirtualMachines(r, instance.Namespace, map[string]string{
+	virtualMachineList, err := common.GetVirtualMachines(ctx, r, instance.Namespace, map[string]string{
 		common.OwnerNameLabelSelector: instance.Name,
 	})
 	if err != nil {
@@ -192,7 +192,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// 2. Clean up resources used by the operator
 		// VirtualMachine resources
-		err := r.virtualMachineListFinalizerCleanup(instance, cond, virtualMachineList)
+		err := r.virtualMachineListFinalizerCleanup(ctx, instance, cond, virtualMachineList)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			// ignore not found errors if the object is already gone
 			return ctrl.Result{}, err
@@ -200,7 +200,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// 3. as last step remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, vmset.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -237,6 +237,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// controller to watch this resource and reconcile
 	//
 	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -258,7 +259,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		currentLabels,
 		instance.Labels,
 	) {
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
@@ -274,6 +275,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Generate fencing data potentially needed by all VMSets in this instance's namespace
 	//
 	err = r.generateNamespaceFencingData(
+		ctx,
 		instance,
 		cond,
 	)
@@ -285,6 +287,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// check for DeploymentSSHSecret and add AuthorizedKeys from DeploymentSSHSecret
 	//
 	templateParameters["AuthorizedKeys"], ctrlResult, err = common.GetDataFromSecret(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -315,6 +318,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	if instance.Spec.PasswordSecret != "" {
 		templateParameters["NodeRootPassword"], ctrlResult, err = r.getPasswordSecret(
+			ctx,
 			instance,
 			cond,
 		)
@@ -332,6 +336,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Create CloudInitSecret secret for the vmset
 	//
 	err = r.createCloudInitSecret(
+		ctx,
 		instance,
 		cond,
 		envVars,
@@ -345,7 +350,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	// Get mapping of all OSNets with their binding type for this namespace
 	//
-	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(r, instance.Namespace)
+	osNetBindings, err := openstacknet.GetOpenStackNetsBindingMap(ctx, r, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -354,6 +359,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
 	//
 	nadMap, ctrlResult, err := r.verifyNetworkAttachments(
+		ctx,
 		instance,
 		cond,
 		osNetBindings,
@@ -366,6 +372,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//   check/update instance status for annotated for deletion marged VMs
 	//
 	err = r.checkVMsAnnotatedForDeletion(
+		ctx,
 		instance,
 		cond,
 	)
@@ -377,6 +384,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//   Handle VM removal from VMSet
 	//
 	deletedHosts, err := r.doVMDelete(
+		ctx,
 		instance,
 		cond,
 		virtualMachineList,
@@ -389,6 +397,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// create IPs for all networks
 	//
 	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -418,6 +427,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//   Create BaseImage for the VMSet
 	//
 	baseImageName, ctrlResult, err := r.createBaseImage(
+		ctx,
 		instance,
 		cond,
 	)
@@ -429,6 +439,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//   Create/Update NetworkData
 	//
 	vmDetails, err := r.createNetworkData(
+		ctx,
 		instance,
 		cond,
 		nadMap,
@@ -443,6 +454,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//   Create the VM objects
 	//
 	ctrlResult, err = r.createVMs(
+		ctx,
 		instance,
 		cond,
 		envVars,
@@ -473,6 +485,7 @@ func (r *OpenStackVMSetReconciler) getNormalizedStatus(status *ospdirectorv1beta
 }
 
 func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
@@ -501,7 +514,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 		},
 	}
 
-	if err := common.EnsureSecrets(r, instance, saSecretTemplate, nil); err != nil {
+	if err := common.EnsureSecrets(ctx, r, instance, saSecretTemplate, nil); err != nil {
 		cond.Message = "Error creating Kubevirt Fencing ServiceAccount Secret"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonKubevirtFencingServiceAccountError)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
@@ -530,7 +543,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 	templateParameters["Namespace"] = instance.Namespace
 
 	// Read-back the secret for the kubevirt agent service account token
-	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), vmset.KubevirtFencingServiceAccountSecret, metav1.GetOptions{})
+	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(ctx, vmset.KubevirtFencingServiceAccountSecret, metav1.GetOptions{})
 	if err != nil {
 		cond.Message = "Error getting the Kubevirt Fencing ServiceAccount Secret"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonKubevirtFencingServiceAccountError)
@@ -555,7 +568,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 		},
 	}
 
-	err = common.EnsureSecrets(r, instance, kubeconfigTemplate, nil)
+	err = common.EnsureSecrets(ctx, r, instance, kubeconfigTemplate, nil)
 	if err != nil {
 		cond.Message = "Error creating secret holding the kubeconfig used by the pacemaker fencing agent"
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonNamespaceFencingDataError)
@@ -569,6 +582,7 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 }
 
 func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	envVars *map[string]common.EnvSetter,
@@ -588,6 +602,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 
 	// get ctlplane network
 	network, err := openstacknet.GetOpenStackNetWithLabel(
+		ctx,
 		r,
 		instance.Namespace,
 		labelSelector,
@@ -628,7 +643,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 		},
 	}
 
-	err = common.EnsureSecrets(r, instance, networkdata, envVars)
+	err = common.EnsureSecrets(ctx, r, instance, networkdata, envVars)
 	if err != nil {
 		return err
 	}
@@ -637,6 +652,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 }
 
 func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	virtualMachineList *virtv1.VirtualMachineList,
@@ -644,7 +660,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(
 	r.Log.Info(fmt.Sprintf("Removing finalizers from VirtualMachines in VMSet: %s", instance.Name))
 
 	for _, virtualMachine := range virtualMachineList.Items {
-		err := r.virtualMachineFinalizerCleanup(&virtualMachine, cond)
+		err := r.virtualMachineFinalizerCleanup(ctx, &virtualMachine, cond)
 
 		if err != nil {
 			return err
@@ -655,11 +671,12 @@ func (r *OpenStackVMSetReconciler) virtualMachineListFinalizerCleanup(
 }
 
 func (r *OpenStackVMSetReconciler) virtualMachineFinalizerCleanup(
+	ctx context.Context,
 	virtualMachine *virtv1.VirtualMachine,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
 	controllerutil.RemoveFinalizer(virtualMachine, vmset.FinalizerName)
-	err := r.Client.Update(context.TODO(), virtualMachine)
+	err := r.Update(ctx, virtualMachine)
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to update %s %s", virtualMachine.Kind, virtualMachine.Name)
@@ -691,6 +708,7 @@ func (r *OpenStackVMSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *OpenStackVMSetReconciler) vmCreateInstance(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	envVars map[string]common.EnvSetter,
@@ -705,7 +723,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 
 	// get deployment userdata from secret
 	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
-	secret, _, err := common.GetSecret(r, userdataSecret, instance.Namespace)
+	secret, _, err := common.GetSecret(ctx, r, userdataSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("CloudInit userdata %s secret not found!!", userdataSecret)
@@ -883,7 +901,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vm, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, vm, func() error {
 
 		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
 
@@ -908,6 +926,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				openstacknet.SubNetNameLabelSelector: netNameLower,
 			}
 			network, err := openstacknet.GetOpenStackNetWithLabel(
+				ctx,
 				r,
 				instance.Namespace,
 				labelSelector,
@@ -996,11 +1015,12 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 // check if specified password secret exists
 //
 func (r *OpenStackVMSetReconciler) getPasswordSecret(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 ) (string, ctrl.Result, error) {
 
-	passwordSecret, _, err := common.GetSecret(r, instance.Spec.PasswordSecret, instance.Namespace)
+	passwordSecret, _, err := common.GetSecret(ctx, r, instance.Spec.PasswordSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
@@ -1033,6 +1053,7 @@ func (r *OpenStackVMSetReconciler) getPasswordSecret(
 // Create CloudInitSecret secret for the vmset
 //
 func (r *OpenStackVMSetReconciler) createCloudInitSecret(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	envVars map[string]common.EnvSetter,
@@ -1052,7 +1073,7 @@ func (r *OpenStackVMSetReconciler) createCloudInitSecret(
 		},
 	}
 
-	err := common.EnsureSecrets(r, instance, cloudinit, &envVars)
+	err := common.EnsureSecrets(ctx, r, instance, cloudinit, &envVars)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating CloudInitSecret secret for the vmset %s", instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCloudInitSecretError)
@@ -1068,12 +1089,13 @@ func (r *OpenStackVMSetReconciler) createCloudInitSecret(
 // NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
 //
 func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	osNetBindings map[string]ospdirectorv1beta1.AttachType,
 ) (map[string]networkv1.NetworkAttachmentDefinition, ctrl.Result, error) {
 	// Verify that NetworkAttachmentDefinition for each non-SRIOV-configured network exists, and...
-	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(ctx, r, instance)
 	if err != nil {
 		return nadMap, ctrl.Result{}, err
 	}
@@ -1083,11 +1105,11 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 		common.OwnerControllerNameLabelSelector: openstacknet.AppLabel,
 		common.OwnerNameSpaceLabelSelector:      instance.Namespace,
 	}
-	snMap, err := openstacknet.GetSriovNetworksWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	snMap, err := openstacknet.GetSriovNetworksWithLabel(ctx, r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
 	if err != nil {
 		return nadMap, ctrl.Result{}, err
 	}
-	snnpMap, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
+	snnpMap, err := openstacknet.GetSriovNetworkNodePoliciesWithLabel(ctx, r, sriovLabelSelectorMap, "openshift-sriov-network-operator")
 	if err != nil {
 		return nadMap, ctrl.Result{}, err
 	}
@@ -1099,6 +1121,7 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
+			ctx,
 			r,
 			instance.Namespace,
 			map[string]string{
@@ -1151,12 +1174,13 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 //   check/update instance status for annotated for deletion marked VMs
 //
 func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 ) error {
 	// check for deletion marked VMs
 	currentVMHostsStatus := instance.Status.DeepCopy().VMHosts
-	deletionAnnotatedVMs, err := r.getDeletedVMOSPHostnames(instance, cond)
+	deletionAnnotatedVMs, err := r.getDeletedVMOSPHostnames(ctx, instance, cond)
 	if err != nil {
 		return err
 	}
@@ -1198,7 +1222,7 @@ func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
 			instance,
 		)
 
-		err = r.Client.Status().Update(context.TODO(), instance)
+		err = r.Status().Update(context.Background(), instance)
 		if err != nil {
 			cond.Message = "Failed to update CR status for annotated for deletion marked VMs"
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
@@ -1213,6 +1237,7 @@ func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
 }
 
 func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 ) ([]string, error) {
@@ -1225,7 +1250,7 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
 		common.OwnerNameLabelSelector:      instance.Name,
 	}
 
-	vmHostList, err := common.GetVirtualMachines(r, instance.Namespace, labelSelector)
+	vmHostList, err := common.GetVirtualMachines(ctx, r, instance.Namespace, labelSelector)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get virtual machines with labelSelector %v ", labelSelector)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonVirtualMachineGetError)
@@ -1258,6 +1283,7 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
 //   Create BaseImage for the VMSet
 //
 func (r *OpenStackVMSetReconciler) createBaseImage(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 ) (string, ctrl.Result, error) {
@@ -1274,7 +1300,7 @@ func (r *OpenStackVMSetReconciler) createBaseImage(
 	//   annotations -> cdi.kubevirt.io/storage.pod.phase: Succeeded
 	pvc := &corev1.PersistentVolumeClaim{}
 
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
+	err := r.Get(ctx, types.NamespacedName{Name: baseImageName, Namespace: instance.Namespace}, pvc)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		cond.Message = fmt.Sprintf("PersistentVolumeClaim %s not found reconcile again in 10 seconds", baseImageName)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonPersitentVolumeClaimNotFound)
@@ -1309,6 +1335,7 @@ func (r *OpenStackVMSetReconciler) createBaseImage(
 }
 
 func (r *OpenStackVMSetReconciler) doVMDelete(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	virtualMachineList *virtv1.VirtualMachineList,
@@ -1335,6 +1362,7 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 				// Choose VirtualMachines to remove from the prepared list of VirtualMachines
 				// that have the common.HostRemovalAnnotation annotation
 				deletedHost, err := r.virtualMachineDeprovision(
+					ctx,
 					instance,
 					cond,
 					&removalAnnotatedVirtualMachines[0],
@@ -1371,6 +1399,7 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 }
 
 func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	virtualMachine *virtv1.VirtualMachine,
@@ -1379,7 +1408,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 
 	// First check if the finalizer is still there and remove it if so
 	if controllerutil.ContainsFinalizer(virtualMachine, vmset.FinalizerName) {
-		err := r.virtualMachineFinalizerCleanup(virtualMachine, cond)
+		err := r.virtualMachineFinalizerCleanup(ctx, virtualMachine, cond)
 
 		if err != nil {
 			return "", err
@@ -1387,7 +1416,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 	}
 
 	// Delete the VirtualMachine
-	err := r.Client.Delete(context.TODO(), virtualMachine, &client.DeleteOptions{})
+	err := r.Delete(ctx, virtualMachine, &client.DeleteOptions{})
 	if err != nil {
 		return virtualMachine.Name, err
 	}
@@ -1396,6 +1425,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 	// Also remove networkdata secret
 	secret := fmt.Sprintf("%s-%s-networkdata", instance.Name, virtualMachine.Name)
 	err = common.DeleteSecretsWithName(
+		ctx,
 		r,
 		cond,
 		secret,
@@ -1416,6 +1446,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 //   Create/Update NetworkData
 //
 func (r *OpenStackVMSetReconciler) createNetworkData(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	nadMap map[string]networkv1.NetworkAttachmentDefinition,
@@ -1448,6 +1479,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 		}
 
 		err := r.generateVirtualMachineNetworkData(
+			ctx,
 			instance,
 			cond,
 			&envVars,
@@ -1499,6 +1531,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 //   Create the VM objects
 //
 func (r *OpenStackVMSetReconciler) createVMs(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
 	envVars map[string]common.EnvSetter,
@@ -1510,7 +1543,7 @@ func (r *OpenStackVMSetReconciler) createVMs(
 		for _, ctl := range vmDetails {
 			// Add chosen baseImageName to controller details, then create the VM instance
 			ctl.BaseImageName = baseImageName
-			err := r.vmCreateInstance(instance, cond, envVars, &ctl, osNetBindings)
+			err := r.vmCreateInstance(ctx, instance, cond, envVars, &ctl, osNetBindings)
 			if err != nil {
 				return ctrl.Result{}, err
 			}

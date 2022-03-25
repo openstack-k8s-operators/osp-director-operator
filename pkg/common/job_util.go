@@ -33,14 +33,19 @@ import (
 
 // DeleteJob func
 // kclient required to properly cleanup the job depending pods with DeleteOptions
-func DeleteJob(job *batchv1.Job, kclient kubernetes.Interface, log logr.Logger) (bool, error) {
+func DeleteJob(
+	ctx context.Context,
+	job *batchv1.Job,
+	kclient kubernetes.Interface,
+	log logr.Logger,
+) (bool, error) {
 
 	// Check if this Job already exists
-	foundJob, err := kclient.BatchV1().Jobs(job.Namespace).Get(context.TODO(), job.Name, metav1.GetOptions{})
+	foundJob, err := kclient.BatchV1().Jobs(job.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
 	if err == nil {
 		log.Info("Deleting Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
 		background := metav1.DeletePropagationBackground
-		err = kclient.BatchV1().Jobs(foundJob.Namespace).Delete(context.TODO(), foundJob.Name, metav1.DeleteOptions{PropagationPolicy: &background})
+		err = kclient.BatchV1().Jobs(foundJob.Namespace).Delete(ctx, foundJob.Name, metav1.DeleteOptions{PropagationPolicy: &background})
 		if err != nil {
 			return false, err
 		}
@@ -50,10 +55,15 @@ func DeleteJob(job *batchv1.Job, kclient kubernetes.Interface, log logr.Logger) 
 }
 
 // WaitOnJob func
-func WaitOnJob(job *batchv1.Job, client client.Client, log logr.Logger) (bool, error) {
+func WaitOnJob(
+	ctx context.Context,
+	job *batchv1.Job,
+	client client.Client,
+	log logr.Logger,
+) (bool, error) {
 	// Check if this Job already exists
 	foundJob := &batchv1.Job{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
+	err := client.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
 	if err != nil {
 		log.Info("WaitOnJob err")
 		return true, err

@@ -15,7 +15,11 @@ import (
 )
 
 // GetCRLists - Get lists of all OSP-D operator resources in the namespace that we care to save/restore
-func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1.CrsForBackup, error) {
+func GetCRLists(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+) (ospdirectorv1beta1.CrsForBackup, error) {
 	crLists := ospdirectorv1beta1.CrsForBackup{}
 
 	listOpts := []client.ListOption{
@@ -26,7 +30,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osBms := ospdirectorv1beta1.OpenStackBaremetalSetList{}
 
-	if err := r.GetClient().List(context.Background(), &osBms, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osBms, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -39,7 +43,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osClients := ospdirectorv1beta1.OpenStackClientList{}
 
-	if err := r.GetClient().List(context.Background(), &osClients, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osClients, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -52,7 +56,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osCtlPlanes := ospdirectorv1beta1.OpenStackControlPlaneList{}
 
-	if err := r.GetClient().List(context.Background(), &osCtlPlanes, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osCtlPlanes, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -65,7 +69,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osMacAddresses := ospdirectorv1beta1.OpenStackMACAddressList{}
 
-	if err := r.GetClient().List(context.Background(), &osMacAddresses, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osMacAddresses, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -78,7 +82,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osNets := ospdirectorv1beta1.OpenStackNetList{}
 
-	if err := r.GetClient().List(context.Background(), &osNets, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osNets, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -91,7 +95,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osNetAttachments := ospdirectorv1beta1.OpenStackNetAttachmentList{}
 
-	if err := r.GetClient().List(context.Background(), &osNetAttachments, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osNetAttachments, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -104,7 +108,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osNetConfigs := ospdirectorv1beta1.OpenStackNetConfigList{}
 
-	if err := r.GetClient().List(context.Background(), &osNetConfigs, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osNetConfigs, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -117,7 +121,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osProvServers := ospdirectorv1beta1.OpenStackProvisionServerList{}
 
-	if err := r.GetClient().List(context.Background(), &osProvServers, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osProvServers, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -130,7 +134,7 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 
 	osVms := ospdirectorv1beta1.OpenStackVMSetList{}
 
-	if err := r.GetClient().List(context.Background(), &osVms, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, &osVms, listOpts...); err != nil {
 		return crLists, err
 	}
 
@@ -143,7 +147,12 @@ func GetCRLists(r common.ReconcilerCommon, namespace string) (ospdirectorv1beta1
 }
 
 // GetConfigMapList - Get list of all OSP-D operator config maps in the namespace that we care to save/restore
-func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenStackBackupRequest, desiredCrs *ospdirectorv1beta1.CrsForBackup) (corev1.ConfigMapList, error) {
+func GetConfigMapList(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	request *ospdirectorv1beta1.OpenStackBackupRequest,
+	desiredCrs *ospdirectorv1beta1.CrsForBackup,
+) (corev1.ConfigMapList, error) {
 	configMapList := &corev1.ConfigMapList{}
 
 	labels := client.HasLabels{
@@ -155,7 +164,7 @@ func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.Ope
 		labels,
 	}
 
-	err := r.GetClient().List(context.TODO(), configMapList, listOpts...)
+	err := r.GetClient().List(ctx, configMapList, listOpts...)
 
 	if err != nil {
 		return *configMapList, err
@@ -173,7 +182,7 @@ func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.Ope
 		labels,
 	}
 
-	err = r.GetClient().List(context.TODO(), osCGConfigMapList, listOpts...)
+	err = r.GetClient().List(ctx, osCGConfigMapList, listOpts...)
 
 	if err != nil {
 		return *configMapList, err
@@ -189,7 +198,7 @@ func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.Ope
 
 	// Also get additional config maps potentially enumerated in the request CR
 	for _, item := range request.Spec.AdditionalConfigMaps {
-		if err := addConfigMapToList(r, request.Namespace, item, configMapList); err != nil {
+		if err := addConfigMapToList(ctx, r, request.Namespace, item, configMapList); err != nil {
 			return *configMapList, err
 		}
 	}
@@ -201,7 +210,13 @@ func GetConfigMapList(r common.ReconcilerCommon, request *ospdirectorv1beta1.Ope
 	return *configMapList, nil
 }
 
-func addConfigMapToList(r common.ReconcilerCommon, namespace string, name string, configMapList *corev1.ConfigMapList) error {
+func addConfigMapToList(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	name string,
+	configMapList *corev1.ConfigMapList,
+) error {
 	found := false
 
 	for _, cm := range configMapList.Items {
@@ -214,7 +229,7 @@ func addConfigMapToList(r common.ReconcilerCommon, namespace string, name string
 	if !found {
 		cm := &corev1.ConfigMap{}
 
-		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, cm); err != nil {
+		if err := r.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, cm); err != nil {
 			return err
 		}
 
@@ -225,7 +240,12 @@ func addConfigMapToList(r common.ReconcilerCommon, namespace string, name string
 }
 
 // GetSecretList - Get list of all OSP-D operator secrets in the namespace that we care to save/restore
-func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenStackBackupRequest, desiredCrs *ospdirectorv1beta1.CrsForBackup) (corev1.SecretList, error) {
+func GetSecretList(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	request *ospdirectorv1beta1.OpenStackBackupRequest,
+	desiredCrs *ospdirectorv1beta1.CrsForBackup,
+) (corev1.SecretList, error) {
 	secretList := &corev1.SecretList{}
 
 	labels := client.HasLabels{
@@ -237,7 +257,7 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 		labels,
 	}
 
-	err := r.GetClient().List(context.TODO(), secretList, listOpts...)
+	err := r.GetClient().List(ctx, secretList, listOpts...)
 
 	if err != nil {
 		return *secretList, err
@@ -246,12 +266,12 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 	// Also get certain secrets used by our CRs
 	for _, item := range desiredCrs.OpenStackBaremetalSets.Items {
 		if item.Spec.DeploymentSSHSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
 		if item.Spec.PasswordSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
@@ -259,12 +279,12 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 
 	for _, item := range desiredCrs.OpenStackVMSets.Items {
 		if item.Spec.DeploymentSSHSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
 		if item.Spec.PasswordSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
@@ -272,7 +292,7 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 
 	for _, item := range desiredCrs.OpenStackControlPlanes.Items {
 		if item.Spec.PasswordSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.PasswordSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
@@ -280,7 +300,7 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 
 	for _, item := range desiredCrs.OpenStackClients.Items {
 		if item.Spec.DeploymentSSHSecret != "" {
-			if err := addSecretToList(r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
+			if err := addSecretToList(ctx, r, request.Namespace, item.Spec.DeploymentSSHSecret, secretList); err != nil {
 				return *secretList, err
 			}
 		}
@@ -288,7 +308,7 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 
 	// Also get additional secrets potentially enumerated in the request CR
 	for _, item := range request.Spec.AdditionalSecrets {
-		if err := addSecretToList(r, request.Namespace, item, secretList); err != nil {
+		if err := addSecretToList(ctx, r, request.Namespace, item, secretList); err != nil {
 			return *secretList, err
 		}
 	}
@@ -300,7 +320,13 @@ func GetSecretList(r common.ReconcilerCommon, request *ospdirectorv1beta1.OpenSt
 	return *secretList, nil
 }
 
-func addSecretToList(r common.ReconcilerCommon, namespace string, name string, secretList *corev1.SecretList) error {
+func addSecretToList(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	name string,
+	secretList *corev1.SecretList,
+) error {
 	found := false
 
 	for _, secret := range secretList.Items {
@@ -313,7 +339,7 @@ func addSecretToList(r common.ReconcilerCommon, namespace string, name string, s
 	if !found {
 		secret := &corev1.Secret{}
 
-		if err := r.GetClient().Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, secret); err != nil {
+		if err := r.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret); err != nil {
 			return err
 		}
 
@@ -554,74 +580,81 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 }
 
 // CleanNamespace - deleted CRs, ConfigMaps and Secrets in this namespace
-func CleanNamespace(r common.ReconcilerCommon, namespace string, crLists ospdirectorv1beta1.CrsForBackup, cmList corev1.ConfigMapList, secretList corev1.SecretList) (bool, error) {
+func CleanNamespace(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	crLists ospdirectorv1beta1.CrsForBackup,
+	cmList corev1.ConfigMapList,
+	secretList corev1.SecretList,
+) (bool, error) {
 	foundRemaining := false
 
 	// Delete OpenStackConfigGenerators as these should not be needed at this point
-	if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackConfigGenerator{}, client.InNamespace(namespace)); err != nil {
+	if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackConfigGenerator{}, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
 	// OSP-D CRs can be mass-deleted
 	if len(crLists.OpenStackBaremetalSets.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackBaremetalSet{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackBaremetalSet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackProvisionServers.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackProvisionServer{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackProvisionServer{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackControlPlanes.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackControlPlane{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackControlPlane{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackVMSets.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackVMSet{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackVMSet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackClients.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackClient{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackClient{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackMACAddresses.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackMACAddress{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackMACAddress{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackNets.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackNet{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackNet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackNetAttachments.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackNetAttachment{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackNetAttachment{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackNetConfigs.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(context.TODO(), &ospdirectorv1beta1.OpenStackNetConfig{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackNetConfig{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
@@ -629,14 +662,14 @@ func CleanNamespace(r common.ReconcilerCommon, namespace string, crLists ospdire
 	// Can't mass-delete ConfigMaps and Secrets because k8s infrastructure uses namespace for these as well
 	for _, cm := range cmList.Items {
 		foundRemaining = true
-		if err := r.GetClient().Delete(context.TODO(), &cm, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
+		if err := r.GetClient().Delete(ctx, &cm, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
 			return false, err
 		}
 	}
 
 	for _, secret := range secretList.Items {
 		foundRemaining = true
-		if err := r.GetClient().Delete(context.TODO(), &secret, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
+		if err := r.GetClient().Delete(ctx, &secret, &client.DeleteOptions{}); err != nil && !k8s_errors.IsNotFound(err) {
 			return false, err
 		}
 	}

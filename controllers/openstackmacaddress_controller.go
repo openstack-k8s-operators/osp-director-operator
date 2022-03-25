@@ -78,7 +78,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// Fetch the controller VM instance
 	instance := &ospdirectorv1beta1.OpenStackMACAddress{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -121,13 +121,8 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
-				if err == nil {
-					err = common.WrapErrorForObject(
-						"Update Status", instance, updateErr)
-				} else {
-					common.LogErrorForObject(r, updateErr, "Update status", instance)
-				}
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
+				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
 
@@ -142,7 +137,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, macaddress.FinalizerName) {
 			controllerutil.AddFinalizer(instance, macaddress.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return reconcile.Result{}, err
 			}
 			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to CR %s", macaddress.FinalizerName, instance.Name), instance)
@@ -156,7 +151,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		// 2. remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, macaddress.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -217,7 +212,7 @@ func (r *OpenStackMACAddressReconciler) SetupWithManager(mgr ctrl.Manager) error
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
+		if err := r.List(context.TODO(), crs, listOpts...); err != nil {
 			r.Log.Error(err, "Unable to retrieve CRs %v")
 			return nil
 		}

@@ -81,7 +81,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Fetch the controller IPset instance
 	instance := &ospdirectorv1beta1.OpenStackIPSet{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -127,7 +127,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -142,7 +142,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, instance.Spec.Networks[0])
+	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(ctx, r, instance, cond, instance.Spec.Networks[0])
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -162,7 +162,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		currentLabels,
 		instance.Labels,
 	) {
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError
@@ -197,7 +197,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// get OSNetCfg object
 	//
 	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
+	err = r.Get(ctx, types.NamespacedName{
 		Name:      strings.ToLower(instance.Labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]),
 		Namespace: instance.Namespace},
 		osnetcfg)
@@ -231,7 +231,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// check if owning object is OSBMS
 		//
 		osBms := &ospdirectorv1beta1.OpenStackBaremetalSet{}
-		err = r.Client.Get(context.TODO(), types.NamespacedName{
+		err = r.Get(ctx, types.NamespacedName{
 			Name:      instance.Labels[common.OwnerNameLabelSelector],
 			Namespace: instance.Namespace},
 			osBms)
@@ -262,7 +262,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				client.MatchingLabels(labelSelector),
 			}
 
-			err := r.GetClient().List(context.TODO(), baremetalHostsList, listOpts...)
+			err := r.GetClient().List(ctx, baremetalHostsList, listOpts...)
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = "Failed to get list of all BareMetalHost(s)"
 				cond.Reason = ospdirectorv1beta1.BaremetalHostCondReasonListError
@@ -382,7 +382,7 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 			instance,
 		)
 
-		err := r.Client.Status().Update(context.TODO(), instance)
+		err := r.Status().Update(context.Background(), instance)
 		if err != nil {
 			cond.Message = "Failed to update CR status for new hostnames"
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)

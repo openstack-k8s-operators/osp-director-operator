@@ -90,7 +90,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// Fetch the OpenStackNetConfig instance
 	instance := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -134,7 +134,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -150,7 +150,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(instance, openstacknetconfig.FinalizerName) {
 			controllerutil.AddFinalizer(instance, openstacknetconfig.FinalizerName)
-			if err := r.Update(context.Background(), instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 			common.LogForObject(r, fmt.Sprintf("Finalizer %s added to CR %s", openstacknetconfig.FinalizerName, instance.Name), instance)
@@ -172,6 +172,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			// TODO: (mschuppert) cleanup single removed netConfig in list
 			for _, subnet := range net.Subnets {
 				if err := r.osnetCleanup(
+					ctx,
 					instance,
 					&subnet,
 					cond,
@@ -187,6 +188,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		//
 		for name, attachConfig := range instance.Spec.AttachConfigurations {
 			if err := r.attachCleanup(
+				ctx,
 				instance,
 				name,
 				&attachConfig,
@@ -209,7 +211,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 			client.MatchingLabels(labelSelector),
 		}
 
-		if err := r.GetClient().List(context.Background(), osNetAttList, listOpts...); err != nil {
+		if err := r.GetClient().List(ctx, osNetAttList, listOpts...); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -228,7 +230,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		// X. as last step remove the finalizer on the operator CR to finish delete
 		controllerutil.RemoveFinalizer(instance, openstacknetconfig.FinalizerName)
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
@@ -267,6 +269,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for name, attachConfig := range instance.Spec.AttachConfigurations {
 		// TODO: (mschuppert) cleanup single removed netAttachment in list
 		netAttachment, err := r.applyNetAttachmentConfig(
+			ctx,
 			instance,
 			name,
 			&attachConfig,
@@ -342,6 +345,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	instance.Status.ProvisioningStatus.PhysNetDesiredCount = len(instance.Spec.OVNBridgeMacMappings.PhysNetworks)
 	instance.Status.ProvisioningStatus.PhysNetReadyCount = 0
 	macAddress, err := r.createOrUpdateOpenStackMACAddress(
+		ctx,
 		instance,
 		cond,
 	)
@@ -420,6 +424,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	nodeConfName string,
 	nodeConfPolicy *ospdirectorv1beta1.NodeConfigurationPolicy,
@@ -458,7 +463,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 		return controllerutil.SetControllerReference(instance, attachConfig, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, attachConfig, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, attachConfig, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", attachConfig.Kind, attachConfig.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetAttachCondReasonCreateError)
@@ -525,6 +530,7 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 }
 
 func (r *OpenStackNetConfigReconciler) attachCleanup(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	nodeConfName string,
 	nodeConfPolicy *ospdirectorv1beta1.NodeConfigurationPolicy,
@@ -544,7 +550,7 @@ func (r *OpenStackNetConfigReconciler) attachCleanup(
 	cond.Message = fmt.Sprintf("OpenStackNetAttachment %s delete started", attachConfig.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
-	if err := r.Client.Delete(context.TODO(), attachConfig, &client.DeleteOptions{}); err != nil {
+	if err := r.Delete(ctx, attachConfig, &client.DeleteOptions{}); err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return nil
 		}
@@ -573,7 +579,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 	//
 	// get OSNet object
 	//
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: strings.ToLower(osNet.Name), Namespace: osNet.Namespace}, osNet)
+	err := r.Get(ctx, types.NamespacedName{Name: strings.ToLower(osNet.Name), Namespace: osNet.Namespace}, osNet)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = fmt.Sprintf("Failed to get %s %s ", osNet.Kind, osNet.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
@@ -647,7 +653,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 		return controllerutil.SetControllerReference(instance, osNet, r.Scheme)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.Background(), r.Client, osNet, apply)
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, osNet, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osNet.Kind, osNet.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonCreateError)
@@ -753,6 +759,7 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 }
 
 func (r *OpenStackNetConfigReconciler) osnetCleanup(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	subnet *ospdirectorv1beta1.Subnet,
 	cond *ospdirectorv1beta1.Condition,
@@ -765,7 +772,7 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 	cond.Message = fmt.Sprintf("OpenStackNet %s delete started", osNet.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
-	if err := r.Client.Delete(context.TODO(), osNet, &client.DeleteOptions{}); err != nil {
+	if err := r.Delete(ctx, osNet, &client.DeleteOptions{}); err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return nil
 		}
@@ -781,6 +788,7 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 // create or update the OpenStackMACAddress object
 //
 func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	cond *ospdirectorv1beta1.Condition,
 ) (*ospdirectorv1beta1.OpenStackMACAddress, error) {
@@ -795,7 +803,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	//
 	// get OSMACAddress object
 	//
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: strings.ToLower(instance.Name), Namespace: instance.Namespace}, macAddress)
+	err := r.Get(ctx, types.NamespacedName{Name: strings.ToLower(instance.Name), Namespace: instance.Namespace}, macAddress)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = fmt.Sprintf("Failed to get %s %s ", macAddress.Kind, macAddress.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonError)
@@ -827,7 +835,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 
 	ipSetList := &ospdirectorv1beta1.OpenStackIPSetList{}
 	if err := r.GetClient().List(
-		context.Background(),
+		ctx,
 		ipSetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
@@ -852,7 +860,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	}
 	vmSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
 	if err := r.GetClient().List(
-		context.Background(),
+		ctx,
 		vmSetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
@@ -864,7 +872,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	//
 	bmSetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
 	if err := r.GetClient().List(
-		context.Background(),
+		ctx,
 		bmSetList,
 		listOpts...,
 	); err != nil && !k8s_errors.IsNotFound(err) {
@@ -932,7 +940,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	//
 	// create/update OSMACAddress
 	//
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, macAddress, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, macAddress, func() error {
 		if len(instance.Spec.OVNBridgeMacMappings.PhysNetworks) == 0 {
 			macAddress.Spec.PhysNetworks = []ospdirectorv1beta1.Physnet{
 				{
@@ -1210,7 +1218,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 		// For backward compatability check if owning object is osClient and set Role to <openstackclient.Role><instance.Name>
 		//
 		osClient := &ospdirectorv1beta1.OpenStackClient{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{
+		err := r.Get(ctx, types.NamespacedName{
 			Name:      osIPset.Labels[common.OwnerNameLabelSelector],
 			Namespace: osIPset.Namespace},
 			osClient)

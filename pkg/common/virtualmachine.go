@@ -8,7 +8,12 @@ import (
 )
 
 // GetVirtualMachines -
-func GetVirtualMachines(r ReconcilerCommon, namespace string, labelSelectorMap map[string]string) (*virtv1.VirtualMachineList, error) {
+func GetVirtualMachines(
+	ctx context.Context,
+	r ReconcilerCommon,
+	namespace string,
+	labelSelectorMap map[string]string,
+) (*virtv1.VirtualMachineList, error) {
 	virtualMachineList := &virtv1.VirtualMachineList{}
 
 	listOpts := []client.ListOption{
@@ -20,7 +25,7 @@ func GetVirtualMachines(r ReconcilerCommon, namespace string, labelSelectorMap m
 		listOpts = append(listOpts, labels)
 	}
 
-	err := r.GetClient().List(context.TODO(), virtualMachineList, listOpts...)
+	err := r.GetClient().List(ctx, virtualMachineList, listOpts...)
 	if err != nil {
 		return virtualMachineList, err
 	}
@@ -29,7 +34,12 @@ func GetVirtualMachines(r ReconcilerCommon, namespace string, labelSelectorMap m
 }
 
 // GetVirtualMachineInstances -
-func GetVirtualMachineInstances(r ReconcilerCommon, namespace string, labelSelectorMap map[string]string) (*virtv1.VirtualMachineInstanceList, error) {
+func GetVirtualMachineInstances(
+	ctx context.Context,
+	r ReconcilerCommon,
+	namespace string,
+	labelSelectorMap map[string]string,
+) (*virtv1.VirtualMachineInstanceList, error) {
 	virtualMachineInstanceList := &virtv1.VirtualMachineInstanceList{}
 
 	listOpts := []client.ListOption{
@@ -41,7 +51,7 @@ func GetVirtualMachineInstances(r ReconcilerCommon, namespace string, labelSelec
 		listOpts = append(listOpts, labels)
 	}
 
-	err := r.GetClient().List(context.TODO(), virtualMachineInstanceList, listOpts...)
+	err := r.GetClient().List(ctx, virtualMachineInstanceList, listOpts...)
 	if err != nil {
 		return virtualMachineInstanceList, err
 	}

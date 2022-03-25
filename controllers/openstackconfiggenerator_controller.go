@@ -95,7 +95,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 	// Fetch the instance
 	instance := &ospdirectorv1beta1.OpenStackConfigGenerator{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -149,7 +149,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -167,7 +167,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	// unified OSPVersion from ControlPlane CR
 	// which means also get either 16.2 or 17.0 for upstream versions
-	controlPlane, ctrlResult, err := common.GetControlPlane(r, instance)
+	controlPlane, ctrlResult, err := common.GetControlPlane(ctx, r, instance)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNetNotFound)
@@ -207,7 +207,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	// check if heat-env-config (customizations provided by administrator) exist if it does not exist, requeue
 	//
-	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
+	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(ctx, r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("The ConfigMap %s doesn't yet exist. Requeing...", instance.Spec.HeatEnvConfigMap)
@@ -222,7 +222,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// add ConfigGeneratorInputLabel if required
-	err = r.addConfigGeneratorInputLabel(instance, cond, tripleoCustomDeployCM)
+	err = r.addConfigGeneratorInputLabel(ctx, instance, cond, tripleoCustomDeployCM)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -235,7 +235,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	var tripleoTarballCM *corev1.ConfigMap
 	if instance.Spec.TarballConfigMap != "" {
-		tripleoTarballCM, _, err = common.GetConfigMapAndHashWithName(r, instance.Spec.TarballConfigMap, instance.Namespace)
+		tripleoTarballCM, _, err = common.GetConfigMapAndHashWithName(ctx, r, instance.Spec.TarballConfigMap, instance.Namespace)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				cond.Message = "Tarball config map not found, requeuing and waiting. Requeing..."
@@ -253,7 +253,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// add ConfigGeneratorInputLabel if required
-	err = r.addConfigGeneratorInputLabel(instance, cond, tripleoTarballCM)
+	err = r.addConfigGeneratorInputLabel(ctx, instance, cond, tripleoTarballCM)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -272,6 +272,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	// render OOO environment, create TripleoDeployCM and read the tripleo-deploy-config CM
 	//
 	tripleoDeployCM, err := r.createTripleoDeployCM(
+		ctx,
 		instance,
 		cond,
 		&envVars,
@@ -313,7 +314,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			Labels:             cmLabels,
 		},
 	}
-	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
+	err = common.EnsureConfigMaps(ctx, r, instance, cms, &envVars)
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s config map not found, requeuing and waiting. Requeing...", "openstackconfig-script-"+instance.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
@@ -369,7 +370,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 	var exports string
 	if instance.Status.ConfigHash != configMapHash {
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, heat, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, heat, func() error {
 			err := controllerutil.SetControllerReference(instance, heat, r.Scheme)
 			if err != nil {
 				return err
@@ -401,7 +402,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 		// configMap Hash changed after Ephemeral Heat was created
 		if heat.Spec.ConfigHash != configMapHash {
-			err = r.Client.Delete(context.TODO(), heat)
+			err = r.Delete(ctx, heat)
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMHashChanged)
@@ -420,7 +421,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		}
 
 		// check if osvmset and osbms is in status provisioned
-		msg, deployed, err := r.verifyNodeResourceStatus(instance)
+		msg, deployed, err := r.verifyNodeResourceStatus(ctx, instance)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -433,7 +434,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			return ctrl.Result{RequeueAfter: time.Second * 20}, err
 		}
 
-		op, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, job, func() error {
+		op, err = controllerutil.CreateOrPatch(ctx, r.Client, job, func() error {
 			err := controllerutil.SetControllerReference(instance, job, r.Scheme)
 			if err != nil {
 				return err
@@ -458,7 +459,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		common.LogForObject(r, fmt.Sprintf("ConfigMap Hash : %s", configMapHash), instance)
 
 		if configMapHash != job.Spec.Template.Spec.Containers[0].Env[0].Value {
-			_, err = common.DeleteJob(job, r.Kclient, r.Log)
+			_, err = common.DeleteJob(ctx, job, r.Kclient, r.Log)
 			if err != nil {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobDelete)
@@ -470,7 +471,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 			// in this case delete heat too as the database may have been used
 			r.Log.Info("Deleting Ephemeral Heat...")
-			err = r.Client.Delete(context.TODO(), heat)
+			err = r.Delete(ctx, heat)
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = err.Error()
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
@@ -489,7 +490,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 		}
 
-		requeue, err := common.WaitOnJob(job, r.Client, r.Log)
+		requeue, err := common.WaitOnJob(ctx, job, r.Client, r.Log)
 		common.LogForObject(r, "Generating Configs...", instance)
 
 		if err != nil {
@@ -523,7 +524,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 	r.setConfigHash(instance, configMapHash)
 
-	_, err = common.DeleteJob(job, r.Kclient, r.Log)
+	_, err = common.DeleteJob(ctx, job, r.Kclient, r.Log)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonJobDelete)
@@ -534,7 +535,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// cleanup the ephemeral Heat
-	err = r.Client.Delete(context.TODO(), heat)
+	err = r.Delete(ctx, heat)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonEphemeralHeatDelete)
@@ -545,13 +546,13 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// update ConfigVersions with Git Commits
-	configVersions, gerr := openstackconfigversion.SyncGit(instance, r.Client, r.Log)
+	configVersions, gerr := openstackconfigversion.SyncGit(ctx, instance, r.Client, r.Log)
 	if gerr != nil {
 		r.Log.Error(gerr, "ConfigVersions")
 		return ctrl.Result{}, gerr
 	}
 
-	if err := r.syncConfigVersions(instance, configVersions, exports); err != nil {
+	if err := r.syncConfigVersions(ctx, instance, configVersions, exports); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -584,20 +585,25 @@ func (r *OpenStackConfigGeneratorReconciler) getNormalizedStatus(status *ospdire
 	return s
 }
 
-func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(instance *ospdirectorv1beta1.OpenStackConfigGenerator, configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion, exports string) error {
+func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	configVersions map[string]ospdirectorv1beta1.OpenStackConfigVersion,
+	exports string,
+) error {
 
 	for _, version := range configVersions {
 
 		// Check if this ConfigVersion already exists
 		foundVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
-		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
+		err := r.Get(ctx, types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
 		if err == nil {
 			//FIXME(dprince): update existing?
 		} else if err != nil && k8s_errors.IsNotFound(err) {
 			// we only add the most recent export to new ConfigVersions (just created...)
 			version.Spec.CtlplaneExports = exports
 			r.Log.Info("Creating a ConfigVersion", "ConfigVersion.Namespace", instance.Namespace, "ConfigVersion.Name", version.Name)
-			err = r.Client.Create(context.TODO(), &version)
+			err = r.Create(ctx, &version)
 			if err != nil {
 				return err
 			}
@@ -644,7 +650,10 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 		Complete(r)
 }
 
-func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *ospdirectorv1beta1.OpenStackConfigGenerator) (string, bool, error) {
+func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+) (string, bool, error) {
 
 	msg := ""
 
@@ -652,7 +661,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 	vmsetList := &ospdirectorv1beta1.OpenStackVMSetList{}
 
 	listOpts := []client.ListOption{}
-	err := r.Client.List(context.TODO(), vmsetList, listOpts...)
+	err := r.List(ctx, vmsetList, listOpts...)
 	if err != nil {
 		return msg, false, err
 	}
@@ -668,7 +677,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 	bmsetList := &ospdirectorv1beta1.OpenStackBaremetalSetList{}
 
 	listOpts = []client.ListOption{}
-	err = r.Client.List(context.TODO(), bmsetList, listOpts...)
+	err = r.List(ctx, bmsetList, listOpts...)
 	if err != nil {
 		return msg, false, err
 	}
@@ -691,6 +700,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(instance *
 // Fencing considerations
 //
 func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
@@ -729,7 +739,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 		for roleName, roleParams := range controlPlane.Spec.VirtualMachineRoles {
 			if common.StringInSlice(roleParams.RoleName, fencingRoles) && roleParams.RoleCount == 3 {
 				// Get the associated VM instances
-				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(r, instance.Namespace, map[string]string{
+				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(ctx, r, instance.Namespace, map[string]string{
 					common.OwnerNameLabelSelector: strings.ToLower(roleName),
 				})
 				if err != nil {
@@ -786,6 +796,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 // generate TripleoDeploy configmap with environment file containing predictible IPs
 //
 func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
 	envVars *map[string]common.EnvSetter,
@@ -797,7 +808,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	//
 	// generate OOO environment file with predictible IPs
 	//
-	templateParameters, rolesMap, err := openstackconfiggenerator.CreateConfigMapParams(r, instance, cond)
+	templateParameters, rolesMap, err := openstackconfiggenerator.CreateConfigMapParams(ctx, r, instance, cond)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonRenderEnvFilesError)
@@ -811,6 +822,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	// get clusterServiceIP for fencing routing in the nic templates
 	//
 	clusterServiceIP, err := r.getClusterServiceEndpoint(
+		ctx,
 		instance,
 		cond,
 		"default",
@@ -846,6 +858,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	// Render fencing template
 	//
 	fencingTemplate, err := r.createFencingEnvironmentFiles(
+		ctx,
 		instance,
 		cond,
 		controlPlane,
@@ -876,7 +889,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 		},
 	}
 
-	err = common.EnsureConfigMaps(r, instance, cm, envVars)
+	err = common.EnsureConfigMaps(ctx, r, instance, cm, envVars)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
@@ -889,7 +902,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	//
 	// Read the tripleo-deploy-config CM
 	//
-	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(r, "tripleo-deploy-config-"+instance.Name, instance.Namespace)
+	tripleoDeployCM, _, err := common.GetConfigMapAndHashWithName(ctx, r, "tripleo-deploy-config-"+instance.Name, instance.Namespace)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMCreateError)
@@ -903,13 +916,14 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 }
 
 func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
 	namespace string,
 	labelSelector map[string]string,
 ) (string, error) {
 
-	serviceList, err := common.GetServicesListWithLabel(r, namespace, labelSelector)
+	serviceList, err := common.GetServicesListWithLabel(ctx, r, namespace, labelSelector)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonServiceNotFound)
@@ -994,6 +1008,7 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 // the CMs to watch
 //
 func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *ospdirectorv1beta1.Condition,
 	cm *corev1.ConfigMap,
@@ -1004,7 +1019,7 @@ func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
 	}
 
 	if _, ok := cm.Labels[openstackconfiggenerator.ConfigGeneratorInputLabel]; !ok {
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.GetClient(), cm, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.GetClient(), cm, func() error {
 			cm.SetLabels(labels.Merge(cm.GetLabels(), labelSelector))
 
 			return nil

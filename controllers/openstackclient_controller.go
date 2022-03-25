@@ -80,7 +80,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Fetch the OpenStackClient instance
 	instance := &ospdirectorv1beta1.OpenStackClient{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -123,7 +123,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -151,6 +151,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	var ctrlResult ctrl.Result
 	currentLabels := instance.DeepCopy().Labels
 	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -172,7 +173,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		currentLabels,
 		instance.Labels,
 	) {
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
@@ -192,6 +193,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	if instance.Spec.DeploymentSSHSecret != "" {
 		_, ctrlResult, err = common.GetDataFromSecret(
+			ctx,
 			r,
 			instance,
 			cond,
@@ -215,6 +217,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	if instance.Spec.CAConfigMap != "" {
 		_, ctrlResult, err = common.GetConfigMap(
+			ctx,
 			r,
 			instance,
 			cond,
@@ -237,6 +240,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	if instance.Spec.IdmSecret != "" {
 		_, ctrlResult, err = common.GetDataFromSecret(
+			ctx,
 			r,
 			instance,
 			cond,
@@ -259,6 +263,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// create openstackclient IPs for all networks
 	//
 	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -284,6 +289,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// NetworkAttachmentDefinition
 	//
 	ctrlResult, err = r.verifyNetworkAttachments(
+		ctx,
 		instance,
 		cond,
 	)
@@ -306,7 +312,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Labels:             labels,
 		},
 	}
-	err = common.EnsureConfigMaps(r, instance, cms, &envVars)
+	err = common.EnsureConfigMaps(ctx, r, instance, cms, &envVars)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -315,6 +321,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// PVCs
 	//
 	err = r.createPVCs(
+		ctx,
 		instance,
 		cond,
 		labels,
@@ -328,6 +335,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// Create or update the pod object
 		//
 		err = r.podCreateOrUpdate(
+			ctx,
 			instance,
 			cond,
 			hostname,
@@ -371,6 +379,7 @@ func (r *OpenStackClientReconciler) getNormalizedStatus(status *ospdirectorv1bet
 }
 
 func (r *OpenStackClientReconciler) podCreateOrUpdate(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,
 	cond *ospdirectorv1beta1.Condition,
 	hostname string,
@@ -462,6 +471,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
+			ctx,
 			r,
 			instance.Namespace,
 			labelSelector,
@@ -519,7 +529,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, pod, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, pod, func() error {
 		// Note: initialize the pod structs above then only reconcile individual fields here
 		// Can not add/replace new structs in the pod here as that will drop the defaults that
 		// are set/added when the pod is created.
@@ -597,7 +607,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 				fmt.Sprintf("OpenStackClient pod deleted due to spec change %v", err),
 				instance,
 			)
-			if err := r.Client.Delete(context.TODO(), pod); err != nil && !k8s_errors.IsNotFound(err) {
+			if err := r.Delete(ctx, pod); err != nil && !k8s_errors.IsNotFound(err) {
 
 				// Error deleting the object
 				cond.Message = fmt.Sprintf("Error deleting OpenStackClient pod %s", pod.Name)
@@ -640,11 +650,12 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 // NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
 //
 func (r *OpenStackClientReconciler) verifyNetworkAttachments(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
 	// verify that NetworkAttachmentDefinition for each configured network exist
-	nadMap, err := common.GetAllNetworkAttachmentDefinitions(r, instance)
+	nadMap, err := common.GetAllNetworkAttachmentDefinitions(ctx, r, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -654,6 +665,7 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 		// get network with name_lower label
 		network, err := openstacknet.GetOpenStackNetWithLabel(
+			ctx,
 			r,
 			instance.Namespace,
 			map[string]string{
@@ -699,6 +711,7 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 // PVCs
 //
 func (r *OpenStackClientReconciler) createPVCs(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,
 	cond *ospdirectorv1beta1.Condition,
 	labels map[string]string,
@@ -715,7 +728,7 @@ func (r *OpenStackClientReconciler) createPVCs(
 		},
 	}
 
-	pvc, op, err := common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	pvc, op, err := common.CreateOrUpdatePvc(ctx, r, instance, &pvcDetails)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)
@@ -743,7 +756,7 @@ func (r *OpenStackClientReconciler) createPVCs(
 		},
 	}
 
-	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	pvc, op, err = common.CreateOrUpdatePvc(ctx, r, instance, &pvcDetails)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)
@@ -771,7 +784,7 @@ func (r *OpenStackClientReconciler) createPVCs(
 		},
 	}
 
-	pvc, op, err = common.CreateOrUpdatePvc(r, instance, &pvcDetails)
+	pvc, op, err = common.CreateOrUpdatePvc(ctx, r, instance, &pvcDetails)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPVCError)

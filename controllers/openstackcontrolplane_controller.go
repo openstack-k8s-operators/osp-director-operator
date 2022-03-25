@@ -91,7 +91,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 	// Fetch the controlplane instance
 	instance := &ospdirectorv1beta1.OpenStackControlPlane{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -154,7 +154,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 
 		if statusChanged() {
-			if updateErr := r.Client.Status().Update(context.Background(), instance); updateErr != nil {
+			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
 				common.LogErrorForObject(r, updateErr, "Update status", instance)
 			}
 		}
@@ -188,7 +188,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// create or get hash of "tripleo-passwords" controlplane.TripleoPasswordSecret secret
 	//
-	err = r.createOrGetTripleoPasswords(instance, cond, &envVars)
+	err = r.createOrGetTripleoPasswords(ctx, instance, cond, &envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -197,7 +197,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Secret - used for deployment to ssh into the overcloud nodes,
 	//          gets added to the controller VMs cloud-admin user using cloud-init
 	//
-	deploymentSecret, err := r.createOrGetDeploymentSecret(instance, cond, &envVars)
+	deploymentSecret, err := r.createOrGetDeploymentSecret(ctx, instance, cond, &envVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -205,7 +205,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// check if specified PasswordSecret secret exists
 	//
-	ctrlResult, err := r.verifySecretExist(instance, cond, instance.Spec.PasswordSecret)
+	ctrlResult, err := r.verifySecretExist(ctx, instance, cond, instance.Spec.PasswordSecret)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -213,7 +213,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// check if specified IdmSecret secret exists
 	//
-	ctrlResult, err = r.verifySecretExist(instance, cond, instance.Spec.IdmSecret)
+	ctrlResult, err = r.verifySecretExist(ctx, instance, cond, instance.Spec.IdmSecret)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -221,7 +221,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// check if specified CAConfigMap config map exists
 	//
-	ctrlResult, err = r.verifyConfigMapExist(instance, cond, instance.Spec.CAConfigMap)
+	ctrlResult, err = r.verifyConfigMapExist(ctx, instance, cond, instance.Spec.CAConfigMap)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -230,7 +230,11 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// create VIPs for networks where VIP parameter is true
 	// AND the service VIPs for Spec.AdditionalServiceVIPs
 	//
-	ctrlResult, err = r.ensureVIPs(instance, cond)
+	ctrlResult, err = r.ensureVIPs(
+		ctx,
+		instance,
+		cond,
+	)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -239,6 +243,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Create VMSets
 	//
 	vmSets, err := r.createOrUpdateVMSets(
+		ctx,
 		instance,
 		cond,
 		deploymentSecret,
@@ -255,6 +260,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Create openstack client pod
 	//
 	osc, err := r.createOrUpdateOpenStackClient(
+		ctx,
 		instance,
 		cond,
 		deploymentSecret,
@@ -269,7 +275,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//var ctlPlaneState ospdirectorv1beta1.ControlPlaneProvisioningState
 
 	// 1) OpenStackClient pod status
-	clientPod, err := r.Kclient.CoreV1().Pods(instance.Namespace).Get(context.TODO(), osc.Name, metav1.GetOptions{})
+	clientPod, err := r.Kclient.CoreV1().Pods(instance.Namespace).Get(ctx, osc.Name, metav1.GetOptions{})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
@@ -360,7 +366,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 			listOpts := []client.ListOption{
 				client.InNamespace(obj.GetNamespace()),
 			}
-			if err := r.Client.List(context.Background(), crs, listOpts...); err != nil {
+			if err := r.List(context.Background(), crs, listOpts...); err != nil {
 				r.Log.Error(err, "Unable to retrieve CRs %v")
 				return nil
 			}
@@ -407,6 +413,7 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 }
 
 func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 ) ([]string, error) {
@@ -424,6 +431,7 @@ func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
 
 			// get network with name_lower label to verify if VIP needs to be requested from Spec
 			network, err := openstacknet.GetOpenStackNetWithLabel(
+				ctx,
 				r,
 				instance.Namespace,
 				labelSelector,
@@ -457,6 +465,7 @@ func (r *OpenStackControlPlaneReconciler) createVIPNetworkList(
 // create or get hash of "tripleo-passwords" controlplane.TripleoPasswordSecret secret
 //
 func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	envVars *map[string]common.EnvSetter,
@@ -464,7 +473,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 	//
 	// check if "tripleo-passwords" controlplane.TripleoPasswordSecret secret already exist
 	//
-	_, secretHash, err := common.GetSecret(r, controlplane.TripleoPasswordSecret, instance.Namespace)
+	_, secretHash, err := common.GetSecret(ctx, r, controlplane.TripleoPasswordSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 
@@ -490,7 +499,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 				},
 			}
 
-			err = common.EnsureSecrets(r, instance, pwSecret, envVars)
+			err = common.EnsureSecrets(ctx, r, instance, pwSecret, envVars)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error creating TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretCreateError)
@@ -519,13 +528,14 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 //          gets added to the controller VMs cloud-admin user using cloud-init
 //
 func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	envVars *map[string]common.EnvSetter,
 ) (*corev1.Secret, error) {
 	deploymentSecretName := strings.ToLower(controlplane.AppLabel) + "-ssh-keys"
 
-	deploymentSecret, secretHash, err := common.GetSecret(r, deploymentSecretName, instance.Namespace)
+	deploymentSecret, secretHash, err := common.GetSecret(ctx, r, deploymentSecretName, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 
@@ -551,7 +561,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 				return deploymentSecret, err
 			}
 
-			secretHash, op, err = common.CreateOrUpdateSecret(r, instance, deploymentSecret)
+			secretHash, op, err = common.CreateOrUpdateSecret(ctx, r, instance, deploymentSecret)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error create or update ssh keys secret %s", deploymentSecretName)
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError)
@@ -582,13 +592,14 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 }
 
 func (r *OpenStackControlPlaneReconciler) verifySecretExist(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	secretName string,
 ) (ctrl.Result, error) {
 	if secretName != "" {
 		// check if specified secret exists before creating the controlplane
-		_, _, err := common.GetSecret(r, secretName, instance.Namespace)
+		_, _, err := common.GetSecret(ctx, r, secretName, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
 				timeout := 30
@@ -619,13 +630,14 @@ func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 }
 
 func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	configMapName string,
 ) (ctrl.Result, error) {
 
 	if configMapName != "" {
-		_, _, err := common.GetConfigMapAndHashWithName(r, instance.Spec.CAConfigMap, instance.Namespace)
+		_, _, err := common.GetConfigMapAndHashWithName(ctx, r, instance.Spec.CAConfigMap, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
 				timeout := 30
@@ -658,6 +670,7 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 // Create VMSets
 //
 func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	deploymentSecret *corev1.Secret,
@@ -677,7 +690,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			},
 		}
 
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, vmSet, func() error {
+		op, err := controllerutil.CreateOrPatch(ctx, r.Client, vmSet, func() error {
 			vmSet.Spec.VMCount = vmRole.RoleCount
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
@@ -744,6 +757,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 }
 
 func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 	deploymentSecret *corev1.Secret,
@@ -754,7 +768,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 			Namespace: instance.Namespace,
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, osc, func() error {
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, osc, func() error {
 		if instance.Spec.OpenStackClientImageURL != "" {
 			osc.Spec.ImageURL = instance.Spec.OpenStackClientImageURL
 		}
@@ -817,6 +831,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 }
 
 func (r *OpenStackControlPlaneReconciler) ensureVIPs(
+	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
 	cond *ospdirectorv1beta1.Condition,
 ) (ctrl.Result, error) {
@@ -825,7 +840,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	//
 
 	// create list of networks where Spec.VIP == True
-	vipNetworksList, err := r.createVIPNetworkList(instance, cond)
+	vipNetworksList, err := r.createVIPNetworkList(ctx, instance, cond)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -836,7 +851,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(r, instance, cond, vipNetworksList[0])
+	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(ctx, r, instance, cond, vipNetworksList[0])
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -856,7 +871,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 		currentLabels,
 		instance.Labels,
 	) {
-		err = r.Client.Update(context.TODO(), instance)
+		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
 			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
@@ -872,6 +887,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	// create controlplane VIPs for all networks which has VIP flag
 	//
 	ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+		ctx,
 		r,
 		instance,
 		cond,
@@ -899,6 +915,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	if instance.Status.OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
 		for service, network := range instance.Spec.AdditionalServiceVIPs {
 			ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
+				ctx,
 				r,
 				instance,
 				cond,

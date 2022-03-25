@@ -27,9 +27,14 @@ import (
 )
 
 // DeleteReplicasetsWithLabel - Delete all replicasets in namespace of the obj matching label selector
-func DeleteReplicasetsWithLabel(r ReconcilerCommon, obj metav1.Object, labelSelectorMap map[string]string) error {
+func DeleteReplicasetsWithLabel(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+	labelSelectorMap map[string]string,
+) error {
 	err := r.GetClient().DeleteAllOf(
-		context.TODO(),
+		ctx,
 		&appsv1.ReplicaSet{},
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(labelSelectorMap),

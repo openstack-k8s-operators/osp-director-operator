@@ -16,8 +16,14 @@ import (
 //
 // GetOpenStackNetAttachmentWithLabel - Return OpenStackNet with labels
 //
-func GetOpenStackNetAttachmentWithLabel(r common.ReconcilerCommon, namespace string, labelSelector map[string]string) (*ospdirectorv1beta1.OpenStackNetAttachment, error) {
+func GetOpenStackNetAttachmentWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) (*ospdirectorv1beta1.OpenStackNetAttachment, error) {
 	osNetAttachList, err := GetOpenStackNetAttachmentsWithLabel(
+		ctx,
 		r,
 		namespace,
 		labelSelector,
@@ -34,7 +40,12 @@ func GetOpenStackNetAttachmentWithLabel(r common.ReconcilerCommon, namespace str
 }
 
 // GetOpenStackNetAttachmentsWithLabel - Return a list of all OpenStackNetAttachmentss in the namespace that have (optional) labels
-func GetOpenStackNetAttachmentsWithLabel(r common.ReconcilerCommon, namespace string, labelSelector map[string]string) (*ospdirectorv1beta1.OpenStackNetAttachmentList, error) {
+func GetOpenStackNetAttachmentsWithLabel(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) (*ospdirectorv1beta1.OpenStackNetAttachmentList, error) {
 	osNetAttachList := &ospdirectorv1beta1.OpenStackNetAttachmentList{}
 
 	listOpts := []client.ListOption{
@@ -46,7 +57,7 @@ func GetOpenStackNetAttachmentsWithLabel(r common.ReconcilerCommon, namespace st
 		listOpts = append(listOpts, labels)
 	}
 
-	if err := r.GetClient().List(context.Background(), osNetAttachList, listOpts...); err != nil {
+	if err := r.GetClient().List(ctx, osNetAttachList, listOpts...); err != nil {
 		return nil, err
 	}
 
@@ -54,8 +65,14 @@ func GetOpenStackNetAttachmentsWithLabel(r common.ReconcilerCommon, namespace st
 }
 
 // GetOpenStackNetAttachmentWithAttachReference - Return OpenStackNetAttachment for the reference name use in the osnet config
-func GetOpenStackNetAttachmentWithAttachReference(r common.ReconcilerCommon, namespace string, attachReference string) (*ospdirectorv1beta1.OpenStackNetAttachment, error) {
+func GetOpenStackNetAttachmentWithAttachReference(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	attachReference string,
+) (*ospdirectorv1beta1.OpenStackNetAttachment, error) {
 	osNetAttach, err := GetOpenStackNetAttachmentWithLabel(
+		ctx,
 		r,
 		namespace,
 		map[string]string{
@@ -70,9 +87,15 @@ func GetOpenStackNetAttachmentWithAttachReference(r common.ReconcilerCommon, nam
 }
 
 // GetOpenStackNetAttachmentType - Return type of OpenStackNetAttachment, either bridge or sriov
-func GetOpenStackNetAttachmentType(r common.ReconcilerCommon, namespace string, attachReference string) (*ospdirectorv1beta1.AttachType, error) {
+func GetOpenStackNetAttachmentType(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	attachReference string,
+) (*ospdirectorv1beta1.AttachType, error) {
 
 	osNetAttach, err := GetOpenStackNetAttachmentWithAttachReference(
+		ctx,
 		r,
 		namespace,
 		attachReference,
@@ -85,9 +108,15 @@ func GetOpenStackNetAttachmentType(r common.ReconcilerCommon, namespace string, 
 }
 
 // GetOpenStackNetAttachmentBridgeName - Return name of the Bridge configured by the OpenStackNetAttachment
-func GetOpenStackNetAttachmentBridgeName(r common.ReconcilerCommon, namespace string, attachReference string) (string, error) {
+func GetOpenStackNetAttachmentBridgeName(
+	ctx context.Context,
+	r common.ReconcilerCommon,
+	namespace string,
+	attachReference string,
+) (string, error) {
 
 	osNetAttach, err := GetOpenStackNetAttachmentWithAttachReference(
+		ctx,
 		r,
 		namespace,
 		attachReference,

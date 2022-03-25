@@ -25,7 +25,12 @@ import (
 )
 
 // GetBmhHosts -
-func GetBmhHosts(r ReconcilerCommon, namespace string, labelSelector map[string]string) (*metal3v1alpha1.BareMetalHostList, error) {
+func GetBmhHosts(
+	ctx context.Context,
+	r ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) (*metal3v1alpha1.BareMetalHostList, error) {
 
 	bmhHostsList := &metal3v1alpha1.BareMetalHostList{}
 
@@ -38,7 +43,7 @@ func GetBmhHosts(r ReconcilerCommon, namespace string, labelSelector map[string]
 		listOpts = append(listOpts, labels)
 	}
 
-	err := r.GetClient().List(context.TODO(), bmhHostsList, listOpts...)
+	err := r.GetClient().List(ctx, bmhHostsList, listOpts...)
 	if err != nil {
 		return bmhHostsList, err
 	}
@@ -47,11 +52,16 @@ func GetBmhHosts(r ReconcilerCommon, namespace string, labelSelector map[string]
 }
 
 // GetDeletionAnnotatedBmhHosts -
-func GetDeletionAnnotatedBmhHosts(r ReconcilerCommon, namespace string, labelSelector map[string]string) ([]string, error) {
+func GetDeletionAnnotatedBmhHosts(
+	ctx context.Context,
+	r ReconcilerCommon,
+	namespace string,
+	labelSelector map[string]string,
+) ([]string, error) {
 
 	annotatedBMHs := []string{}
 
-	baremetalHostList, err := GetBmhHosts(r, namespace, labelSelector)
+	baremetalHostList, err := GetBmhHosts(ctx, r, namespace, labelSelector)
 	if err != nil {
 		return annotatedBMHs, err
 	}

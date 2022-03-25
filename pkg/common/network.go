@@ -25,7 +25,11 @@ import (
 )
 
 // GetAllNetworkAttachmentDefinitions - get all NetworkAttachmentDefinition
-func GetAllNetworkAttachmentDefinitions(r ReconcilerCommon, obj metav1.Object) (map[string]networkv1.NetworkAttachmentDefinition, error) {
+func GetAllNetworkAttachmentDefinitions(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+) (map[string]networkv1.NetworkAttachmentDefinition, error) {
 
 	nadMap := make(map[string]networkv1.NetworkAttachmentDefinition)
 
@@ -35,7 +39,7 @@ func GetAllNetworkAttachmentDefinitions(r ReconcilerCommon, obj metav1.Object) (
 		client.InNamespace(obj.GetNamespace()),
 	}
 
-	err := r.GetClient().List(context.TODO(), nadList, nadListOpts...)
+	err := r.GetClient().List(ctx, nadList, nadListOpts...)
 	if err != nil {
 		return nadMap, err
 	}

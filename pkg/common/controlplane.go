@@ -30,7 +30,11 @@ import (
 )
 
 // GetControlPlane -
-func GetControlPlane(r ReconcilerCommon, obj metav1.Object) (ospdirectorv1beta1.OpenStackControlPlane, reconcile.Result, error) {
+func GetControlPlane(
+	ctx context.Context,
+	r ReconcilerCommon,
+	obj metav1.Object,
+) (ospdirectorv1beta1.OpenStackControlPlane, reconcile.Result, error) {
 
 	controlPlane := ospdirectorv1beta1.OpenStackControlPlane{}
 
@@ -41,7 +45,7 @@ func GetControlPlane(r ReconcilerCommon, obj metav1.Object) (ospdirectorv1beta1.
 		client.InNamespace(obj.GetNamespace()),
 		client.Limit(1000),
 	}
-	err := r.GetClient().List(context.TODO(), controlPlaneList, controlPlaneListOpts...)
+	err := r.GetClient().List(ctx, controlPlaneList, controlPlaneListOpts...)
 	if err != nil {
 		return controlPlane, ctrl.Result{}, err
 	}
