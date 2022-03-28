@@ -201,13 +201,9 @@ func (r *OpenStackControlPlane) Default() {
 		if err != nil {
 			controlplanelog.Error(err, fmt.Sprintf("error adding OpenStackNetConfig reference label on %s - %s: %s", r.Kind, r.Name, err))
 		}
-		if !equality.Semantic.DeepEqual(
-			labels,
-			r.GetLabels(),
-		) {
-			r.SetLabels(labels)
-			controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
-		}
+
+		r.SetLabels(labels)
+		controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
 	}
 
 	//
