@@ -27,8 +27,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackConfigVersion is the Schema for the openstackconfigversions
-          API
+        description: OpenStackConfigVersion represents a set of executable Ansible
+          playbooks
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

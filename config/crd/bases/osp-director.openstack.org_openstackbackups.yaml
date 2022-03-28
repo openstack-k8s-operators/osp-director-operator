@@ -1158,8 +1158,8 @@ spec:
                         type: string
                       items:
                         items:
-                          description: OpenStackMACAddress is the Schema for the openstackmacaddresses
-                            API
+                          description: OpenStackMACAddress represents Mac address
+                            reservations for static OVN bridge mappings
                           properties:
                             apiVersion:
                               description: 'APIVersion defines the versioned schema
@@ -1399,8 +1399,9 @@ spec:
                         type: string
                       items:
                         items:
-                          description: OpenStackNetAttachment is the Schema for the
-                            openstacknetattachments API
+                          description: OpenStackNetAttachment are used to describe
+                            the node network configuration policy and configured as
+                            part of OSNetConfig resources
                           properties:
                             apiVersion:
                               description: 'APIVersion defines the versioned schema
@@ -1634,8 +1635,9 @@ spec:
                         type: string
                       items:
                         items:
-                          description: OpenStackNetConfig is the Schema for the openstacknetconfigs
-                            API
+                          description: OpenStackNetConfig high level CRD to specify
+                            openstacknetattachments and openstacknets to describe
+                            the full network configuration
                           properties:
                             apiVersion:
                               description: 'APIVersion defines the versioned schema
@@ -2429,8 +2431,8 @@ spec:
                         type: string
                       items:
                         items:
-                          description: OpenStackProvisionServer is the Schema for
-                            the openstackprovisionservers API
+                          description: OpenStackProvisionServer used to serve custom
+                            images for baremetal provisioning with Metal3
                           properties:
                             apiVersion:
                               description: 'APIVersion defines the versioned schema

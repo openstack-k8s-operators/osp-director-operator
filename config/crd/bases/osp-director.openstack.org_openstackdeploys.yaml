@@ -28,7 +28,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackDeploy is the Schema for the openstackdeploys API
+        description: OpenStackDeploy executes a set of Ansible playbooks for the supplied
+          OSConfigVersion
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

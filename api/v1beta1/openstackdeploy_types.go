@@ -117,7 +117,7 @@ type OpenStackDeployStatus struct {
 //+operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Deploy"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
-// OpenStackDeploy is the Schema for the openstackdeploys API
+// OpenStackDeploy executes a set of Ansible playbooks for the supplied OSConfigVersion
 type OpenStackDeploy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

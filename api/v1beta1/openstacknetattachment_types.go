@@ -127,7 +127,7 @@ func (instance *OpenStackNetAttachment) IsReady() bool {
 //+operator-sdk:csv:customresourcedefinitions:displayName="OpenStack NetAttachment"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentState`,description="Status"
 
-// OpenStackNetAttachment is the Schema for the openstacknetattachments API
+// OpenStackNetAttachment are used to describe the node network configuration policy and configured as part of OSNetConfig resources
 type OpenStackNetAttachment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

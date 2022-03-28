@@ -39,8 +39,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackBackupRequest is the Schema for the openstackbackuprequests
-          API
+        description: OpenStackBackupRequest a request to backup the OpenStack Director
+          Operator
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

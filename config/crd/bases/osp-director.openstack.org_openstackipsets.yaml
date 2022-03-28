@@ -44,7 +44,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackIPSet is the Schema for the openstackipsets API
+        description: OpenStackIPSet a resource to request a set of IPs for the given
+          networks
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

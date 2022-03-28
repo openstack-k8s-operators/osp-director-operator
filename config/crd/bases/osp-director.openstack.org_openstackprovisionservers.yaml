@@ -31,8 +31,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
-          API
+        description: OpenStackProvisionServer used to serve custom images for baremetal
+          provisioning with Metal3
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

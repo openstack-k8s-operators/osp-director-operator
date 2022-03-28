@@ -110,7 +110,7 @@ func (instance *OpenStackProvisionServer) IsReady() bool {
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.provisioningStatus.state",description="Status"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.provisioningStatus.reason",description="Reason"
 
-// OpenStackProvisionServer is the Schema for the openstackprovisionservers API
+// OpenStackProvisionServer used to serve custom images for baremetal provisioning with Metal3
 type OpenStackProvisionServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

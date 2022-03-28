@@ -29,8 +29,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackNetAttachment is the Schema for the openstacknetattachments
-          API
+        description: OpenStackNetAttachment are used to describe the node network
+          configuration policy and configured as part of OSNetConfig resources
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

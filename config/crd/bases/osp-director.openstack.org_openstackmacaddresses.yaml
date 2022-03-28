@@ -32,8 +32,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OpenStackMACAddress is the Schema for the openstackmacaddresses
-          API
+        description: OpenStackMACAddress represents Mac address reservations for static
+          OVN bridge mappings
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
