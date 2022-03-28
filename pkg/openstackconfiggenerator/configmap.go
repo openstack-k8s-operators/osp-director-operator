@@ -27,6 +27,7 @@ import (
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
+	"github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -353,9 +354,7 @@ func createNetworksMap(
 // IsRoleIncluded - checks if the role exists in the ConfigGenerator Roles set
 func IsRoleIncluded(roleName string, instance *ospdirectorv1beta1.OpenStackConfigGenerator) bool {
 
-	if len(instance.Spec.Roles) == 0 {
-		return true
-	} else if roleName == "ControlPlane" {
+	if len(instance.Spec.Roles) == 0 || roleName == controlplane.Role {
 		return true
 	}
 	for _, r := range instance.Spec.Roles {
