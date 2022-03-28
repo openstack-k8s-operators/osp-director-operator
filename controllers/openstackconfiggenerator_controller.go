@@ -879,7 +879,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 			Type:               common.TemplateTypeConfig,
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{},
-			CustomData: common.MergeStringMaps(
+			CustomData: ospdirectorv1beta1.MergeStringMaps(
 				roleNicTemplates,
 				fencingTemplate,
 			),

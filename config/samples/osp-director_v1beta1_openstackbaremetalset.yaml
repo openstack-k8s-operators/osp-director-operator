@@ -8,6 +8,8 @@ spec:
   count: 1
   # The image to install on the provisioned nodes
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  # use this provisionServerName instead of creating a new one use baseImageUrl
+  provisionServerName: openstack
   # The secret containing the SSH pub key to place on the provisioned nodes
   deploymentSSHSecret: osp-controlplane-ssh-keys
   # Networks to associate with this host
@@ -21,7 +23,7 @@ spec:
   # to the secret data
   passwordSecret: userpassword
   # The interface on the nodes that will be assigned an IP from the ctlCidr
-  ctlplaneInterface: enp7s0
+  ctlplaneInterface: enp1s0
   # Arbitrary label selector for BaremetalHosts (optional)
   bmhLabelSelector:
     arbitraryKey: arbitraryValue

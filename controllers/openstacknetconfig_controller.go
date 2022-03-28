@@ -401,7 +401,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		//
 		// verify object has OpenStackNetConfigReconcileLabel
 		//
-		reconcileCR, ok := labels[openstacknetconfig.OpenStackNetConfigReconcileLabel]
+		reconcileCR, ok := labels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]
 		if !ok {
 			return []reconcile.Request{}
 		}
@@ -444,7 +444,7 @@ func (r *OpenStackNetConfigReconciler) applyNetAttachmentConfig(
 	attachConfig.Namespace = instance.Namespace
 
 	apply := func() error {
-		common.InitMap(&attachConfig.Labels)
+		ospdirectorv1beta1.InitMap(&attachConfig.Labels)
 		attachConfig.Labels[common.OwnerUIDLabelSelector] = string(instance.UID)
 		attachConfig.Labels[common.OwnerNameLabelSelector] = instance.Name
 		attachConfig.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
@@ -612,15 +612,15 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 	}
 
 	apply := func() error {
-		common.InitMap(&osNet.Labels)
+		ospdirectorv1beta1.InitMap(&osNet.Labels)
 		osNet.Labels[common.OwnerUIDLabelSelector] = string(instance.UID)
 		osNet.Labels[common.OwnerNameLabelSelector] = instance.Name
 		osNet.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
 		osNet.Labels[common.OwnerControllerNameLabelSelector] = openstacknetconfig.AppLabel
-		osNet.Labels[openstacknet.NetworkNameLabelSelector] = net.Name
-		osNet.Labels[openstacknet.NetworkNameLowerLabelSelector] = net.NameLower
-		osNet.Labels[openstacknet.SubNetNameLabelSelector] = subnet.Name
-		osNet.Labels[openstacknet.ControlPlaneNetworkLabelSelector] = strconv.FormatBool(net.IsControlPlane)
+		osNet.Labels[ospdirectorv1beta1.NetworkNameLabelSelector] = net.Name
+		osNet.Labels[ospdirectorv1beta1.NetworkNameLowerLabelSelector] = net.NameLower
+		osNet.Labels[ospdirectorv1beta1.SubNetNameLabelSelector] = subnet.Name
+		osNet.Labels[ospdirectorv1beta1.ControlPlaneNetworkLabelSelector] = strconv.FormatBool(net.IsControlPlane)
 
 		osNet.Spec.AttachConfiguration = subnet.AttachConfiguration
 		osNet.Spec.MTU = net.MTU
@@ -826,7 +826,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	// get all IPsets
 	//
 	labelSelector := map[string]string{
-		openstacknetconfig.OpenStackNetConfigReconcileLabel: instance.Name,
+		ospdirectorv1beta1.OpenStackNetConfigReconcileLabel: instance.Name,
 	}
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
@@ -1189,7 +1189,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 
 	// reduce object scope by limit to the added name_lower network label
 	labelSelector := map[string]string{
-		fmt.Sprintf("%s/%s", openstacknet.SubNetNameLabelSelector, osNet.Spec.NameLower): strconv.FormatBool(true),
+		fmt.Sprintf("%s/%s", ospdirectorv1beta1.SubNetNameLabelSelector, osNet.Spec.NameLower): strconv.FormatBool(true),
 	}
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),

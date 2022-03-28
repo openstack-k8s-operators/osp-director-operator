@@ -244,6 +244,7 @@ spec:
                                     type: string
                                   type: array
                                 count:
+                                  default: 0
                                   description: Count The number of baremetalhosts
                                     to attempt to aquire
                                   minimum: 0

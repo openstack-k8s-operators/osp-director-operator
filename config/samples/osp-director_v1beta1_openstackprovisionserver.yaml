@@ -6,3 +6,4 @@ metadata:
 spec:
   port: 8080
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  interface: br-ctlplane

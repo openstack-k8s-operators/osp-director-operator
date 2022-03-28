@@ -1,93 +1,15 @@
 package openstacknetconfig
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
-	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-//
-// AddOSNetConfigRefLabel - add osnetcfg CR label reference which is used in
-// the in the osnetcfg controller to watch this resource and reconcile
-//
-func AddOSNetConfigRefLabel(
-	ctx context.Context,
-	r common.ReconcilerCommon,
-	obj client.Object,
-	cond *ospdirectorv1beta1.Condition,
-	subnetName string,
-) (map[string]string, reconcile.Result, error) {
-	labels := obj.GetLabels()
-
-	//
-	// only add label if it is not already there
-	// Note, any rename of the osnetcfg won't be reflected
-	//
-	if _, ok := obj.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
-		//
-		// Get OSnet with SubNetNameLabelSelector: subnetName
-		//
-		labelSelector := map[string]string{
-			openstacknet.SubNetNameLabelSelector: subnetName,
-		}
-		osnet, err := openstacknet.GetOpenStackNetWithLabel(ctx, r, obj.GetNamespace(), labelSelector)
-		if err != nil && k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetNotFound)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
-			common.LogForObject(r, cond.Message, obj)
-
-			return labels, ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-		} else if err != nil {
-			cond.Message = fmt.Sprintf("Failed to get OpenStackNet %s ", subnetName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonOSNetError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
-			err = common.WrapErrorForObject(cond.Message, obj, err)
-
-			return labels, ctrl.Result{}, err
-		}
-
-		//
-		// get ownerReferences entry with Kind OpenStackNetConfig
-		//
-		for _, ownerRef := range osnet.ObjectMeta.OwnerReferences {
-			if ownerRef.Kind == "OpenStackNetConfig" {
-				//
-				// merge with obj labels
-				//
-				labels = common.MergeStringMaps(
-					labels,
-					map[string]string{
-						OpenStackNetConfigReconcileLabel: ownerRef.Name,
-					},
-				)
-
-				common.LogForObject(
-					r,
-					fmt.Sprintf("%s updated with %s:%s label",
-						obj.GetName(),
-						OpenStackNetConfigReconcileLabel,
-						ownerRef.Name,
-					),
-					obj,
-				)
-				break
-			}
-		}
-	}
-
-	return labels, ctrl.Result{}, nil
-}
 
 //
 // WaitOnIPsCreated - Wait for IPs created on all configured networks

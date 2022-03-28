@@ -36,5 +36,5 @@ status:
       hostRef: somecustomrole-0
       hostname: somecustomrole-0
       ipaddresses:
-        ctlplane: 192.168.25.100/24
+        ctlplane: 172.22.0.100/24
       provisioningState: Provisioned

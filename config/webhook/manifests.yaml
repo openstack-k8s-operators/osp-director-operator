@@ -13,6 +13,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackbaremetalset
+  failurePolicy: Fail
+  name: mopenstackbaremetalset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackbaremetalsets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-osp-director-openstack-org-v1beta1-openstackclient
   failurePolicy: Fail
   name: mopenstackclient.kb.io
@@ -118,6 +139,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackipset
+  failurePolicy: Fail
+  name: mopenstackipset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackipsets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-osp-director-openstack-org-v1beta1-openstacknet
   failurePolicy: Fail
   name: mopenstacknet.kb.io
@@ -194,6 +236,27 @@ webhooks:
     - UPDATE
     resources:
     - openstackprovisionservers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-osp-director-openstack-org-v1beta1-openstackvmset
+  failurePolicy: Fail
+  name: mopenstackvmset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackvmsets
   sideEffects: None
 
 ---
@@ -272,6 +335,28 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-openstackclient
+  failurePolicy: Fail
+  name: vopenstackclient.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - openstackclients
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-osp-director-openstack-org-v1beta1-openstackcontrolplane
   failurePolicy: Fail
   name: vopenstackcontrolplane.kb.io
@@ -286,6 +371,27 @@ webhooks:
     - DELETE
     resources:
     - openstackcontrolplanes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-osp-director-openstack-org-v1beta1-openstackipset
+  failurePolicy: Fail
+  name: vopenstackipset.kb.io
+  rules:
+  - apiGroups:
+    - osp-director.openstack.org
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - openstackipsets
   sideEffects: None
 - admissionReviewVersions:
   - v1

@@ -42,7 +42,6 @@ import (
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -232,25 +231,28 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	var ctrlResult ctrl.Result
 
 	currentLabels := instance.DeepCopy().Labels
+
 	//
+	// Only kept for running local
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
-		ctx,
-		r,
-		instance,
-		cond,
-		instance.Spec.Networks[0],
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
+		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
+		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			instance.Namespace,
+			instance.Spec.Networks[0],
+			currentLabels,
+		)
+		if err != nil {
+			return ctrlResult, err
+		}
 	}
 
 	//
 	// add labels of all networks used by this CR
 	//
-	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	instance.Labels = ospdirectorv1beta1.AddOSNetNameLowerLabels(r.GetLogger(), instance.Labels, instance.Spec.Networks)
 
 	//
 	// update instance to sync labels if changed
@@ -597,13 +599,11 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 	netNameLower := "ctlplane"
 	// get network with name_lower label
 	labelSelector := map[string]string{
-		openstacknet.SubNetNameLabelSelector: netNameLower,
+		ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 	}
 
 	// get ctlplane network
-	network, err := openstacknet.GetOpenStackNetWithLabel(
-		ctx,
-		r,
+	network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 		instance.Namespace,
 		labelSelector,
 	)
@@ -923,11 +923,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 
 			// get network with name_lower label
 			labelSelector := map[string]string{
-				openstacknet.SubNetNameLabelSelector: netNameLower,
+				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 			}
-			network, err := openstacknet.GetOpenStackNetWithLabel(
-				ctx,
-				r,
+			network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 				instance.Namespace,
 				labelSelector,
 			)
@@ -1120,12 +1118,10 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
 
 		// get network with name_lower label
-		network, err := openstacknet.GetOpenStackNetWithLabel(
-			ctx,
-			r,
+		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 			instance.Namespace,
 			map[string]string{
-				openstacknet.SubNetNameLabelSelector: netNameLower,
+				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 			},
 		)
 		if err != nil {

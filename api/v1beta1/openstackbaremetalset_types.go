@@ -27,6 +27,7 @@ type HardwareReqType string
 type OpenStackBaremetalSetSpec struct {
 	// Count The number of baremetalhosts to attempt to aquire
 	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=0
 	Count int `json:"count,omitempty"`
 	// Remote URL pointing to desired RHEL qcow2 image
 	BaseImageURL string `json:"baseImageUrl,omitempty"`

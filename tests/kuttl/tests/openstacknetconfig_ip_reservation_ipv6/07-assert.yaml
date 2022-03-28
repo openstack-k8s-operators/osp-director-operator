@@ -126,7 +126,6 @@ metadata:
 spec:
   domainName: ostest.test.metalkube.org
   enableFencing: false
-  gitSecret: git-secret
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
@@ -161,7 +160,7 @@ status:
       hostname: controlplane
       ipaddresses:
         ctlplane: 2001:db8:fd00:2000::10/64
-      provisioningState: Provisioned
+      provisioningState: Created
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackVMSet
@@ -232,7 +231,6 @@ spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
   domainName: ostest.test.metalkube.org
-  gitSecret: git-secret
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane

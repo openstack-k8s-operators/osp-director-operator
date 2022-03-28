@@ -4,6 +4,29 @@ metadata:
   name: openstacknetconfig
 spec:
   attachConfigurations:
+    br-ctlplane:
+      nodeNetworkConfigurationPolicy:
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp1s0
+            description: Linux bridge with enp1s0 as a port
+            name: br-ctlplane
+            type: linux-bridge
+            state: up
+            ipv4:
+              dhcp: true
+              enabled: true
+            ipv6:
+              dhcp: true
+              enabled: true
+            mtu: 1500
     br-osp:
       nodeNetworkConfigurationPolicy:
         nodeSelector:
@@ -18,9 +41,22 @@ spec:
               - name: enp7s0
             description: Linux bridge with enp7s0 as a port
             name: br-osp
-            state: up
             type: linux-bridge
-            mtu: 1500
+            state: up
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
+            mtu: 9000
+          - name: enp7s0
+            description: Configuring enp7s0 on workers
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
+            mtu: 9000
     br-ex:
       nodeNetworkConfigurationPolicy:
         nodeSelector:
@@ -35,23 +71,27 @@ spec:
               - name: enp6s0
             description: Linux bridge with enp6s0 as a port
             name: br-ex
-            state: up
             type: linux-bridge
+            state: up
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
             mtu: 1500
+  dnsServers: ['172.22.0.1']
   networks:
   - name: Control
     nameLower: ctlplane
     subnets:
     - name: ctlplane
       ipv4:
-        allocationEnd: 192.168.25.250
-        allocationStart: 192.168.25.100
-        cidr: 192.168.25.0/24
-        gateway: 192.168.25.1
-      attachConfiguration: br-osp
+        allocationEnd: 172.22.0.250
+        allocationStart: 172.22.0.100
+        cidr: 172.22.0.0/24
+        gateway: 172.22.0.1
+      attachConfiguration: br-ctlplane
   - name: InternalApi
     nameLower: internal_api
-    mtu: 1350
     subnets:
     - name: internal_api
       ipv4:
@@ -72,7 +112,7 @@ spec:
       attachConfiguration: br-ex
   - name: Storage
     nameLower: storage
-    mtu: 1350
+    mtu: 9000
     subnets:
     - name: storage
       ipv4:
@@ -83,7 +123,6 @@ spec:
       attachConfiguration: br-osp
   - name: StorageMgmt
     nameLower: storage_mgmt
-    mtu: 1350
     subnets:
     - name: storage_mgmt
       ipv4:
@@ -95,7 +134,7 @@ spec:
   - name: Tenant
     nameLower: tenant
     vip: False
-    mtu: 1350
+    mtu: 9000
     subnets:
     - name: tenant
       ipv4:
@@ -114,7 +153,7 @@ spec:
   reservations:
     compute-0:
       ipReservations:
-        ctlplane: 192.168.25.40
+        ctlplane: 172.22.0.140
         internal_api: 172.17.0.40
         storage: 172.18.0.40
         tenant: 172.20.0.40
@@ -123,7 +162,7 @@ spec:
         datacentre2: fa:16:3b:bb:bb:bb
     controller-0:
       ipReservations:
-        ctlplane: 192.168.25.20
+        ctlplane: 172.22.0.120
         external: 10.0.0.20
         internal_api: 172.17.0.20
         storage: 172.18.0.20
@@ -134,7 +173,7 @@ spec:
         datacentre2: fa:16:3b:aa:aa:aa
     controller-1:
       ipReservations:
-        ctlplane: 192.168.25.21
+        ctlplane: 172.22.0.121
         external: 10.0.0.21
         internal_api: 172.17.0.21
         storage: 172.18.0.21
@@ -145,7 +184,7 @@ spec:
         datacentre2: fa:16:3b:aa:aa:bb
     controller-2:
       ipReservations:
-        ctlplane: 192.168.25.22
+        ctlplane: 172.22.0.122
         external: 10.0.0.22
         internal_api: 172.17.0.22
         storage: 172.18.0.22
@@ -153,13 +192,13 @@ spec:
         tenant: 172.20.0.22
     controlplane:
       ipReservations:
-        ctlplane: 192.168.25.10
+        ctlplane: 172.22.0.110
         external: 10.0.0.10
         internal_api: 172.17.0.10
         storage: 172.18.0.10
         storage_mgmt: 172.19.0.10
     openstackclient-0:
       ipReservations:
-        ctlplane: 192.168.25.251
+        ctlplane: 172.22.0.251
         external: 10.0.0.251
         internal_api: 172.17.0.251

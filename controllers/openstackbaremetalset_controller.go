@@ -47,8 +47,6 @@ import (
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackipset "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackipset"
-	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
-	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
 )
 
@@ -234,25 +232,28 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 
 	var ctrlResult reconcile.Result
 	currentLabels := instance.DeepCopy().Labels
+
 	//
+	// Only kept for running local
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	instance.Labels, ctrlResult, err = openstacknetconfig.AddOSNetConfigRefLabel(
-		ctx,
-		r,
-		instance,
-		cond,
-		instance.Spec.Networks[0],
-	)
-	if (err != nil) || (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
+	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
+		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
+		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			instance.Namespace,
+			instance.Spec.Networks[0],
+			currentLabels,
+		)
+		if err != nil {
+			return ctrlResult, err
+		}
 	}
 
 	//
 	// add labels of all networks used by this CR
 	//
-	instance.Labels = openstacknet.AddOSNetNameLowerLabels(r, instance, cond, instance.Spec.Networks)
+	instance.Labels = ospdirectorv1beta1.AddOSNetNameLowerLabels(r.GetLogger(), instance.Labels, instance.Spec.Networks)
 
 	//
 	// update instance to sync labels if changed
@@ -956,13 +957,11 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	netNameLower := "ctlplane"
 	// get network with name_lower label
 	labelSelector := map[string]string{
-		openstacknet.SubNetNameLabelSelector: netNameLower,
+		ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 	}
 
 	// get ctlplane network
-	ctlPlaneNetwork, err := openstacknet.GetOpenStackNetWithLabel(
-		ctx,
-		r,
+	ctlPlaneNetwork, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 		instance.Namespace,
 		labelSelector,
 	)

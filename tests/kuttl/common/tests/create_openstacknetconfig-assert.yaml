@@ -17,6 +17,37 @@ metadata:
   namespace: openstack
 spec:
   attachConfigurations:
+    br-ctlplane:
+      nodeNetworkConfigurationPolicy:
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp1s0
+            description: Linux bridge with enp1s0 as a port
+            ipv4:
+              dhcp: true
+              enabled: true
+            ipv6:
+              dhcp: true
+              enabled: true
+            mtu: 1500
+            name: br-ctlplane
+            state: up
+            type: linux-bridge
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+      nodeSriovConfigurationPolicy:
+        desiredState:
+          deviceType: vfio-pci
+          mtu: 9000
+          numVfs: 0
+          port: ""
+          spoofCheck: "on"
+          trust: "off"
     br-ex:
       nodeNetworkConfigurationPolicy:
         desiredState:
@@ -28,6 +59,10 @@ spec:
               port:
               - name: enp6s0
             description: Linux bridge with enp6s0 as a port
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
             mtu: 1500
             name: br-ex
             state: up
@@ -53,10 +88,23 @@ spec:
               port:
               - name: enp7s0
             description: Linux bridge with enp7s0 as a port
-            mtu: 1500
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
+            mtu: 9000
             name: br-osp
             state: up
             type: linux-bridge
+          - description: Configuring enp7s0 on workers
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: false
+            mtu: 9000
+            name: enp7s0
+            state: up
+            type: ethernet
         nodeSelector:
           node-role.kubernetes.io/worker: ""
       nodeSriovConfigurationPolicy:
@@ -67,7 +115,8 @@ spec:
           port: ""
           spoofCheck: "on"
           trust: "off"
-  dnsServers: []
+  dnsServers:
+  - 172.22.0.1
   domainName: localdomain
   networks:
   - isControlPlane: true
@@ -75,12 +124,12 @@ spec:
     name: Control
     nameLower: ctlplane
     subnets:
-    - attachConfiguration: br-osp
+    - attachConfiguration: br-ctlplane
       ipv4:
-        allocationEnd: 192.168.25.250
-        allocationStart: 192.168.25.100
-        cidr: 192.168.25.0/24
-        gateway: 192.168.25.1
+        allocationEnd: 172.22.0.250
+        allocationStart: 172.22.0.100
+        cidr: 172.22.0.0/24
+        gateway: 172.22.0.1
       ipv6:
         allocationEnd: ""
         allocationStart: ""
@@ -90,7 +139,7 @@ spec:
       vlan: 0
     vip: true
   - isControlPlane: false
-    mtu: 1350
+    mtu: 1500
     name: InternalApi
     nameLower: internal_api
     subnets:
@@ -128,7 +177,7 @@ spec:
       vlan: 0
     vip: true
   - isControlPlane: false
-    mtu: 1350
+    mtu: 9000
     name: Storage
     nameLower: storage
     subnets:
@@ -147,7 +196,7 @@ spec:
       vlan: 30
     vip: true
   - isControlPlane: false
-    mtu: 1350
+    mtu: 1500
     name: StorageMgmt
     nameLower: storage_mgmt
     subnets:
@@ -166,7 +215,7 @@ spec:
       vlan: 40
     vip: true
   - isControlPlane: false
-    mtu: 1350
+    mtu: 9000
     name: Tenant
     nameLower: tenant
     subnets:
@@ -194,7 +243,7 @@ spec:
   reservations:
     compute-0:
       ipReservations:
-        ctlplane: 192.168.25.40
+        ctlplane: 172.22.0.140
         internal_api: 172.17.0.40
         storage: 172.18.0.40
         tenant: 172.20.0.40
@@ -203,7 +252,7 @@ spec:
         datacentre2: fa:16:3b:bb:bb:bb
     controller-0:
       ipReservations:
-        ctlplane: 192.168.25.20
+        ctlplane: 172.22.0.120
         external: 10.0.0.20
         internal_api: 172.17.0.20
         storage: 172.18.0.20
@@ -214,7 +263,7 @@ spec:
         datacentre2: fa:16:3b:aa:aa:aa
     controller-1:
       ipReservations:
-        ctlplane: 192.168.25.21
+        ctlplane: 172.22.0.121
         external: 10.0.0.21
         internal_api: 172.17.0.21
         storage: 172.18.0.21
@@ -225,7 +274,7 @@ spec:
         datacentre2: fa:16:3b:aa:aa:bb
     controller-2:
       ipReservations:
-        ctlplane: 192.168.25.22
+        ctlplane: 172.22.0.122
         external: 10.0.0.22
         internal_api: 172.17.0.22
         storage: 172.18.0.22
@@ -234,7 +283,7 @@ spec:
       macReservations: {}
     controlplane:
       ipReservations:
-        ctlplane: 192.168.25.10
+        ctlplane: 172.22.0.110
         external: 10.0.0.10
         internal_api: 172.17.0.10
         storage: 172.18.0.10
@@ -242,20 +291,67 @@ spec:
       macReservations: {}
     openstackclient-0:
       ipReservations:
-        ctlplane: 192.168.25.251
+        ctlplane: 172.22.0.251
         external: 10.0.0.251
         internal_api: 172.17.0.251
       macReservations: {}
 status:
   provisioningStatus:
-    attachDesiredCount: 2
-    attachReadyCount: 2
+    attachDesiredCount: 3
+    attachReadyCount: 3
     netDesiredCount: 6
     netReadyCount: 6
     physNetDesiredCount: 2
     physNetReadyCount: 2
     reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetAttachment
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    bridge: br-ctlplane
+    ooo-attach-reference: br-ctlplane
+    ooo-attach-type: bridge
+    osp-director.openstack.org/controller: osp-openstacknetconfig
+    osp-director.openstack.org/name: openstacknetconfig
+    osp-director.openstack.org/namespace: openstack
+  name: br-ctlplane-bridge
+  namespace: openstack
+spec:
+  attachConfiguration:
+    nodeNetworkConfigurationPolicy:
+      desiredState:
+        interfaces:
+        - bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+            - name: enp1s0
+          description: Linux bridge with enp1s0 as a port
+          ipv4:
+            dhcp: true
+            enabled: true
+          ipv6:
+            dhcp: true
+            enabled: true
+          mtu: 1500
+          name: br-ctlplane
+          state: up
+          type: linux-bridge
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+    nodeSriovConfigurationPolicy:
+      desiredState:
+        deviceType: vfio-pci
+        mtu: 9000
+        numVfs: 0
+        port: ""
+        spoofCheck: "on"
+        trust: "off"
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNetAttachment
@@ -283,6 +379,10 @@ spec:
             port:
             - name: enp6s0
           description: Linux bridge with enp6s0 as a port
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
           mtu: 1500
           name: br-ex
           state: up
@@ -324,10 +424,23 @@ spec:
             port:
             - name: enp7s0
           description: Linux bridge with enp7s0 as a port
-          mtu: 1500
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+          mtu: 9000
           name: br-osp
           state: up
           type: linux-bridge
+        - description: Configuring enp7s0 on workers
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+          mtu: 9000
+          name: enp7s0
+          state: up
+          type: ethernet
       nodeSelector:
         node-role.kubernetes.io/worker: ""
     nodeSriovConfigurationPolicy:
@@ -338,6 +451,49 @@ spec:
         port: ""
         spoofCheck: "on"
         trust: "off"
+---
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  finalizers:
+  - openstacknetattachment
+  labels:
+    ooo-bridge: br-ctlplane
+    osp-director.openstack.org/controller: osp-openstacknetattach
+    osp-director.openstack.org/name: br-ctlplane-bridge
+    osp-director.openstack.org/namespace: openstack
+  name: br-ctlplane
+spec:
+  desiredState:
+    interfaces:
+    - bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: enp1s0
+      description: Linux bridge with enp1s0 as a port
+      ipv4:
+        dhcp: true
+        enabled: true
+      ipv6:
+        dhcp: true
+        enabled: true
+      mtu: 1500
+      name: br-ctlplane
+      state: up
+      type: linux-bridge
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+status:
+  conditions:
+  - message: 3/3 nodes successfully configured
+    reason: SuccessfullyConfigured
+    status: "True"
+    type: Available
+  - reason: SuccessfullyConfigured
+    status: "False"
+    type: Degraded
 ---
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
@@ -360,6 +516,11 @@ spec:
         port:
         - name: enp6s0
       description: Linux bridge with enp6s0 as a port
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 1500
       name: br-ex
       state: up
       type: linux-bridge
@@ -367,7 +528,8 @@ spec:
     node-role.kubernetes.io/worker: ""
 status:
   conditions:
-  - reason: SuccessfullyConfigured
+  - message: 3/3 nodes successfully configured
+    reason: SuccessfullyConfigured
     status: "True"
     type: Available
   - reason: SuccessfullyConfigured
@@ -395,14 +557,29 @@ spec:
         port:
         - name: enp7s0
       description: Linux bridge with enp7s0 as a port
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 9000
       name: br-osp
       state: up
       type: linux-bridge
+    - description: Configuring enp7s0 on workers
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 9000
+      name: enp7s0
+      state: up
+      type: ethernet
   nodeSelector:
     node-role.kubernetes.io/worker: ""
 status:
   conditions:
-  - reason: SuccessfullyConfigured
+  - message: 3/3 nodes successfully configured
+    reason: SuccessfullyConfigured
     status: "True"
     type: Available
   - reason: SuccessfullyConfigured
@@ -425,12 +602,12 @@ metadata:
   name: ctlplane
   namespace: openstack
 spec:
-  allocationEnd: 192.168.25.250
-  allocationStart: 192.168.25.100
-  attachConfiguration: br-osp
-  cidr: 192.168.25.0/24
+  allocationEnd: 172.22.0.250
+  allocationStart: 172.22.0.100
+  attachConfiguration: br-ctlplane
+  cidr: 172.22.0.0/24
   domainName: ctlplane.localdomain
-  gateway: 192.168.25.1
+  gateway: 172.22.0.1
   mtu: 1500
   name: Control
   nameLower: ctlplane
@@ -509,7 +686,7 @@ spec:
   cidr: 172.17.0.0/24
   domainName: internalapi.localdomain
   gateway: ""
-  mtu: 1350
+  mtu: 1500
   name: InternalApi
   nameLower: internal_api
   roleReservations: {}
@@ -548,7 +725,7 @@ spec:
   cidr: 172.18.0.0/24
   domainName: storage.localdomain
   gateway: ""
-  mtu: 1350
+  mtu: 9000
   name: Storage
   nameLower: storage
   roleReservations: {}
@@ -587,7 +764,7 @@ spec:
   cidr: 172.19.0.0/24
   domainName: storagemgmt.localdomain
   gateway: ""
-  mtu: 1350
+  mtu: 1500
   name: StorageMgmt
   nameLower: storage_mgmt
   roleReservations: {}
@@ -626,7 +803,7 @@ spec:
   cidr: 172.20.0.0/24
   domainName: tenant.localdomain
   gateway: ""
-  mtu: 1350
+  mtu: 9000
   name: Tenant
   nameLower: tenant
   roleReservations: {}

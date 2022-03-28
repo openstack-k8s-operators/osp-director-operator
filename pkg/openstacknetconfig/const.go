@@ -22,8 +22,4 @@ const (
 
 	// FinalizerName -
 	FinalizerName = "openstacknetconfig.osp-director.openstack.org"
-
-	// OpenStackNetConfigReconcileLabel - label set on objects on which change
-	// trigger a reconcile of the osnetconfig
-	OpenStackNetConfigReconcileLabel = "osnetconfig-reconcile-dep"
 )

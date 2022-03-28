@@ -9,5 +9,5 @@ commands:
       oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-1", "value": {"ipReservations":{}, "macReservations": {}}}]'
     namespaced: true
   - command: |
-      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-1/ipReservations", "value": {"ctlplane": "192.168.25.41" }}]'
+      oc patch -n openstack osnetcfg openstacknetconfig --type='json' -p='[{"op": "add", "path": "/spec/reservations/controller-1/ipReservations", "value": {"ctlplane": "172.22.0.121" }}]'
     namespaced: true

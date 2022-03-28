@@ -93,6 +93,9 @@ var _ = BeforeSuite(func() {
 	err = (&OpenStackNetAttachment{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&OpenStackIPSet{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {
