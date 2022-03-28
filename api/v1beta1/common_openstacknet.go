@@ -167,7 +167,7 @@ func GetOpenStackNetWithLabel(
 	if len(osNetList.Items) == 0 {
 		return nil, k8s_errors.NewNotFound(v1.Resource("openstacknet"), fmt.Sprint(labelSelector))
 	} else if len(osNetList.Items) > 1 {
-		return nil, fmt.Errorf("multiple OpenStackNet with label %v not found", labelSelector)
+		return nil, fmt.Errorf("multiple OpenStackNet with label %v found", labelSelector)
 	}
 	return &osNetList.Items[0], nil
 }

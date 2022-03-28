@@ -27,8 +27,8 @@ spec:
       kind: ProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackBackupRequest is the Schema for the openstackbackuprequests
-        API
+    - description: OpenStackBackupRequest a request to backup the OpenStack Director
+        Operator
       displayName: OpenStack Backup Request
       kind: OpenStackBackupRequest
       name: openstackbackuprequests.osp-director.openstack.org
@@ -58,8 +58,7 @@ spec:
       kind: OpenStackConfigGenerator
       name: openstackconfiggenerators.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackConfigVersion is the Schema for the openstackconfigversions
-        API
+    - description: OpenStackConfigVersion represents a set of executable Ansible playbooks
       displayName: OpenStack Config Version
       kind: OpenStackConfigVersion
       name: openstackconfigversions.osp-director.openstack.org
@@ -70,35 +69,38 @@ spec:
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackDeploy is the Schema for the openstackdeploys API
+    - description: OpenStackDeploy executes a set of Ansible playbooks for the supplied
+        OSConfigVersion
       displayName: OpenStack Deploy
       kind: OpenStackDeploy
       name: openstackdeploys.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackEphemeralHeat is the Schema for the openstackephemeralheats
-        API
+    - description: OpenStackEphemeralHeat an ephermeral OpenStack Heat deployment
+        used internally by the OSConfigGenerator to generate Ansible playbooks
       displayName: OpenStack Ephemeral Heat
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackIPSet is the Schema for the openstackipsets API
+    - description: OpenStackIPSet a resource to request a set of IPs for the given
+        networks
       displayName: OpenStack IPSet
       kind: OpenStackIPSet
       name: openstackipsets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackMACAddress is the Schema for the openstackmacaddresses
-        API
+    - description: OpenStackMACAddress represents Mac address reservations for static
+        OVN bridge mappings
       displayName: OpenStack MACAddress
       kind: OpenStackMACAddress
       name: openstackmacaddresses.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackNetAttachment is the Schema for the openstacknetattachments
-        API
+    - description: OpenStackNetAttachment are used to describe the node network configuration
+        policy and configured as part of OSNetConfig resources
       displayName: OpenStack NetAttachment
       kind: OpenStackNetAttachment
       name: openstacknetattachments.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackNetConfig is the Schema for the openstacknetconfigs API
+    - description: OpenStackNetConfig high level CRD to specify openstacknetattachments
+        and openstacknets to describe the full network configuration
       displayName: OpenStack NetConfig
       kind: OpenStackNetConfig
       name: openstacknetconfigs.osp-director.openstack.org
@@ -109,8 +111,8 @@ spec:
       kind: OpenStackNet
       name: openstacknets.osp-director.openstack.org
       version: v1beta1
-    - description: OpenStackProvisionServer is the Schema for the openstackprovisionservers
-        API
+    - description: OpenStackProvisionServer used to serve custom images for baremetal
+        provisioning with Metal3
       displayName: OpenStack ProvisionServer
       kind: OpenStackProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org

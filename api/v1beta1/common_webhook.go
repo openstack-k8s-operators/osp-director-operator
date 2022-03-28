@@ -128,7 +128,7 @@ func validateNetworks(namespace string, networks []string) error {
 		}
 		osnet, err := GetOpenStackNetWithLabel(namespace, labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {
-			return fmt.Errorf(fmt.Sprintf("%s %s instance is supported at this time", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
+			return fmt.Errorf(fmt.Sprintf("%s %s not found, validate the object network list!", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
 		} else if err != nil {
 			return fmt.Errorf(fmt.Sprintf("Failed to get %s %s", osnet.Kind, subnetName))
 		}
