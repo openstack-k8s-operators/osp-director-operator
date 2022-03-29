@@ -40,6 +40,10 @@ type OpenStackConfigGeneratorSpec struct {
 	Interactive bool `json:"interactive,omitempty"`
 	// GitSecret the name of the secret used to configure the Git repository url and ssh private key credentials used to store generated Ansible playbooks. This secret should contain an entry for both 'git_url' and 'git_ssh_identity'.
 	GitSecret string `json:"gitSecret"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
+	// Optional. List of Roles used to limit which roles have network information injected during playbook generation. By default the list is empty and all Roles are included for Baremetal/Vmsets within the project.
+	Roles []string `json:"roles,omitempty"`
 }
 
 // OpenStackConfigGeneratorStatus defines the observed state of OpenStackConfigGenerator
