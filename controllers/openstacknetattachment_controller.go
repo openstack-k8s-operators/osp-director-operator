@@ -81,6 +81,7 @@ func (r *OpenStackNetAttachmentReconciler) GetScheme() *runtime.Scheme {
 // FIXME: Cluster-scope required below for now, as the operator watches openshift-machine-api namespace as well
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationenactments,verbs=get;list;watch
 // +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworknodepolicies,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=sriovnetwork.openshift.io,resources=sriovnetworks,verbs=create;delete;get;list;patch;update;watch
 
@@ -247,7 +248,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 
 			instance.Status.AttachType = ospdirectorv1beta1.AttachTypeBridge
 		} else {
-			common.LogForObject(r, fmt.Sprintf("NNCP %s config in progress waiting to be in %s state",
+			common.LogForObject(r, fmt.Sprintf("NodeNetworkConfigurationPolicy %s config in progress waiting to be in %s state",
 				instance.Status.BridgeName,
 				nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured),
 				instance)
@@ -337,6 +338,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 		networkConfigurationPolicy.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
 		networkConfigurationPolicy.Labels[common.OwnerControllerNameLabelSelector] = openstacknetattachment.AppLabel
 		networkConfigurationPolicy.Labels[openstacknetattachment.BridgeLabel] = bridgeName
+		networkConfigurationPolicy.Labels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel] = instance.GetLabels()[common.OwnerNameLabelSelector]
 
 		networkConfigurationPolicy.Spec = instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy
 

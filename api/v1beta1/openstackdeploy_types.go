@@ -95,6 +95,11 @@ type OpenStackDeploySpec struct {
 	// +kubebuilder:validation:Optional
 	// Advanced deployment settings
 	AdvancedSettings OpenStackDeployAdvancedSettingsSpec `json:"advancedSettings,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// Skip NNCP validation to proceed deployment even if one NNCP status returns not all worker nodes are configured
+	SkipNNCPValidation bool `json:"skipNNCPValidation"`
 }
 
 // OpenStackDeployStatus defines the observed state of OpenStackDeploy

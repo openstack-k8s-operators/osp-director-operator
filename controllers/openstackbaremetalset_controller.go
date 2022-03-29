@@ -369,7 +369,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	//   Get domain name and dns servers from controlplane spec
 	//
-	controlPlane, ctrlResult, err := common.GetControlPlane(ctx, r, instance)
+	controlPlane, ctrlResult, err := ospdirectorv1beta1.GetControlPlane(r.Client, instance)
 	if err != nil {
 		return ctrlResult, err
 	}

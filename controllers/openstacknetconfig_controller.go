@@ -282,20 +282,14 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 		//
 		// Set/update CR status from OSNetAttach status
 		//
-		ctrlResult, err := r.getNetAttachmentStatus(
+		err = r.getNetAttachmentStatus(
 			instance,
 			netAttachment,
 			cond,
 		)
 		if err != nil {
 			return ctrl.Result{}, err
-		} else if !reflect.DeepEqual(ctrlResult, ctrl.Result{}) {
-			cond.Message = fmt.Sprintf("%s %s waiting for all OpenStackNetworkAttachments to be configured", instance.Kind, instance.Name)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigWaiting)
-
-			return ctrlResult, nil
 		}
-		instance.Status.ProvisioningStatus.AttachReadyCount++
 	}
 
 	//
@@ -493,14 +487,11 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
 	netAttachment *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *ospdirectorv1beta1.Condition,
-) (ctrl.Result, error) {
+) error {
 
 	cond.Message = fmt.Sprintf("OpenStackNetConfig %s is configuring OpenStackNetAttachment(s)", instance.Name)
 	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfiguring)
 
-	ctrlResult := ctrl.Result{
-		RequeueAfter: time.Second * 20,
-	}
 	//
 	// sync latest status of the osnetattach object to the osnetconfig
 	//
@@ -513,12 +504,13 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigConfigured)
 				common.LogForObject(r, cond.Message, instance)
 
-				ctrlResult = ctrl.Result{}
+				instance.Status.ProvisioningStatus.AttachReadyCount++
+
 			} else if condition.Type == ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError) {
 				cond.Message = fmt.Sprintf("OpenStackNetAttachment error: %s", condition.Message)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigError)
 
-				return ctrl.Result{}, fmt.Errorf(cond.Message)
+				return fmt.Errorf(cond.Message)
 			}
 		}
 	}
@@ -526,7 +518,7 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 	instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
 	instance.Status.ProvisioningStatus.Reason = cond.Message
 
-	return ctrlResult, nil
+	return nil
 }
 
 func (r *OpenStackNetConfigReconciler) attachCleanup(

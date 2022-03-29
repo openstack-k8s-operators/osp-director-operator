@@ -88,6 +88,11 @@ spec:
                 - update
                 - externalUpdate
                 type: string
+              skipNNCPValidation:
+                default: false
+                description: Skip NNCP validation to proceed deployment even if one
+                  NNCP status returns not all worker nodes are configured
+                type: boolean
             required:
             - configGenerator
             type: object
