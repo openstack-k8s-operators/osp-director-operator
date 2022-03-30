@@ -391,6 +391,20 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	runAsUser := int64(instance.Spec.RunUID)
 	runAsGroup := int64(instance.Spec.RunGID)
 
+	//
+	//   Get domain name and dns servers from osNetCfg
+	//
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		cond.Type = ospdirectorv1beta1.CommonCondTypeError
+		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
+			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			err)
+
+		return err
+	}
+
 	// Get volumes
 	initVolumeMounts := openstackclient.GetInitVolumeMounts(instance)
 	volumeMounts := openstackclient.GetVolumeMounts(instance)
@@ -403,10 +417,8 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		(*envVars)["OS_CLOUD"] = common.EnvValue(instance.Spec.CloudName)
 	}
 
-	if instance.Spec.DomainName != "" {
-		(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + instance.Spec.DomainName)
+	(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + osNetCfg.Spec.DomainName)
 
-	}
 	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
 
 	initEnvVars := make(map[string]common.EnvSetter)
@@ -458,7 +470,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 				},
 			}
 		}
-		initEnvVars["IPA_DOMAIN"] = common.EnvValue(instance.Spec.DomainName)
+		initEnvVars["IPA_DOMAIN"] = common.EnvValue(osNetCfg.Spec.DomainName)
 	}
 	initEnv := common.MergeEnvs([]corev1.EnvVar{}, initEnvVars)
 
@@ -564,15 +576,15 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		pod.Spec.InitContainers[0].Env = initEnv
 		pod.Spec.InitContainers[0].VolumeMounts = initVolumeMounts
 
-		if len(instance.Spec.DNSServers) != 0 {
+		if len(osNetCfg.Spec.DNSServers) != 0 {
 			pod.Spec.DNSPolicy = corev1.DNSNone
-			pod.Spec.DNSConfig.Nameservers = instance.Spec.DNSServers
+			pod.Spec.DNSConfig.Nameservers = osNetCfg.Spec.DNSServers
 		} else {
 			pod.Spec.DNSPolicy = corev1.DNSClusterFirst
 			pod.Spec.DNSConfig.Nameservers = []string{}
 		}
-		if len(instance.Spec.DNSSearchDomains) != 0 {
-			pod.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+		if len(osNetCfg.Spec.DNSSearchDomains) != 0 {
+			pod.Spec.DNSConfig.Searches = osNetCfg.Spec.DNSSearchDomains
 		} else {
 			pod.Spec.DNSConfig.Searches = []string{}
 		}

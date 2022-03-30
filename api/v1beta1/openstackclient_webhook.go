@@ -91,12 +91,11 @@ func (r *OpenStackClient) Default() {
 		r.SetLabels(labels)
 		openstackclientlog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
 	}
-
 }
 
 // +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,versions=v1beta1,name=vopenstackclient.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &OpenStackIPSet{}
+var _ webhook.Validator = &OpenStackClient{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackClient) ValidateCreate() error {

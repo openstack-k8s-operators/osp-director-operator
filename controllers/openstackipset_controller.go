@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -208,16 +207,13 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	// get OSNetCfg object
 	//
-	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.Get(ctx, types.NamespacedName{
-		Name:      strings.ToLower(instance.Labels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]),
-		Namespace: instance.Namespace},
-		osnetcfg)
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonnError
 		cond.Type = ospdirectorv1beta1.CommonCondTypeError
-		err = common.WrapErrorForObject(cond.Message, instance, err)
+		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
+			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			err)
 
 		return ctrl.Result{}, err
 	}
@@ -230,7 +226,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			r,
 			instance,
 			cond,
-			osnetcfg,
+			osNetCfg,
 			instance.Spec.Networks,
 			hostname,
 			&hostStatus,

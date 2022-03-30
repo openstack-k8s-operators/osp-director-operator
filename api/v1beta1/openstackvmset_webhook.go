@@ -90,6 +90,8 @@ func (r *OpenStackVMSet) ValidateDelete() error {
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,verbs=create;update,versions=v1beta1,name=mopenstackvmset.kb.io,admissionReviewVersions=v1
 
+var _ webhook.Defaulter = &OpenStackVMSet{}
+
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackVMSet) Default() {
 	vmsetlog.Info("default", "name", r.Name)
@@ -126,6 +128,28 @@ func (r *OpenStackVMSet) Default() {
 	) {
 		r.SetLabels(labels)
 		vmsetlog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
+	}
+
+	//
+	// set spec.domainName , dnsSearchDomains and bootstrapDNS from osnetcfg if not specified
+	//
+	osNetCfg, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		controlplanelog.Error(err, fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
+	}
+
+	if osNetCfg != nil {
+		if len(r.Spec.DNSSearchDomains) == 0 && len(osNetCfg.Spec.DNSSearchDomains) > 0 {
+			r.Spec.DNSSearchDomains = osNetCfg.Spec.DNSSearchDomains
+			controlplanelog.Info(fmt.Sprintf("Using DNSSearchDomains from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.DNSSearchDomains))
+		}
+		if len(r.Spec.BootstrapDNS) == 0 && len(osNetCfg.Spec.DNSServers) > 0 {
+			r.Spec.BootstrapDNS = osNetCfg.Spec.DNSServers
+			controlplanelog.Info(fmt.Sprintf("Using BootstrapDNS from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.BootstrapDNS))
+		}
 	}
 
 }

@@ -69,7 +69,7 @@ func (r *OpenStackDeploy) Default() {
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackdeploy,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackdeploys,verbs=create;update,versions=v1beta1,name=vopenstackdeploy.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &OpenStackIPSet{}
+var _ webhook.Validator = &OpenStackDeploy{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackDeploy) ValidateCreate() error {
@@ -172,13 +172,15 @@ func (r *OpenStackDeploy) validateNNCP() error {
 					var nnceError string
 					var nnce nmstatev1alpha1.NodeNetworkConfigurationEnactment
 					for _, nnce = range nnceList.Items {
-						condition := nmstate.GetCurrentCondition(nnce.Status.Conditions)
+						if nnce.Status.Conditions != nil && len(nnce.Status.Conditions) > 0 {
+							condition := nmstate.GetCurrentCondition(nnce.Status.Conditions)
 
-						// if the first nnce has condition.Reason == nmstateshared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure
-						// return the message as a hint to look at, do not return all nnce messages
-						if condition != nil && condition.Reason == nmstateshared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure {
-							nnceError = condition.Message
-							break
+							// if the first nnce has condition.Reason == nmstateshared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure
+							// return the message as a hint to look at, do not return all nnce messages
+							if condition != nil && condition.Reason == nmstateshared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure {
+								nnceError = condition.Message
+								break
+							}
 						}
 					}
 

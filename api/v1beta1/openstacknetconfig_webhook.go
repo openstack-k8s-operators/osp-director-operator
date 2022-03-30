@@ -167,10 +167,18 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	openstacknetconfiglog.Info("validate update", "name", r.Name)
 
+	// Get the OpenStackNetConfig object
+	var ok bool
+	var oldInstance *OpenStackNetConfig
+
+	if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
+		return fmt.Errorf("runtime object is not an OpenStackNetConfig")
+	}
+
 	//
 	// validate that the bridge names won't change on CR update
 	//
-	err := r.validateBridgeNameChanged(old)
+	err := r.validateBridgeNameChanged(oldInstance)
 	if err != nil {
 		return err
 	}
@@ -186,9 +194,13 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	//
 	// Validate static MAC address reservations
 	//
-	err = r.validateStaticMacReservations(old)
+	err = r.validateStaticMacReservations(oldInstance)
 	if err != nil {
 		return err
+	}
+
+	if r.Spec.DomainName != oldInstance.Spec.DomainName {
+		return fmt.Errorf("domainName cannot be modified")
 	}
 
 	return nil
@@ -220,16 +232,8 @@ func (r *OpenStackNetConfig) validateControlPlaneNetworkNames() error {
 }
 
 // validateBridgeNameChanged - validate that the bridge names won't change on CR update
-func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error {
+func (r *OpenStackNetConfig) validateBridgeNameChanged(oldInstance *OpenStackNetConfig) error {
 	for attachRef, attachCfg := range r.Spec.AttachConfigurations {
-
-		// Get the old bridge name, if any
-		var ok bool
-		var oldInstance *OpenStackNetConfig
-
-		if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
-			return fmt.Errorf("runtime object is not an OpenStackNetConfig")
-		}
 
 		// if the attachRef is in the spec of the old CR instance:
 		// * check if bridge names did not change
@@ -258,7 +262,7 @@ func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error
 }
 
 // validateStaticMacReservations - validate static MAC address reservations
-func (r *OpenStackNetConfig) validateStaticMacReservations(old runtime.Object) error {
+func (r *OpenStackNetConfig) validateStaticMacReservations(oldInstance *OpenStackNetConfig) error {
 	// fill an empty reservations map to check for uniq MAC reservations
 	reservations := map[string]OpenStackMACNodeReservation{}
 
@@ -281,12 +285,7 @@ func (r *OpenStackNetConfig) validateStaticMacReservations(old runtime.Object) e
 			//
 			// check that a MAC reservation won't change
 			//
-			if old != nil {
-				var ok bool
-				var oldInstance *OpenStackNetConfig
-				if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
-					return fmt.Errorf("runtime object is not an OpenStackNetConfig")
-				}
+			if oldInstance != nil {
 				if currentMAC, ok := oldInstance.Spec.Reservations[node].MACReservations[physnet]; ok && currentMAC != mac {
 					return fmt.Errorf("MAC address %s of node %s must not change - new MAC address %s", currentMAC, node, mac)
 				}
