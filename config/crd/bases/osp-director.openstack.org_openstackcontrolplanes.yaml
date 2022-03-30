@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: openstackcontrolplanes.osp-director.openstack.org
 spec:
@@ -67,25 +66,13 @@ spec:
                 description: 'AdditionalServiceVIPs - Map of service name <-> subnet
                   nameLower for which a IP should get reserved on These are used to
                   create the <Service>VirtualFixedIPs environment parameters starting
-                  wallaby/OSP17.0. Default "Redis":  "internal_api",         "OVNDBs":
-                  "internal_api", https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
+                  wallaby/OSP17.0. Default "Redis":  "internal_api", "OVNDBs": "internal_api",
+                  https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
                   Note: OSP17 networkv2 only'
                 type: object
               caConfigMap:
                 description: Name of the config map containing custom CA certificates
                   to trust
-                type: string
-              dnsSearchDomains:
-                items:
-                  type: string
-                type: array
-              dnsServers:
-                description: Upstream DNS servers
-                items:
-                  type: string
-                type: array
-              domainName:
-                description: Domain name used to build fqdn
                 type: string
               enableFencing:
                 default: false

@@ -32,7 +32,7 @@ DOWNLOADER_IMG="$DOWNLOADER_IMG_BASE:$VERSION"
 CLUSTER_BUNDLE_FILE="bundle/manifests/osp-director-operator.clusterserviceversion.yaml"
 
 # Base operator image
-make manager
+make build
 make manifests
 make generate
 make IMG=${IMG} docker-build docker-push
