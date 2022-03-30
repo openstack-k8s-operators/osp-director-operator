@@ -36,7 +36,7 @@ type OpenStackConfigVersionStatus struct {
 //+kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=osconfigversion;osconfigversions
 // +operator-sdk:csv:customresourcedefinitions:displayName="OpenStack Config Version"
-// +kubebuilder:printcolumn:name="Generator",type="string",JSONPath=".spec.ConfigGeneratorName",description="Config Generator Name"
+// +kubebuilder:printcolumn:name="Generator",type="string",JSONPath=".spec.configGeneratorName",description="Config Generator Name"
 
 // OpenStackConfigVersion represents a set of executable Ansible playbooks
 type OpenStackConfigVersion struct {

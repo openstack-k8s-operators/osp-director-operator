@@ -19,4 +19,7 @@ package openstackdeploy
 const (
 	// ServiceAccount -
 	ServiceAccount = "osp-director-operator-openstackdeploy"
+
+	// ConfigMapBasename The basename prefix for exports data ConfigMaps
+	ConfigMapBasename = "tripleo-exports-"
 )

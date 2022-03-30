@@ -1545,6 +1545,25 @@ openstackbackuprestore   restore    openstackbackupsave-1641928378   Restored   
 
 At this point, all resources contained with the chosen `OpenStackBackup` should be restored and fully provisioned.
 
+Exported stack data config map
+--------------------------------------------------------
+
+The OSP Director Operator automatically creates a ConfigMap after each OSDeploy resource finishes executing. This ConfigMap is named after the OSDeploy resource name and prefixed with tripleo-exports-. For example tripleo-exports-default would be the name of the ConfigMap for the 'default' OSDeploy resource. Each ConfigMap contains 2 YAML files:
+
+| Filename    | Description | TripleO Command Equivalent |
+| ----------- | ----------- | -------------------------- |
+| ctlplane-export.yaml | Used with multiple stacks for DCN | overcloud export |
+| ctlplane-export-filtered.yaml | Used for multiple stacks with Cell "Controller" stacks | overcloud cell export |
+
+Use the command below to extract the YAML files from the ConfigMap. Once extracted the YAML files can be
+added into custom Heat parameters on OSConfigGenerator resources.
+
+```bash
+oc extract cm/tripleo-exports-default
+```
+
+NOTE: The OSP Director Operator does not yet generate exports for Ceph stacks.
+
 # Day2 Operations
 
 ## Change resources on virtual machines
