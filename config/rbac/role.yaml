@@ -226,6 +226,14 @@ rules:
 - apiGroups:
   - nmstate.io
   resources:
+  - nodenetworkconfigurationenactments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nmstate.io
+  resources:
   - nodenetworkconfigurationpolicies
   verbs:
   - create

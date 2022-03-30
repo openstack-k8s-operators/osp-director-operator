@@ -137,7 +137,7 @@ const (
 	ControlPlaneNetworkLabelSelector = "ooo-ctlplane-network"
 	// OpenStackNetConfigReconcileLabel - label set on objects on which change
 	// trigger a reconcile of the osnetconfig
-	OpenStackNetConfigReconcileLabel = "osnetconfig-reconcile-dep"
+	OpenStackNetConfigReconcileLabel = "osnetconfig-ref"
 )
 
 // Hash - struct to add hashes to status

@@ -167,7 +167,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	// unified OSPVersion from ControlPlane CR
 	// which means also get either 16.2 or 17.0 for upstream versions
-	controlPlane, ctrlResult, err := common.GetControlPlane(ctx, r, instance)
+	controlPlane, ctrlResult, err := ospdirectorv1beta1.GetControlPlane(r.Client, instance)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNetNotFound)

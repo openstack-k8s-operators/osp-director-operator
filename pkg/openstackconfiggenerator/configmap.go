@@ -164,7 +164,7 @@ func CreateConfigMapParams(
 	//
 	// get OSPVersion from ControlPlane CR
 	//
-	controlPlane, _, err := common.GetControlPlane(ctx, r, &instance.ObjectMeta)
+	controlPlane, _, err := ospdirectorv1beta1.GetControlPlane(r.GetClient(), &instance.ObjectMeta)
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
