@@ -38,7 +38,7 @@ func (r *OpenStackNetAttachment) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstacknetattachment,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknetattachments,verbs=create;update,versions=v1beta1,name=mopenstacknetattachment.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstacknetattachment,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknetattachments,verbs=create;update,versions=v1beta1,name=mopenstacknetattachment.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackNetAttachment{}
 
@@ -58,7 +58,7 @@ func (r *OpenStackNetAttachment) Default() {
 
 }
 
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknetattachment,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknetattachments,verbs=create;update,versions=v1beta1,name=vopenstacknetattachment.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstacknetattachment,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstacknetattachments,verbs=create;update,versions=v1beta1,name=vopenstacknetattachment.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackNetAttachment{}
 

@@ -17,8 +17,6 @@ CI_TOOLS_REPO := https://github.com/openstack-k8s-operators/openstack-k8s-operat
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
-# Produce CRDs with apiextensions.k8s.io/v1 and generate embedded metadata
-CRD_OPTIONS ?= "crd:crdVersions=v1,generateEmbeddedObjectMeta=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -78,7 +76,7 @@ deploy: manifests kustomize
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=conf
 
 # Run go fmt against code
 gofmt: get-ci-tools

@@ -56,7 +56,7 @@ func (r *OpenStackProvisionServer) SetupWebhookWithManager(mgr ctrl.Manager, def
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update;delete,versions=v1beta1,name=vopenstackprovisionserver.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update;delete,versions=v1beta1,name=vopenstackprovisionserver.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackProvisionServer{}
 
@@ -100,7 +100,7 @@ func (r *OpenStackProvisionServer) ValidateDelete() error {
 	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=mopenstackprovisionserver.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=mopenstackprovisionserver.kb.io,admissionReviewVersions=v1
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackProvisionServer) Default() {
