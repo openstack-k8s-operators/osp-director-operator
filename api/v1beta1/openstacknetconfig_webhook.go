@@ -222,12 +222,6 @@ func (r *OpenStackNetConfig) validateControlPlaneNetworkNames() error {
 // validateBridgeNameChanged - validate that the bridge names won't change on CR update
 func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error {
 	for attachRef, attachCfg := range r.Spec.AttachConfigurations {
-		// Get the current (potentially new) bridge name, if any
-		curBridge, err := nmstate.GetDesiredStateBridgeName(attachCfg.NodeNetworkConfigurationPolicy.DesiredState.Raw)
-
-		if err != nil {
-			return err
-		}
 
 		// Get the old bridge name, if any
 		var ok bool
@@ -237,14 +231,26 @@ func (r *OpenStackNetConfig) validateBridgeNameChanged(old runtime.Object) error
 			return fmt.Errorf("runtime object is not an OpenStackNetConfig")
 		}
 
-		oldBridge, err := nmstate.GetDesiredStateBridgeName(oldInstance.Spec.AttachConfigurations[attachRef].NodeNetworkConfigurationPolicy.DesiredState.Raw)
+		// if the attachRef is in the spec of the old CR instance:
+		// * check if bridge names did not change
+		// * otherwise we expect it to be a new attachconfiguration/interface to configure on the workers.
+		if _, ok := oldInstance.Spec.AttachConfigurations[attachRef]; ok {
+			// Get the current (potentially new) bridge name, if any
+			curBridge, err := nmstate.GetDesiredStateBridgeName(attachCfg.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 
-		if err != nil {
-			return err
-		}
+			if err != nil {
+				return err
+			}
 
-		if curBridge != oldBridge {
-			return fmt.Errorf("bridge names may not be changed")
+			oldBridge, err := nmstate.GetDesiredStateBridgeName(oldInstance.Spec.AttachConfigurations[attachRef].NodeNetworkConfigurationPolicy.DesiredState.Raw)
+
+			if err != nil {
+				return err
+			}
+
+			if curBridge != oldBridge {
+				return fmt.Errorf("bridge names may not be changed")
+			}
 		}
 	}
 
