@@ -28,7 +28,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -237,7 +236,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	if instance.Spec.TarballConfigMap != "" {
 		tripleoTarballCM, _, err = common.GetConfigMapAndHashWithName(ctx, r, instance.Spec.TarballConfigMap, instance.Namespace)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if k8s_errors.IsNotFound(err) {
 				cond.Message = "Tarball config map not found, requeuing and waiting. Requeing..."
 				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ConfigGeneratorCondReasonCMNotFound)
 				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeWaiting)

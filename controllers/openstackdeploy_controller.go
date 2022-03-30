@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -129,7 +128,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// look up the git secret from the configGenerator
 	configGenerator := &ospdirectorv1beta1.OpenStackConfigGenerator{}
 	err = r.GetClient().Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8s_errors.IsNotFound(err) {
 		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonConfigVersionNotFound)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
