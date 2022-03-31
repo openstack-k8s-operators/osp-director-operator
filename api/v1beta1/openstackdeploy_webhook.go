@@ -67,7 +67,7 @@ func (r *OpenStackDeploy) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackdeploy,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackdeploys,verbs=create;update,versions=v1beta1,name=vopenstackdeploy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackdeploy,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackdeploys,verbs=create;update,versions=v1beta1,name=vopenstackdeploy.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackIPSet{}
 

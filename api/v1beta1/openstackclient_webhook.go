@@ -94,7 +94,7 @@ func (r *OpenStackClient) Default() {
 
 }
 
-// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,versions=v1beta1,name=vopenstackclient.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,versions=v1beta1,name=vopenstackclient.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackIPSet{}
 

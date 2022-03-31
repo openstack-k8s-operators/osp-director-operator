@@ -1,0 +1,274 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackvmsets.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackVMSet
+    listKind: OpenStackVMSetList
+    plural: openstackvmsets
+    shortNames:
+    - osvmset
+    - osvmsets
+    - osvms
+    singular: openstackvmset
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Cores
+      jsonPath: .spec.cores
+      name: Cores
+      type: integer
+    - description: RAM in GB
+      jsonPath: .spec.memory
+      name: RAM
+      type: integer
+    - description: Desired
+      jsonPath: .spec.vmCount
+      name: Desired
+      type: integer
+    - description: Ready
+      jsonPath: .status.provisioningStatus.readyCount
+      name: Ready
+      type: integer
+    - description: Status
+      jsonPath: .status.provisioningStatus.state
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.provisioningStatus.reason
+      name: Reason
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackVMSet represents a set of virtual machines hosts for
+          a specific role within the Overcloud deployment
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackVMSetSpec defines the desired state of an OpenStackVMSet
+            properties:
+              baseImageVolumeName:
+                description: BaseImageVolumeName used as the base volume for the VM
+                type: string
+              bootstrapDns:
+                description: BootstrapDNS - initial DNS nameserver values to set on
+                  the VM when they are provisioned. Note that subsequent TripleO deployment
+                  will overwrite these values
+                items:
+                  type: string
+                type: array
+              cores:
+                description: number of Cores assigned to the VMs
+                format: int32
+                type: integer
+              ctlplaneInterface:
+                default: enp2s0
+                description: Interface to use for ctlplane network
+                type: string
+              deploymentSSHSecret:
+                description: name of secret holding the stack-admin ssh keys
+                type: string
+              diskSize:
+                description: root Disc size in GB
+                format: int32
+                type: integer
+              dnsSearchDomains:
+                items:
+                  type: string
+                type: array
+              domainName:
+                description: Domain name used to build fqdn
+                type: string
+              isTripleoRole:
+                description: in case of external functionality, like 3rd party network
+                  controllers, set to false to ignore role in rendered overcloud templates.
+                type: boolean
+              memory:
+                description: amount of Memory in GB used by the VMs
+                format: int32
+                type: integer
+              networks:
+                default:
+                - ctlplane
+                - external
+                - internalapi
+                - tenant
+                - storage
+                - storagemgmt
+                description: Networks the name(s) of the OpenStackNetworks used to
+                  generate IPs
+                items:
+                  type: string
+                type: array
+              passwordSecret:
+                description: 'PasswordSecret the name of the secret used to optionally
+                  set the root pwd by adding NodeRootPassword: <base64 enc pwd> to
+                  the secret data'
+                type: string
+              roleName:
+                description: RoleName the name of the TripleO role this VM Spec is
+                  associated with. If it is a TripleO role, the name must match.
+                type: string
+              storageAccessMode:
+                default: ReadWriteMany
+                description: StorageAccessMode - Virtual machines must have a persistent
+                  volume claim (PVC) with a shared ReadWriteMany (RWX) access mode
+                  to be live migrated.
+                enum:
+                - ReadWriteOnce
+                - ReadWriteMany
+                type: string
+              storageClass:
+                description: StorageClass to be used for the disks
+                type: string
+              storageVolumeMode:
+                default: Filesystem
+                description: 'StorageVolumeMode - When using OpenShift Virtualization
+                  with OpenShift Container Platform Container Storage, specify RBD
+                  block mode persistent volume claims (PVCs) when creating virtual
+                  machine disks. With virtual machine disks, RBD block mode volumes
+                  are more efficient and provide better performance than Ceph FS or
+                  RBD filesystem-mode PVCs. To specify RBD block mode PVCs, use the
+                  ''ocs-storagecluster-ceph-rbd'' storage class and VolumeMode: Block.'
+                enum:
+                - Block
+                - Filesystem
+                type: string
+              vmCount:
+                description: Number of VMs to configure, 1 or 3
+                type: integer
+            required:
+            - baseImageVolumeName
+            - cores
+            - ctlplaneInterface
+            - deploymentSSHSecret
+            - diskSize
+            - isTripleoRole
+            - memory
+            - networks
+            - roleName
+            - vmCount
+            type: object
+          status:
+            description: OpenStackVMSetStatus defines the observed state of OpenStackVMSet
+            properties:
+              baseImageDVReady:
+                description: BaseImageDVReady is the status of the BaseImage DataVolume
+                type: boolean
+              conditions:
+                description: ConditionList - A list of conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              provisioningStatus:
+                description: OpenStackVMSetProvisioningStatus represents the overall
+                  provisioning state of all VMs in the OpenStackVMSet (with an optional
+                  explanatory message)
+                properties:
+                  readyCount:
+                    type: integer
+                  reason:
+                    type: string
+                  state:
+                    description: ProvisioningState - the overall state of all VMs
+                      in this OpenStackVmSet
+                    type: string
+                type: object
+              vmHosts:
+                additionalProperties:
+                  description: HostStatus represents the hostname and IP info for
+                    a specific host
+                  properties:
+                    annotatedForDeletion:
+                      default: false
+                      description: Host annotated for deletion
+                      type: boolean
+                    ctlplaneIP:
+                      type: string
+                    hostRef:
+                      default: unassigned
+                      type: string
+                    hostname:
+                      type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    networkDataSecretName:
+                      type: string
+                    provisioningState:
+                      description: ProvisioningState - the overall state of all VMs
+                        in this OpenStackVmSet
+                      type: string
+                    userDataSecretName:
+                      type: string
+                  required:
+                  - annotatedForDeletion
+                  - ctlplaneIP
+                  - hostRef
+                  - hostname
+                  - networkDataSecretName
+                  - provisioningState
+                  - userDataSecretName
+                  type: object
+                type: object
+              vmpods:
+                description: VMpods are the names of the kubevirt controller vm pods
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
