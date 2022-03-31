@@ -345,6 +345,10 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 		vip = true
 	}
 
+	if instance.Status.Hosts == nil {
+		instance.Status.Hosts = map[string]ospdirectorv1beta1.HostStatus{}
+	}
+
 	//
 	//   create hostnames for the newCount
 	//
