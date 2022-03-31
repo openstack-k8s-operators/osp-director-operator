@@ -40,7 +40,7 @@ func (r *OpenStackIPSet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackipset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackipsets,verbs=create;update,versions=v1beta1,name=mopenstackipset.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackipset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackipsets,verbs=create;update,versions=v1beta1,name=mopenstackipset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackIPSet{}
 
@@ -66,7 +66,7 @@ func (r *OpenStackIPSet) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackipset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackipsets,verbs=create;update,versions=v1beta1,name=vopenstackipset.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-osp-director-openstack-org-v1beta1-openstackipset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackipsets,verbs=create;update,versions=v1beta1,name=vopenstackipset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackIPSet{}
 

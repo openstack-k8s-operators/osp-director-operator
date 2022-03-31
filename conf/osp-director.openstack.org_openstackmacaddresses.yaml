@@ -1,0 +1,180 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackmacaddresses.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackMACAddress
+    listKind: OpenStackMACAddressList
+    plural: openstackmacaddresses
+    shortNames:
+    - osmacaddress
+    - osmacaddresses
+    - osmacaddr
+    - osmacaddrs
+    singular: openstackmacaddress
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.reservedMACCount
+      name: Reserved MACs
+      type: integer
+    - description: Status
+      jsonPath: .status.currentState
+      name: Status
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackMACAddress represents Mac address reservations for static
+          OVN bridge mappings
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackMACAddressSpec defines the desired state of OpenStackMACAddress
+            properties:
+              physNetworks:
+                description: PhysNetworks - physical networks list to create MAC addresses
+                  per physnet per node to create OVNStaticBridgeMacMappings
+                items:
+                  description: Physnet - name and prefix to be used for the physnet
+                  properties:
+                    macPrefix:
+                      default: fa:16:3a
+                      description: MACPrefix - the MAC address prefix to use Locally
+                        administered addresses are distinguished from universally
+                        administered addresses by setting (assigning the value of
+                        1 to) the second-least-significant bit of the first octet
+                        of the address. https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
+                      type: string
+                    name:
+                      default: datacentre
+                      description: Name - the name of the physnet
+                      type: string
+                  required:
+                  - name
+                  type: object
+                minItems: 1
+                type: array
+              roleReservations:
+                additionalProperties:
+                  description: OpenStackMACRoleReservation -
+                  properties:
+                    reservations:
+                      additionalProperties:
+                        description: OpenStackMACNodeReservation defines the observed
+                          state of the MAC addresses per PhysNetworks
+                        properties:
+                          deleted:
+                            description: Deleted - node and therefore MAC reservation
+                              are flagged as deleted
+                            type: boolean
+                          reservations:
+                            additionalProperties:
+                              type: string
+                            description: Reservations MAC reservations per PhysNetwork
+                            type: object
+                        required:
+                        - reservations
+                        type: object
+                      description: Reservations IP address reservations per role
+                      type: object
+                  required:
+                  - reservations
+                  type: object
+                description: RoleReservations, MAC address reservations per role
+                type: object
+            required:
+            - physNetworks
+            type: object
+          status:
+            description: OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress
+            properties:
+              conditions:
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentState:
+                description: CurrentState - the overall state of the OSMAC cr
+                type: string
+              macReservations:
+                additionalProperties:
+                  description: OpenStackMACNodeReservation defines the observed state
+                    of the MAC addresses per PhysNetworks
+                  properties:
+                    deleted:
+                      description: Deleted - node and therefore MAC reservation are
+                        flagged as deleted
+                      type: boolean
+                    reservations:
+                      additionalProperties:
+                        type: string
+                      description: Reservations MAC reservations per PhysNetwork
+                      type: object
+                  required:
+                  - reservations
+                  type: object
+                description: Reservations MAC address reservations per node
+                type: object
+              reservedMACCount:
+                description: ReservedMACCount - the count of all MAC addresses reserved
+                type: integer
+            required:
+            - currentState
+            - macReservations
+            - reservedMACCount
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

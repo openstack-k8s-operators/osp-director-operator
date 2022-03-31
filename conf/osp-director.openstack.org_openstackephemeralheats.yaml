@@ -1,0 +1,124 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackephemeralheats.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackEphemeralHeat
+    listKind: OpenStackEphemeralHeatList
+    plural: openstackephemeralheats
+    shortNames:
+    - osephemeralheat
+    - osephemeralheats
+    singular: openstackephemeralheat
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.active
+      name: Active
+      type: boolean
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackEphemeralHeat an ephermeral OpenStack Heat deployment
+          used internally by the OSConfigGenerator to generate Ansible playbooks
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackEphemeralHeatSpec defines the desired state of OpenStackEphemeralHeat
+            properties:
+              configHash:
+                description: ConfigHash hash which acts as a unique identifier for
+                  this ephemeral heat instance
+                type: string
+              heatAPIImageURL:
+                description: Container image URL for the Heat API container image
+                  used as part of this ephemeral heat instance
+                type: string
+              heatEngineImageURL:
+                description: Container image URL for the Heat Engine container image
+                  used as part of this ephemeral heat instance
+                type: string
+              heatEngineReplicas:
+                default: 3
+                description: Number of replicas for the Heat Engine service, defaults
+                  to 3 if unset
+                format: int32
+                type: integer
+              mariadbImageURL:
+                description: Container image URL for the MySQL container image used
+                  as part of this ephemeral heat instance
+                type: string
+              rabbitImageURL:
+                description: Container image URL for the RabbitMQ container image
+                  used as part of this ephemeral heat instance
+                type: string
+            type: object
+          status:
+            description: OpenStackEphemeralHeatStatus defines the observed state of
+              OpenStackEphemeralHeat
+            properties:
+              active:
+                description: Active hash
+                type: boolean
+              conditions:
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+            required:
+            - active
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

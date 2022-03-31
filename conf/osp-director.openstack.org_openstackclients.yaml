@@ -1,0 +1,181 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: openstackclients.osp-director.openstack.org
+spec:
+  group: osp-director.openstack.org
+  names:
+    kind: OpenStackClient
+    listKind: OpenStackClientList
+    plural: openstackclients
+    shortNames:
+    - osclient
+    - osclients
+    singular: openstackclient
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackClient used to create a container for deploying, scaling,
+          and managing the OpenStack Overcloud
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackClientSpec defines the desired state of OpenStackClient
+            properties:
+              caConfigMap:
+                description: Name of the config map containing custom CA certificates
+                  to trust
+                type: string
+              cloudName:
+                description: cloudname passed in via OS_CLOUDNAME
+                type: string
+              deploymentSSHSecret:
+                description: name of secret holding the stack-admin ssh keys
+                type: string
+              dnsSearchDomains:
+                items:
+                  type: string
+                type: array
+              dnsServers:
+                description: Upstream DNS servers
+                items:
+                  type: string
+                type: array
+              domainName:
+                description: Domain name used to build fqdn
+                type: string
+              idmSecret:
+                description: Idm secret used to register openstack client in IPA
+                type: string
+              imageURL:
+                description: OpenStackClient image. If missing will be set to the
+                  configured OPENSTACKCLIENT_IMAGE_URL_DEFAULT in the CSV for the
+                  OSP Director Operator.
+                type: string
+              networks:
+                default:
+                - ctlplane
+                - external
+                description: Networks the name(s) of the OpenStackNetworks used to
+                  generate IPs
+                items:
+                  type: string
+                type: array
+              runGID:
+                default: 42401
+                description: RunGID user ID to run the pod with
+                type: integer
+              runUID:
+                default: 42401
+                description: RunUID user ID to run the pod with
+                type: integer
+              storageClass:
+                description: StorageClass to be used for the openstackclient persistent
+                  storage
+                type: string
+            required:
+            - networks
+            - runGID
+            - runUID
+            type: object
+          status:
+            description: OpenStackClientStatus defines the observed state of OpenStackClient
+            properties:
+              conditions:
+                description: Conditions - conditions to display in the OpenShift GUI,
+                  which reflect CurrentState
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: ConditionReason - Why a particular condition is
+                        true, false or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: ConditionType - A summarizing name for a given
+                        condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              netStatus:
+                additionalProperties:
+                  description: HostStatus represents the hostname and IP info for
+                    a specific host
+                  properties:
+                    annotatedForDeletion:
+                      default: false
+                      description: Host annotated for deletion
+                      type: boolean
+                    ctlplaneIP:
+                      type: string
+                    hostRef:
+                      default: unassigned
+                      type: string
+                    hostname:
+                      type: string
+                    ipaddresses:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    networkDataSecretName:
+                      type: string
+                    provisioningState:
+                      description: ProvisioningState - the overall state of all VMs
+                        in this OpenStackVmSet
+                      type: string
+                    userDataSecretName:
+                      type: string
+                  required:
+                  - annotatedForDeletion
+                  - ctlplaneIP
+                  - hostRef
+                  - hostname
+                  - networkDataSecretName
+                  - provisioningState
+                  - userDataSecretName
+                  type: object
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
