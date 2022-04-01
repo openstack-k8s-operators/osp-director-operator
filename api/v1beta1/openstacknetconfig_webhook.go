@@ -160,6 +160,13 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// Validate domainName, must include a top-level domain and at least one subdomain
+	//
+	if err := checkDomainName(r.Spec.DomainName); err != nil {
+		return err
+	}
+
 	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
 }
 
