@@ -4,6 +4,7 @@ umask 022
 
 export PWD=/home/cloud-admin
 CONFIG_VERSION=${CONFIG_VERSION:?"Please set CONFIG_VERSION."}
+OSP_VERSION=${OSP_VERSION:?"Please set OSP_VERSION."}
 sudo bash -c 'mkdir -p /var/run/tripleo-deploy && chown '$(whoami)' /var/run/tripleo-deploy'
 RUNDIR="/var/run/tripleo-deploy/$CONFIG_VERSION"
 mkdir -p $RUNDIR
@@ -120,11 +121,48 @@ play() {
     sed -i -e 's/OSP_DIRECTOR_OPERATOR_DEPLOY_IDENTIFIER/'${DEPLOY_IDENTIFIER}'/g' $i
   done
 
+  STACK_ACTION_ARG=""
+  if [ "${OSP_VERSION}" = "16.2" ]; then
+    # We need stack_action to be set correctly in 16.2 as the network_config and octavia roles in tripleo-ansible
+    # rely on it.
+    # As we can't use the existance of a heat stack, instead use the existance of /var/lib/tripleo-config on any
+    # overcloud host (created by the tripleo-bootstrap role) to determine if this is a "CREATE" or an "UPDATE"
+    cat <<EOF > set_stack_action_playbook.yaml
+{{` ---
+- hosts: overcloud
+  name: Determine the correct stack action for 16.2 deployments
+  gather_facts: false
+  tasks:
+    - stat:
+        path: /var/lib/tripleo-config
+      register: deploy_exists
+      ignore_unreachable: yes
+    - set_fact:
+        deploy_exists: "{{ hostvars['localhost'].deploy_exists|default('0')|int + 1 }}"
+      when: deploy_exists.stat.exists|default(False)
+      delegate_to: localhost
+      delegate_facts: yes
+    - copy:
+        dest: stack_action_override.yaml
+        content: |
+          stack_action: {{ 'UPDATE' if hostvars['localhost'].deploy_exists|default('0')|int > 0 else 'CREATE' }}
+      delegate_to: localhost
+      run_once: yes
+EOF`}}
+
+    ansible-playbook \
+      -i $WORKDIR/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
+      ${LIMIT_ARG} \
+      set_stack_action_playbook.yaml
+    STACK_ACTION_ARG="-e @stack_action_override.yaml"
+  fi
+
   ansible-playbook \
     -i $WORKDIR/playbooks/tripleo-ansible/tripleo-ansible-inventory.yaml \
     ${LIMIT_ARG} \
     ${TAGS_ARG} \
     ${SKIP_TAGS_ARG} \
+    ${STACK_ACTION_ARG} \
     ${PLAYBOOK_ARG}
 
   # Only created when keystone is deployed

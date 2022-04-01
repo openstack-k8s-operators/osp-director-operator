@@ -48,6 +48,7 @@ var (
 		limit          string
 		tags           string
 		skipTags       string
+		ospVersion     string
 	}
 
 	openstackConfigVersionGVR = schema.GroupVersionResource{
@@ -78,6 +79,7 @@ func init() {
 	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "limit", "", "Playbook inventory limit")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "tags", "", "Playbook include tags")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "skipTags", "", "Playbook exclude tags")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.ospVersion, "ospVersion", "", "OSP release version")
 }
 
 // GetConfigMap for our exports Heat environment
@@ -335,6 +337,13 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		}
 		deployOpts.deployName = deployName
 	}
+	if deployOpts.ospVersion == "" {
+		ospVersion, ok := os.LookupEnv("OSP_VERSION")
+		if !ok || ospVersion == "" {
+			glog.Fatalf("ospVersion is required")
+		}
+		deployOpts.ospVersion = ospVersion
+	}
 
 	if deployOpts.gitURL == "" {
 		gitURL, ok := os.LookupEnv("GIT_URL")
@@ -416,6 +425,7 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 					"LIMIT='"+deployOpts.limit+"' "+
 					"TAGS='"+deployOpts.tags+"' "+
 					"SKIP_TAGS='"+deployOpts.skipTags+"' "+
+					"OSP_VERSION='"+deployOpts.ospVersion+"' "+
 					"/usr/local/bin/tripleo-deploy-term.sh")
 			if execErr != nil {
 				panic(execErr.Error())
@@ -434,6 +444,7 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 			"LIMIT='"+deployOpts.limit+"' "+
 			"TAGS='"+deployOpts.tags+"' "+
 			"SKIP_TAGS='"+deployOpts.skipTags+"' "+
+			"OSP_VERSION='"+deployOpts.ospVersion+"' "+
 			"/usr/local/bin/tripleo-deploy.sh")
 	if execErr != nil {
 		panic(execErr.Error())
