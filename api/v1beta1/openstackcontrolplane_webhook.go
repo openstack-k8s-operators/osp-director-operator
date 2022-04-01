@@ -94,6 +94,17 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	}
 
 	//
+	// Fail early on create if osnetcfg ist not found
+	//
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
+	}
+
+	//
 	// validate that for all configured subnets an osnet exists
 	//
 	for _, vmspec := range r.Spec.VirtualMachineRoles {
