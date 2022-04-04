@@ -18,7 +18,7 @@ package controlplane
 import (
 	"sort"
 
-	virtv1 "kubevirt.io/client-go/api/v1"
+	virtv1 "kubevirt.io/api/core/v1"
 )
 
 // FencingConfig - stores the unique fencing configuration for a particular Kubevirt VM
