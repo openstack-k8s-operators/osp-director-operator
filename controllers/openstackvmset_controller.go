@@ -308,12 +308,23 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	//
+	//   Get domain name and dns servers from osNetCfg
+	//
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		cond.Type = ospdirectorv1beta1.CommonCondTypeError
+		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
+			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			err)
+
+		return ctrl.Result{}, err
+	}
+
+	//
 	// add DomainName
 	//
-	// Todo: get from netcfg
-	if instance.Spec.DomainName != "" {
-		templateParameters["DomainName"] = instance.Spec.DomainName
-	}
+	templateParameters["DomainName"] = osNetCfg.Spec.DomainName
 
 	//
 	// check if PasswordSecret got specified and if it exists before creating the controlplane
@@ -444,6 +455,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ctx,
 		instance,
 		cond,
+		osNetCfg,
 		nadMap,
 		envVars,
 		templateParameters,
@@ -587,14 +599,25 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
+	osNetCfg *ospdirectorv1beta1.OpenStackNetConfig,
 	envVars *map[string]common.EnvSetter,
 	templateParameters map[string]interface{},
 	host ospdirectorv1beta1.Host,
 ) error {
 	templateParameters["ControllerIP"] = host.IPAddress
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
-	templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
-	templateParameters["CtlplaneDnsSearch"] = instance.Spec.DNSSearchDomains
+
+	if len(instance.Spec.BootstrapDNS) > 0 {
+		templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
+	} else {
+		templateParameters["CtlplaneDns"] = osNetCfg.Spec.DNSServers
+	}
+
+	if len(instance.Spec.DNSSearchDomains) > 0 {
+		templateParameters["CtlplaneDnsSearch"] = instance.Spec.DNSSearchDomains
+	} else {
+		templateParameters["CtlplaneDnsSearch"] = osNetCfg.Spec.DNSSearchDomains
+	}
 
 	netNameLower := "ctlplane"
 	// get network with name_lower label
@@ -1445,6 +1468,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackVMSet,
 	cond *ospdirectorv1beta1.Condition,
+	osNetCfg *ospdirectorv1beta1.OpenStackNetConfig,
 	nadMap map[string]networkv1.NetworkAttachmentDefinition,
 	envVars map[string]common.EnvSetter,
 	templateParameters map[string]interface{},
@@ -1478,6 +1502,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 			ctx,
 			instance,
 			cond,
+			osNetCfg,
 			&envVars,
 			templateParameters,
 			vmDetails[vm.Hostname],

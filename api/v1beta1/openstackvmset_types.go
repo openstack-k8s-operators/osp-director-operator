@@ -69,8 +69,6 @@ type OpenStackVMSetSpec struct {
 	// to the secret data
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 
-	// Domain name used to build fqdn
-	DomainName string `json:"domainName,omitempty"`
 	// BootstrapDNS - initial DNS nameserver values to set on the VM when they are provisioned.
 	// Note that subsequent TripleO deployment will overwrite these values
 	BootstrapDNS     []string `json:"bootstrapDns,omitempty"`

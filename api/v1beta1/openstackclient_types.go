@@ -49,13 +49,6 @@ type OpenStackClientSpec struct {
 	// RunGID user ID to run the pod with
 	RunGID int `json:"runGID"`
 
-	// Domain name used to build fqdn
-	DomainName string `json:"domainName,omitempty"`
-
-	// Upstream DNS servers
-	DNSServers       []string `json:"dnsServers,omitempty"`
-	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
-
 	// Idm secret used to register openstack client in IPA
 	IdmSecret string `json:"idmSecret,omitempty"`
 

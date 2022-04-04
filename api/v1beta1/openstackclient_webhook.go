@@ -91,16 +91,26 @@ func (r *OpenStackClient) Default() {
 		r.SetLabels(labels)
 		openstackclientlog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
 	}
-
 }
 
 // +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackclients,versions=v1beta1,name=vopenstackclient.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &OpenStackIPSet{}
+var _ webhook.Validator = &OpenStackClient{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackClient) ValidateCreate() error {
 	openstackipsetlog.Info("validate create", "name", r.Name)
+
+	//
+	// Fail early on create if osnetcfg ist not found
+	//
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
+	}
 
 	//
 	// validate that for all configured subnets an osnet exists

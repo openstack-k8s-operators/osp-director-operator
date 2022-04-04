@@ -58,6 +58,17 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	}
 
 	//
+	// Fail early on create if osnetcfg ist not found
+	//
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
+	}
+
+	//
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
@@ -90,6 +101,8 @@ func (r *OpenStackBaremetalSet) ValidateDelete() error {
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=create;update,versions=v1beta1,name=mopenstackbaremetalset.kb.io,admissionReviewVersions=v1
+
+var _ webhook.Defaulter = &OpenStackBaremetalSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackBaremetalSet) Default() {
@@ -127,6 +140,28 @@ func (r *OpenStackBaremetalSet) Default() {
 	) {
 		r.SetLabels(labels)
 		baremetalsetlog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
+	}
+
+	//
+	// set spec.domainName , dnsSearchDomains and dnsServers from osnetcfg if not specified
+	//
+	osNetCfg, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		controlplanelog.Error(err, fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
+	}
+
+	if osNetCfg != nil {
+		if len(r.Spec.DNSSearchDomains) == 0 && len(osNetCfg.Spec.DNSSearchDomains) > 0 {
+			r.Spec.DNSSearchDomains = osNetCfg.Spec.DNSSearchDomains
+			controlplanelog.Info(fmt.Sprintf("Using DNSSearchDomains from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.DNSSearchDomains))
+		}
+		if len(r.Spec.BootstrapDNS) == 0 && len(osNetCfg.Spec.DNSServers) > 0 {
+			r.Spec.BootstrapDNS = osNetCfg.Spec.DNSServers
+			controlplanelog.Info(fmt.Sprintf("Using BootstrapDNS from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.BootstrapDNS))
+		}
 	}
 
 }

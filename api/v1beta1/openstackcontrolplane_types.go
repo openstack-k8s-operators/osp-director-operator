@@ -62,13 +62,6 @@ type OpenStackControlPlaneSpec struct {
 	// FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
 	EnableFencing bool `json:"enableFencing"`
 
-	// Domain name used to build fqdn
-	DomainName string `json:"domainName,omitempty"`
-
-	// Upstream DNS servers
-	DNSServers       []string `json:"dnsServers,omitempty"`
-	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
-
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
 	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image

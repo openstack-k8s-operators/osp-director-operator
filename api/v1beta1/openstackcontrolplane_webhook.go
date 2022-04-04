@@ -93,8 +93,15 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		return fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
 	}
 
-	if err := checkDomainName(r.Spec.DomainName); err != nil {
-		return err
+	//
+	// Fail early on create if osnetcfg ist not found
+	//
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err))
 	}
 
 	//
@@ -126,11 +133,6 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 		}
 	}
 
-	oldControlPlane := old.(*OpenStackControlPlane)
-	if r.Spec.DomainName != oldControlPlane.Spec.DomainName {
-		return fmt.Errorf("domainName cannot be modified")
-	}
-
 	//
 	// validate that for all configured subnets an osnet exists
 	//
@@ -154,6 +156,8 @@ func (r *OpenStackControlPlane) ValidateDelete() error {
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplane.kb.io,admissionReviewVersions=v1
+
+var _ webhook.Defaulter = &OpenStackControlPlane{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackControlPlane) Default() {
@@ -226,5 +230,4 @@ func (r *OpenStackControlPlane) Default() {
 		r.SetLabels(labels)
 		controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
 	}
-
 }

@@ -644,11 +644,6 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
 			vmSet.Spec.DiskSize = vmRole.DiskSize
-			if instance.Spec.DomainName != "" {
-				vmSet.Spec.DomainName = instance.Spec.DomainName
-			}
-			vmSet.Spec.BootstrapDNS = instance.Spec.DNSServers
-			vmSet.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
 			if vmRole.StorageClass != "" {
 				vmSet.Spec.StorageClass = vmRole.StorageClass
 			}
@@ -726,11 +721,6 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 		osc.Spec.StorageClass = instance.Spec.OpenStackClientStorageClass
 		osc.Spec.RunUID = openstackclient.CloudAdminUID
 		osc.Spec.RunGID = openstackclient.CloudAdminGID
-		if instance.Spec.DomainName != "" {
-			osc.Spec.DomainName = instance.Spec.DomainName
-		}
-		osc.Spec.DNSServers = instance.Spec.DNSServers
-		osc.Spec.DNSSearchDomains = instance.Spec.DNSSearchDomains
 		if instance.Spec.IdmSecret != "" {
 			osc.Spec.IdmSecret = instance.Spec.IdmSecret
 		}

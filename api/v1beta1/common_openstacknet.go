@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -230,4 +231,32 @@ func CreateVIPNetworkList(
 	}
 
 	return uniqNetworksList, nil
+}
+
+//
+// GetOsNetCfg -
+//
+func GetOsNetCfg(
+	c client.Client,
+	namespace string,
+	osNetCfgName string,
+) (*OpenStackNetConfig, error) {
+
+	osNetCfg := &OpenStackNetConfig{}
+	err := c.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      osNetCfgName,
+			Namespace: namespace,
+		},
+		osNetCfg)
+
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil, fmt.Errorf(fmt.Sprintf("%s with name %s not found", osNetCfg.DeepCopy().GroupVersionKind().Kind, osNetCfg.Name))
+		}
+		return nil, err
+	}
+
+	return osNetCfg, nil
 }

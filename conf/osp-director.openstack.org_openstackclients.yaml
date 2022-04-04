@@ -50,18 +50,6 @@ spec:
               deploymentSSHSecret:
                 description: name of secret holding the stack-admin ssh keys
                 type: string
-              dnsSearchDomains:
-                items:
-                  type: string
-                type: array
-              dnsServers:
-                description: Upstream DNS servers
-                items:
-                  type: string
-                type: array
-              domainName:
-                description: Domain name used to build fqdn
-                type: string
               idmSecret:
                 description: Idm secret used to register openstack client in IPA
                 type: string

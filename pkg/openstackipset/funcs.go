@@ -98,16 +98,13 @@ func EnsureIPs(
 	//
 	// get OSNetCfg object
 	//
-	osnetcfg := &ospdirectorv1beta1.OpenStackNetConfig{}
-	err = r.GetClient().Get(ctx, types.NamespacedName{
-		Name:      strings.ToLower(obj.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]),
-		Namespace: obj.GetNamespace()},
-		osnetcfg)
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), obj.GetNamespace(), obj.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", osnetcfg.Kind, osnetcfg.Name)
-		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonnError
 		cond.Type = ospdirectorv1beta1.CommonCondTypeError
-		err = common.WrapErrorForObject(cond.Message, obj, err)
+		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
+			obj.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			err)
 
 		return status, reconcile.Result{}, err
 	}
@@ -117,7 +114,7 @@ func EnsureIPs(
 			r,
 			obj,
 			cond,
-			osnetcfg,
+			osNetCfg,
 			networks,
 			hostname,
 			&hostStatus,

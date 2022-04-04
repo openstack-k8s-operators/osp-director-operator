@@ -367,11 +367,17 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
-	//   Get domain name and dns servers from controlplane spec
+	//   Get domain name and dns servers from osNetCfg
 	//
-	controlPlane, ctrlResult, err := ospdirectorv1beta1.GetControlPlane(r.Client, instance)
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return ctrlResult, err
+		cond.Type = ospdirectorv1beta1.CommonCondTypeError
+		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
+			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			err)
+
+		return ctrl.Result{}, err
 	}
 
 	//
@@ -381,7 +387,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		ctx,
 		instance,
 		cond,
-		&controlPlane,
+		osNetCfg,
 		provisionServer,
 		sshSecret,
 		passwordSecret,
@@ -702,7 +708,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
-	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	osNetCfg *ospdirectorv1beta1.OpenStackNetConfig,
 	provisionServer *ospdirectorv1beta1.OpenStackProvisionServer,
 	sshSecret string,
 	passwordSecret *corev1.Secret,
@@ -806,7 +812,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 				ctx,
 				instance,
 				cond,
-				controlPlane,
+				osNetCfg,
 				availableBaremetalHosts[i],
 				provisionServer.Status.LocalImageURL,
 				sshSecret,
@@ -825,7 +831,7 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 			ctx,
 			instance,
 			cond,
-			controlPlane,
+			osNetCfg,
 			bmh.GetName(),
 			provisionServer.Status.LocalImageURL,
 			sshSecret,
@@ -864,7 +870,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *ospdirectorv1beta1.Condition,
-	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	osNetCfg *ospdirectorv1beta1.OpenStackNetConfig,
 	bmh string,
 	localImageURL string,
 	sshSecret string,
@@ -914,19 +920,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = sshSecret
 	templateParameters["Hostname"] = bmhStatus.Hostname
-
-	//
-	//   Get Domain and DNSServers from controlplane spec
-	//
-	domainName := controlPlane.Spec.DomainName
-	DNSServers := instance.Spec.BootstrapDNS
-	if DNSServers == nil {
-		DNSServers = controlPlane.Spec.DNSServers
-	}
-	DNSSearchDomains := controlPlane.Spec.DNSSearchDomains
-	if domainName != "" {
-		templateParameters["DomainName"] = domainName
-	}
 
 	//
 	// use same NodeRootPassword paremater as tripleo have
@@ -986,8 +979,18 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneGateway"] = ctlPlaneNetwork.Spec.Gateway
 	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
-	templateParameters["CtlplaneDns"] = DNSServers
-	templateParameters["CtlplaneDnsSearch"] = DNSSearchDomains
+	templateParameters["DomainName"] = osNetCfg.Spec.DomainName
+	if len(instance.Spec.BootstrapDNS) > 0 {
+		templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
+	} else {
+		templateParameters["CtlplaneDns"] = osNetCfg.Spec.DNSServers
+	}
+
+	if len(instance.Spec.DNSSearchDomains) > 0 {
+		templateParameters["CtlplaneDnsSearch"] = instance.Spec.DNSSearchDomains
+	} else {
+		templateParameters["CtlplaneDnsSearch"] = osNetCfg.Spec.DNSSearchDomains
+	}
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 

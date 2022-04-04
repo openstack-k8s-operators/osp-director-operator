@@ -75,18 +75,6 @@ spec:
                 description: Name of the config map containing custom CA certificates
                   to trust
                 type: string
-              dnsSearchDomains:
-                items:
-                  type: string
-                type: array
-              dnsServers:
-                description: Upstream DNS servers
-                items:
-                  type: string
-                type: array
-              domainName:
-                description: Domain name used to build fqdn
-                type: string
               enableFencing:
                 default: false
                 description: 'EnableFencing is provided so that users have the option
