@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
-	virtv1 "kubevirt.io/client-go/api/v1"
+	virtv1 "kubevirt.io/api/core/v1"
 )
 
 // NetSetter - net setter for virtv1.Network
