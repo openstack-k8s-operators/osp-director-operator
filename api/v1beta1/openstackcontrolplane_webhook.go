@@ -231,4 +231,16 @@ func (r *OpenStackControlPlane) Default() {
 		r.SetLabels(labels)
 		controlplanelog.Info(fmt.Sprintf("%s %s labels set to %v", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.GetLabels()))
 	}
+
+	//
+	// set defaults on VM roles
+	//
+	for idx, role := range r.Spec.VirtualMachineRoles {
+		if role.IOThreadsPolicy == "" {
+			role.IOThreadsPolicy = "default"
+		}
+
+		r.Spec.VirtualMachineRoles[idx] = role
+	}
+
 }

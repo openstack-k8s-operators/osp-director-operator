@@ -643,13 +643,9 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			vmSet.Spec.VMCount = vmRole.RoleCount
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
-			vmSet.Spec.DiskSize = vmRole.DiskSize
-			if vmRole.StorageClass != "" {
-				vmSet.Spec.StorageClass = vmRole.StorageClass
-			}
-			vmSet.Spec.StorageAccessMode = vmRole.StorageAccessMode
-			vmSet.Spec.StorageVolumeMode = vmRole.StorageVolumeMode
-			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
+			vmSet.Spec.IOThreadsPolicy = vmRole.IOThreadsPolicy
+			vmSet.Spec.BlockMultiQueue = vmRole.BlockMultiQueue
+			vmSet.Spec.RootDisk = vmRole.RootDisk
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecret.Name
 			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface
 			vmSet.Spec.Networks = vmRole.Networks
@@ -658,6 +654,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			if instance.Spec.PasswordSecret != "" {
 				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
 			}
+			vmSet.Spec.AdditionalDisks = vmRole.AdditionalDisks
 
 			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
 			if err != nil {

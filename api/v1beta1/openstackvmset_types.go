@@ -29,26 +29,25 @@ type OpenStackVMSetSpec struct {
 	Cores uint32 `json:"cores"`
 	// amount of Memory in GB used by the VMs
 	Memory uint32 `json:"memory"`
-	// root Disc size in GB
-	DiskSize uint32 `json:"diskSize"`
-	// StorageClass to be used for the disks
-	StorageClass string `json:"storageClass,omitempty"`
+	// RootDisk specification of the VM
+	RootDisk OpenStackVMSetDisk `json:"rootDisk"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=ReadWriteMany
-	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
-	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
-	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
-	StorageAccessMode string `json:"storageAccessMode,omitempty"`
+	// AdditionalDisks additional disks to add to the VM
+	AdditionalDisks []OpenStackVMSetDisk `json:"additionalDisks,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=Filesystem
-	// +kubebuilder:validation:Enum=Block;Filesystem
-	// StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
-	// specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
-	// RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
-	// To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
-	StorageVolumeMode string `json:"storageVolumeMode"`
-	// BaseImageVolumeName used as the base volume for the VM
-	BaseImageVolumeName string `json:"baseImageVolumeName"`
+	// +kubebuilder:validation:Enum=default;auto;shared
+	// IOThreadsPolicy - IO thread policy for the domain. Currently valid policies are shared and auto.
+	// If IOThreadsPolicy is default, use of IOThreads will be disabled. However, if any disk requests a dedicated IOThread, ioThreadsPolicy will be enabled and default to shared.
+	// When ioThreadsPolicy is set to auto IOThreads will also be "isolated" from the vCPUs and placed on the same physical CPU as the QEMU emulator thread.
+	// An ioThreadsPolicy of shared indicates that KubeVirt should use one thread that will be shared by all disk devices.
+	IOThreadsPolicy string `json:"ioThreadsPolicy"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// Block Multi-Queue is a framework for the Linux block layer that maps Device I/O queries to multiple queues.
+	// This splits I/O processing up across multiple threads, and therefor multiple CPUs. libvirt recommends that the
+	// number of queues used should match the number of CPUs allocated for optimal performance.
+	BlockMultiQueue bool `json:"blockMultiQueue"`
+
 	// name of secret holding the stack-admin ssh keys
 	DeploymentSSHSecret string `json:"deploymentSSHSecret"`
 
@@ -73,6 +72,37 @@ type OpenStackVMSetSpec struct {
 	// Note that subsequent TripleO deployment will overwrite these values
 	BootstrapDNS     []string `json:"bootstrapDns,omitempty"`
 	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
+}
+
+// OpenStackVMSetDisk defines additional disk properties
+type OpenStackVMSetDisk struct {
+	// Name of the additional disk, e.g. used to do the PVC request
+	Name string `json:"name"`
+	// Disc size in GB
+	DiskSize uint32 `json:"diskSize"`
+	// StorageClass to be used for the disk
+	StorageClass string `json:"storageClass,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=ReadWriteMany
+	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
+	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
+	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
+	StorageAccessMode string `json:"storageAccessMode,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=Filesystem
+	// +kubebuilder:validation:Enum=Block;Filesystem
+	// StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+	// specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+	// RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+	// To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
+	StorageVolumeMode string `json:"storageVolumeMode"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// DedicatedIOThread - Disks with dedicatedIOThread set to true will be allocated an exclusive thread.
+	// This is generally useful if a specific Disk is expected to have heavy I/O traffic, e.g. a database spindle.
+	DedicatedIOThread bool `json:"dedicatedIOThread"`
+	// BaseImageVolumeName used as the base volume for the rootdisk of the VM
+	BaseImageVolumeName string `json:"baseImageVolumeName"`
 }
 
 // OpenStackVMSetStatus defines the observed state of OpenStackVMSet

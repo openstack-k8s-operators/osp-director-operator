@@ -46,15 +46,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	virtv1 "kubevirt.io/api/core/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+	"kubevirt.io/client-go/kubecli"
+	// cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+	//	virtctl "kubevirt.io/kubevirt/pkg/virtctl/vm"
 )
 
 // OpenStackVMSetReconciler reconciles a VMSet object
 type OpenStackVMSetReconciler struct {
 	client.Client
-	Kclient kubernetes.Interface
-	Log     logr.Logger
-	Scheme  *runtime.Scheme
+	Kclient        kubernetes.Interface
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	KubevirtClient kubecli.KubevirtClient
 }
 
 // GetClient -
@@ -65,6 +68,11 @@ func (r *OpenStackVMSetReconciler) GetClient() client.Client {
 // GetKClient -
 func (r *OpenStackVMSetReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
+}
+
+// GetVirtClient -
+func (r *OpenStackVMSetReconciler) GetVirtClient() kubecli.KubevirtClient {
+	return r.KubevirtClient
 }
 
 // GetLogger -
@@ -742,9 +750,13 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 ) error {
 
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
-	fsMode := corev1.PersistentVolumeMode(instance.Spec.StorageVolumeMode)
 	trueValue := true
 	terminationGracePeriodSeconds := int64(0)
+	// This run strategy ensures that the VM boots upon creation and reboots upon
+	// failure, but also allows us to issue manual power commands to the Kubevirt API.
+	// The default strategy, "Always", disallows the direct power command API calls
+	// that are required by the Kubevirt fencing agent
+	runStrategy := virtv1.RunStrategyRerunOnFailure
 
 	// get deployment userdata from secret
 	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
@@ -762,175 +774,101 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		return err
 	}
 
-	// dvTemplateSpec for the VM
-	dvTemplateSpec := virtv1.DataVolumeTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ctl.DomainNameUniq,
-			Namespace: instance.Namespace,
-		},
-		Spec: cdiv1.DataVolumeSpec{
-			PVC: &corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					corev1.PersistentVolumeAccessMode(instance.Spec.StorageAccessMode),
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", instance.Spec.DiskSize)),
-					},
-				},
-				VolumeMode: &fsMode,
-			},
-			Source: &cdiv1.DataVolumeSource{
-				PVC: &cdiv1.DataVolumeSourcePVC{
-					Name:      ctl.BaseImageName,
-					Namespace: instance.Namespace,
-				},
-			},
-		},
-	}
-	// set StorageClasseName when specified in the CR
-	if instance.Spec.StorageClass != "" {
-		dvTemplateSpec.Spec.PVC.StorageClassName = &instance.Spec.StorageClass
-	}
-
-	disks := []virtv1.Disk{
-		{
-			Name: "rootdisk",
-			DiskDevice: virtv1.DiskDevice{
-				Disk: &virtv1.DiskTarget{
-					Bus: "virtio",
-				},
-			},
-		},
-		{
-			Name: "cloudinitdisk",
-			DiskDevice: virtv1.DiskDevice{
-				Disk: &virtv1.DiskTarget{
-					Bus: "virtio",
-				},
-			},
-		},
-		{
-			Name:   "fencingdisk",
-			Serial: "fencingdisk",
-			DiskDevice: virtv1.DiskDevice{
-				Disk: &virtv1.DiskTarget{
-					Bus: "virtio",
-				},
-			},
-		},
-	}
-
-	volumes := []virtv1.Volume{
-		{
-			Name: "rootdisk",
-			VolumeSource: virtv1.VolumeSource{
-				DataVolume: &virtv1.DataVolumeSource{
-					Name: ctl.DomainNameUniq,
-				},
-			},
-		},
-		{
-			Name: "cloudinitdisk",
-			VolumeSource: virtv1.VolumeSource{
-				CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
-					UserDataSecretRef: &corev1.LocalObjectReference{
-						Name: secret.Name,
-					},
-					NetworkDataSecretRef: &corev1.LocalObjectReference{
-						Name: ctl.NetworkDataSecret,
-					},
-				},
-			},
-		},
-		{
-			Name: "fencingdisk",
-			VolumeSource: virtv1.VolumeSource{
-				Secret: &virtv1.SecretVolumeSource{
-					SecretName: vmset.KubevirtFencingKubeconfigSecret,
-				},
-			},
-		},
-	}
-
 	labels := common.GetLabels(instance, vmset.AppLabel, map[string]string{
 		common.OSPHostnameLabelSelector: ctl.Hostname,
 		"kubevirt.io/vm":                ctl.DomainName,
 	})
 
-	vmTemplate := virtv1.VirtualMachineInstanceTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: labels,
-		},
-		Spec: virtv1.VirtualMachineInstanceSpec{
-			Hostname:                      ctl.DomainName,
-			EvictionStrategy:              &evictionStrategy,
-			TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-			Domain: virtv1.DomainSpec{
-				Devices: virtv1.Devices{
-					Disks: disks,
-					Interfaces: []virtv1.Interface{
+	var vm *virtv1.VirtualMachine
+	var vmTemplate *virtv1.VirtualMachineInstanceTemplateSpec
+	if vm, err = r.KubevirtClient.VirtualMachine(instance.Namespace).Get(ctl.DomainName, &metav1.GetOptions{}); err != nil {
+		// of not found, prepare the VirtualMachineInstanceTemplateSpec
+		if k8s_errors.IsNotFound(err) {
+			vmTemplate = &virtv1.VirtualMachineInstanceTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ctl.DomainName,
+					Namespace: instance.Namespace,
+					Labels:    labels,
+				},
+				Spec: virtv1.VirtualMachineInstanceSpec{
+					Hostname:                      ctl.DomainName,
+					EvictionStrategy:              &evictionStrategy,
+					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
+					Domain: virtv1.DomainSpec{
+						Devices: virtv1.Devices{
+							Disks: []virtv1.Disk{},
+							Interfaces: []virtv1.Interface{
+								{
+									Name:  "default",
+									Model: "virtio",
+									InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
+										Masquerade: &virtv1.InterfaceMasquerade{},
+									},
+								},
+							},
+							NetworkInterfaceMultiQueue: &trueValue,
+							Rng:                        &virtv1.Rng{},
+						},
+						Machine: &virtv1.Machine{
+							Type: "",
+						},
+					},
+					Volumes: []virtv1.Volume{},
+					Networks: []virtv1.Network{
 						{
-							Name:  "default",
-							Model: "virtio",
-							InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
-								Masquerade: &virtv1.InterfaceMasquerade{},
+							Name: "default",
+							NetworkSource: virtv1.NetworkSource{
+								Pod: &virtv1.PodNetwork{},
 							},
 						},
 					},
-					NetworkInterfaceMultiQueue: &trueValue,
-					Rng:                        &virtv1.Rng{},
 				},
-				Machine: &virtv1.Machine{
-					Type: "",
-				},
-			},
-			Volumes: volumes,
-			Networks: []virtv1.Network{
-				{
-					Name: "default",
-					NetworkSource: virtv1.NetworkSource{
-						Pod: &virtv1.PodNetwork{},
-					},
-				},
-			},
-		},
-	}
+			}
 
-	if len(instance.Spec.BootstrapDNS) != 0 {
-		vmTemplate.Spec.DNSPolicy = corev1.DNSNone
-		vmTemplate.Spec.DNSConfig = &corev1.PodDNSConfig{
-			Nameservers: instance.Spec.BootstrapDNS,
+			// VM
+			vm = &virtv1.VirtualMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ctl.DomainName,
+					Namespace: instance.Namespace,
+				},
+				Spec: virtv1.VirtualMachineSpec{
+					Template: vmTemplate,
+				},
+			}
+
+		} else {
+			// Error reading the object - requeue the request.
+			err = common.WrapErrorForObject("Get VirtualMachineInstanceTemplateSpec", vm, err)
+			return err
 		}
-		if len(instance.Spec.DNSSearchDomains) != 0 {
-			vmTemplate.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+
+		// VM
+		vm = &virtv1.VirtualMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ctl.DomainName,
+				Namespace: instance.Namespace,
+				Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
+			},
+			Spec: virtv1.VirtualMachineSpec{
+				Template: vmTemplate,
+			},
 		}
-	}
-
-	// This run strategy ensures that the VM boots upon creation and reboots upon
-	// failure, but also allows us to issue manual power commands to the Kubevirt API.
-	// The default strategy, "Always", disallows the direct power command API calls
-	// that are required by the Kubevirt fencing agent
-	runStrategy := virtv1.RunStrategyRerunOnFailure
-
-	// VM
-	vm := &virtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ctl.DomainName,
-			Namespace: instance.Namespace,
-			Labels:    common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
-		},
-		Spec: virtv1.VirtualMachineSpec{
-			RunStrategy: &runStrategy,
-			Template:    &vmTemplate,
-		},
 	}
 
 	op, err := controllerutil.CreateOrPatch(ctx, r.Client, vm, func() error {
-
 		vm.Labels = common.GetLabels(instance, vmset.AppLabel, map[string]string{})
+		vm.Spec.RunStrategy = &runStrategy
 
-		vm.Spec.DataVolumeTemplates = []virtv1.DataVolumeTemplateSpec{dvTemplateSpec}
+		if len(instance.Spec.BootstrapDNS) != 0 {
+			vm.Spec.Template.Spec.DNSPolicy = corev1.DNSNone
+			vm.Spec.Template.Spec.DNSConfig = &corev1.PodDNSConfig{
+				Nameservers: instance.Spec.BootstrapDNS,
+			}
+			if len(instance.Spec.DNSSearchDomains) != 0 {
+				vm.Spec.Template.Spec.DNSConfig.Searches = instance.Spec.DNSSearchDomains
+			}
+		}
+
 		vm.Spec.Template.Spec.Domain.CPU = &virtv1.CPU{
 			Cores: instance.Spec.Cores,
 		}
@@ -940,7 +878,9 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			},
 		}
 
+		//
 		// merge additional networks
+		//
 		networks := instance.Spec.Networks
 		// sort networks to get an expected ordering for easier ooo nic template creation
 		sort.Strings(networks)
@@ -994,6 +934,120 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				vm.Spec.Template.Spec.Networks,
 				vmset.NetSetterMap{
 					network.Name: vmset.Network(network.Name, osNetBindings[netNameLower]),
+				},
+			)
+		}
+
+		//
+		// Disks and storage
+		//
+		if instance.Spec.BlockMultiQueue {
+			vm.Spec.Template.Spec.Domain.Devices.BlockMultiQueue = &trueValue
+		}
+		if instance.Spec.IOThreadsPolicy != "default" {
+			ioThreadsPolicy := virtv1.IOThreadsPolicy(instance.Spec.IOThreadsPolicy)
+			vm.Spec.Template.Spec.Domain.IOThreadsPolicy = &ioThreadsPolicy
+		}
+
+		// root, cloudinit and fencing disk
+		vm.Spec.DataVolumeTemplates = vmset.MergeVMDataVolumes(
+			vm.Spec.DataVolumeTemplates,
+			vmset.DataVolumeSetterMap{
+				ctl.DomainNameUniq: vmset.DataVolume(
+					ctl.DomainNameUniq,
+					instance.Namespace,
+					instance.Spec.RootDisk.StorageAccessMode,
+					instance.Spec.RootDisk.DiskSize,
+					instance.Spec.RootDisk.StorageVolumeMode,
+					instance.Spec.RootDisk.StorageClass,
+					ctl.BaseImageName,
+				),
+			},
+			instance.Namespace,
+		)
+
+		vm.Spec.Template.Spec.Domain.Devices.Disks = vmset.MergeVMDisks(
+			vm.Spec.Template.Spec.Domain.Devices.Disks,
+			vmset.DiskSetterMap{
+				"rootdisk": vmset.Disk(
+					"rootdisk",
+					"virtio",
+					"",
+					instance.Spec.RootDisk.DedicatedIOThread,
+				),
+				"cloudinitdisk": vmset.Disk(
+					"cloudinitdisk",
+					"virtio",
+					"",
+					false,
+				),
+				"fencingdisk": vmset.Disk(
+					"fencingdisk",
+					"virtio",
+					"fencingdisk",
+					false,
+				),
+			},
+		)
+
+		vm.Spec.Template.Spec.Volumes = vmset.MergeVMVolumes(
+			vm.Spec.Template.Spec.Volumes,
+			vmset.VolumeSetterMap{
+				"rootdisk": vmset.VolumeSourceDataVolume(
+					"rootdisk",
+					ctl.DomainNameUniq,
+				),
+				"cloudinitdisk": vmset.VolumeSourceCloudInitNoCloud(
+					"cloudinitdisk",
+					secret.Name,
+					ctl.NetworkDataSecret,
+				),
+				"fencingdisk": vmset.VolumeSourceSecret(
+					"fencingdisk",
+					vmset.KubevirtFencingKubeconfigSecret,
+				),
+			},
+		)
+
+		// merge additional disks
+		for _, disk := range instance.Spec.AdditionalDisks {
+			name := fmt.Sprintf("%s-%s", ctl.DomainNameUniq, disk.Name)
+
+			vm.Spec.DataVolumeTemplates = vmset.MergeVMDataVolumes(
+				vm.Spec.DataVolumeTemplates,
+				vmset.DataVolumeSetterMap{
+					name: vmset.DataVolume(
+						name,
+						instance.Namespace,
+						disk.StorageAccessMode,
+						disk.DiskSize,
+						disk.StorageVolumeMode,
+						disk.StorageClass,
+						"",
+					),
+				},
+				instance.Namespace,
+			)
+
+			vm.Spec.Template.Spec.Domain.Devices.Disks = vmset.MergeVMDisks(
+				vm.Spec.Template.Spec.Domain.Devices.Disks,
+				vmset.DiskSetterMap{
+					name: vmset.Disk(
+						name,
+						"virtio",
+						"",
+						disk.DedicatedIOThread,
+					),
+				},
+			)
+
+			vm.Spec.Template.Spec.Volumes = vmset.MergeVMVolumes(
+				vm.Spec.Template.Spec.Volumes,
+				vmset.VolumeSetterMap{
+					name: vmset.VolumeSourceDataVolume(
+						name,
+						name,
+					),
 				},
 			)
 		}
@@ -1311,8 +1365,8 @@ func (r *OpenStackVMSetReconciler) createBaseImage(
 	cond *ospdirectorv1beta1.Condition,
 ) (string, ctrl.Result, error) {
 	baseImageName := fmt.Sprintf("osp-vmset-baseimage-%s", instance.UID[0:4])
-	if instance.Spec.BaseImageVolumeName != "" {
-		baseImageName = instance.Spec.BaseImageVolumeName
+	if instance.Spec.RootDisk.BaseImageVolumeName != "" {
+		baseImageName = instance.Spec.RootDisk.BaseImageVolumeName
 	}
 
 	// wait for the base image conversion job to be finished before we create the VMs

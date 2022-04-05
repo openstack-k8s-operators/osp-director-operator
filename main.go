@@ -43,6 +43,8 @@ import (
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	"kubevirt.io/client-go/kubecli"
+
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	//templatev1 "github.com/openshift/api/template/v1"
@@ -135,6 +137,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	kubevirtClient, err := kubecli.GetKubevirtClientFromRESTConfig(cfg)
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+
 	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
 		enableWebhooks = true
 
@@ -156,10 +164,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackVMSetReconciler{
-		Client:  mgr.GetClient(),
-		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
-		Scheme:  mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Kclient:        kclient,
+		Log:            ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
+		Scheme:         mgr.GetScheme(),
+		KubevirtClient: kubevirtClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackVMSet")
 		os.Exit(1)
