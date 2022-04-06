@@ -154,6 +154,18 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err = r.GetClient().Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonConfigGeneratorNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrl.Result{}, err
+	}
+
+	// look up the ConfigVersion(contains the full Hash) from the ConfigVersionName (a short hash)
+	configVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
+	err = r.GetClient().Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigVersion, Namespace: instance.Namespace}, configVersion)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		cond.Message = err.Error()
 		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.DeployCondReasonConfigVersionNotFound)
 		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
 		err = common.WrapErrorForObject(cond.Message, instance, err)
@@ -181,7 +193,8 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		job := openstackdeploy.DeployJob(
 			instance,
 			"openstackclient",
-			instance.Spec.ConfigVersion,
+			configVersion.Spec.Hash,
+			configVersion.Name,
 			configGenerator.Spec.GitSecret,
 			advancedSettings,
 			OSPVersion,

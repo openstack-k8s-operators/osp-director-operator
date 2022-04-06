@@ -612,10 +612,10 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
 
     The osconfiggenerator created above will automatically generate playbooks any time you scale or modify the ConfigMaps for your OSP deployment. Generating these playbooks takes several minutes. You can monitor the osconfiggenerator's status condition for it to finish.
 
-9) Obtain the latest OsConfigVersion (Ansible Playbooks). Select the hash/digest of the latest osconfigversion for use in the next step.
+9) Obtain the latest OsConfigVersion (Ansible Playbooks). Select the name of the latest osconfigversion for use in the next step.
 
     ```bash
-    oc get -n openstack --sort-by {.metadata.creationTimestamp} osconfigversions -o json
+    oc get -n openstack --sort-by {.metadata.creationTimestamp} osconfigversions -o json | jq -re .items[0].metadata.name
     ```
 
    NOTE: OsConfigVersion objects also have a 'git diff' attribute that can be used to easily compare the changes between Ansible playbook versions.
@@ -628,7 +628,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     metadata:
       name: default
     spec:
-      configVersion: n5fch96h548h75hf4hbdhb8hfdh676h57bh96h5c5h59hf4h88h...
+      configVersion: n5fch96h54
       configGenerator: default
     ```
 

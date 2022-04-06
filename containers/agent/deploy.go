@@ -37,18 +37,19 @@ var (
 	}
 
 	deployOpts struct {
-		kubeconfig     string
-		namespace      string
-		pod            string
-		deployName     string
-		configVersion  string
-		gitURL         string
-		gitSSHIdentity string
-		playbook       string
-		limit          string
-		tags           string
-		skipTags       string
-		ospVersion     string
+		kubeconfig        string
+		namespace         string
+		pod               string
+		deployName        string
+		configVersion     string
+		configVersionName string
+		gitURL            string
+		gitSSHIdentity    string
+		playbook          string
+		limit             string
+		tags              string
+		skipTags          string
+		ospVersion        string
 	}
 
 	openstackConfigVersionGVR = schema.GroupVersionResource{
@@ -72,6 +73,7 @@ func init() {
 	deployCmd.PersistentFlags().StringVar(&deployOpts.namespace, "namespace", "openstack", "Namespace to use for openstackclient pod.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.pod, "pod", "", "Pod to use for executing the deployment.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.configVersion, "configVersion", "", "Config version to use when executing the deployment.")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.configVersionName, "configVersionName", "", "Config version name to use for looking up exports.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.deployName, "deployName", "", "The name of the deployment being executed. Controls the name of the generated exports ConfigMap.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitURL, "gitURL", "", "Git URL to use when downloading playbooks.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitSSHIdentity, "gitSSHIdentity", "", "Git SSH Identity to use when downloading playbooks.")
@@ -213,11 +215,11 @@ func allNodesToYaml(allNodesData string, filter bool) (string, error) {
 	return string(yamlStr), err
 }
 
-func getCtlplaneExports(dClient dynamic.Interface) (string, error) {
+func getCtlplaneExports(dClient dynamic.Interface, configVersionName string) (string, error) {
 
 	configVersion := dClient.Resource(openstackConfigVersionGVR)
 
-	unstructuredConfigVersion, err := configVersion.Namespace(deployOpts.namespace).Get(context.Background(), os.Getenv("CONFIG_VERSION"), metav1.GetOptions{})
+	unstructuredConfigVersion, err := configVersion.Namespace(deployOpts.namespace).Get(context.Background(), configVersionName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -248,7 +250,7 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 
 	// get the existing CtlplaneExports from the ConfigVersion CR
 	dClient := dynamic.NewForConfigOrDie(config)
-	ctlplaneExport, err := getCtlplaneExports(dClient)
+	ctlplaneExport, err := getCtlplaneExports(dClient, deployOpts.configVersionName)
 	if err != nil {
 		return err
 	}
@@ -329,6 +331,13 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 			glog.Fatalf("configVersion is required")
 		}
 		deployOpts.configVersion = configVersion
+	}
+	if deployOpts.configVersionName == "" {
+		configVersionName, ok := os.LookupEnv("CONFIG_VERSION_NAME")
+		if !ok || configVersionName == "" {
+			glog.Fatalf("configVersionName is required")
+		}
+		deployOpts.configVersionName = configVersionName
 	}
 	if deployOpts.deployName == "" {
 		deployName, ok := os.LookupEnv("DEPLOY_NAME")

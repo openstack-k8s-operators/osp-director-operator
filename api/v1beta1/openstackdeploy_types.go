@@ -48,6 +48,8 @@ const (
 	DeployCondReasonCVUpdated ConditionReason = "ConfigVersionUpdated"
 	// DeployCondReasonConfigVersionNotFound - error finding ConfigVersion
 	DeployCondReasonConfigVersionNotFound ConditionReason = "ConfigVersionNotFound"
+	// DeployCondReasonConfigGeneratorNotFound - error finding ConfigGenerator
+	DeployCondReasonConfigGeneratorNotFound ConditionReason = "ConfigGeneratorNotFound"
 	// DeployCondReasonJobFailed - error creating/update CM
 	DeployCondReasonJobFailed ConditionReason = "JobFailed"
 	// DeployCondReasonConfigCreate - error creating/update CM
