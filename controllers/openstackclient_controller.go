@@ -153,6 +153,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			r.Client,
 			instance.Namespace,
 			instance.Spec.Networks[0],
 			currentLabels,
@@ -484,6 +485,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 		// get network with name_lower label
 		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+			r.Client,
 			instance.Namespace,
 			labelSelector,
 		)
@@ -676,6 +678,7 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 
 		// get network with name_lower label
 		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+			r.Client,
 			instance.Namespace,
 			map[string]string{
 				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,

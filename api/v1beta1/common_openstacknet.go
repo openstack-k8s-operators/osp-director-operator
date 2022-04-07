@@ -89,6 +89,7 @@ func AddOSNetNameLowerLabels(
 // the in the osnetcfg controller to watch this resource and reconcile
 //
 func AddOSNetConfigRefLabel(
+	c client.Client,
 	namespace string,
 	subnetName string,
 	labels map[string]string,
@@ -100,7 +101,7 @@ func AddOSNetConfigRefLabel(
 	labelSelector := map[string]string{
 		SubNetNameLabelSelector: subnetName,
 	}
-	osnet, err := GetOpenStackNetWithLabel(namespace, labelSelector)
+	osnet, err := GetOpenStackNetWithLabel(c, namespace, labelSelector)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		return labels, fmt.Errorf(fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName))
 	} else if err != nil {
@@ -131,6 +132,7 @@ func AddOSNetConfigRefLabel(
 
 // GetOpenStackNetsWithLabel - Return a list of all OpenStackNets in the namespace that have (optional) labels
 func GetOpenStackNetsWithLabel(
+	c client.Client,
 	namespace string,
 	labelSelector map[string]string,
 ) (*OpenStackNetList, error) {
@@ -145,7 +147,7 @@ func GetOpenStackNetsWithLabel(
 		listOpts = append(listOpts, labels)
 	}
 
-	if err := webhookClient.List(context.TODO(), osNetList, listOpts...); err != nil {
+	if err := c.List(context.TODO(), osNetList, listOpts...); err != nil {
 		return nil, err
 	}
 
@@ -154,11 +156,13 @@ func GetOpenStackNetsWithLabel(
 
 // GetOpenStackNetWithLabel - Return OpenStackNet with labels
 func GetOpenStackNetWithLabel(
+	c client.Client,
 	namespace string,
 	labelSelector map[string]string,
 ) (*OpenStackNet, error) {
 
 	osNetList, err := GetOpenStackNetsWithLabel(
+		c,
 		namespace,
 		labelSelector,
 	)
@@ -175,10 +179,12 @@ func GetOpenStackNetWithLabel(
 
 // GetOpenStackNetsMapWithLabel - Return a map[NameLower] of all OpenStackNets in the namespace that have (optional) labels
 func GetOpenStackNetsMapWithLabel(
+	c client.Client,
 	namespace string,
 	labelSelector map[string]string,
 ) (map[string]OpenStackNet, error) {
 	osNetList, err := GetOpenStackNetsWithLabel(
+		c,
 		namespace,
 		labelSelector,
 	)
@@ -196,6 +202,7 @@ func GetOpenStackNetsMapWithLabel(
 
 // CreateVIPNetworkList - return list of all networks from all VM roles which has vip flag
 func CreateVIPNetworkList(
+	c client.Client,
 	instance *OpenStackControlPlane,
 ) ([]string, error) {
 
@@ -212,6 +219,7 @@ func CreateVIPNetworkList(
 
 			// get network with name_lower label to verify if VIP needs to be requested from Spec
 			network, err := GetOpenStackNetWithLabel(
+				c,
 				instance.Namespace,
 				labelSelector,
 			)

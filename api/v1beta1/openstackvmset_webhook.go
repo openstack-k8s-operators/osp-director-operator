@@ -113,6 +113,7 @@ func (r *OpenStackVMSet) Default() {
 	//
 	if _, ok := r.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
 		labels, err := AddOSNetConfigRefLabel(
+			webhookClient,
 			r.Namespace,
 			r.Spec.Networks[0],
 			r.DeepCopy().GetLabels(),
