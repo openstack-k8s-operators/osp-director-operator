@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: openstackbackups.osp-director.openstack.org
 spec:
@@ -97,23 +96,6 @@ spec:
                           type: string
                         metadata:
                           description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
-                          properties:
-                            annotations:
-                              additionalProperties:
-                                type: string
-                              type: object
-                            finalizers:
-                              items:
-                                type: string
-                              type: array
-                            labels:
-                              additionalProperties:
-                                type: string
-                              type: object
-                            name:
-                              type: string
-                            namespace:
-                              type: string
                           type: object
                       type: object
                     type: array
@@ -203,23 +185,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackBaremetalSetSpec defines the desired
@@ -256,6 +221,10 @@ spec:
                                   description: Name of secret holding the stack-admin
                                     ssh keys
                                   type: string
+                                dnsSearchDomains:
+                                  items:
+                                    type: string
+                                  type: array
                                 hardwareReqs:
                                   description: Hardware requests for sub-selection
                                     of BaremetalHosts with certain hardware specs
@@ -553,23 +522,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackClientSpec defines the desired
@@ -585,18 +537,6 @@ spec:
                                 deploymentSSHSecret:
                                   description: name of secret holding the stack-admin
                                     ssh keys
-                                  type: string
-                                dnsSearchDomains:
-                                  items:
-                                    type: string
-                                  type: array
-                                dnsServers:
-                                  description: Upstream DNS servers
-                                  items:
-                                    type: string
-                                  type: array
-                                domainName:
-                                  description: Domain name used to build fqdn
                                   type: string
                                 idmSecret:
                                   description: Idm secret used to register openstack
@@ -795,23 +735,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackControlPlaneSpec defines the desired
@@ -824,25 +747,13 @@ spec:
                                     name <-> subnet nameLower for which a IP should
                                     get reserved on These are used to create the <Service>VirtualFixedIPs
                                     environment parameters starting wallaby/OSP17.0.
-                                    Default "Redis":  "internal_api",         "OVNDBs":
-                                    "internal_api", https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
+                                    Default "Redis":  "internal_api", "OVNDBs": "internal_api",
+                                    https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
                                     Note: OSP17 networkv2 only'
                                   type: object
                                 caConfigMap:
                                   description: Name of the config map containing custom
                                     CA certificates to trust
-                                  type: string
-                                dnsSearchDomains:
-                                  items:
-                                    type: string
-                                  type: array
-                                dnsServers:
-                                  description: Upstream DNS servers
-                                  items:
-                                    type: string
-                                  type: array
-                                domainName:
-                                  description: Domain name used to build fqdn
                                   type: string
                                 enableFencing:
                                   default: false
@@ -1176,23 +1087,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackMACAddressSpec defines the desired
@@ -1418,23 +1312,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackNetAttachmentSpec defines the
@@ -1654,23 +1531,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackNetConfigSpec defines the desired
@@ -2165,23 +2025,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackNetSpec defines the desired state
@@ -2449,23 +2292,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackProvisionServerSpec defines the
@@ -2644,23 +2470,6 @@ spec:
                                 to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             metadata:
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: OpenStackVMSetSpec defines the desired
@@ -2698,9 +2507,6 @@ spec:
                                   items:
                                     type: string
                                   type: array
-                                domainName:
-                                  description: Domain name used to build fqdn
-                                  type: string
                                 isTripleoRole:
                                   description: in case of external functionality,
                                     like 3rd party network controllers, set to false
@@ -2982,23 +2788,6 @@ spec:
                           type: string
                         metadata:
                           description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
-                          properties:
-                            annotations:
-                              additionalProperties:
-                                type: string
-                              type: object
-                            finalizers:
-                              items:
-                                type: string
-                              type: array
-                            labels:
-                              additionalProperties:
-                                type: string
-                              type: object
-                            name:
-                              type: string
-                            namespace:
-                              type: string
                           type: object
                         stringData:
                           additionalProperties:
@@ -3011,8 +2800,8 @@ spec:
                             from the API.
                           type: object
                         type:
-                          description: Used to facilitate programmatic handling of
-                            secret data.
+                          description: 'Used to facilitate programmatic handling of
+                            secret data. More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types'
                           type: string
                       type: object
                     type: array

@@ -165,7 +165,7 @@ jobs:
       uses: redhat-actions/openshift-tools-installer@v1
       with:
         source: github
-        operator-sdk: '1.14.0'
+        operator-sdk: '1.18.1'
 
     - name: Log in to Quay Registry
       uses: redhat-actions/podman-login@v1
