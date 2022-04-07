@@ -50,6 +50,8 @@ endif
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
+# Metrics bind address
+METRICS_BIND_ADDRESS ?= :8080
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -153,7 +155,7 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run ./main.go -metrics-bind-address ${METRICS_BIND_ADDRESS}
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
