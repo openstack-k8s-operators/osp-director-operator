@@ -125,6 +125,30 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}(cond)
 
+	//
+	// Get OSPVersion from OSControlPlane status
+	//
+	// unified OSPVersion from ControlPlane CR
+	// which means also get either 16.2 or 17.0 for upstream versions
+	controlPlane, ctrlResult, err := ospdirectorv1beta1.GetControlPlane(r.Client, instance)
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNetNotFound)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrlResult, err
+	}
+	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNotSupportedVersion)
+		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.DeployCondTypeError)
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return ctrlResult, err
+	}
+
 	// look up the git secret from the configGenerator
 	configGenerator := &ospdirectorv1beta1.OpenStackConfigGenerator{}
 	err = r.GetClient().Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigGenerator, Namespace: instance.Namespace}, configGenerator)
@@ -160,6 +184,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			instance.Spec.ConfigVersion,
 			configGenerator.Spec.GitSecret,
 			advancedSettings,
+			OSPVersion,
 		)
 
 		op, err := controllerutil.CreateOrPatch(ctx, r.Client, job, func() error {

@@ -33,6 +33,7 @@ func DeployJob(
 	configVersion string,
 	gitSecret string,
 	advancedSettings *ospdirectorv1beta1.OpenStackDeployAdvancedSettingsSpec,
+	ospVersion ospdirectorv1beta1.OSPVersion,
 ) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
@@ -84,6 +85,10 @@ func DeployJob(
 					{
 						Name:  "OPENSTACKCLIENT_POD",
 						Value: openstackClientPod,
+					},
+					{
+						Name:  "OSP_VERSION",
+						Value: string(ospVersion),
 					},
 					{
 						Name: "GIT_URL",
