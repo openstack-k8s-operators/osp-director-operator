@@ -240,6 +240,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			r.Client,
 			instance.Namespace,
 			instance.Spec.Networks[0],
 			currentLabels,
@@ -627,6 +628,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 
 	// get ctlplane network
 	network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+		r.Client,
 		instance.Namespace,
 		labelSelector,
 	)
@@ -949,6 +951,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
 			}
 			network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+				r.Client,
 				instance.Namespace,
 				labelSelector,
 			)
@@ -1142,6 +1145,7 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 
 		// get network with name_lower label
 		network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+			r.Client,
 			instance.Namespace,
 			map[string]string{
 				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,

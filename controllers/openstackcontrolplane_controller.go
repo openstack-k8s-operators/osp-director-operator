@@ -779,7 +779,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	//
 
 	// create list of networks where Spec.VIP == True
-	vipNetworksList, err := ospdirectorv1beta1.CreateVIPNetworkList(instance)
+	vipNetworksList, err := ospdirectorv1beta1.CreateVIPNetworkList(r.Client, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -795,6 +795,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			r.Client,
 			instance.Namespace,
 			vipNetworksList[0],
 			currentLabels,

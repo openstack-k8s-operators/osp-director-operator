@@ -241,6 +241,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
+			r.Client,
 			instance.Namespace,
 			instance.Spec.Networks[0],
 			currentLabels,
@@ -955,6 +956,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 
 	// get ctlplane network
 	ctlPlaneNetwork, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+		r.Client,
 		instance.Namespace,
 		labelSelector,
 	)

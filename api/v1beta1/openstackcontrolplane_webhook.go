@@ -198,6 +198,7 @@ func (r *OpenStackControlPlane) Default() {
 		}
 
 		labels, err := AddOSNetConfigRefLabel(
+			webhookClient,
 			r.Namespace,
 			subnetName,
 			r.DeepCopy().GetLabels(),
@@ -213,7 +214,7 @@ func (r *OpenStackControlPlane) Default() {
 	//
 	// add labels of all networks used by this CR
 	//
-	vipNetList, err := CreateVIPNetworkList(r)
+	vipNetList, err := CreateVIPNetworkList(webhookClient, r)
 	if err != nil {
 		controlplanelog.Error(err, fmt.Sprintf("error creating VIP network list: %s", err))
 	}

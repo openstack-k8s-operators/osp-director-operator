@@ -19,7 +19,7 @@ func GetOpenStackNetsBindingMap(
 	//
 	// Acquire a list and map of all OpenStackNetworks available in this namespace
 	//
-	osNetList, err := ospdirectorv1beta1.GetOpenStackNetsWithLabel(namespace, map[string]string{})
+	osNetList, err := ospdirectorv1beta1.GetOpenStackNetsWithLabel(r.GetClient(), namespace, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
