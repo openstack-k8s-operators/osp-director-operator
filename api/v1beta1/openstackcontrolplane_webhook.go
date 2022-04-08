@@ -114,6 +114,13 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
 			return err
 		}
+
+		//
+		// validate additional disks
+		//
+		if err := validateAdditionalDisks(vmspec.AdditionalDisks, []OpenStackVMSetDisk{}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -122,6 +129,14 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	controlplanelog.Info("validate update", "name", r.Name)
+
+	// Get the OpenStackVMSet object
+	var ok bool
+	var oldInstance *OpenStackControlPlane
+
+	if oldInstance, ok = old.(*OpenStackControlPlane); !ok {
+		return fmt.Errorf("runtime object is not an OpenStackControlPlane")
+	}
 
 	//
 	// validate OSP version, right now only 16.2/train and 17.0/wallaby are supported
@@ -134,13 +149,32 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	}
 
 	//
-	// validate that for all configured subnets an osnet exists
+	// validate vm roles
 	//
-	for _, vmspec := range r.Spec.VirtualMachineRoles {
+	for role, vmspec := range r.Spec.VirtualMachineRoles {
+		oldVMSpec := OpenStackVirtualMachineRoleSpec{}
+		if spec, ok := oldInstance.Spec.VirtualMachineRoles[role]; ok {
+			oldVMSpec = spec
+		}
+
 		//
 		// validate that for all configured subnets an osnet exists
 		//
 		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
+			return err
+		}
+
+		//
+		// validate rootdisk
+		//
+		if err := validateRootDisk(vmspec.RootDisk, oldVMSpec.RootDisk); err != nil {
+			return err
+		}
+
+		//
+		// validate additional disks
+		//
+		if err := validateAdditionalDisks(vmspec.AdditionalDisks, oldVMSpec.AdditionalDisks); err != nil {
 			return err
 		}
 	}

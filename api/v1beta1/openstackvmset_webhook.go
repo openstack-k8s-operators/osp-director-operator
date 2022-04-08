@@ -75,6 +75,13 @@ func (r *OpenStackVMSet) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// validate additional disks
+	//
+	if err := validateAdditionalDisks(r.Spec.AdditionalDisks, []OpenStackVMSetDisk{}); err != nil {
+		return err
+	}
+
 	return r.validateCr()
 }
 
@@ -82,10 +89,32 @@ func (r *OpenStackVMSet) ValidateCreate() error {
 func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 	vmsetlog.Info("validate update", "name", r.Name)
 
+	// Get the OpenStackVMSet object
+	var ok bool
+	var oldInstance *OpenStackVMSet
+
+	if oldInstance, ok = old.(*OpenStackVMSet); !ok {
+		return fmt.Errorf("runtime object is not an OpenStackVMSet")
+	}
+
 	//
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+		return err
+	}
+
+	//
+	// validate rootdisk
+	//
+	if err := validateRootDisk(r.Spec.RootDisk, oldInstance.Spec.RootDisk); err != nil {
+		return err
+	}
+
+	//
+	// validate additional disks
+	//
+	if err := validateAdditionalDisks(r.Spec.AdditionalDisks, oldInstance.Spec.AdditionalDisks); err != nil {
 		return err
 	}
 
