@@ -106,7 +106,7 @@ var _ webhook.Defaulter = &OpenStackProvisionServer{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *OpenStackProvisionServer) Default() {
-	openstackephemeralheatlog.Info("default", "name", r.Name)
+	openstackprovisionserverlog.Info("default", "name", r.Name)
 
 	if r.Spec.DownloaderImageURL == "" {
 		r.Spec.DownloaderImageURL = openstackProvisionServerDefaults.DownloaderImageURL

@@ -56,7 +56,7 @@ func AddOSNetNameLowerLabels(
 	}
 
 	if len(newOsNets) > 0 {
-		controlplanelog.Info(fmt.Sprintf("removing network labels: %v",
+		log.Info(fmt.Sprintf("removing network labels: %v",
 			removedOsNets,
 		))
 	}
@@ -76,7 +76,7 @@ func AddOSNetNameLowerLabels(
 	}
 
 	if len(newOsNets) > 0 {
-		controlplanelog.Info(fmt.Sprintf("adding network labels: %v",
+		log.Info(fmt.Sprintf("adding network labels: %v",
 			newOsNets,
 		))
 	}
