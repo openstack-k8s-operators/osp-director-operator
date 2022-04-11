@@ -272,3 +272,11 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+.PHONY: osp-director-operator-agent-image-build
+osp-director-operator-agent-image-build: test ## Build osp-director-operator-agent.
+	podman build -t ${IMG} -f Dockerfile.agent
+
+.PHONY: osp-director-downloader-image-build
+osp-director-downloader-image-build: test ## Build osp-director-downloader image.
+	podman build -t ${IMG} -f containers/image_downloader/Dockerfile containers/image_downloader
