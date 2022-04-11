@@ -128,7 +128,7 @@ play() {
     # As we can't use the existance of a heat stack, instead use the existance of /var/lib/tripleo-config on any
     # overcloud host (created by the tripleo-bootstrap role) to determine if this is a "CREATE" or an "UPDATE"
     cat <<EOF > set_stack_action_playbook.yaml
-{{` ---
+{{`---
 - hosts: overcloud
   name: Determine the correct stack action for 16.2 deployments
   gather_facts: false
