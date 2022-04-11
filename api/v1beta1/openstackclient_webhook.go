@@ -100,7 +100,7 @@ var _ webhook.Validator = &OpenStackClient{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackClient) ValidateCreate() error {
-	openstackipsetlog.Info("validate create", "name", r.Name)
+	openstackclientlog.Info("validate create", "name", r.Name)
 
 	//
 	// Fail early on create if osnetcfg ist not found
@@ -125,7 +125,7 @@ func (r *OpenStackClient) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackClient) ValidateUpdate(old runtime.Object) error {
-	openstackipsetlog.Info("validate update", "name", r.Name)
+	openstackclientlog.Info("validate update", "name", r.Name)
 
 	//
 	// validate that for all configured subnets an osnet exists
@@ -139,7 +139,7 @@ func (r *OpenStackClient) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *OpenStackClient) ValidateDelete() error {
-	openstackipsetlog.Info("validate delete", "name", r.Name)
+	openstackclientlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil

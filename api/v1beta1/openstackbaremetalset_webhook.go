@@ -148,7 +148,7 @@ func (r *OpenStackBaremetalSet) Default() {
 	//
 	osNetCfg, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		controlplanelog.Error(err, fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+		baremetalsetlog.Error(err, fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
 			r.GetLabels()[OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err))
@@ -157,11 +157,11 @@ func (r *OpenStackBaremetalSet) Default() {
 	if osNetCfg != nil {
 		if len(r.Spec.DNSSearchDomains) == 0 && len(osNetCfg.Spec.DNSSearchDomains) > 0 {
 			r.Spec.DNSSearchDomains = osNetCfg.Spec.DNSSearchDomains
-			controlplanelog.Info(fmt.Sprintf("Using DNSSearchDomains from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.DNSSearchDomains))
+			baremetalsetlog.Info(fmt.Sprintf("Using DNSSearchDomains from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.DNSSearchDomains))
 		}
 		if len(r.Spec.BootstrapDNS) == 0 && len(osNetCfg.Spec.DNSServers) > 0 {
 			r.Spec.BootstrapDNS = osNetCfg.Spec.DNSServers
-			controlplanelog.Info(fmt.Sprintf("Using BootstrapDNS from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.BootstrapDNS))
+			baremetalsetlog.Info(fmt.Sprintf("Using BootstrapDNS from %s %s: %v", osNetCfg.GetObjectKind().GroupVersionKind().Kind, osNetCfg.Name, r.Spec.BootstrapDNS))
 		}
 	}
 
