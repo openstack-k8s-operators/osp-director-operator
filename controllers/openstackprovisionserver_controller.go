@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	provisionserver "github.com/openstack-k8s-operators/osp-director-operator/pkg/provisionserver"
@@ -115,7 +116,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := &shared.Condition{}
 
 	//
 	// Used in comparisons below to determine whether a status update is actually needed
@@ -128,7 +129,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
@@ -139,7 +140,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		)
 
 		instance.Status.ProvisioningStatus.Reason = cond.Message
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.ProvisioningStatus.State = shared.ProvisioningState(cond.Type)
 
 		if statusChanged() {
 			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
@@ -205,8 +206,8 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// Calculate overall provisioning status
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ProvisionServerCondTypeProvisioning)
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioning)
+	cond.Type = shared.ProvisionServerCondTypeProvisioning
+	cond.Reason = shared.OpenStackProvisionServerCondReasonProvisioning
 	cond.Message = "Provisioning of OpenStackProvisionServer in progress"
 
 	// Provision IP Discovery Agent sets status' ProvisionIP
@@ -216,8 +217,8 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		curURL, err := url.Parse(instance.Status.LocalImageURL)
 
 		if err != nil {
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ProvisionServerCondTypeError)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonLocalImageURLParseError)
+			cond.Type = shared.ProvisionServerCondTypeError
+			cond.Reason = shared.OpenStackProvisionServerCondReasonLocalImageURLParseError
 			cond.Message = fmt.Sprintf("Failed to parse existing LocalImageURL: %s", instance.Status.LocalImageURL)
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -237,8 +238,8 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		})
 
 		if err != nil {
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ProvisionServerCondTypeError)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonListError)
+			cond.Type = shared.ProvisionServerCondTypeError
+			cond.Reason = shared.OpenStackProvisionServerCondReasonListError
 			cond.Message = "Failed to list pods"
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -250,8 +251,8 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		if podListLen > 1 {
 			common.LogForObject(r, fmt.Sprintf("WARNING: Multiple pods (%d) found for OpenStackProvisionServer %s!", podListLen, instance.Name), instance)
 		} else if podListLen < 1 {
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ProvisionServerCondTypeWaiting)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonListError)
+			cond.Type = shared.ProvisionServerCondTypeWaiting
+			cond.Reason = shared.OpenStackProvisionServerCondReasonListError
 			cond.Message = "Pod not yet available"
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -261,8 +262,8 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 		// There should only be one pod.  If there is more than one, we have other problems...
 		for _, pod := range podList.Items {
 			if pod.Status.Phase == corev1.PodRunning {
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ProvisionServerCondTypeProvisioned)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonProvisioned)
+				cond.Type = shared.ProvisionServerCondTypeProvisioned
+				cond.Reason = shared.OpenStackProvisionServerCondReasonProvisioned
 				cond.Message = "OpenStackProvisionServer has been provisioned"
 				break
 			}
@@ -301,7 +302,7 @@ func (r *OpenStackProvisionServerReconciler) SetupWithManager(mgr ctrl.Manager) 
 func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackProvisionServer,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (string, error) {
 	// Get the provisioning interface of the cluster worker nodes from either Metal3
 	// or from the instance spec itself if it was provided there
@@ -317,8 +318,8 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 
 		if err != nil {
 			cond.Message = "Unable to acquire provisioning interface!"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonInterfaceAcquireError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.OpenStackProvisionServerCondReasonInterfaceAcquireError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -327,8 +328,8 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 
 		if provInterfaceName == "" {
 			cond.Message = "Metal3 provisioning interface configuration not found!"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonInterfaceNotFound)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.OpenStackProvisionServerCondReasonInterfaceNotFound
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -342,7 +343,7 @@ func (r *OpenStackProvisionServerReconciler) getProvisioningInterfaceName(
 func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackProvisionServer,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	provInterfaceName string,
 ) error {
 	trueValue := true
@@ -469,8 +470,8 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update deployment %s", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonDeploymentError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.OpenStackProvisionServerCondReasonDeploymentError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return err
@@ -478,8 +479,8 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 
 	if op != controllerutil.OperationResultNone {
 		cond.Message = fmt.Sprintf("%s %s %s", instance.Kind, instance.Name, op)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OpenStackProvisionServerCondReasonDeploymentCreated)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+		cond.Reason = shared.OpenStackProvisionServerCondReasonDeploymentCreated
+		cond.Type = shared.CommonCondTypeProvisioned
 	}
 
 	return nil

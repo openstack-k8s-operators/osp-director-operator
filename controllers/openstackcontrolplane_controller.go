@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
@@ -104,7 +105,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// initialize condition
 	//
-	cond := &ospdirectorv1beta1.Condition{}
+	cond := &shared.Condition{}
 
 	if instance.Status.VIPStatus == nil {
 		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
@@ -138,7 +139,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
@@ -149,7 +150,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		)
 
 		instance.Status.ProvisioningStatus.Reason = cond.Message
-		instance.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.ProvisioningStatus.State = shared.ProvisioningState(cond.Type)
 
 		if statusChanged() {
 			if updateErr := r.Status().Update(context.Background(), instance); updateErr != nil {
@@ -175,8 +176,8 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	if err != nil {
 		cond.Message = err.Error()
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonNotSupportedVersion)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.ControlPlaneReasonNotSupportedVersion
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -278,8 +279,8 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		if k8s_errors.IsNotFound(err) {
 			timeout := 30
 			cond.Message = fmt.Sprintf("%s pod %s not found, next reconcile in %d s", osc.Kind, osc.Name, timeout)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodMissing)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+			cond.Reason = shared.OsClientCondReasonPodMissing
+			cond.Type = shared.CommonCondTypeWaiting
 
 			common.LogForObject(r, cond.Message, instance)
 
@@ -287,8 +288,8 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		cond.Message = fmt.Sprintf("%s pod %s error", osc.Kind, osc.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonPodError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.OsClientCondReasonPodError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -297,9 +298,9 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	instance.Status.ProvisioningStatus.ClientReady = (clientPod != nil && clientPod.Status.Phase == corev1.PodRunning)
 
 	// 2) OpenStackVMSet status
-	vmSetStateCounts := map[ospdirectorv1beta1.ProvisioningState]int{}
+	vmSetStateCounts := map[shared.ProvisioningState]int{}
 	for _, vmSet := range vmSets {
-		if vmSet.Status.ProvisioningStatus.State == ospdirectorv1beta1.VMSetCondTypeError {
+		if vmSet.Status.ProvisioningStatus.State == shared.ProvisioningState(shared.VMSetCondTypeError) {
 			// An error overrides all aggregrate state considerations
 			vmSetCondition := vmSet.Status.Conditions.GetCurrentCondition()
 			cond.Message = fmt.Sprintf("Underlying OSVMSet %s hit an error: %s", vmSet.Name, vmSet.Status.ProvisioningStatus.Reason)
@@ -310,32 +311,32 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 
 			return ctrl.Result{}, err
 		}
-		vmSetStateCounts[vmSet.Status.ProvisioningStatus.State]++
+		vmSetStateCounts[shared.ProvisioningState(vmSet.Status.ProvisioningStatus.State)]++
 	}
 
 	instance.Status.ProvisioningStatus.DesiredCount = len(instance.Spec.VirtualMachineRoles)
 	instance.Status.ProvisioningStatus.ReadyCount =
-		vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioned] +
-			vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeEmpty]
+		vmSetStateCounts[shared.ProvisioningState(shared.VMSetCondTypeProvisioned)] +
+			vmSetStateCounts[shared.ProvisioningState(shared.VMSetCondTypeEmpty)]
 
 	// TODO?: Currently considering states in an arbitrary order of priority here...
-	if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeProvisioning] > 0 {
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneProvisioning)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioning)
+	if vmSetStateCounts[shared.ProvisioningState(shared.VMSetCondTypeProvisioning)] > 0 {
+		cond.Type = shared.ControlPlaneProvisioning
+		cond.Reason = shared.VMSetCondReasonProvisioning
 		cond.Message = "One or more OSVMSets are provisioning"
-	} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeDeprovisioning] > 0 {
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneDeprovisioning)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonDeprovisioning)
+	} else if vmSetStateCounts[shared.ProvisioningState(shared.VMSetCondTypeDeprovisioning)] > 0 {
+		cond.Type = shared.ControlPlaneDeprovisioning
+		cond.Reason = shared.VMSetCondReasonDeprovisioning
 		cond.Message = "One or more OSVMSets are deprovisioning"
-	} else if vmSetStateCounts[ospdirectorv1beta1.VMSetCondTypeWaiting] > 0 || vmSetStateCounts[""] > 0 {
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneWaiting)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonInitialize)
+	} else if vmSetStateCounts[shared.ProvisioningState(shared.VMSetCondTypeWaiting)] > 0 || vmSetStateCounts[""] > 0 {
+		cond.Type = shared.ControlPlaneWaiting
+		cond.Reason = shared.VMSetCondReasonInitialize
 		cond.Message = "Waiting on one or more OSVMSets to initialize or continue"
 	} else {
 		// If we get here, the only states possible for the VMSets are provisioned or empty,
 		// which both count as provisioned
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ControlPlaneProvisioned)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonProvisioned)
+		cond.Type = shared.ControlPlaneProvisioned
+		cond.Reason = shared.VMSetCondReasonProvisioned
 		cond.Message = "All requested OSVMSets have been provisioned"
 	}
 
@@ -416,7 +417,7 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	envVars *map[string]common.EnvSetter,
 ) error {
 	//
@@ -451,16 +452,16 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 			err = common.EnsureSecrets(ctx, r, instance, pwSecret, envVars)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error creating TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretCreateError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretCreateError
+				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return err
 			}
 		} else {
 			cond.Message = fmt.Sprintf("Error get TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonTripleoPasswordsSecretError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return err
@@ -479,7 +480,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	envVars *map[string]common.EnvSetter,
 ) (*corev1.Secret, error) {
 	deploymentSecretName := strings.ToLower(controlplane.AppLabel) + "-ssh-keys"
@@ -503,8 +504,8 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 			)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error creating ssh keys %s", deploymentSecretName)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonDeploymentSSHKeysGenError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				cond.Reason = shared.ControlPlaneReasonDeploymentSSHKeysGenError
+				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return deploymentSecret, err
@@ -513,8 +514,8 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 			secretHash, op, err = common.CreateOrUpdateSecret(ctx, r, instance, deploymentSecret)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error create or update ssh keys secret %s", deploymentSecretName)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				cond.Reason = shared.ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError
+				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return deploymentSecret, err
@@ -528,8 +529,8 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 			}
 		} else {
 			cond.Message = fmt.Sprintf("Error get secret %s", deploymentSecretName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonDeploymentSecretError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonDeploymentSecretError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return deploymentSecret, err
@@ -543,7 +544,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	secretName string,
 ) (ctrl.Result, error) {
 	if secretName != "" {
@@ -553,8 +554,8 @@ func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 			if k8s_errors.IsNotFound(err) {
 				timeout := 30
 				cond.Message = fmt.Sprintf("Secret %s not found but specified in CR, next reconcile in %d s", secretName, timeout)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretMissing)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+				cond.Reason = shared.CommonCondReasonSecretMissing
+				cond.Type = shared.CommonCondTypeWaiting
 
 				common.LogForObject(r, cond.Message, instance)
 
@@ -562,8 +563,8 @@ func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 			}
 			// Error reading the object - requeue the request.
 			cond.Message = fmt.Sprintf("Error reading secret object: %s", secretName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonSecretError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return ctrl.Result{}, err
@@ -581,7 +582,7 @@ func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	configMapName string,
 ) (ctrl.Result, error) {
 
@@ -591,8 +592,8 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 			if k8s_errors.IsNotFound(err) {
 				timeout := 30
 				cond.Message = fmt.Sprintf("ConfigMap %s not found but specified in CR, next reconcile in %d s", configMapName, timeout)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonConfigMapMissing)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+				cond.Reason = shared.CommonCondReasonConfigMapMissing
+				cond.Type = shared.CommonCondTypeWaiting
 
 				common.LogForObject(r, cond.Message, instance)
 
@@ -600,8 +601,8 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 			}
 			// Error reading the object - requeue the request.
 			cond.Message = fmt.Sprintf("Error reading config map object: %s", configMapName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonConfigMapError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonConfigMapError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return ctrl.Result{}, err
@@ -621,7 +622,7 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	deploymentSecret *corev1.Secret,
 ) ([]*ospdirectorv1beta1.OpenStackVMSet, error) {
 	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
@@ -662,8 +663,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error set controller reference for %s %s", vmSet.Kind, vmSet.Name)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				cond.Reason = shared.CommonCondReasonControllerReferenceError
+				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return err
@@ -674,8 +675,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to create or update %s %s ", vmSet.Kind, vmSet.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.VMSetCondReasonError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return vmSets, err
@@ -691,8 +692,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 				instance,
 			)
 		}
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.VMSetCondReasonCreated)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
+		cond.Reason = shared.VMSetCondReasonCreated
+		cond.Type = shared.CommonCondTypeCreated
 
 		vmSets = append(vmSets, vmSet)
 	}
@@ -703,7 +704,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	deploymentSecret *corev1.Secret,
 ) (*ospdirectorv1beta1.OpenStackClient, error) {
 	osc := &ospdirectorv1beta1.OpenStackClient{
@@ -735,8 +736,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 		err := controllerutil.SetControllerReference(instance, osc, r.Scheme)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Error set controller reference for %s %s", osc.Kind, osc.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonControllerReferenceError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonControllerReferenceError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return err
@@ -746,8 +747,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 	})
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to create or update %s %s ", osc.Kind, osc.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.OsClientCondReasonError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return osc, err
@@ -763,8 +764,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 			instance,
 		)
 	}
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.OsClientCondReasonCreated)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeCreated)
+	cond.Reason = shared.OsClientCondReasonCreated
+	cond.Type = shared.CommonCondTypeCreated
 
 	return osc, nil
 }
@@ -772,7 +773,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackControlPlane,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	//
 	// Create VIPs for networks where VIP parameter is true
@@ -820,8 +821,8 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonAddOSNetLabelError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 

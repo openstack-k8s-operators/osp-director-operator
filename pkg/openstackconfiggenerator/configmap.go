@@ -25,6 +25,7 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
@@ -119,7 +120,7 @@ func CreateConfigMapParams(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (map[string]interface{}, map[string]*RoleType, error) {
 
 	templateParameters := make(map[string]interface{})
@@ -136,8 +137,8 @@ func CreateConfigMapParams(
 	err := r.GetClient().List(ctx, osNetList, osNetListOpts...)
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSNets", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetCondReasonNetNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
+		cond.Reason = shared.NetCondReasonNetNotFound
+		cond.Type = shared.ConfigGeneratorCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return templateParameters, rolesMap, err
@@ -154,8 +155,8 @@ func CreateConfigMapParams(
 	err = r.GetClient().List(ctx, osMACList, osMACListOpts...)
 	if err != nil {
 		cond.Message = fmt.Sprintf("%s %s failed to get list of all OSMACs", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonMACNotFound)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.ConfigGeneratorCondTypeError)
+		cond.Reason = shared.MACCondReasonMACNotFound
+		cond.Type = shared.ConfigGeneratorCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return templateParameters, rolesMap, err

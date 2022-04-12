@@ -24,6 +24,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -79,7 +80,7 @@ func (r *OpenStackProvisionServer) ValidateUpdate(old runtime.Object) error {
 }
 
 func (r *OpenStackProvisionServer) validateCr() error {
-	existingPorts, err := r.GetExistingProvServerPorts(&Condition{}, webhookClient)
+	existingPorts, err := r.GetExistingProvServerPorts(&shared.Condition{}, webhookClient)
 	if err != nil {
 		return err
 	}

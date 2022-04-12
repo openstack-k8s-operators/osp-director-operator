@@ -14,13 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
-
-import (
-	goClient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
-)
+package shared
 
 // APIAction - typedef to enumerate API verbs
 type APIAction string
@@ -61,7 +55,7 @@ type Hash struct {
 }
 
 // ProvisioningState - the overall state of all VMs in this OpenStackVmSet
-//type ProvisioningState string
+type ProvisioningState string
 
 const (
 	// HostRefInitState - intial HostRef state of a new node which has not yet assigned
@@ -70,8 +64,8 @@ const (
 
 // HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {
-	Hostname          string                   `json:"hostname"`
-	ProvisioningState shared.ProvisioningState `json:"provisioningState"`
+	Hostname          string            `json:"hostname"`
+	ProvisioningState ProvisioningState `json:"provisioningState"`
 
 	// +kubebuilder:default=unassigned
 	HostRef string `json:"hostRef"`
@@ -100,29 +94,4 @@ type NetworkStatus struct {
 
 	// +kubebuilder:validation:Optional
 	Gateway string `json:"gateway"`
-}
-
-// OpenStackBackupOverridesReconcile - Should a controller pause reconciliation for a particular resource given potential backup operations?
-func OpenStackBackupOverridesReconcile(client goClient.Client, namespace string, resourceReady bool) (bool, error) {
-	var backupRequests *OpenStackBackupRequestList
-
-	backupRequests, err := GetOpenStackBackupRequestsWithLabel(client, namespace, map[string]string{})
-
-	if err != nil {
-		return true, err
-	}
-
-	for _, backup := range backupRequests.Items {
-		// If this backup is quiescing...
-		// - If this CR has reached its "finished" state, end this reconcile
-		// If this backup is saving or loading...
-		// - End this reconcile
-		if backup.Status.CurrentState == BackupSaving ||
-			backup.Status.CurrentState == BackupLoading ||
-			(backup.Status.CurrentState == BackupQuiescing && resourceReady) {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }

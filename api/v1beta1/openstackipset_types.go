@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,23 +64,8 @@ type OpenStackIPSetStatus struct {
 	Networks int                   `json:"networks,omitempty"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
-
-const (
-	//
-	// condition reasones
-	//
-
-	// IPSetCondReasonError - General error getting the OSIPset object
-	IPSetCondReasonError ConditionReason = "OpenStackIPSetError"
-	// IPSetCondReasonProvisioned - ipset provisioned
-	IPSetCondReasonProvisioned ConditionReason = "OpenStackIPSetProvisioned"
-	// IPSetCondReasonWaitingOnHosts - ipset Waiting on hosts to be created on IPSet
-	IPSetCondReasonWaitingOnHosts ConditionReason = "OpenStackIPSetWaitingOnHostsCreated"
-	// IPSetCondReasonCreated - created ipset
-	IPSetCondReasonCreated ConditionReason = "OpenStackIPSetCreated"
-)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

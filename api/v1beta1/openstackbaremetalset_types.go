@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,7 +58,7 @@ type OpenStackBaremetalSetSpec struct {
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet
 type OpenStackBaremetalSetStatus struct {
-	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
+	Conditions         shared.ConditionList                    `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackBaremetalSetProvisioningStatus `json:"provisioningStatus,omitempty"`
 	BaremetalHosts     map[string]HostStatus                   `json:"baremetalHosts,omitempty"`
 }
@@ -65,71 +66,10 @@ type OpenStackBaremetalSetStatus struct {
 // OpenStackBaremetalSetProvisioningStatus represents the overall provisioning state of all BaremetalHosts in
 // the OpenStackBaremetalSet (with an optional explanatory message)
 type OpenStackBaremetalSetProvisioningStatus struct {
-	State      ProvisioningState `json:"state,omitempty"`
-	Reason     string            `json:"reason,omitempty"`
-	ReadyCount int               `json:"readyCount,omitempty"`
+	State      shared.ProvisioningState `json:"state,omitempty"`
+	Reason     string                   `json:"reason,omitempty"`
+	ReadyCount int                      `json:"readyCount,omitempty"`
 }
-
-const (
-	// BaremetalSetCondTypeEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
-	BaremetalSetCondTypeEmpty ProvisioningState = "Empty"
-	// BaremetalSetCondTypeWaiting - something other than BaremetalHost availability is causing the OpenStackBaremetalSet to wait
-	BaremetalSetCondTypeWaiting ProvisioningState = "Waiting"
-	// BaremetalSetCondTypeProvisioning - one or more BaremetalHosts are provisioning
-	BaremetalSetCondTypeProvisioning ProvisioningState = "Provisioning"
-	// BaremetalSetCondTypeProvisioned - the requested BaremetalHosts count has been satisfied
-	BaremetalSetCondTypeProvisioned ProvisioningState = "Provisioned"
-	// BaremetalSetCondTypeDeprovisioning - one or more BaremetalHosts are deprovisioning
-	BaremetalSetCondTypeDeprovisioning ProvisioningState = "Deprovisioning"
-	// BaremetalSetCondTypeInsufficient - one or more BaremetalHosts not found (either for scale-up or scale-down) to satisfy count request
-	BaremetalSetCondTypeInsufficient ProvisioningState = "Insufficient availability"
-	// BaremetalSetCondTypeError - general catch-all for actual errors
-	BaremetalSetCondTypeError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	//
-	// metal3
-	//
-
-	// BaremetalHostCondReasonListError - metal3 bmh list objects error
-	BaremetalHostCondReasonListError ConditionReason = "BaremetalHostListError"
-	// BaremetalHostCondReasonGetError - error get metal3 bmh object
-	BaremetalHostCondReasonGetError ConditionReason = "BaremetalHostGetError"
-	// BaremetalHostCondReasonUpdateError - error updating metal3 bmh object
-	BaremetalHostCondReasonUpdateError ConditionReason = "BaremetalHostUpdateError"
-	// BaremetalHostCondReasonCloudInitSecretError - error creating cloud-init secrets for metal3
-	BaremetalHostCondReasonCloudInitSecretError ConditionReason = "BaremetalHostCloudInitSecretError"
-
-	//
-	// osbms
-	//
-
-	// BaremetalSetCondReasonError - General error getting the OSBms object
-	BaremetalSetCondReasonError ConditionReason = "BaremetalSetError"
-	// BaremetalSetCondReasonBaremetalHostStatusNotFound - bare metal host status not found
-	BaremetalSetCondReasonBaremetalHostStatusNotFound ConditionReason = "BaremetalHostStatusNotFound"
-	// BaremetalSetCondReasonUserDataSecretDeleteError - error deleting user data secret
-	BaremetalSetCondReasonUserDataSecretDeleteError ConditionReason = "BaremetalSetUserDataSecretDeleteError"
-	// BaremetalSetCondReasonNetworkDataSecretDeleteError - error deleting network data secret
-	BaremetalSetCondReasonNetworkDataSecretDeleteError ConditionReason = "BaremetalSetNetworkDataSecretDeleteError"
-	// BaremetalSetCondReasonScaleDownInsufficientAnnotatedHosts - not enough nodes annotated for deletion
-	BaremetalSetCondReasonScaleDownInsufficientAnnotatedHosts ConditionReason = "BaremetalSetScaleDownInsufficientAnnotatedHosts"
-	// BaremetalSetCondReasonScaleUpInsufficientHosts - not enough nodes for requested host count
-	BaremetalSetCondReasonScaleUpInsufficientHosts ConditionReason = "BaremetalSetScaleUpInsufficientHosts"
-	// BaremetalSetCondReasonProvisioningErrors - errors during bmh provisioning
-	BaremetalSetCondReasonProvisioningErrors ConditionReason = "BaremetalSetProvisioningErrors"
-	// BaremetalSetCondReasonVirtualMachineProvisioning - bmh provisioning in progress
-	BaremetalSetCondReasonVirtualMachineProvisioning ConditionReason = "BaremetalHostProvisioning"
-	// BaremetalSetCondReasonVirtualMachineDeprovisioning - bmh deprovisioning in progress
-	BaremetalSetCondReasonVirtualMachineDeprovisioning ConditionReason = "BaremetalHostDeprovisioning"
-	// BaremetalSetCondReasonVirtualMachineProvisioned - bmh provisioned
-	BaremetalSetCondReasonVirtualMachineProvisioned ConditionReason = "BaremetalHostProvisioned"
-	// BaremetalSetCondReasonVirtualMachineCountZero - no bmh requested
-	BaremetalSetCondReasonVirtualMachineCountZero ConditionReason = "BaremetalHostCountZero"
-)
 
 // GetHostnames -
 func (instance OpenStackBaremetalSet) GetHostnames() map[string]string {
@@ -212,7 +152,8 @@ type DiskSSDReq struct {
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackBaremetalSet) IsReady() bool {
-	return instance.Status.ProvisioningStatus.State == BaremetalSetCondTypeProvisioned || instance.Status.ProvisioningStatus.State == BaremetalSetCondTypeEmpty
+	return instance.Status.ProvisioningStatus.State == shared.ProvisioningState(shared.BaremetalSetCondTypeProvisioned) ||
+		instance.Status.ProvisioningStatus.State == shared.ProvisioningState(shared.BaremetalSetCondTypeEmpty)
 }
 
 // +genclient

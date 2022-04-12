@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -76,12 +77,12 @@ type OpenStackNetAttachmentSpec struct {
 // OpenStackNetAttachmentStatus defines the observed state of OpenStackNetAttachment
 type OpenStackNetAttachmentStatus struct {
 	// CurrentState - the overall state of the network attachment
-	CurrentState ProvisioningState `json:"currentState"`
+	CurrentState shared.ConditionType `json:"currentState"`
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 
 	// AttachType of the OpenStackNetAttachment
 	AttachType AttachType `json:"attachType"`
@@ -90,35 +91,9 @@ type OpenStackNetAttachmentStatus struct {
 	BridgeName string `json:"bridgeName"`
 }
 
-const (
-	//
-	// condition types
-	//
-
-	// NetAttachWaiting - the network configuration is blocked by prerequisite objects
-	NetAttachWaiting ProvisioningState = "Waiting"
-	// NetAttachInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetAttachInitializing ProvisioningState = "Initializing"
-	// NetAttachConfiguring - the underlying network resources are configuring the nodes
-	NetAttachConfiguring ProvisioningState = "Configuring"
-	// NetAttachConfigured - the nodes have been configured by the underlying network resources
-	NetAttachConfigured ProvisioningState = "Configured"
-	// NetAttachError - the network configuration hit a generic error
-	NetAttachError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// NetAttachCondReasonCreated - osnetattachment created
-	NetAttachCondReasonCreated ConditionReason = "OpenStackNetAttachCreated"
-	// NetAttachCondReasonCreateError - error creating osnetatt object
-	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachCreateError"
-)
-
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackNetAttachment) IsReady() bool {
-	return instance.Status.CurrentState == NetAttachConfigured
+	return instance.Status.CurrentState == shared.NetAttachConfigured
 }
 
 //+kubebuilder:object:root=true

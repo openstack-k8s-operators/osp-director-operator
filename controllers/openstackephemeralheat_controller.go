@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackephemeralheat "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackephemeralheat"
@@ -115,7 +116,7 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
@@ -208,8 +209,8 @@ func (r *OpenStackEphemeralHeatReconciler) Reconcile(ctx context.Context, req ct
 	// If we get here, everything should be ready
 	instance.Status.Active = true
 	cond.Message = fmt.Sprintf("%s %s is available", instance.Kind, instance.Name)
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatReady)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeProvisioned)
+	cond.Reason = shared.EphemeralHeatReady
+	cond.Type = shared.CommonCondTypeProvisioned
 
 	return ctrl.Result{}, nil
 }
@@ -243,7 +244,7 @@ func (r *OpenStackEphemeralHeatReconciler) getNormalizedStatus(status *ospdirect
 func (r *OpenStackEphemeralHeatReconciler) generatePasswordSecret(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (*corev1.Secret, ctrl.Result, error) {
 	cmLabels := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 
@@ -256,8 +257,8 @@ func (r *OpenStackEphemeralHeatReconciler) generatePasswordSecret(
 			_, op, err := common.CreateOrUpdateSecret(ctx, r, instance, passwordSecret)
 			if err != nil {
 				cond.Message = fmt.Sprintf("Error creating password secret for %s %s", instance.Kind, instance.Name)
-				cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretError)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+				cond.Reason = shared.CommonCondReasonSecretError
+				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
 
 				return nil, ctrl.Result{}, err
@@ -270,15 +271,15 @@ func (r *OpenStackEphemeralHeatReconciler) generatePasswordSecret(
 			)
 
 			cond.Message = "Waiting for password secret to populate"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondWaitOnPassSecret)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+			cond.Reason = shared.EphemeralHeatCondWaitOnPassSecret
+			cond.Type = shared.CommonCondTypeWaiting
 
 			return nil, ctrl.Result{RequeueAfter: time.Second * 3}, nil
 		}
 
 		cond.Message = fmt.Sprintf("Error acquiring password secret for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonSecretError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.CommonCondReasonSecretError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return nil, ctrl.Result{}, err
@@ -291,7 +292,7 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
 	passwordSecret *corev1.Secret,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) error {
 	cmLabels := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 	envVars := make(map[string]common.EnvSetter)
@@ -318,8 +319,8 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating service config maps for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonConfigMapError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.CommonCondReasonConfigMapError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return err
@@ -331,7 +332,7 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	// MariaDB Pod
 	mariadbPod := openstackephemeralheat.MariadbPod(instance)
@@ -346,8 +347,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating MariaDB pod for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondMariaDBError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondMariaDBError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -363,8 +364,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 
 	if len(mariadbPod.Status.ContainerStatuses) < 1 || !mariadbPod.Status.ContainerStatuses[0].Ready {
 		cond.Message = fmt.Sprintf("Waiting on MariaDB to start for: %s", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondWaitOnMariaDB)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.EphemeralHeatCondWaitOnMariaDB
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return ctrl.Result{RequeueAfter: time.Second * 3}, nil
 	}
@@ -382,8 +383,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating MariaDB service for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondMariaDBError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondMariaDBError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -403,7 +404,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureMariaDB(
 func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	// RabbitMQ Pod
 	rabbitmqPod := openstackephemeralheat.RabbitmqPod(instance)
@@ -418,8 +419,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating RabbitMQ pod for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondRabbitMQError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondRabbitMQError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -435,8 +436,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 
 	if len(rabbitmqPod.Status.ContainerStatuses) < 1 || !rabbitmqPod.Status.ContainerStatuses[0].Ready {
 		cond.Message = fmt.Sprintf("Waiting on RabbitMQ to start for: %s", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondWaitOnRabbitMQ)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.EphemeralHeatCondWaitOnRabbitMQ
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return ctrl.Result{RequeueAfter: time.Second * 3}, nil
 	}
@@ -454,8 +455,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating RabbitMQ service for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondRabbitMQError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondRabbitMQError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -475,7 +476,7 @@ func (r *OpenStackEphemeralHeatReconciler) ensureRabbitMQ(
 func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackEphemeralHeat,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	// Heat Pod
 	heatPod := openstackephemeralheat.HeatAPIPod(instance)
@@ -490,8 +491,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating Heat pod for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondHeatError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondHeatError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -507,8 +508,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 
 	if len(heatPod.Status.ContainerStatuses) < 1 || !heatPod.Status.ContainerStatuses[0].Ready {
 		cond.Message = fmt.Sprintf("Waiting on Heat to start for: %s", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondWaitOnHeat)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.EphemeralHeatCondWaitOnHeat
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return ctrl.Result{RequeueAfter: time.Second * 3}, nil
 	}
@@ -526,8 +527,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating Heat service for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondHeatError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondHeatError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -554,8 +555,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error creating/updating Heat replicaset for %s %s", instance.Kind, instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondHeatError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+		cond.Reason = shared.EphemeralHeatCondHeatError
+		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
 		return ctrl.Result{}, err
@@ -571,8 +572,8 @@ func (r *OpenStackEphemeralHeatReconciler) ensureHeat(
 
 	if heatEngineReplicaset.Status.AvailableReplicas < instance.Spec.HeatEngineReplicas {
 		cond.Message = fmt.Sprintf("Waiting on Heat Engine Replicas to start for: %s", instance.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.EphemeralHeatCondWaitOnHeat)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.EphemeralHeatCondWaitOnHeat
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}

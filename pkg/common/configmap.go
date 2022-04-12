@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -249,8 +250,8 @@ func GetConfigMap(
 	ctx context.Context,
 	r ReconcilerCommon,
 	object client.Object,
-	cond *ospdirectorv1beta1.Condition,
-	conditionDetails ospdirectorv1beta1.ConditionDetails,
+	cond *shared.Condition,
+	conditionDetails shared.ConditionDetails,
 	configMapName string,
 	requeueTimeout int,
 ) (*corev1.ConfigMap, ctrl.Result, error) {
@@ -260,16 +261,16 @@ func GetConfigMap(
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("%s config map does not exist: %v", configMapName, err)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionNotFoundReason)
-			cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionNotFoundType)
+			cond.Reason = conditionDetails.ConditionNotFoundReason
+			cond.Type = conditionDetails.ConditionNotFoundType
 
 			LogForObject(r, cond.Message, object)
 
 			return configMap, ctrl.Result{RequeueAfter: time.Duration(requeueTimeout) * time.Second}, nil
 		}
 		cond.Message = fmt.Sprintf("Error getting %s config map: %v", configMapName, err)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(conditionDetails.ConditionErrordReason)
-		cond.Type = ospdirectorv1beta1.ConditionType(conditionDetails.ConditionErrorType)
+		cond.Reason = conditionDetails.ConditionErrordReason
+		cond.Type = conditionDetails.ConditionErrorType
 		err = WrapErrorForObject(cond.Message, object, err)
 
 		return configMap, ctrl.Result{}, err

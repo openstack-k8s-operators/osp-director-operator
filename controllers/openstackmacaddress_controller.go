@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
@@ -110,7 +111,7 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
@@ -154,8 +155,8 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonRemoveFinalizerError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -193,10 +194,10 @@ func (r *OpenStackMACAddressReconciler) Reconcile(ctx context.Context, req ctrl.
 	instance.Status.MACReservations = reservations
 
 	cond.Message = "All MAC addresses created"
-	cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.MACCondReasonAllMACAddressesCreated)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.MACCondTypeConfigured)
+	cond.Reason = shared.MACCondReasonAllMACAddressesCreated
+	cond.Type = shared.MACCondTypeConfigured
 
-	instance.Status.CurrentState = ospdirectorv1beta1.MACCondTypeConfigured
+	instance.Status.CurrentState = shared.MACCondTypeConfigured
 
 	return ctrl.Result{}, nil
 }

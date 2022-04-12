@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknet "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknet"
@@ -116,14 +117,14 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
-		instance.Status.CurrentState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.CurrentState = cond.Type
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
-			ospdirectorv1beta1.ConditionReason(cond.Message),
+			shared.ConditionReason(cond.Message),
 			cond.Message,
 		)
 
@@ -173,8 +174,8 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonRemoveFinalizerError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -202,7 +203,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	if err := r.createOrUpdateNetworkAttachmentDefinition(ctx, instance, false, cond); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s encountered an error configuring NetworkAttachmentDefinition", instance.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+		cond.Type = shared.NetError
 		return ctrl.Result{}, err
 	}
 
@@ -211,7 +212,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//
 	if err := r.createOrUpdateNetworkAttachmentDefinition(ctx, instance, true, cond); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s encountered an error configuring static NetworkAttachmentDefinition", instance.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+		cond.Type = shared.NetError
 		return ctrl.Result{}, err
 	}
 
@@ -236,7 +237,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// If we get this far, we assume the NAD been successfully created (NAD does not
 	// have a status block we can examine)
 	cond.Message = fmt.Sprintf("OpenStackNet %s has been successfully configured on targeted node(s)", instance.Name)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigured)
+	cond.Type = shared.NetConfigured
 
 	return ctrl.Result{}, nil
 }
@@ -271,7 +272,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNet,
 	nadStatic bool,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) error {
 	networkAttachmentDefinition := &networkv1.NetworkAttachmentDefinition{}
 	networkAttachmentDefinition.Name = instance.Name
@@ -287,7 +288,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	)
 	if err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s failure get bridge for OpenStackNetAttachment %s", instance.Name, instance.Spec.AttachConfiguration)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+		cond.Type = shared.NetError
 
 		return common.WrapErrorForObject(fmt.Sprintf("failure get bridge name for OpenStackNetAttachment referenc: %s", instance.Spec.AttachConfiguration), instance, err)
 	}
@@ -316,7 +317,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 
 	if err := common.IsJSON(CNIConfig); err != nil {
 		cond.Message = fmt.Sprintf("OpenStackNet %s failure rendering CNIConfig for NetworkAttachmentDefinition", instance.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+		cond.Type = shared.NetError
 
 		return common.WrapErrorForObject(fmt.Sprintf("failure rendering CNIConfig for NetworkAttachmentDefinition %s: %v", instance.Name, templateData), instance, err)
 	}
@@ -353,7 +354,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkAttachmentDefinition, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkAttachmentDefinition", instance.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetError)
+		cond.Type = shared.NetError
 
 		err = common.WrapErrorForObject(fmt.Sprintf("Updating %s networkAttachmentDefinition", instance.Name), networkAttachmentDefinition, err)
 		return err
@@ -363,10 +364,10 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 		common.LogForObject(r, string(op), networkAttachmentDefinition)
 
 		cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s is %s", networkAttachmentDefinition.Name, string(op))
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfiguring)
+		cond.Type = shared.NetConfiguring
 	} else {
 		cond.Message = fmt.Sprintf("NetworkAttachmentDefinition %s configured targeted node(s)", networkAttachmentDefinition.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetConfigured)
+		cond.Type = shared.NetConfigured
 	}
 
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -386,7 +387,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNet,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) error {
 
 	networkAttachmentDefinitionList := &networkv1.NetworkAttachmentDefinitionList{}
@@ -411,8 +412,8 @@ func (r *OpenStackNetReconciler) cleanupNetworkAttachmentDefinition(
 		controllerutil.RemoveFinalizer(&nad, openstacknet.FinalizerName)
 		if err := r.Update(ctx, &nad); err != nil && !k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonRemoveFinalizerError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 

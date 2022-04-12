@@ -36,6 +36,7 @@ import (
 
 	"github.com/go-logr/logr"
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstacknetconfig "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstacknetconfig"
@@ -114,7 +115,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
@@ -177,8 +178,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.CommonCondReasonAddOSNetLabelError
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonAddOSNetLabelError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -210,10 +211,10 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		cond.Type = ospdirectorv1beta1.CommonCondTypeError
-		cond.Reason = ospdirectorv1beta1.NetConfigCondReasonError
+		cond.Type = shared.CommonCondTypeError
+		cond.Reason = shared.NetConfigCondReasonError
 		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
-			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			instance.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			err)
 
 		return ctrl.Result{}, err
@@ -246,8 +247,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			osBms)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			cond.Message = fmt.Sprintf("Failed to get %s %s ", osBms.Kind, osBms.Name)
-			cond.Reason = ospdirectorv1beta1.BaremetalSetCondReasonError
-			cond.Type = ospdirectorv1beta1.CommonCondTypeError
+			cond.Reason = shared.BaremetalSetCondReasonError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return ctrl.Result{}, err
@@ -274,8 +275,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			err := r.GetClient().List(ctx, baremetalHostsList, listOpts...)
 			if err != nil && !k8s_errors.IsNotFound(err) {
 				cond.Message = "Failed to get list of all BareMetalHost(s)"
-				cond.Reason = ospdirectorv1beta1.BaremetalHostCondReasonListError
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.BaremetalSetCondTypeError)
+				cond.Reason = shared.BaremetalHostCondReasonListError
+				cond.Type = shared.BaremetalSetCondTypeError
 
 				return reconcile.Result{}, err
 			}
@@ -297,8 +298,8 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	cond.Type = ospdirectorv1beta1.CommonCondTypeProvisioned
-	cond.Reason = ospdirectorv1beta1.IPSetCondReasonProvisioned
+	cond.Type = shared.CommonCondTypeProvisioned
+	cond.Reason = shared.IPSetCondReasonProvisioned
 	cond.Message = "All requested IPs have been reserved"
 
 	return ctrl.Result{}, nil
@@ -331,7 +332,7 @@ func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 //
 func (r *OpenStackIPSetReconciler) createNewHostnames(
 	instance *ospdirectorv1beta1.OpenStackIPSet,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	newCount int,
 ) ([]string, error) {
 	newHostnames := []string{}
@@ -359,8 +360,8 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 		err := common.CreateOrGetHostname(instance, &hostnameDetails)
 		if err != nil {
 			cond.Message = fmt.Sprintf("error creating new hostname %v", hostnameDetails)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNewHostnameError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonNewHostnameError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newHostnames, err
@@ -398,8 +399,8 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 		err := r.Status().Update(context.Background(), instance)
 		if err != nil {
 			cond.Message = "Failed to update CR status for new hostnames"
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonCRStatusUpdateError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonCRStatusUpdateError
+			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
 			return newHostnames, err

@@ -40,6 +40,7 @@ import (
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
@@ -119,16 +120,16 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		)
 	}
 
-	defer func(cond *ospdirectorv1beta1.Condition) {
+	defer func(cond *shared.Condition) {
 		//
 		// Update object conditions
 		//
-		instance.Status.CurrentState = ospdirectorv1beta1.ProvisioningState(cond.Type)
+		instance.Status.CurrentState = cond.Type
 
 		// TODO, we should set some proper cond.Reason type
 		instance.Status.Conditions.UpdateCurrentCondition(
 			cond.Type,
-			ospdirectorv1beta1.ConditionReason(cond.Message),
+			shared.ConditionReason(cond.Message),
 			cond.Message,
 		)
 
@@ -187,8 +188,8 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		err = r.Update(ctx, instance)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+			cond.Reason = shared.CommonCondReasonRemoveFinalizerError
+			cond.Type = shared.CommonCondTypeError
 
 			err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -218,7 +219,7 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		//
 		if err := r.ensureSriov(ctx, instance); err != nil {
 			cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeSriovConfigurationPolicy", instance.Name)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+			cond.Type = shared.NetAttachError
 			return ctrl.Result{}, err
 		}
 
@@ -235,13 +236,13 @@ func (r *OpenStackNetAttachmentReconciler) Reconcile(ctx context.Context, req ct
 		// if no NNCP was found, or the NNCP is in SuccessfullyConfigured -> create or update nncp
 		//
 		if k8s_errors.IsNotFound(err) ||
-			cond.Reason == ospdirectorv1beta1.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured) {
+			cond.Reason == shared.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured) {
 			//
 			// Create/update Bridge
 			//
 			if err := r.createOrUpdateNodeNetworkConfigurationPolicy(ctx, instance, cond); err != nil {
 				cond.Message = fmt.Sprintf("OpenStackNetAttach %s encountered an error configuring NodeNetworkConfigurationPolicy", instance.Name)
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+				cond.Type = shared.NetAttachError
 
 				return ctrl.Result{}, err
 			}
@@ -310,7 +311,7 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfigurationPolicy(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) error {
 	//
 	// get bridgeName from desiredState
@@ -318,7 +319,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	bridgeName, err := nmstate.GetDesiredStateBridgeName(instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy.DesiredState.Raw)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error get bridge name from NetworkConfigurationPolicy desired state - %s", instance.Name)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+		cond.Type = shared.NetAttachError
 
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 
@@ -348,7 +349,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkConfigurationPolicy, apply)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", bridgeName)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+		cond.Type = shared.NetAttachError
 
 		err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)
 
@@ -357,7 +358,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 
 	if op != controllerutil.OperationResultNone {
 		cond.Message = fmt.Sprintf("NodeNetworkConfigurationPolicy %s is %s", networkConfigurationPolicy.Name, string(op))
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfiguring)
+		cond.Type = shared.NetAttachConfiguring
 
 		common.LogForObject(r, string(op), networkConfigurationPolicy)
 		common.LogForObject(r, cond.Message, instance)
@@ -379,21 +380,21 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStatus(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) error {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s ", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonNNCPError)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+		cond.Reason = shared.CommonCondReasonNNCPError
+		cond.Type = shared.NetAttachError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
 		return err
 	}
 
 	cond.Message = fmt.Sprintf("%s %s is configuring targeted node(s)", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
-	cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfiguring)
+	cond.Type = shared.NetAttachConfiguring
 
 	//
 	// sync latest status of the nncp object to the osnetattach
@@ -402,14 +403,14 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 		condition := nmstate.GetCurrentCondition(networkConfigurationPolicy.Status.Conditions)
 		if condition != nil {
 			cond.Message = fmt.Sprintf("%s %s: %s", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name, condition.Message)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(condition.Reason)
-			cond.Type = ospdirectorv1beta1.ConditionType(condition.Type)
+			cond.Reason = shared.ConditionReason(condition.Reason)
+			cond.Type = shared.ConditionType(condition.Type)
 
 			if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionAvailable &&
 				condition.Reason == nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured {
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachConfigured)
+				cond.Type = shared.NetAttachConfigured
 			} else if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionDegraded {
-				cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+				cond.Type = shared.NetAttachError
 
 				return common.WrapErrorForObject(cond.Message, instance, err)
 			}
@@ -422,7 +423,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 
@@ -439,15 +440,15 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 	// in case of nncp cond.Reason == FailedToConfigure, still continue to try to
 	// cleanup and delete the nncp
 	if err != nil &&
-		cond.Reason != ospdirectorv1beta1.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionFailedToConfigure) {
+		cond.Reason != shared.ConditionReason(nmstateshared.NodeNetworkConfigurationPolicyConditionFailedToConfigure) {
 		return ctrl.Result{}, err
 	}
 
 	bridgeState, err := nmstate.GetDesiredStateBridgeInterfaceState(networkConfigurationPolicy.Spec.DesiredState.Raw)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Error getting interface state for bride %s from %s networkConfigurationPolicy", instance.Status.BridgeName, networkConfigurationPolicy.Name)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+		cond.Reason = shared.ConditionReason(cond.Message)
+		cond.Type = shared.NetAttachError
 
 		err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)
 		return ctrl.Result{}, err
@@ -480,8 +481,8 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 		op, err := controllerutil.CreateOrPatch(ctx, r.Client, networkConfigurationPolicy, apply)
 		if err != nil {
 			cond.Message = fmt.Sprintf("Updating %s networkConfigurationPolicy", instance.Status.BridgeName)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(cond.Message)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.NetAttachError)
+			cond.Reason = shared.ConditionReason(cond.Message)
+			cond.Type = shared.NetAttachError
 
 			err = common.WrapErrorForObject(cond.Message, networkConfigurationPolicy, err)
 			return ctrl.Result{}, err
@@ -514,8 +515,8 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 				controllerutil.RemoveFinalizer(networkConfigurationPolicy, openstacknetattachment.FinalizerName)
 				if err := r.Update(ctx, networkConfigurationPolicy); err != nil && !k8s_errors.IsNotFound(err) {
 					cond.Message = fmt.Sprintf("Failed to update %s %s", instance.Kind, instance.Name)
-					cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.CommonCondReasonRemoveFinalizerError)
-					cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
+					cond.Reason = shared.CommonCondReasonRemoveFinalizerError
+					cond.Type = shared.CommonCondTypeError
 
 					err = common.WrapErrorForObject(cond.Message, instance, err)
 

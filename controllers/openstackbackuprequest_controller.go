@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackbackup"
 )
@@ -164,7 +165,7 @@ func (r *OpenStackBackupRequestReconciler) setStatus(
 	}
 
 	if !reflect.DeepEqual(instance.Status, oldStatus) {
-		instance.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(instance.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
+		instance.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(instance.Status.CurrentState), shared.ConditionReason(msg), msg)
 		if err := r.Status().Update(ctx, instance); err != nil {
 			r.Log.Error(err, "OpenStackBackupRequest update status error: %v")
 			return err
@@ -371,8 +372,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.NetWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.NetWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -385,8 +386,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.NetAttachWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.NetAttachWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -399,9 +400,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.NetConfigWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -414,8 +415,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.MACCondTypeWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -428,9 +429,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ProvisionServerCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -443,9 +444,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.BaremetalSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -458,7 +459,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.CommonCondTypeWaiting, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -471,9 +472,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.VMSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -486,9 +487,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ControlPlaneWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
