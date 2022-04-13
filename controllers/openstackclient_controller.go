@@ -280,7 +280,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	)
 
 	for _, status := range ipsetStatus {
-		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.OpenStackClientNetStatus, status)
+		hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.OpenStackClientNetStatus, status)
 		instance.Status.OpenStackClientNetStatus[status.Hostname] = hostStatus
 	}
 

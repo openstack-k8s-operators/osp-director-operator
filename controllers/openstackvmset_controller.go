@@ -430,7 +430,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	for _, status := range ipsetStatus {
-		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.VMHosts, status)
+		hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.VMHosts, status)
 		instance.Status.VMHosts[status.Hostname] = hostStatus
 	}
 

@@ -209,37 +209,3 @@ func createOrUpdateIPSet(
 
 	return ipSet, nil
 }
-
-//
-// SyncIPsetStatus - sync relevant information from IPSet to CR status
-//
-func SyncIPsetStatus(
-	cond *shared.Condition,
-	instanceStatus map[string]ospdirectorv1beta1.HostStatus,
-	ipsetHostStatus ospdirectorv1beta1.HostStatus,
-) ospdirectorv1beta1.HostStatus {
-	var hostStatus ospdirectorv1beta1.HostStatus
-	if _, ok := instanceStatus[ipsetHostStatus.Hostname]; !ok {
-		hostStatus = ipsetHostStatus
-	} else {
-		// Note:
-		// do not sync all information as other controllers are
-		// the master for e.g.
-		// - BMH <-> hostname mapping
-		// - create of networkDataSecretName and userDataSecretName
-		hostStatus = instanceStatus[ipsetHostStatus.Hostname]
-		hostStatus.AnnotatedForDeletion = ipsetHostStatus.AnnotatedForDeletion
-		// TODO: (mschuppert) remove CtlplaneIP where used (osbms) and replace with hostStatus.IPAddresses[<ctlplane>]
-		hostStatus.CtlplaneIP = ipsetHostStatus.CtlplaneIP
-		hostStatus.IPAddresses = ipsetHostStatus.IPAddresses
-		hostStatus.ProvisioningState = ipsetHostStatus.ProvisioningState
-
-		if ipsetHostStatus.HostRef != ospdirectorv1beta1.HostRefInitState {
-			hostStatus.HostRef = ipsetHostStatus.HostRef
-		}
-	}
-
-	hostStatus.ProvisioningState = shared.ProvisioningState(cond.Type)
-
-	return hostStatus
-}

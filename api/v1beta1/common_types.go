@@ -66,3 +66,37 @@ type NetworkStatus struct {
 	// +kubebuilder:validation:Optional
 	Gateway string `json:"gateway"`
 }
+
+//
+// SyncIPsetStatus - sync relevant information from IPSet to CR status
+//
+func SyncIPsetStatus(
+	cond *shared.Condition,
+	instanceStatus map[string]HostStatus,
+	ipsetHostStatus HostStatus,
+) HostStatus {
+	var hostStatus HostStatus
+	if _, ok := instanceStatus[ipsetHostStatus.Hostname]; !ok {
+		hostStatus = ipsetHostStatus
+	} else {
+		// Note:
+		// do not sync all information as other controllers are
+		// the master for e.g.
+		// - BMH <-> hostname mapping
+		// - create of networkDataSecretName and userDataSecretName
+		hostStatus = instanceStatus[ipsetHostStatus.Hostname]
+		hostStatus.AnnotatedForDeletion = ipsetHostStatus.AnnotatedForDeletion
+		// TODO: (mschuppert) remove CtlplaneIP where used (osbms) and replace with hostStatus.IPAddresses[<ctlplane>]
+		hostStatus.CtlplaneIP = ipsetHostStatus.CtlplaneIP
+		hostStatus.IPAddresses = ipsetHostStatus.IPAddresses
+		hostStatus.ProvisioningState = ipsetHostStatus.ProvisioningState
+
+		if ipsetHostStatus.HostRef != HostRefInitState {
+			hostStatus.HostRef = ipsetHostStatus.HostRef
+		}
+	}
+
+	hostStatus.ProvisioningState = shared.ProvisioningState(cond.Type)
+
+	return hostStatus
+}

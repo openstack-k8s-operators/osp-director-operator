@@ -848,7 +848,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	)
 
 	for _, status := range ipsetStatus {
-		hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
+		hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
 		instance.Status.VIPStatus[status.Hostname] = hostStatus
 	}
 
@@ -876,7 +876,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 			)
 
 			for _, status := range ipsetStatus {
-				hostStatus := openstackipset.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
+				hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
 				instance.Status.VIPStatus[status.Hostname] = hostStatus
 			}
 
