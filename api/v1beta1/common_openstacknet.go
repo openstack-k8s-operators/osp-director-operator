@@ -269,3 +269,23 @@ func GetOsNetCfg(
 
 	return osNetCfg, nil
 }
+
+// validateNetworks - validate that for all configured subnets an osnet exists
+func validateNetworks(namespace string, networks []string) error {
+	for _, subnetName := range networks {
+		//
+		// Get OSnet with SubNetNameLabelSelector: subnetName
+		//
+		labelSelector := map[string]string{
+			shared.SubNetNameLabelSelector: subnetName,
+		}
+		osnet, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
+		if err != nil && k8s_errors.IsNotFound(err) {
+			return fmt.Errorf(fmt.Sprintf("%s %s not found, validate the object network list!", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
+		} else if err != nil {
+			return fmt.Errorf(fmt.Sprintf("Failed to get %s %s", osnet.Kind, subnetName))
+		}
+	}
+
+	return nil
+}
