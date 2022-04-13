@@ -6,7 +6,6 @@ package v1beta1
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,16 +67,6 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	return found, nil
-}
-
-func checkDomainName(domainName string) error {
-
-	// TODO: implement the same validation as freeipa validate_domain_name()
-	//       in https://github.com/freeipa/freeipa/blob/master/ipalib/util.py
-	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
-		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
-	}
-	return nil
 }
 
 func checkBackupOperationBlocksAction(namespace string, action shared.APIAction) error {

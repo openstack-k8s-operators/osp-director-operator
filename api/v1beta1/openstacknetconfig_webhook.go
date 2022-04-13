@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
@@ -402,5 +403,15 @@ func (r *OpenStackNetConfig) validateStaticIPReservations() error {
 		}
 	}
 
+	return nil
+}
+
+func checkDomainName(domainName string) error {
+
+	// TODO: implement the same validation as freeipa validate_domain_name()
+	//       in https://github.com/freeipa/freeipa/blob/master/ipalib/util.py
+	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
+		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
+	}
 	return nil
 }
