@@ -143,7 +143,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
+	if _, ok := currentLabels[shared.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
 			r.Client,
@@ -209,7 +209,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	// get OSNetCfg object
 	//
-	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
 		cond.Type = shared.CommonCondTypeError
 		cond.Reason = shared.NetConfigCondReasonError

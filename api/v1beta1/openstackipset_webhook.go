@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,7 +53,7 @@ func (r *OpenStackIPSet) Default() {
 	// set OpenStackNetConfig reference label if not already there
 	// Note, any rename of the osnetcfg won't be reflected
 	//
-	if _, ok := r.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
+	if _, ok := r.GetLabels()[shared.OpenStackNetConfigReconcileLabel]; !ok {
 		labels, err := AddOSNetConfigRefLabel(
 			webhookClient,
 			r.Namespace,

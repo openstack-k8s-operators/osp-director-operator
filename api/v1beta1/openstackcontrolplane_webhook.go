@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -96,10 +97,10 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	//
 	// Fail early on create if osnetcfg ist not found
 	//
-	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
-			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err))
 	}
@@ -190,7 +191,7 @@ func (r *OpenStackControlPlane) Default() {
 	// set OpenStackNetConfig reference label if not already there
 	// Note, any rename of the osnetcfg won't be reflected
 	//
-	if _, ok := r.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
+	if _, ok := r.GetLabels()[shared.OpenStackNetConfigReconcileLabel]; !ok {
 		var subnetName string
 		for _, vmRole := range r.Spec.VirtualMachineRoles {
 			subnetName = vmRole.Networks[0]

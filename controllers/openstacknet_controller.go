@@ -325,8 +325,8 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	networkAttachmentDefinition.Namespace = instance.Namespace
 
 	apply := func() error {
-		ospdirectorv1beta1.InitMap(&networkAttachmentDefinition.Labels)
-		ospdirectorv1beta1.InitMap(&networkAttachmentDefinition.Annotations)
+		shared.InitMap(&networkAttachmentDefinition.Labels)
+		shared.InitMap(&networkAttachmentDefinition.Annotations)
 
 		//
 		// Labels

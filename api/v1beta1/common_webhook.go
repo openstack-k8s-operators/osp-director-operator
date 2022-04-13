@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -124,7 +125,7 @@ func validateNetworks(namespace string, networks []string) error {
 		// Get OSnet with SubNetNameLabelSelector: subnetName
 		//
 		labelSelector := map[string]string{
-			SubNetNameLabelSelector: subnetName,
+			shared.SubNetNameLabelSelector: subnetName,
 		}
 		osnet, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {

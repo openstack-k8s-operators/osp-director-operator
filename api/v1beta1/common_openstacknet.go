@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,7 +30,7 @@ func AddOSNetNameLowerLabels(
 	networkNameLowerNamesMap := map[string]bool{}
 
 	for _, n := range networkNameLowerNames {
-		label := fmt.Sprintf("%s/%s", SubNetNameLabelSelector, n)
+		label := fmt.Sprintf("%s/%s", shared.SubNetNameLabelSelector, n)
 		networkNameLowerNamesMap[label] = true
 	}
 
@@ -40,7 +41,7 @@ func AddOSNetNameLowerLabels(
 		//
 		// has label key SubNetNameLabelSelector string included?
 		//
-		if strings.HasSuffix(label.String(), SubNetNameLabelSelector) {
+		if strings.HasSuffix(label.String(), shared.SubNetNameLabelSelector) {
 			l := label.String()
 			osNetLabels[l] = labels[l]
 
@@ -99,7 +100,7 @@ func AddOSNetConfigRefLabel(
 	// Get OSnet with SubNetNameLabelSelector: subnetName
 	//
 	labelSelector := map[string]string{
-		SubNetNameLabelSelector: subnetName,
+		shared.SubNetNameLabelSelector: subnetName,
 	}
 	osnet, err := GetOpenStackNetWithLabel(c, namespace, labelSelector)
 	if err != nil && k8s_errors.IsNotFound(err) {
@@ -116,10 +117,10 @@ func AddOSNetConfigRefLabel(
 			//
 			// merge with obj labels
 			//
-			labels = MergeStringMaps(
+			labels = shared.MergeStringMaps(
 				labels,
 				map[string]string{
-					OpenStackNetConfigReconcileLabel: ownerRef.Name,
+					shared.OpenStackNetConfigReconcileLabel: ownerRef.Name,
 				},
 			)
 
@@ -214,7 +215,7 @@ func CreateVIPNetworkList(
 		for _, netNameLower := range vmRole.Networks {
 			// get network with name_lower label
 			labelSelector := map[string]string{
-				SubNetNameLabelSelector: netNameLower,
+				shared.SubNetNameLabelSelector: netNameLower,
 			}
 
 			// get network with name_lower label to verify if VIP needs to be requested from Spec

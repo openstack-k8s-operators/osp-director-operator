@@ -333,13 +333,13 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 	instance.Status.BridgeName = bridgeName
 
 	apply := func() error {
-		ospdirectorv1beta1.InitMap(&networkConfigurationPolicy.Labels)
+		shared.InitMap(&networkConfigurationPolicy.Labels)
 		networkConfigurationPolicy.Labels[common.OwnerUIDLabelSelector] = string(instance.UID)
 		networkConfigurationPolicy.Labels[common.OwnerNameLabelSelector] = instance.Name
 		networkConfigurationPolicy.Labels[common.OwnerNameSpaceLabelSelector] = instance.Namespace
 		networkConfigurationPolicy.Labels[common.OwnerControllerNameLabelSelector] = openstacknetattachment.AppLabel
 		networkConfigurationPolicy.Labels[openstacknetattachment.BridgeLabel] = bridgeName
-		networkConfigurationPolicy.Labels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel] = instance.GetLabels()[common.OwnerNameLabelSelector]
+		networkConfigurationPolicy.Labels[shared.OpenStackNetConfigReconcileLabel] = instance.GetLabels()[common.OwnerNameLabelSelector]
 
 		networkConfigurationPolicy.Spec = instance.Spec.AttachConfiguration.NodeNetworkConfigurationPolicy
 

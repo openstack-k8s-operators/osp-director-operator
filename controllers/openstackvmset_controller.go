@@ -238,7 +238,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// add osnetcfg CR label reference which is used in the in the osnetcfg
 	// controller to watch this resource and reconcile
 	//
-	if _, ok := currentLabels[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel]; !ok {
+	if _, ok := currentLabels[shared.OpenStackNetConfigReconcileLabel]; !ok {
 		common.LogForObject(r, "osnetcfg reference label not added by webhook, adding it!", instance)
 		instance.Labels, err = ospdirectorv1beta1.AddOSNetConfigRefLabel(
 			r.Client,
@@ -312,12 +312,12 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	//   Get domain name and dns servers from osNetCfg
 	//
-	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel])
+	osNetCfg, err := ospdirectorv1beta1.GetOsNetCfg(r.GetClient(), instance.GetNamespace(), instance.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
 		cond.Type = shared.CommonCondTypeError
 		cond.Reason = shared.NetConfigCondReasonError
 		cond.Message = fmt.Sprintf("error getting OpenStackNetConfig %s: %s",
-			instance.GetLabels()[ospdirectorv1beta1.OpenStackNetConfigReconcileLabel],
+			instance.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			err)
 
 		return ctrl.Result{}, err
@@ -624,7 +624,7 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 	netNameLower := "ctlplane"
 	// get network with name_lower label
 	labelSelector := map[string]string{
-		ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
+		shared.SubNetNameLabelSelector: netNameLower,
 	}
 
 	// get ctlplane network
@@ -949,7 +949,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 
 			// get network with name_lower label
 			labelSelector := map[string]string{
-				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
+				shared.SubNetNameLabelSelector: netNameLower,
 			}
 			network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
 				r.Client,
@@ -1149,7 +1149,7 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 			r.Client,
 			instance.Namespace,
 			map[string]string{
-				ospdirectorv1beta1.SubNetNameLabelSelector: netNameLower,
+				shared.SubNetNameLabelSelector: netNameLower,
 			},
 		)
 		if err != nil {

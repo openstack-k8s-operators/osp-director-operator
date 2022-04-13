@@ -34,24 +34,6 @@ const (
 	APIActionDelete APIAction = "delete"
 )
 
-const (
-	//
-	// LabelSelectors
-	//
-
-	// NetworkNameLabelSelector -
-	NetworkNameLabelSelector = "ooo-netname"
-	// NetworkNameLowerLabelSelector -
-	NetworkNameLowerLabelSelector = "ooo-netname-lower"
-	// SubNetNameLabelSelector -
-	SubNetNameLabelSelector = "ooo-subnetname"
-	// ControlPlaneNetworkLabelSelector - is the network a ctlplane network?
-	ControlPlaneNetworkLabelSelector = "ooo-ctlplane-network"
-	// OpenStackNetConfigReconcileLabel - label set on objects on which change
-	// trigger a reconcile of the osnetconfig
-	OpenStackNetConfigReconcileLabel = "osnetconfig-ref"
-)
-
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter
@@ -59,9 +41,6 @@ type Hash struct {
 	// Hash
 	Hash string `json:"hash,omitempty"`
 }
-
-// ProvisioningState - the overall state of all VMs in this OpenStackVmSet
-//type ProvisioningState string
 
 const (
 	// HostRefInitState - intial HostRef state of a new node which has not yet assigned

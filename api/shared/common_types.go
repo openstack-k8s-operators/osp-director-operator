@@ -28,24 +28,6 @@ const (
 	APIActionDelete APIAction = "delete"
 )
 
-const (
-	//
-	// LabelSelectors
-	//
-
-	// NetworkNameLabelSelector -
-	NetworkNameLabelSelector = "ooo-netname"
-	// NetworkNameLowerLabelSelector -
-	NetworkNameLowerLabelSelector = "ooo-netname-lower"
-	// SubNetNameLabelSelector -
-	SubNetNameLabelSelector = "ooo-subnetname"
-	// ControlPlaneNetworkLabelSelector - is the network a ctlplane network?
-	ControlPlaneNetworkLabelSelector = "ooo-ctlplane-network"
-	// OpenStackNetConfigReconcileLabel - label set on objects on which change
-	// trigger a reconcile of the osnetconfig
-	OpenStackNetConfigReconcileLabel = "osnetconfig-ref"
-)
-
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter
@@ -61,37 +43,3 @@ const (
 	// HostRefInitState - intial HostRef state of a new node which has not yet assigned
 	HostRefInitState string = "unassigned"
 )
-
-// HostStatus represents the hostname and IP info for a specific host
-type HostStatus struct {
-	Hostname          string            `json:"hostname"`
-	ProvisioningState ProvisioningState `json:"provisioningState"`
-
-	// +kubebuilder:default=unassigned
-	HostRef string `json:"hostRef"`
-
-	// +kubebuilder:validation:Optional
-	IPAddresses map[string]string `json:"ipaddresses"`
-
-	// +kubebuilder:default=false
-	// Host annotated for deletion
-	AnnotatedForDeletion bool `json:"annotatedForDeletion"`
-
-	UserDataSecretName    string `json:"userDataSecretName"`
-	NetworkDataSecretName string `json:"networkDataSecretName"`
-	CtlplaneIP            string `json:"ctlplaneIP"`
-}
-
-// NetworkStatus represents the network details of a network
-type NetworkStatus struct {
-	Cidr string `json:"cidr"`
-
-	// +kubebuilder:validation:Optional
-	Vlan int `json:"vlan"`
-
-	AllocationStart string `json:"allocationStart"`
-	AllocationEnd   string `json:"allocationEnd"`
-
-	// +kubebuilder:validation:Optional
-	Gateway string `json:"gateway"`
-}
