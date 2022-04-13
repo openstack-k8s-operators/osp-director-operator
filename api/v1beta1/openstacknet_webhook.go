@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -79,7 +80,7 @@ var _ webhook.Validator = &OpenStackNet{}
 func (r *OpenStackNet) ValidateCreate() error {
 	openstacknetlog.Info("validate create", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -129,5 +130,5 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackNet) ValidateDelete() error {
 	openstacknetlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }

@@ -22,6 +22,7 @@ import (
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -66,7 +67,7 @@ var _ webhook.Validator = &OpenStackNetAttachment{}
 func (r *OpenStackNetAttachment) ValidateCreate() error {
 	openstacknetattachmentlog.Info("validate create", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -80,7 +81,7 @@ func (r *OpenStackNetAttachment) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackNetAttachment) ValidateDelete() error {
 	openstacknetattachmentlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {

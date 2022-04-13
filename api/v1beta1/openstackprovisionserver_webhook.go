@@ -65,7 +65,7 @@ var _ webhook.Validator = &OpenStackProvisionServer{}
 func (r *OpenStackProvisionServer) ValidateCreate() error {
 	openstackprovisionserverlog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+	if err := checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (r *OpenStackProvisionServer) validateCr() error {
 func (r *OpenStackProvisionServer) ValidateDelete() error {
 	openstackprovisionserverlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=mopenstackprovisionserver.kb.io,admissionReviewVersions=v1

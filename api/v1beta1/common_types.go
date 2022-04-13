@@ -22,18 +22,6 @@ import (
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 )
 
-// APIAction - typedef to enumerate API verbs
-type APIAction string
-
-const (
-	// APIActionCreate - "create" API verb
-	APIActionCreate APIAction = "create"
-	// APIActionUpdate - "update" API verb
-	APIActionUpdate APIAction = "update"
-	// APIActionDelete - "delete" API verb
-	APIActionDelete APIAction = "delete"
-)
-
 // Hash - struct to add hashes to status
 type Hash struct {
 	// Name of hash referencing the parameter

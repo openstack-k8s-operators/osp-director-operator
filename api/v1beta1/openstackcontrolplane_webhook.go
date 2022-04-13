@@ -66,7 +66,7 @@ var _ webhook.Validator = &OpenStackControlPlane{}
 func (r *OpenStackControlPlane) ValidateCreate() error {
 	controlplanelog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+	if err := checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -153,7 +153,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackControlPlane) ValidateDelete() error {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplane.kb.io,admissionReviewVersions=v1
