@@ -87,10 +87,10 @@ func checkBackupOperationBlocksAction(namespace string, action shared.APIAction)
 		return err
 	}
 
-	if action == shared.APIActionCreate && (op == BackupCleaning || op == BackupSaving || op == BackupReconciling) {
+	if action == shared.APIActionCreate && (op == shared.BackupCleaning || op == shared.BackupSaving || op == shared.BackupReconciling) {
 		// Don't allow creation of certain OSP-D-operator-specific CRDs during backup save, (restore) clean or (restore) reconcile
 		err = fmt.Errorf("OSP-D operator API is disabled for creating resources while certain backup operations are in progress")
-	} else if action == shared.APIActionDelete && (op == BackupLoading || op == BackupSaving || op == BackupReconciling) {
+	} else if action == shared.APIActionDelete && (op == shared.BackupLoading || op == shared.BackupSaving || op == shared.BackupReconciling) {
 		// Don't allow deletion of certain OSP-D-operator-specific CRDs during backup save, (restore) load or (restore) reconcile
 		err = fmt.Errorf("OSP-D operator API is disabled for deleting resources while certain backup operations are in progress")
 	}

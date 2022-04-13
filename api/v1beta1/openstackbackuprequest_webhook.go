@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -86,7 +87,7 @@ func (r *OpenStackBackupRequest) ValidateDelete() error {
 }
 
 func (r *OpenStackBackupRequest) validateCr() error {
-	if r.Spec.Mode == BackupRestore || r.Spec.Mode == BackupCleanRestore {
+	if r.Spec.Mode == shared.BackupRestore || r.Spec.Mode == shared.BackupCleanRestore {
 		return webhookClient.Get(context.TODO(), types.NamespacedName{Name: r.Spec.RestoreSource, Namespace: r.Namespace}, &OpenStackBackup{})
 	}
 
