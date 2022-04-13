@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -43,4 +45,45 @@ func GetControlPlane(
 
 	return controlPlane, ctrl.Result{}, nil
 
+}
+
+// CreateVIPNetworkList - return list of all networks from all VM roles which has vip flag
+func CreateVIPNetworkList(
+	c client.Client,
+	instance *OpenStackControlPlane,
+) ([]string, error) {
+
+	// create uniq list networls of all VirtualMachineRoles
+	networkList := make(map[string]bool)
+	uniqNetworksList := []string{}
+
+	for _, vmRole := range instance.Spec.VirtualMachineRoles {
+		for _, netNameLower := range vmRole.Networks {
+			// get network with name_lower label
+			labelSelector := map[string]string{
+				shared.SubNetNameLabelSelector: netNameLower,
+			}
+
+			// get network with name_lower label to verify if VIP needs to be requested from Spec
+			network, err := GetOpenStackNetWithLabel(
+				c,
+				instance.Namespace,
+				labelSelector,
+			)
+			if err != nil {
+				if k8s_errors.IsNotFound(err) {
+					return uniqNetworksList, fmt.Errorf(fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower))
+				}
+				// Error reading the object - requeue the request.
+				return uniqNetworksList, fmt.Errorf(fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector))
+			}
+
+			if _, value := networkList[netNameLower]; !value && network.Spec.VIP {
+				networkList[netNameLower] = true
+				uniqNetworksList = append(uniqNetworksList, netNameLower)
+			}
+		}
+	}
+
+	return uniqNetworksList, nil
 }
