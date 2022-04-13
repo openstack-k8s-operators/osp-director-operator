@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"context"
+	"fmt"
 
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -106,4 +107,22 @@ func GetOpenStackBackupsWithLabel(client goClient.Client, namespace string, labe
 	}
 
 	return osBackupList, nil
+}
+
+func checkBackupOperationBlocksAction(namespace string, action shared.APIAction) error {
+	op, err := GetOpenStackBackupOperationInProgress(webhookClient, namespace)
+
+	if err != nil {
+		return err
+	}
+
+	if action == shared.APIActionCreate && (op == shared.BackupCleaning || op == shared.BackupSaving || op == shared.BackupReconciling) {
+		// Don't allow creation of certain OSP-D-operator-specific CRDs during backup save, (restore) clean or (restore) reconcile
+		err = fmt.Errorf("OSP-D operator API is disabled for creating resources while certain backup operations are in progress")
+	} else if action == shared.APIActionDelete && (op == shared.BackupLoading || op == shared.BackupSaving || op == shared.BackupReconciling) {
+		// Don't allow deletion of certain OSP-D-operator-specific CRDs during backup save, (restore) load or (restore) reconcile
+		err = fmt.Errorf("OSP-D operator API is disabled for deleting resources while certain backup operations are in progress")
+	}
+
+	return err
 }
