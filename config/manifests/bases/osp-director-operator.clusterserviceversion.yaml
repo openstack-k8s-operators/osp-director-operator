@@ -68,6 +68,12 @@ spec:
       displayName: OpenStack ControlPlane
       kind: OpenStackControlPlane
       name: openstackcontrolplanes.osp-director.openstack.org
+      version: v1beta2
+    - description: OpenStackControlPlane represents a virtualized OpenStack control
+        plane configuration
+      displayName: OpenStack ControlPlane
+      kind: OpenStackControlPlane
+      name: openstackcontrolplanes.osp-director.openstack.org
       version: v1beta1
     - description: OpenStackDeploy executes a set of Ansible playbooks for the supplied
         OSConfigVersion
@@ -117,6 +123,12 @@ spec:
       kind: OpenStackProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackVMSet represents a set of virtual machines hosts for a
+        specific role within the Overcloud deployment
+      displayName: OpenStack VMSet
+      kind: OpenStackVMSet
+      name: openstackvmsets.osp-director.openstack.org
+      version: v1beta2
     - description: OpenStackVMSet represents a set of virtual machines hosts for a
         specific role within the Overcloud deployment
       displayName: OpenStack VMSet

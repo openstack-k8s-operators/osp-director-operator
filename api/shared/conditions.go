@@ -588,6 +588,8 @@ const (
 	VMSetCondReasonNamespaceFencingDataError ConditionReason = "NamespaceFencingDataError"
 	// VMSetCondReasonKubevirtFencingServiceAccountError - error creating/reading the KubevirtFencingServiceAccount secret
 	VMSetCondReasonKubevirtFencingServiceAccountError ConditionReason = "KubevirtFencingServiceAccountError"
+	// VMSetCondReasonKubevirtError - error creating/updating Kubevirt object
+	VMSetCondReasonKubevirtError ConditionReason = "KubevirtError"
 	// VMSetCondReasonKubeConfigError - error getting the KubeConfig used by the operator
 	VMSetCondReasonKubeConfigError ConditionReason = "KubeConfigError"
 	// VMSetCondReasonCloudInitSecretError - error creating the CloudInitSecret

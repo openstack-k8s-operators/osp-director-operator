@@ -890,7 +890,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	//
 	if err != nil && k8s_errors.IsNotFound(err) {
 		for _, bmhStatus = range instance.Status.BaremetalHosts {
-			if bmhStatus.HostRef == ospdirectorv1beta1.HostRefInitState {
+			if bmhStatus.HostRef == shared.HostRefInitState {
 
 				bmhStatus.HostRef = bmh
 				instance.Status.BaremetalHosts[bmhStatus.Hostname] = bmhStatus

@@ -855,7 +855,6 @@ spec:
                                           it is a TripleO role, the name must match.
                                         type: string
                                       storageAccessMode:
-                                        default: ReadWriteMany
                                         description: StorageAccessMode - Virtual machines
                                           must have a persistent volume claim (PVC)
                                           with a shared ReadWriteMany (RWX) access
@@ -869,7 +868,6 @@ spec:
                                           controller disks
                                         type: string
                                       storageVolumeMode:
-                                        default: Filesystem
                                         description: 'StorageVolumeMode - When using
                                           OpenShift Virtualization with OpenShift
                                           Container Platform Container Storage, specify

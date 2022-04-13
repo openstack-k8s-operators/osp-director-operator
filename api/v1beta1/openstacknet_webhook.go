@@ -80,7 +80,7 @@ var _ webhook.Validator = &OpenStackNet{}
 func (r *OpenStackNet) ValidateCreate() error {
 	openstacknetlog.Info("validate create", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -130,5 +130,5 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackNet) ValidateDelete() error {
 	openstacknetlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }

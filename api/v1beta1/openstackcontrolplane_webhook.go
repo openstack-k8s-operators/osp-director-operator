@@ -34,18 +34,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// OpenStackControlPlaneDefaults -
-type OpenStackControlPlaneDefaults struct {
-	OpenStackRelease string
-}
-
-var openstackControlPlaneDefaults OpenStackControlPlaneDefaults
+var openstackControlPlaneDefaults shared.OpenStackControlPlaneDefaults
 
 // log is for logging in this package.
 var controlplanelog = logf.Log.WithName("controlplane-resource")
 
 // SetupWebhookWithManager - register this webhook with the controller manager
-func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager, defaults OpenStackControlPlaneDefaults) error {
+func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager, defaults shared.OpenStackControlPlaneDefaults) error {
 
 	openstackControlPlaneDefaults = defaults
 
@@ -58,7 +53,7 @@ func (r *OpenStackControlPlane) SetupWebhookWithManager(mgr ctrl.Manager, defaul
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplane.kb.io,admissionReviewVersions=v1
+//// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,versions=v1beta1,name=vopenstackcontrolplanev1beta1.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackControlPlane{}
 
@@ -66,7 +61,7 @@ var _ webhook.Validator = &OpenStackControlPlane{}
 func (r *OpenStackControlPlane) ValidateCreate() error {
 	controlplanelog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
+	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -112,7 +107,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		//
 		// validate that for all configured subnets an osnet exists
 		//
-		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
+		if err := ValidateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
 			return err
 		}
 	}
@@ -141,7 +136,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 		//
 		// validate that for all configured subnets an osnet exists
 		//
-		if err := validateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
+		if err := ValidateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
 			return err
 		}
 	}
@@ -153,10 +148,10 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackControlPlane) ValidateDelete() error {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplane.kb.io,admissionReviewVersions=v1
+////+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackcontrolplane,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackcontrolplanes,verbs=create;update,versions=v1beta1,name=mopenstackcontrolplanev1beta1.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackControlPlane{}
 

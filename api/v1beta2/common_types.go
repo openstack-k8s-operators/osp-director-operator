@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
+	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
 
 // Hash - struct to add hashes to status
@@ -54,11 +55,11 @@ type HostStatus struct {
 func SyncIPsetStatus(
 	cond *shared.Condition,
 	instanceStatus map[string]HostStatus,
-	ipsetHostStatus HostStatus,
+	ipsetHostStatus ospdirectorv1beta1.HostStatus,
 ) HostStatus {
 	var hostStatus HostStatus
 	if _, ok := instanceStatus[ipsetHostStatus.Hostname]; !ok {
-		hostStatus = ipsetHostStatus
+		hostStatus = HostStatus(ipsetHostStatus)
 	} else {
 		// Note:
 		// do not sync all information as other controllers are

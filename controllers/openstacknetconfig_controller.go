@@ -43,6 +43,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	macaddress "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackmacaddress"
@@ -851,7 +852,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labelSelector),
 	}
-	vmSetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+	vmSetList := &ospdirectorv1beta2.OpenStackVMSetList{}
 	if err := r.GetClient().List(
 		ctx,
 		vmSetList,

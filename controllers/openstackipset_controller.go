@@ -293,7 +293,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	for _, hostStatus := range instance.Status.Hosts {
 		// if there is not yet an assigned BMH host, schedule reconcile
-		if hostStatus.HostRef == ospdirectorv1beta1.HostRefInitState {
+		if hostStatus.HostRef == shared.HostRefInitState {
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 	}

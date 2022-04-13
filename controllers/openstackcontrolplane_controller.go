@@ -36,6 +36,7 @@ import (
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
@@ -43,6 +44,7 @@ import (
 	vmset "github.com/openstack-k8s-operators/osp-director-operator/pkg/vmset"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	storageversionmigrations "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
 )
 
 // OpenStackControlPlaneReconciler reconciles an OpenStackControlPlane object
@@ -82,6 +84,7 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
+// +kubebuilder:rbac:groups=migration.k8s.io,resources=storageversionmigrations,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile - control plane
@@ -89,7 +92,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	_ = r.Log.WithValues("controlplane", req.NamespacedName)
 
 	// Fetch the controlplane instance
-	instance := &ospdirectorv1beta1.OpenStackControlPlane{}
+	instance := &ospdirectorv1beta2.OpenStackControlPlane{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -108,7 +111,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	cond := &shared.Condition{}
 
 	if instance.Status.VIPStatus == nil {
-		instance.Status.VIPStatus = map[string]ospdirectorv1beta1.HostStatus{}
+		instance.Status.VIPStatus = map[string]ospdirectorv1beta2.HostStatus{}
 	}
 
 	// If we determine that a backup is overriding this reconcile, requeue after a longer delay
@@ -165,6 +168,14 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	envVars := make(map[string]common.EnvSetter)
 
 	//
+	// verify if API storageversionmigration is required
+	//
+	ctrlResult, err := r.ensureStorageVersionMigration(ctx, instance, cond)
+	if (err != nil) || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
+
+	//
 	// Set the OSP version, the version is usually set in the ctlplane webhook,
 	// so this is mostly for when running local with no webhooks and no OpenStackRelease is provided
 	//
@@ -204,7 +215,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// check if specified PasswordSecret secret exists
 	//
-	ctrlResult, err := r.verifySecretExist(ctx, instance, cond, instance.Spec.PasswordSecret)
+	ctrlResult, err = r.verifySecretExist(ctx, instance, cond, instance.Spec.PasswordSecret)
 	if (err != nil) || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -271,7 +282,6 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	//
 	// Calculate overall status
 	//
-	//var ctlPlaneState ospdirectorv1beta1.ControlPlaneProvisioningState
 
 	// 1) OpenStackClient pod status
 	clientPod, err := r.Kclient.CoreV1().Pods(instance.Namespace).Get(ctx, osc.Name, metav1.GetOptions{})
@@ -361,7 +371,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 		controller, ok := labels[common.OwnerControllerNameLabelSelector]
 		if ok || controllers[controller] {
 			// get all CRs from the same namespace
-			crs := &ospdirectorv1beta1.OpenStackControlPlaneList{}
+			crs := &ospdirectorv1beta2.OpenStackControlPlaneList{}
 			listOpts := []client.ListOption{
 				client.InNamespace(obj.GetNamespace()),
 			}
@@ -385,18 +395,20 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.OpenStackControlPlane{}).
+		For(&ospdirectorv1beta2.OpenStackControlPlane{}).
 		Owns(&corev1.Secret{}).
 		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
-		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
+		Owns(&ospdirectorv1beta2.OpenStackVMSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
+		Owns(&storageversionmigrations.StorageVersionMigration{}).
+
 		// watch vmset and openstackclient pods in the same namespace
 		// as we want to reconcile if VMs or openstack client pods change
 		Watches(&source.Kind{Type: &corev1.Pod{}}, podWatcher).
 		Complete(r)
 }
 
-func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirectorv1beta1.OpenStackControlPlaneStatus) *ospdirectorv1beta1.OpenStackControlPlaneStatus {
+func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirectorv1beta2.OpenStackControlPlaneStatus) *ospdirectorv1beta2.OpenStackControlPlaneStatus {
 
 	//
 	// set LastHeartbeatTime and LastTransitionTime to a default value as those
@@ -416,7 +428,7 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 //
 func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	envVars *map[string]common.EnvSetter,
 ) error {
@@ -479,7 +491,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 //
 func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	envVars *map[string]common.EnvSetter,
 ) (*corev1.Secret, error) {
@@ -543,7 +555,7 @@ func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 
 func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	secretName string,
 ) (ctrl.Result, error) {
@@ -581,7 +593,7 @@ func (r *OpenStackControlPlaneReconciler) verifySecretExist(
 
 func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	configMapName string,
 ) (ctrl.Result, error) {
@@ -621,18 +633,18 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 //
 func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	deploymentSecret *corev1.Secret,
-) ([]*ospdirectorv1beta1.OpenStackVMSet, error) {
-	vmSets := []*ospdirectorv1beta1.OpenStackVMSet{}
+) ([]*ospdirectorv1beta2.OpenStackVMSet, error) {
+	vmSets := []*ospdirectorv1beta2.OpenStackVMSet{}
 
 	for _, vmRole := range instance.Spec.VirtualMachineRoles {
 
 		//
 		// Create or update the vmSet CR object
 		//
-		vmSet := &ospdirectorv1beta1.OpenStackVMSet{
+		vmSet := &ospdirectorv1beta2.OpenStackVMSet{
 			ObjectMeta: metav1.ObjectMeta{
 				// use the role name as the VM CR name
 				Name:      strings.ToLower(vmRole.RoleName),
@@ -644,13 +656,12 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 			vmSet.Spec.VMCount = vmRole.RoleCount
 			vmSet.Spec.Cores = vmRole.Cores
 			vmSet.Spec.Memory = vmRole.Memory
-			vmSet.Spec.DiskSize = vmRole.DiskSize
-			if vmRole.StorageClass != "" {
-				vmSet.Spec.StorageClass = vmRole.StorageClass
+			if len(vmSet.Spec.IOThreadsPolicy) > 0 {
+				vmSet.Spec.IOThreadsPolicy = vmRole.IOThreadsPolicy
 			}
-			vmSet.Spec.StorageAccessMode = vmRole.StorageAccessMode
-			vmSet.Spec.StorageVolumeMode = vmRole.StorageVolumeMode
-			vmSet.Spec.BaseImageVolumeName = vmRole.DeepCopy().BaseImageVolumeName
+			vmSet.Spec.BlockMultiQueue = vmRole.BlockMultiQueue
+			vmSet.Spec.RootDisk = vmRole.RootDisk
+			vmSet.Spec.AdditionalDisks = vmRole.AdditionalDisks
 			vmSet.Spec.DeploymentSSHSecret = deploymentSecret.Name
 			vmSet.Spec.CtlplaneInterface = vmRole.CtlplaneInterface
 			vmSet.Spec.Networks = vmRole.Networks
@@ -703,7 +714,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 
 func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 	deploymentSecret *corev1.Secret,
 ) (*ospdirectorv1beta1.OpenStackClient, error) {
@@ -772,7 +783,7 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateOpenStackClient(
 
 func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackControlPlane,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
 	cond *shared.Condition,
 ) (ctrl.Result, error) {
 	//
@@ -780,7 +791,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	//
 
 	// create list of networks where Spec.VIP == True
-	vipNetworksList, err := ospdirectorv1beta1.CreateVIPNetworkList(r.Client, instance)
+	vipNetworksList, err := ospdirectorv1beta2.CreateVIPNetworkList(r.Client, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -848,7 +859,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	)
 
 	for _, status := range ipsetStatus {
-		hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
+		hostStatus := ospdirectorv1beta2.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
 		instance.Status.VIPStatus[status.Hostname] = hostStatus
 	}
 
@@ -876,7 +887,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 			)
 
 			for _, status := range ipsetStatus {
-				hostStatus := ospdirectorv1beta1.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
+				hostStatus := ospdirectorv1beta2.SyncIPsetStatus(cond, instance.Status.VIPStatus, status)
 				instance.Status.VIPStatus[status.Hostname] = hostStatus
 			}
 
@@ -886,5 +897,104 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 		}
 	}
 
+	return ctrl.Result{}, nil
+}
+
+//
+// verify if API storageversionmigration is required
+//
+func (r *OpenStackControlPlaneReconciler) ensureStorageVersionMigration(
+	ctx context.Context,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
+	cond *shared.Condition,
+) (ctrl.Result, error) {
+	// if old vmspec.DiskSize is present in the CR the storageversionmigration needs to be performed
+	for _, vmspec := range instance.Spec.VirtualMachineRoles {
+		if vmspec.DiskSize > 0 {
+			//
+			// get all storageversionmigrations for ths app label for this CRD
+			//
+			smList := &storageversionmigrations.StorageVersionMigrationList{}
+			labelSelectorMap := map[string]string{
+				common.OwnerControllerNameLabelSelector: controlplane.AppLabel,
+			}
+
+			listOpts := []client.ListOption{
+				client.MatchingLabels(labelSelectorMap),
+			}
+
+			if err := r.List(ctx, smList, listOpts...); err != nil {
+				err = fmt.Errorf("Error listing services for %s: %v", smList.GroupVersionKind().Kind, err)
+				return ctrl.Result{}, err
+			}
+
+			//
+			// if empty storageversionmigrations list, create the storageversionmigration
+			//
+			if len(smList.Items) == 0 {
+				sm := &storageversionmigrations.StorageVersionMigration{}
+				// plural, add s
+				resource := fmt.Sprintf("%ss", strings.ToLower(instance.GroupVersionKind().Kind))
+				sm.Name = fmt.Sprintf("%s-storage-version-migration", resource)
+				sm.SetLabels(common.GetLabels(instance, controlplane.AppLabel, map[string]string{}))
+
+				sm.Spec.Resource.Group = strings.ToLower(instance.GroupVersionKind().Group)
+				sm.Spec.Resource.Resource = resource
+				sm.Spec.Resource.Version = "v1beta2"
+
+				err := r.Create(ctx, sm)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+			} else {
+				//
+				// get storageversionmigrations for this API version
+				//
+				for _, sm := range smList.Items {
+					if sm.Spec.Resource.Version == "v1beta2" {
+						currentCond := &storageversionmigrations.MigrationCondition{}
+						for i, c := range sm.Status.Conditions {
+							if c.Status == corev1.ConditionTrue {
+								currentCond = &sm.Status.Conditions[i]
+								break
+							}
+						}
+
+						if currentCond != nil {
+							switch currentCond.Type {
+							case storageversionmigrations.MigrationSucceeded:
+								cond.Message = fmt.Sprintf("All runtime objects %s migrated to new API version",
+									strings.ToLower(instance.GroupVersionKind().Group),
+								)
+								cond.Reason = shared.ConditionReason(currentCond.Reason)
+								cond.Type = shared.ConditionType(currentCond.Type)
+
+								common.LogForObject(r, cond.Message, instance)
+
+							case storageversionmigrations.MigrationRunning:
+								cond.Message = fmt.Sprintf("waiting for runtime objects %s to be migrated to new API version",
+									strings.ToLower(instance.GroupVersionKind().Group),
+								)
+								cond.Reason = shared.ConditionReason(currentCond.Reason)
+								cond.Type = shared.ConditionType(currentCond.Type)
+								common.LogForObject(r, cond.Message, instance)
+
+								return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+							case storageversionmigrations.MigrationFailed:
+								cond.Message = fmt.Sprintf("storageversionmigration failed for %s",
+									strings.ToLower(instance.GroupVersionKind().Group),
+								)
+								cond.Reason = shared.ConditionReason(currentCond.Reason)
+								cond.Type = shared.ConditionType(currentCond.Type)
+								err := common.WrapErrorForObject(cond.Message, instance, fmt.Errorf(cond.Message))
+
+								return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, err
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	return ctrl.Result{}, nil
 }

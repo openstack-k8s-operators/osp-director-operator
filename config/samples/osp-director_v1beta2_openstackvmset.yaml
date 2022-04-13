@@ -1,0 +1,32 @@
+apiVersion: osp-director.openstack.org/v1beta2
+kind: OpenStackVMSet
+metadata:
+  name: customvmset
+  namespace: openstack
+spec:
+  vmCount: 1
+  cores: 2
+  memory: 20
+  rootDisk:
+    diskSize: 50
+    baseImageVolumeName: controller-base-img
+    storageClass: host-nfs-storageclass
+    storageAccessMode:  ReadWriteMany
+    storageVolumeMode: Filesystem
+  additionalDisks:
+  - name: dataDisk1
+    diskSize: 1
+    storageClass: host-nfs-storageclass
+    storageAccessMode:  ReadWriteMany
+    storageVolumeMode: Filesystem
+  - name: dataDisk2
+    diskSize: 1
+    storageClass: host-nfs-storageclass
+    storageAccessMode:  ReadWriteMany
+    storageVolumeMode: Filesystem
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  isTripleoRole: true
+  ctlplaneInterface: enp2s0 #defaults to enp2s0
+  networks:
+    - ctlplane
+  roleName: SomeCustomRole

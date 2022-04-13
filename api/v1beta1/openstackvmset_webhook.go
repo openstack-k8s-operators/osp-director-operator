@@ -46,7 +46,7 @@ func (r *OpenStackVMSet) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions=v1
+//// +kubebuilder:webhook:verbs=create;update;delete,path=/validate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=false,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,versions=v1beta1,name=vopenstackvmset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &OpenStackVMSet{}
 
@@ -54,7 +54,7 @@ var _ webhook.Validator = &OpenStackVMSet{}
 func (r *OpenStackVMSet) ValidateCreate() error {
 	vmsetlog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
+	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (r *OpenStackVMSet) ValidateCreate() error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -97,10 +97,10 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackVMSet) ValidateDelete() error {
 	vmsetlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
-//+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,verbs=create;update,versions=v1beta1,name=mopenstackvmset.kb.io,admissionReviewVersions=v1
+////+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackvmset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackvmsets,verbs=create;update,versions=v1beta1,name=mopenstackvmset.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &OpenStackVMSet{}
 

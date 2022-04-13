@@ -109,7 +109,8 @@ func GetOpenStackBackupsWithLabel(client goClient.Client, namespace string, labe
 	return osBackupList, nil
 }
 
-func checkBackupOperationBlocksAction(namespace string, action shared.APIAction) error {
+// CheckBackupOperationBlocksAction -
+func CheckBackupOperationBlocksAction(namespace string, action shared.APIAction) error {
 	op, err := GetOpenStackBackupOperationInProgress(webhookClient, namespace)
 
 	if err != nil {

@@ -44,6 +44,7 @@ import (
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	controlplane "github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	openstackconfiggenerator "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackconfiggenerator"
@@ -167,7 +168,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	// unified OSPVersion from ControlPlane CR
 	// which means also get either 16.2 or 17.0 for upstream versions
-	controlPlane, ctrlResult, err := ospdirectorv1beta1.GetControlPlane(r.Client, instance)
+	controlPlane, ctrlResult, err := ospdirectorv1beta2.GetControlPlane(r.Client, instance)
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = shared.ControlPlaneReasonNetNotFound
@@ -658,7 +659,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 	msg := ""
 
 	// check if all osvmset are in status provisioned
-	vmsetList := &ospdirectorv1beta1.OpenStackVMSetList{}
+	vmsetList := &ospdirectorv1beta2.OpenStackVMSetList{}
 
 	listOpts := []client.ListOption{}
 	err := r.List(ctx, vmsetList, listOpts...)
@@ -707,7 +708,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *shared.Condition,
-	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	controlPlane *ospdirectorv1beta2.OpenStackControlPlane,
 	tripleoTarballCM *corev1.ConfigMap,
 	cmLabels map[string]string,
 
@@ -806,7 +807,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	envVars *map[string]common.EnvSetter,
 	cmLabels map[string]string,
 	ospVersion shared.OSPVersion,
-	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
+	controlPlane *ospdirectorv1beta2.OpenStackControlPlane,
 	tripleoTarballCM *corev1.ConfigMap,
 ) (*corev1.ConfigMap, error) {
 	//

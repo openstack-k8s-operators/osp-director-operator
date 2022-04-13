@@ -28,18 +28,18 @@ const (
 	APIActionDelete APIAction = "delete"
 )
 
-// Hash - struct to add hashes to status
-type Hash struct {
-	// Name of hash referencing the parameter
-	Name string `json:"name,omitempty"`
-	// Hash
-	Hash string `json:"hash,omitempty"`
-}
-
 // ProvisioningState - the overall state of all VMs in this OpenStackVmSet
 type ProvisioningState string
 
 const (
 	// HostRefInitState - intial HostRef state of a new node which has not yet assigned
 	HostRefInitState string = "unassigned"
+
+	// RootDiskConvertedAnnotation - annotation set on object when root disk definition got migrated
+	RootDiskConvertedAnnotation string = "osp-director.openstack.org/rootdiskconverted"
 )
+
+// OpenStackControlPlaneDefaults -
+type OpenStackControlPlaneDefaults struct {
+	OpenStackRelease string
+}

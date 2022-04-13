@@ -16,6 +16,8 @@ resources:
 - osp-director_v1beta1_openstackmacaddress.yaml
 - osp-director_v1beta1_openstackbackuprequest.yaml
 - osp-director_v1beta1_openstackbackup.yaml
+- osp-director_v1beta2_openstackvmset.yaml
+- osp-director_v1beta2_openstackcontrolplane.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
 # These patches will "correct" some values for samples injected into the CSV,
 # but leave the samples as-is for functional testing purposes

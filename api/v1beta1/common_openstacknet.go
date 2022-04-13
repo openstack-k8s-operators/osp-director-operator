@@ -229,8 +229,8 @@ func GetOsNetCfg(
 	return osNetCfg, nil
 }
 
-// validateNetworks - validate that for all configured subnets an osnet exists
-func validateNetworks(namespace string, networks []string) error {
+// ValidateNetworks - validate that for all configured subnets an osnet exists
+func ValidateNetworks(namespace string, networks []string) error {
 	for _, subnetName := range networks {
 		//
 		// Get OSnet with SubNetNameLabelSelector: subnetName

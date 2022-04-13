@@ -20,8 +20,199 @@ import (
 	"fmt"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	virtv1 "kubevirt.io/api/core/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
+
+// DiskSetter - disk setter for virtv1.Disk
+type DiskSetter func(*virtv1.Disk)
+
+// DiskSetterMap -
+type DiskSetterMap map[string]DiskSetter
+
+// Disk - create additional Disk, ATM only virtio
+func Disk(
+	diskName string,
+	bus string,
+	serial string,
+	dedicatedIOThread bool,
+) DiskSetter {
+	return func(disk *virtv1.Disk) {
+		disk.Name = diskName
+		if serial != "" {
+			disk.Serial = serial
+		}
+		disk.DiskDevice.Disk = &virtv1.DiskTarget{}
+		disk.DiskDevice.Disk.Bus = bus
+		disk.DedicatedIOThread = &dedicatedIOThread
+	}
+}
+
+// MergeVMDisks - merge new Disk into existing []virtv1.Disk
+func MergeVMDisks(disks []virtv1.Disk, newDisks DiskSetterMap) []virtv1.Disk {
+	for name, f := range newDisks {
+		updated := false
+		for i := 0; i < len(disks); i++ {
+			if disks[i].Name == name {
+				f(&disks[i])
+				updated = true
+				break
+			}
+		}
+
+		if !updated {
+			disks = append(disks, virtv1.Disk{Name: name})
+			f(&disks[len(disks)-1])
+		}
+	}
+
+	return disks
+}
+
+// VolumeSetter - volume setter for virtv1.Volume
+type VolumeSetter func(*virtv1.Volume)
+
+// VolumeSetterMap -
+type VolumeSetterMap map[string]VolumeSetter
+
+// VolumeSourceDataVolume - create additional VolumeSourceDataVolume
+func VolumeSourceDataVolume(
+	volumeName string,
+	dataVolumeName string,
+) VolumeSetter {
+	return func(volume *virtv1.Volume) {
+		volume.Name = volumeName
+		volume.VolumeSource.DataVolume = &virtv1.DataVolumeSource{}
+		volume.VolumeSource.DataVolume.Name = dataVolumeName
+	}
+}
+
+// VolumeSourceCloudInitNoCloud - create additional VolumeSourceCloudInitNoCloud
+func VolumeSourceCloudInitNoCloud(
+	volumeName string,
+	userDataSecretRefName string,
+	networkDataSecretRefName string,
+) VolumeSetter {
+	return func(volume *virtv1.Volume) {
+		volume.Name = volumeName
+		volume.VolumeSource.CloudInitNoCloud = &virtv1.CloudInitNoCloudSource{}
+		volume.VolumeSource.CloudInitNoCloud.UserDataSecretRef = &corev1.LocalObjectReference{
+			Name: userDataSecretRefName,
+		}
+		volume.VolumeSource.CloudInitNoCloud.NetworkDataSecretRef = &corev1.LocalObjectReference{
+			Name: networkDataSecretRefName,
+		}
+	}
+}
+
+// VolumeSourceSecret - create additional VolumeSourceSecret
+func VolumeSourceSecret(
+	volumeName string,
+	secretName string,
+) VolumeSetter {
+	return func(volume *virtv1.Volume) {
+		volume.Name = volumeName
+		volume.VolumeSource.Secret = &virtv1.SecretVolumeSource{}
+		volume.VolumeSource.Secret.SecretName = secretName
+	}
+}
+
+// MergeVMVolumes - merge new Volume into existing []virtv1.Volume
+func MergeVMVolumes(volumes []virtv1.Volume, newVolumes VolumeSetterMap) []virtv1.Volume {
+	for name, f := range newVolumes {
+		updated := false
+		for i := 0; i < len(volumes); i++ {
+			if volumes[i].Name == name {
+				f(&volumes[i])
+				updated = true
+				break
+			}
+		}
+
+		if !updated {
+			volumes = append(volumes, virtv1.Volume{Name: name})
+			f(&volumes[len(volumes)-1])
+		}
+	}
+
+	return volumes
+}
+
+// DataVolumeSetter - volume setter for virtv1.DataVolumeTemplateSpec
+type DataVolumeSetter func(*virtv1.DataVolumeTemplateSpec)
+
+// DataVolumeSetterMap -
+type DataVolumeSetterMap map[string]DataVolumeSetter
+
+// DataVolume - create additional DataVolume
+func DataVolume(
+	dataVolumeName string,
+	namespace string,
+	pvAccessMode string,
+	diskSize uint32,
+	volumeMode string,
+	storageClass string,
+	baseImageName string,
+) DataVolumeSetter {
+	volMode := corev1.PersistentVolumeMode(volumeMode)
+
+	return func(dataVolume *virtv1.DataVolumeTemplateSpec) {
+		dataVolume.ObjectMeta.Name = dataVolumeName
+		dataVolume.ObjectMeta.Namespace = namespace
+
+		dataVolume.Spec.PVC = &corev1.PersistentVolumeClaimSpec{}
+		dataVolume.Spec.PVC.AccessModes = []corev1.PersistentVolumeAccessMode{
+			corev1.PersistentVolumeAccessMode(pvAccessMode),
+		}
+
+		dataVolume.Spec.PVC.Resources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSize)),
+			},
+		}
+		dataVolume.Spec.PVC.VolumeMode = &volMode
+		if baseImageName != "" {
+			dataVolume.Spec.Source = &cdiv1.DataVolumeSource{
+				PVC: &cdiv1.DataVolumeSourcePVC{
+					Name:      baseImageName,
+					Namespace: namespace,
+				},
+			}
+		} else {
+			dataVolume.Spec.Source = &cdiv1.DataVolumeSource{
+				Blank: &cdiv1.DataVolumeBlankImage{},
+			}
+		}
+	}
+}
+
+// MergeVMDataVolumes - merge new DataVolume into existing []virtv1.DataVolumeTemplateSpec
+func MergeVMDataVolumes(dataVolumes []virtv1.DataVolumeTemplateSpec, newDataVolumes DataVolumeSetterMap, namespace string) []virtv1.DataVolumeTemplateSpec {
+	for name, f := range newDataVolumes {
+		updated := false
+		for i := 0; i < len(dataVolumes); i++ {
+			if dataVolumes[i].GetObjectMeta().GetName() == name {
+				f(&dataVolumes[i])
+				updated = true
+				break
+			}
+		}
+
+		if !updated {
+			dataVolumes = append(dataVolumes, virtv1.DataVolumeTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				}})
+			f(&dataVolumes[len(dataVolumes)-1])
+		}
+	}
+
+	return dataVolumes
+}
 
 // NetSetter - net setter for virtv1.Network
 type NetSetter func(*virtv1.Network)

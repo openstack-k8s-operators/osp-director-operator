@@ -54,7 +54,7 @@ var _ webhook.Validator = &OpenStackBaremetalSet{}
 func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	baremetalsetlog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
+	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackBaremetalSet) ValidateDelete() error {
 	baremetalsetlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=create;update,versions=v1beta1,name=mopenstackbaremetalset.kb.io,admissionReviewVersions=v1

@@ -35,6 +35,7 @@ import (
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackbackup"
 )
 
@@ -143,13 +144,13 @@ func (r *OpenStackBackupRequestReconciler) SetupWithManager(mgr ctrl.Manager) er
 		Owns(&ospdirectorv1beta1.OpenStackBackup{}).
 		Owns(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
-		Owns(&ospdirectorv1beta1.OpenStackControlPlane{}).
+		Owns(&ospdirectorv1beta2.OpenStackControlPlane{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetConfig{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
-		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
+		Owns(&ospdirectorv1beta2.OpenStackVMSet{}).
 		Complete(r)
 }
 

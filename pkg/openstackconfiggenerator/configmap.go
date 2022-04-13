@@ -27,6 +27,8 @@ import (
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
+
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/controlplane"
 	"k8s.io/apimachinery/pkg/types"
@@ -165,7 +167,7 @@ func CreateConfigMapParams(
 	//
 	// get OSPVersion from ControlPlane CR
 	//
-	controlPlane, _, err := ospdirectorv1beta1.GetControlPlane(r.GetClient(), &instance.ObjectMeta)
+	controlPlane, _, err := ospdirectorv1beta2.GetControlPlane(r.GetClient(), &instance.ObjectMeta)
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
@@ -516,7 +518,7 @@ func isVMRole(
 	namespace string,
 ) (bool, bool, error) {
 
-	vmset := &ospdirectorv1beta1.OpenStackVMSet{}
+	vmset := &ospdirectorv1beta2.OpenStackVMSet{}
 
 	err := r.GetClient().Get(ctx, types.NamespacedName{Name: roleName, Namespace: namespace}, vmset)
 	if err != nil && !k8s_errors.IsNotFound(err) {

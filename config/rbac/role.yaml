@@ -223,6 +223,18 @@ rules:
   - patch
   - update
 - apiGroups:
+  - migration.k8s.io
+  resources:
+  - storageversionmigrations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - nmstate.io
   resources:
   - nodenetworkconfigurationenactments

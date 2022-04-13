@@ -169,7 +169,7 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 		return err
 	}
 
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -220,7 +220,7 @@ func (r *OpenStackNetConfig) ValidateDelete() error {
 	openstacknetconfiglog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return checkBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 // validateControlPlaneNetworkNames - validate that the specified control plane network name and name_lower match the expected ooo names

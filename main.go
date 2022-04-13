@@ -42,7 +42,12 @@ import (
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
+	"kubevirt.io/client-go/kubecli"
+	storageversionmigrations "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
+
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	//templatev1 "github.com/openshift/api/template/v1"
@@ -68,6 +73,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(ospdirectorv1beta1.AddToScheme(scheme))
+	utilruntime.Must(ospdirectorv1beta2.AddToScheme(scheme))
 	//utilruntime.Must(templatev1.AddToScheme(scheme))
 	utilruntime.Must(virtv1.AddToScheme(scheme))
 	utilruntime.Must(nmstate.AddToScheme(scheme))
@@ -76,6 +82,7 @@ func init() {
 	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme))
 	utilruntime.Must(sriovnetworkv1.AddToScheme(scheme))
+	utilruntime.Must(storageversionmigrations.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -135,6 +142,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	kubevirtClient, err := kubecli.GetKubevirtClientFromRESTConfig(cfg)
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+
 	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
 		enableWebhooks = true
 
@@ -156,10 +169,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.OpenStackVMSetReconciler{
-		Client:  mgr.GetClient(),
-		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
-		Scheme:  mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Kclient:        kclient,
+		Log:            ctrl.Log.WithName("controllers").WithName("OpenStackVMSet"),
+		Scheme:         mgr.GetScheme(),
+		KubevirtClient: kubevirtClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackVMSet")
 		os.Exit(1)
@@ -303,7 +317,7 @@ func main() {
 		//
 		// DEFAULTS
 		//
-		openstackControlPlaneDefaults := ospdirectorv1beta1.OpenStackControlPlaneDefaults{
+		openstackControlPlaneDefaults := shared.OpenStackControlPlaneDefaults{
 			OpenStackRelease: os.Getenv("OPENSTACK_RELEASE_DEFAULT"),
 		}
 
@@ -355,7 +369,16 @@ func main() {
 			os.Exit(1)
 		}
 
+		if err = (&ospdirectorv1beta2.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
+			os.Exit(1)
+		}
+
 		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
+			os.Exit(1)
+		}
+		if err = (&ospdirectorv1beta2.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
 			os.Exit(1)
 		}

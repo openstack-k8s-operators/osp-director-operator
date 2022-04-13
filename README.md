@@ -483,16 +483,38 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
             - storagemgmt
           cores: 6
           memory: 12
-          diskSize: 50
-          baseImageVolumeName: openstack-base-img
-          # storageClass must support RWX to be able to live migrate VMs
-          storageClass: host-nfs-storageclass
-          storageAccessMode: ReadWriteMany
-          # When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
-          # specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
-          # RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
-          # To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
-          storageVolumeMode: Filesystem
+          rootDisk:
+            diskSize: 50
+            baseImageVolumeName: openstack-base-img
+            # storageClass must support RWX to be able to live migrate VMs
+            storageClass: host-nfs-storageclass
+            storageAccessMode: ReadWriteMany
+            # When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+            # specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+            # RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+            # To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
+            storageVolumeMode: Filesystem
+            # Optional
+            # DedicatedIOThread - Disks with dedicatedIOThread set to true will be allocated an exclusive thread.
+            # This is generally useful if a specific Disk is expected to have heavy I/O traffic, e.g. a database spindle.
+            dedicatedIOThread: false
+          additionalDisks:
+            # name must be uniqe and must not be rootDisk
+            - name: dataDisk1
+              diskSize: 100
+              storageClass: host-nfs-storageclass
+              storageAccessMode: ReadWriteMany
+              storageVolumeMode: Filesystem
+          # Optional block storage settings
+          # IOThreadsPolicy - IO thread policy for the domain. Currently valid policies are shared and auto.
+          # However, if any disk requests a dedicated IOThread, ioThreadsPolicy will be enabled and default to shared.
+          # When ioThreadsPolicy is set to auto IOThreads will also be "isolated" from the vCPUs and placed on the same physical CPU as the QEMU emulator thread.
+          # An ioThreadsPolicy of shared indicates that KubeVirt should use one thread that will be shared by all disk devices.
+          ioThreadsPolicy: auto
+          # Block Multi-Queue is a framework for the Linux block layer that maps Device I/O queries to multiple queues.
+          # This splits I/O processing up across multiple threads, and therefor multiple CPUs. libvirt recommends that the
+          # number of queues used should match the number of CPUs allocated for optimal performance.
+          blockMultiQueue: false
     ```
 
     If you write the above YAML into a file called openstackcontrolplane.yaml you can create the OpenStackControlPlane via this command:
@@ -1334,9 +1356,12 @@ spec:
         - storage_mgmt
       cores: 6
       memory: 20
-      diskSize: 40
-      baseImageVolumeName: controller-base-img
-      storageClass: host-nfs-storageclass
+      rootDisk:
+        diskSize: 40
+        baseImageVolumeName: controller-base-img
+        storageClass: host-nfs-storageclass
+        storageAccessMode: ReadWriteMany
+        storageVolumeMode: Filesystem
   enableFencing: False
 ```
 

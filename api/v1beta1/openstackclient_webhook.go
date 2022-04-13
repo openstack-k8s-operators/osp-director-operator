@@ -117,7 +117,7 @@ func (r *OpenStackClient) ValidateCreate() error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (r *OpenStackClient) ValidateUpdate(old runtime.Object) error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
