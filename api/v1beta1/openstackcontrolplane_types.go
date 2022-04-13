@@ -17,28 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// OSPVersion - OSP template version
-type OSPVersion string
-
-const (
-	//
-	// OSPVersion
-	//
-
-	// TemplateVersionTrain - upstream train template version
-	TemplateVersionTrain OSPVersion = "train"
-	// TemplateVersion16_2 - OSP 16.2 template version
-	TemplateVersion16_2 OSPVersion = "16.2"
-	// TemplateVersionWallaby - upstream wallaby template version
-	TemplateVersionWallaby OSPVersion = "wallaby"
-	// TemplateVersion17_0 - OSP 17.0 template version
-	TemplateVersion17_0 OSPVersion = "17.0"
 )
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
@@ -135,7 +115,7 @@ type OpenStackControlPlaneStatus struct {
 	ProvisioningStatus OpenStackControlPlaneProvisioningStatus `json:"provisioningStatus,omitempty"`
 
 	// OSPVersion the OpenStack version to render templates files
-	OSPVersion OSPVersion `json:"ospVersion"`
+	OSPVersion shared.OSPVersion `json:"ospVersion"`
 }
 
 // OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
@@ -195,27 +175,4 @@ func (instance OpenStackControlPlane) GetHostnames() map[string]string {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret
-}
-
-// GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
-//  - TemplateVersion16_2 for eitner 16.2 or upstream train
-//  - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
-func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
-	switch parsedVersion {
-	case string(TemplateVersionTrain):
-		return TemplateVersion16_2, nil
-
-	case string(TemplateVersion16_2):
-		return TemplateVersion16_2, nil
-
-	case string(TemplateVersionWallaby):
-		return TemplateVersion17_0, nil
-
-	case string(TemplateVersion17_0):
-		return TemplateVersion17_0, nil
-	default:
-		err := fmt.Errorf("not a supported OSP version: %v", parsedVersion)
-		return "", err
-
-	}
 }

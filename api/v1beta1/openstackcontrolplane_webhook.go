@@ -75,7 +75,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	//
 	if r.Spec.OpenStackRelease != "" {
 		var err error
-		if r.Status.OSPVersion, err = GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
+		if r.Status.OSPVersion, err = shared.GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
 			return err
 		}
 	}
@@ -129,7 +129,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	//
 	if r.Spec.OpenStackRelease != "" {
 		var err error
-		if r.Status.OSPVersion, err = GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
+		if r.Status.OSPVersion, err = shared.GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
 			return err
 		}
 	}
@@ -168,9 +168,9 @@ func (r *OpenStackControlPlane) Default() {
 	//
 	if r.Spec.OpenStackRelease == "" {
 		r.Spec.OpenStackRelease = openstackControlPlaneDefaults.OpenStackRelease
-		r.Status.OSPVersion = OSPVersion(openstackControlPlaneDefaults.OpenStackRelease)
+		r.Status.OSPVersion = shared.OSPVersion(openstackControlPlaneDefaults.OpenStackRelease)
 	} else {
-		r.Status.OSPVersion = OSPVersion(r.Spec.OpenStackRelease)
+		r.Status.OSPVersion = shared.OSPVersion(r.Spec.OpenStackRelease)
 	}
 	controlplanelog.Info(fmt.Sprintf("%s %s using OSP release %s", r.GetObjectKind().GroupVersionKind().Kind, r.Name, r.Status.OSPVersion))
 
@@ -178,7 +178,7 @@ func (r *OpenStackControlPlane) Default() {
 	// set default for AdditionalServiceVIPs if non provided in ctlplane spec
 	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
 	//
-	if r.Status.OSPVersion == TemplateVersion17_0 && r.Spec.AdditionalServiceVIPs == nil {
+	if r.Status.OSPVersion == shared.TemplateVersion17_0 && r.Spec.AdditionalServiceVIPs == nil {
 		r.Spec.AdditionalServiceVIPs = map[string]string{
 			"Redis":  "internal_api",
 			"OVNDBs": "internal_api",

@@ -17,6 +17,7 @@ limitations under the License.
 package openstackconfiggenerator
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	openstackclient "github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackclient"
 	batchv1 "k8s.io/api/batch/v1"
@@ -25,7 +26,7 @@ import (
 )
 
 // ConfigJob -
-func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash string, ospVersion ospdirectorv1beta1.OSPVersion) *batchv1.Job {
+func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash string, ospVersion shared.OSPVersion) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)

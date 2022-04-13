@@ -168,11 +168,11 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 	// Set the OSP version, the version is usually set in the ctlplane webhook,
 	// so this is mostly for when running local with no webhooks and no OpenStackRelease is provided
 	//
-	var OSPVersion ospdirectorv1beta1.OSPVersion
+	var OSPVersion shared.OSPVersion
 	if instance.Spec.OpenStackRelease != "" {
-		OSPVersion, err = ospdirectorv1beta1.GetOSPVersion(instance.Spec.OpenStackRelease)
+		OSPVersion, err = shared.GetOSPVersion(instance.Spec.OpenStackRelease)
 	} else {
-		OSPVersion = ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2)
+		OSPVersion = shared.OSPVersion(shared.TemplateVersion16_2)
 	}
 	if err != nil {
 		cond.Message = err.Error()
@@ -859,7 +859,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	//
 	// create Service VIPs starting OSP17/wallaby for RedisVirtualFixedIPs and OVNDBsVirtualFixedIPs
 	//
-	if instance.Status.OSPVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
+	if instance.Status.OSPVersion == shared.OSPVersion(shared.TemplateVersion17_0) {
 		for service, network := range instance.Spec.AdditionalServiceVIPs {
 			ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
 				ctx,

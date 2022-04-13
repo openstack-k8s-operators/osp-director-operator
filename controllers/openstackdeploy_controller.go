@@ -140,7 +140,7 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		return ctrlResult, err
 	}
-	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := shared.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = shared.ControlPlaneReasonNotSupportedVersion

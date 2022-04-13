@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -42,7 +42,7 @@ type Template struct {
 	Annotations        map[string]string
 	ConfigOptions      map[string]interface{}
 	SkipSetOwner       bool // skip setting ownership on the associated configmap
-	Version            ospdirectorv1beta1.OSPVersion
+	Version            shared.OSPVersion
 }
 
 // GetTemplatesPath get path to templates, either running local or deployed as container

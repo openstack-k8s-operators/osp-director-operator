@@ -176,7 +176,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 
 		return ctrlResult, err
 	}
-	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := shared.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = shared.ControlPlaneReasonNotSupportedVersion
@@ -805,7 +805,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	cond *shared.Condition,
 	envVars *map[string]common.EnvSetter,
 	cmLabels map[string]string,
-	ospVersion ospdirectorv1beta1.OSPVersion,
+	ospVersion shared.OSPVersion,
 	controlPlane *ospdirectorv1beta1.OpenStackControlPlane,
 	tripleoTarballCM *corev1.ConfigMap,
 ) (*corev1.ConfigMap, error) {
@@ -953,7 +953,7 @@ func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 //
 func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
-	ospVersion ospdirectorv1beta1.OSPVersion,
+	ospVersion shared.OSPVersion,
 	rolesMap map[string]*openstackconfiggenerator.RoleType,
 	clusterServiceIP string,
 	cmLabels map[string]string,
@@ -969,11 +969,11 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 
 			file := ""
 			nicTemplate := ""
-			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) {
+			if ospVersion == shared.OSPVersion(shared.TemplateVersion16_2) {
 				file = fmt.Sprintf("%s-%s", role.NameLower, openstackconfiggenerator.RenderedNicFileTrain)
 				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateTrain)
 			}
-			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion17_0) {
+			if ospVersion == shared.OSPVersion(shared.TemplateVersion17_0) {
 				file = fmt.Sprintf("%s-%s", role.NameLower, openstackconfiggenerator.RenderedNicFileWallaby)
 				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateWallaby)
 			}

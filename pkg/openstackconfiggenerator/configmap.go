@@ -169,7 +169,7 @@ func CreateConfigMapParams(
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
-	OSPVersion, err := ospdirectorv1beta1.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+	OSPVersion, err := shared.GetOSPVersion(string(controlPlane.Status.OSPVersion))
 	if err != nil {
 		return templateParameters, rolesMap, err
 	}
@@ -238,7 +238,7 @@ func CreateConfigMapParams(
 //	               to get the network name from the subnet name
 //
 func createNetworksMap(
-	ospVersion ospdirectorv1beta1.OSPVersion,
+	ospVersion shared.OSPVersion,
 	netConfig *ospdirectorv1beta1.OpenStackNetConfig,
 ) (
 	map[string]*networkType,
@@ -339,7 +339,7 @@ func createNetworksMap(
 			// In train, there is a top level default subnet, while with networkv2 there are only subnets.
 			// For default subnet in Train, the network NameLower and subnet Name must match
 			//
-			if ospVersion == ospdirectorv1beta1.OSPVersion(ospdirectorv1beta1.TemplateVersion16_2) &&
+			if ospVersion == shared.OSPVersion(shared.TemplateVersion16_2) &&
 				n.NameLower == s.Name {
 				network.DefaultSubnet = subnet
 			} else {
