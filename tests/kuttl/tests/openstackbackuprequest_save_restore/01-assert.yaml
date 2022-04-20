@@ -27,7 +27,7 @@ status:
     reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackControlPlane
 metadata:
   name: overcloud
@@ -51,7 +51,7 @@ status:
     reason: All requested BaremetalHosts have been provisioned
     state: Provisioned
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   name: controller

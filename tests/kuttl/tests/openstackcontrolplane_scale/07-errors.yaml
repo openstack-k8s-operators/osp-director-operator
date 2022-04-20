@@ -7,13 +7,13 @@
 # - 1 OpenStackClient (should be removed)
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackControlPlane
 metadata:
   name: overcloud
   namespace: openstack
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   name: controller

@@ -4,12 +4,11 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
+  domainName: ostest.test.metalkube.org
   enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
-  - external
-  - internal_api
   openStackClientStorageClass: host-nfs-storageclass
   openStackRelease: "16.2"
   passwordSecret: userpassword
@@ -17,26 +16,15 @@ spec:
     controller:
       cores: 6
       ctlplaneInterface: enp2s0
+      isTripleoRole: true
+      memory: 20
+      networks:
+      - ctlplane
+      roleCount: 0
+      roleName: Controller
       rootDisk:
         diskSize: 50
         baseImageVolumeName: controller-base-img
         storageClass: host-nfs-storageclass
         storageAccessMode:  ReadWriteMany
         storageVolumeMode: Filesystem
-      additionalDisks:
-      - name: datadisk1
-        diskSize: 1
-        storageClass: host-nfs-storageclass
-        storageAccessMode:  ReadWriteMany
-        storageVolumeMode: Filesystem
-      isTripleoRole: true
-      memory: 20
-      networks:
-      - ctlplane
-      - external
-      - internal_api
-      - storage
-      - storage_mgmt
-      - tenant
-      roleCount: 0
-      roleName: Controller

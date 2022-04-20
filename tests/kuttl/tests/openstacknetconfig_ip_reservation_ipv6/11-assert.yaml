@@ -234,17 +234,15 @@ status:
       ip: fd00:fd00:fd00:2000::10
   reservedIpCount: 2
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   name: controller
   namespace: openstack
 spec:
-  baseImageVolumeName: controller-base-img
   cores: 6
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  diskSize: 50
   isTripleoRole: true
   memory: 20
   networks:
@@ -252,9 +250,14 @@ spec:
   - internal_api
   passwordSecret: userpassword
   roleName: Controller
-  storageAccessMode: ReadWriteMany
-  storageClass: host-nfs-storageclass
-  storageVolumeMode: Filesystem
+  rootDisk:
+    baseImageVolumeName: controller-base-img
+    dedicatedIOThread: false
+    diskSize: 50
+    name: ""
+    storageAccessMode: ReadWriteMany
+    storageClass: host-nfs-storageclass
+    storageVolumeMode: Filesystem
   vmCount: 1
 status:
   baseImageDVReady: true

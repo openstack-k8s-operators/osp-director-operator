@@ -14,12 +14,12 @@ spec:
     storageAccessMode:  ReadWriteMany
     storageVolumeMode: Filesystem
   additionalDisks:
-  - name: dataDisk1
+  - name: datadisk1
     diskSize: 1
     storageClass: host-nfs-storageclass
     storageAccessMode:  ReadWriteMany
     storageVolumeMode: Filesystem
-  - name: dataDisk2
+  - name: datadisk2
     diskSize: 1
     storageClass: host-nfs-storageclass
     storageAccessMode:  ReadWriteMany

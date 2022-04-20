@@ -4,7 +4,7 @@
 # - 1 OpenStackVMSet with roleName unchanged
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   name: customvmset
