@@ -117,7 +117,7 @@ spec:
           trust: "off"
   dnsServers:
   - 172.22.0.1
-  domainName: localdomain
+  domainName: osptest.test.metalkube.org
   networks:
   - isControlPlane: true
     mtu: 1500
@@ -606,7 +606,7 @@ spec:
   allocationStart: 172.22.0.100
   attachConfiguration: br-ctlplane
   cidr: 172.22.0.0/24
-  domainName: ctlplane.localdomain
+  domainName: ctlplane.osptest.test.metalkube.org
   gateway: 172.22.0.1
   mtu: 1500
   name: Control
@@ -645,7 +645,7 @@ spec:
   allocationStart: 10.0.0.10
   attachConfiguration: br-ex
   cidr: 10.0.0.0/24
-  domainName: external.localdomain
+  domainName: external.osptest.test.metalkube.org
   gateway: 10.0.0.1
   mtu: 1500
   name: External
@@ -684,7 +684,7 @@ spec:
   allocationStart: 172.17.0.10
   attachConfiguration: br-osp
   cidr: 172.17.0.0/24
-  domainName: internalapi.localdomain
+  domainName: internalapi.osptest.test.metalkube.org
   gateway: ""
   mtu: 1500
   name: InternalApi
@@ -723,7 +723,7 @@ spec:
   allocationStart: 172.18.0.10
   attachConfiguration: br-osp
   cidr: 172.18.0.0/24
-  domainName: storage.localdomain
+  domainName: storage.osptest.test.metalkube.org
   gateway: ""
   mtu: 9000
   name: Storage
@@ -762,7 +762,7 @@ spec:
   allocationStart: 172.19.0.10
   attachConfiguration: br-osp
   cidr: 172.19.0.0/24
-  domainName: storagemgmt.localdomain
+  domainName: storagemgmt.osptest.test.metalkube.org
   gateway: ""
   mtu: 1500
   name: StorageMgmt
@@ -801,7 +801,7 @@ spec:
   allocationStart: 172.20.0.10
   attachConfiguration: br-osp
   cidr: 172.20.0.0/24
-  domainName: tenant.localdomain
+  domainName: tenant.osptest.test.metalkube.org
   gateway: ""
   mtu: 9000
   name: Tenant

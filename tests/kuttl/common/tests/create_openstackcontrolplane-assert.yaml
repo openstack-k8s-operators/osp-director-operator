@@ -18,11 +18,10 @@ metadata:
     ooo-subnetname/internal_api: "true"
     ooo-subnetname/storage: "true"
     ooo-subnetname/storage_mgmt: "true"
-    osnetconfig-reconcile-dep: openstacknetconfig
+    osnetconfig-ref: openstacknetconfig
   name: overcloud
   namespace: openstack
 spec:
-  domainName: ostest.test.metalkube.org
   enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
@@ -48,8 +47,8 @@ spec:
       - storage_mgmt
       - tenant
       roleCount: 0
-      storageAccessMode: ReadWriteMany
       roleName: Controller
+      storageAccessMode: ReadWriteMany
       storageClass: host-nfs-storageclass
       storageVolumeMode: Filesystem
 status:
@@ -85,7 +84,7 @@ metadata:
     ooo-subnetname/storage: "true"
     ooo-subnetname/storage_mgmt: "true"
     ooo-subnetname/tenant: "true"
-    osnetconfig-reconcile-dep: openstacknetconfig
+    osnetconfig-ref: openstacknetconfig
   name: controller
   namespace: openstack
 spec:
@@ -94,7 +93,6 @@ spec:
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
-  domainName: ostest.test.metalkube.org
   isTripleoRole: true
   memory: 20
   networks:
@@ -106,7 +104,9 @@ spec:
   - tenant
   passwordSecret: userpassword
   roleName: Controller
+  storageAccessMode: ReadWriteMany
   storageClass: host-nfs-storageclass
+  storageVolumeMode: Filesystem
   vmCount: 0
 status:
   baseImageDVReady: true
@@ -121,13 +121,12 @@ metadata:
     ooo-subnetname/ctlplane: "true"
     ooo-subnetname/external: "true"
     ooo-subnetname/internal_api: "true"
-    osnetconfig-reconcile-dep: openstacknetconfig
+    osnetconfig-ref: openstacknetconfig
   name: openstackclient
   namespace: openstack
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  domainName: ostest.test.metalkube.org
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
@@ -168,7 +167,7 @@ spec:
   allocationStart: 172.22.0.100
   attachConfiguration: br-ctlplane
   cidr: 172.22.0.0/24
-  domainName: ctlplane.localdomain
+  domainName: ctlplane.osptest.test.metalkube.org
   gateway: 172.22.0.1
   mtu: 1500
   name: Control
@@ -224,7 +223,7 @@ spec:
   allocationStart: 10.0.0.10
   attachConfiguration: br-ex
   cidr: 10.0.0.0/24
-  domainName: external.localdomain
+  domainName: external.osptest.test.metalkube.org
   gateway: 10.0.0.1
   mtu: 1500
   name: External
@@ -280,7 +279,7 @@ spec:
   allocationStart: 172.17.0.10
   attachConfiguration: br-osp
   cidr: 172.17.0.0/24
-  domainName: internalapi.localdomain
+  domainName: internalapi.osptest.test.metalkube.org
   gateway: ""
   mtu: 1500
   name: InternalApi
@@ -336,7 +335,7 @@ spec:
   allocationStart: 172.18.0.10
   attachConfiguration: br-osp
   cidr: 172.18.0.0/24
-  domainName: storage.localdomain
+  domainName: storage.osptest.test.metalkube.org
   gateway: ""
   mtu: 9000
   name: Storage
@@ -381,7 +380,7 @@ spec:
   allocationStart: 172.19.0.10
   attachConfiguration: br-osp
   cidr: 172.19.0.0/24
-  domainName: storagemgmt.localdomain
+  domainName: storagemgmt.osptest.test.metalkube.org
   gateway: ""
   mtu: 1500
   name: StorageMgmt
@@ -426,7 +425,7 @@ spec:
   allocationStart: 172.20.0.10
   attachConfiguration: br-osp
   cidr: 172.20.0.0/24
-  domainName: tenant.localdomain
+  domainName: tenant.osptest.test.metalkube.org
   gateway: ""
   mtu: 9000
   name: Tenant

@@ -1,26 +1,28 @@
 #
 # Check for:
 #
-# - 1 OpenStackProvisionServer with a second user-defined httpd port
+# - 1 OpenStackProvisionServer
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackProvisionServer
 metadata:
-  name: goodprov
+  name: openstack
   namespace: openstack
 spec:
-  apacheImageUrl: registry.redhat.io/rhel8/httpd-24@sha256:87d58041da70f094e685511f86f8a83e9b2a67424fcf8cf2530ff071f566350b
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
-  downloaderImageUrl: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader@sha256:dadca151e8712eef8b206b69722c558b2aac035a4a3c52e705bf69c26d649567
-  port: 8081
-  agentImageUrl: quay.io/openstack-k8s-operators/osp-director-operator-agent:0.0.1
+  interface: br-ctlplane
+  port: 8080
 status:
   conditions:
-  - message: ProvisionServer goodprov has been provisioned
-    reason: ProvisionServer goodprov has been provisioned
+  - message: Provisioning of OpenStackProvisionServer in progress
+    reason: OpenStackProvisionServerCondReasonProvisioning
+    status: "False"
+    type: Provisioning
+  - message: OpenStackProvisionServer has been provisioned
+    reason: OpenStackProvisionServerCondReasonProvisioned
     status: "True"
     type: Provisioned
   provisioningStatus:
-    reason: ProvisionServer goodprov has been provisioned
+    reason: OpenStackProvisionServer has been provisioned
     state: Provisioned

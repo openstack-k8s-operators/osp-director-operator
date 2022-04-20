@@ -21,6 +21,8 @@ spec:
             state: up
             type: linux-bridge
             mtu: 1500
+  domainName: osptest.test.metalkube.org
+  dnsServers: ['172.22.0.1']
   networks:
   - name: Control
     nameLower: ctlplane

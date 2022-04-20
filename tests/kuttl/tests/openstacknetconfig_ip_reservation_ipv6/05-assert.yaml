@@ -42,8 +42,9 @@ spec:
           port: ""
           spoofCheck: "on"
           trust: "off"
-  dnsServers: []
-  domainName: localdomain
+  dnsServers:
+  - 172.22.0.1
+  domainName: osptest.test.metalkube.org
   networks:
   - isControlPlane: true
     mtu: 1500

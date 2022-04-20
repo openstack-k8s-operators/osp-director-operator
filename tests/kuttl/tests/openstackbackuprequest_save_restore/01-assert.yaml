@@ -18,8 +18,8 @@ metadata:
   namespace: openstack
 status:
   provisioningStatus:
-    attachDesiredCount: 2
-    attachReadyCount: 2
+    attachDesiredCount: 3
+    attachReadyCount: 3
     netDesiredCount: 6
     netReadyCount: 6
     physNetDesiredCount: 2

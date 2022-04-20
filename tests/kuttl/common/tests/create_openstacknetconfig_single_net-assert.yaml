@@ -16,7 +16,6 @@ metadata:
   name: openstacknetconfig
   namespace: openstack
 spec:
-spec:
   attachConfigurations:
     br-osp:
       nodeNetworkConfigurationPolicy:
@@ -43,8 +42,9 @@ spec:
           port: ""
           spoofCheck: "on"
           trust: "off"
-  dnsServers: []
-  domainName: localdomain
+  dnsServers:
+  - 172.22.0.1
+  domainName: osptest.test.metalkube.org
   networks:
   - isControlPlane: true
     mtu: 1500
@@ -187,6 +187,7 @@ spec:
   allocationStart: 172.22.0.100
   attachConfiguration: br-osp
   cidr: 172.22.0.0/24
+  domainName: ctlplane.osptest.test.metalkube.org
   gateway: 172.22.0.1
   mtu: 1500
   name: Control

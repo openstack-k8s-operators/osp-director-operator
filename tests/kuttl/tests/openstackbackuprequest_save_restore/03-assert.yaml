@@ -249,12 +249,6 @@ spec:
     - apiVersion: v1
       kind: Secret
       metadata:
-        name: git-secret
-        namespace: openstack
-      type: Opaque
-    - apiVersion: v1
-      kind: Secret
-      metadata:
         labels:
           osp-controlplane-ssh-keys: ""
         name: osp-controlplane-ssh-keys

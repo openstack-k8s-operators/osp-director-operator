@@ -1,17 +1,17 @@
 #
 # Check for:
 #
-# - 1 OpenStackProvisionServer (we don't actually care about the OpenStackBaremetalSet resource) with an auto-assigned httpd port
-# 
+# - 1 OpenStackProvisionServer with a second user-defined httpd port
+#
 
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackProvisionServer
 metadata:
-  name: compute2-provisionserver
+  name: goodprov
   namespace: openstack
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
-  port: 6191
+  port: 8081
 status:
   conditions:
   - message: Provisioning of OpenStackProvisionServer in progress
