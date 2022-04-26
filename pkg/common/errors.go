@@ -17,10 +17,7 @@ limitations under the License.
 package common
 
 import (
-	"errors"
 	"fmt"
-
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // ForbiddenPodSpecChangeError - error returned when Pod must be recreate
@@ -34,5 +31,6 @@ func (e *ForbiddenPodSpecChangeError) Error() string {
 
 // IsForbiddenPodSpecChangeError -
 func IsForbiddenPodSpecChangeError(err error) bool {
-	return errors.Is(err, &ForbiddenPodSpecChangeError{}) || k8s_errors.IsInvalid(err)
+	_, ok := err.(*ForbiddenPodSpecChangeError)
+	return ok
 }
