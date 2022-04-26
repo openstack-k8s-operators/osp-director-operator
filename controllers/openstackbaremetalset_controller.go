@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -1010,53 +1009,56 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 		return err
 	}
 
-	//
-	// create a copy of the foundBaremetalHost to be able to compare after we applied our labels/spec
-	//
-	actualFoundBaremetalHost := foundBaremetalHost.DeepCopy()
+	op, err := controllerutil.CreateOrPatch(context.TODO(), r.Client, foundBaremetalHost, func() error {
+		//
+		// Set our ownership labels so we can watch this resource
+		// Set ownership labels that can be found by the respective controller kind
+		labelSelector = common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
+			common.OSPHostnameLabelSelector: bmhStatus.Hostname,
+		})
+		foundBaremetalHost.Labels = common.MergeStringMaps(
+			foundBaremetalHost.GetLabels(),
+			labelSelector,
+		)
 
-	//
-	// Set our ownership labels so we can watch this resource
-	// Set ownership labels that can be found by the respective controller kind
-	labelSelector = common.GetLabels(instance, baremetalset.AppLabel, map[string]string{
-		common.OSPHostnameLabelSelector: bmhStatus.Hostname,
+		//
+		// Update the BMH spec once when ConsumerRef is nil to only perform one time provision.
+		//
+		if foundBaremetalHost.Spec.ConsumerRef == nil {
+			foundBaremetalHost.Spec.Online = true
+			foundBaremetalHost.Spec.ConsumerRef = &corev1.ObjectReference{Name: instance.Name, Kind: instance.Kind, Namespace: instance.Namespace}
+			foundBaremetalHost.Spec.Image = &metal3v1alpha1.Image{
+				URL:      localImageURL,
+				Checksum: fmt.Sprintf("%s.md5sum", localImageURL),
+			}
+			foundBaremetalHost.Spec.UserData = &corev1.SecretReference{
+				Name:      userDataSecretName,
+				Namespace: "openshift-machine-api",
+			}
+			foundBaremetalHost.Spec.NetworkData = &corev1.SecretReference{
+				Name:      networkDataSecretName,
+				Namespace: "openshift-machine-api",
+			}
+		}
+
+		return nil
 	})
+	if err != nil {
+		cond.Message = fmt.Sprintf("Error update %s BMH %s", foundBaremetalHost.Kind, foundBaremetalHost.Name)
+		cond.Reason = ospdirectorv1beta1.BaremetalHostCondReasonUpdateError
+		cond.Type = ospdirectorv1beta1.CommonCondTypeError
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+		common.LogForObject(r, fmt.Sprintf("%s: %+v", cond.Message, foundBaremetalHost), foundBaremetalHost)
 
-	foundBaremetalHost.GetObjectMeta().SetLabels(labels.Merge(foundBaremetalHost.GetObjectMeta().GetLabels(), labelSelector))
-
-	foundBaremetalHost.Spec.Online = true
-	foundBaremetalHost.Spec.ConsumerRef = &corev1.ObjectReference{Name: instance.Name, Kind: instance.Kind, Namespace: instance.Namespace}
-	foundBaremetalHost.Spec.Image = &metal3v1alpha1.Image{
-		URL:      localImageURL,
-		Checksum: fmt.Sprintf("%s.md5sum", localImageURL),
-	}
-	foundBaremetalHost.Spec.UserData = &corev1.SecretReference{
-		Name:      userDataSecretName,
-		Namespace: "openshift-machine-api",
-	}
-	foundBaremetalHost.Spec.NetworkData = &corev1.SecretReference{
-		Name:      networkDataSecretName,
-		Namespace: "openshift-machine-api",
+		return err
 	}
 
-	//
-	// update metal3 object only if labes or spec changed
-	//
-	if !reflect.DeepEqual(actualFoundBaremetalHost.GetLabels(), foundBaremetalHost.GetLabels()) ||
-		!reflect.DeepEqual(actualFoundBaremetalHost.Spec, foundBaremetalHost.Spec) {
+	if op != controllerutil.OperationResultNone {
 		common.LogForObject(
 			r,
-			fmt.Sprintf("Allocating/Updating BaremetalHost: %s", foundBaremetalHost.Name),
-			instance)
-
-		err = r.Client.Update(context.TODO(), foundBaremetalHost)
-		if err != nil {
-			cond.Message = fmt.Sprintf("Failed to update %s %s", foundBaremetalHost.Kind, foundBaremetalHost.Name)
-			cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.BaremetalHostCondReasonUpdateError)
-			cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeError)
-
-			return err
-		}
+			fmt.Sprintf("BaremetalHost %s successfully reconciled - operation: %s", foundBaremetalHost.Name, string(op)),
+			instance,
+		)
 	}
 
 	//
