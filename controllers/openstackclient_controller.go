@@ -611,7 +611,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		return nil
 	})
 	if err != nil {
-		if common.IsForbiddenPodSpecChangeError(err) {
+		if common.IsForbiddenPodSpecChangeError(err) || k8s_errors.IsInvalid(err) {
 			// Delete pod when an unsupported change was requested, like
 			// e.g. additional controller VM got up. We just re-create the
 			// openstackclient pod
