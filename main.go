@@ -364,20 +364,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&ospdirectorv1beta1.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
-			os.Exit(1)
-		}
-
 		if err = (&ospdirectorv1beta2.OpenStackControlPlane{}).SetupWebhookWithManager(mgr, openstackControlPlaneDefaults); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackControlPlane")
 			os.Exit(1)
 		}
 
-		if err = (&ospdirectorv1beta1.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
-			os.Exit(1)
-		}
 		if err = (&ospdirectorv1beta2.OpenStackVMSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackVMSet")
 			os.Exit(1)

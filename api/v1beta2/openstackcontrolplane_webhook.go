@@ -263,7 +263,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	controlplanelog.Info("validate update", "name", r.Name)
 
-	// Get the OpenStackVMSet object
+	// Get the OpenStackControlPlane object
 	var ok bool
 	var oldInstance *OpenStackControlPlane
 

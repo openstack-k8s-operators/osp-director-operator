@@ -61,7 +61,7 @@ func (r *OpenStackIPSet) Default() {
 			r.GetLabels(),
 		)
 		if err != nil {
-			controlplanelog.Error(err, fmt.Sprintf("error adding OpenStackNetConfig reference label on %s - %s: %s", r.Kind, r.Name, err))
+			openstackipsetlog.Error(err, fmt.Sprintf("error adding OpenStackNetConfig reference label on %s - %s: %s", r.Kind, r.Name, err))
 		}
 		r.SetLabels(labels)
 	}
