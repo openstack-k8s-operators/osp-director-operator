@@ -141,7 +141,7 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 func (r *OpenStackBackupRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBackupRequest{}).
-		Owns(&ospdirectorv1beta1.OpenStackBackup{}).
+		Owns(&ospdirectorv1beta2.OpenStackBackup{}).
 		Owns(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
 		Owns(&ospdirectorv1beta2.OpenStackControlPlane{}).
@@ -235,7 +235,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 				return err
 			}
 
-			backup := &ospdirectorv1beta1.OpenStackBackup{
+			backup := &ospdirectorv1beta2.OpenStackBackup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", instance.Name, time.Now().Unix()),
 					Namespace: instance.Namespace,
@@ -276,7 +276,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
 ) error {
 	// Get the backup we are restoring
-	backup := &ospdirectorv1beta1.OpenStackBackup{}
+	backup := &ospdirectorv1beta2.OpenStackBackup{}
 
 	if err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.RestoreSource, Namespace: instance.Namespace}, backup); err != nil {
 		return err
@@ -360,7 +360,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBackupRequest,
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
-	backup *ospdirectorv1beta1.OpenStackBackup,
+	backup *ospdirectorv1beta2.OpenStackBackup,
 ) error {
 	// Create all CRs in the spec first, and set their status to some initial state
 
@@ -538,7 +538,7 @@ func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBackupRequest,
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
-	backup *ospdirectorv1beta1.OpenStackBackup,
+	backup *ospdirectorv1beta2.OpenStackBackup,
 ) error {
 	// Check each CR in the OpenStackBackup spec that has a state and wait for the "finished" equivalent for that CRD
 

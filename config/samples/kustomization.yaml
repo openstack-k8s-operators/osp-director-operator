@@ -18,17 +18,18 @@ resources:
 - osp-director_v1beta1_openstackbackup.yaml
 - osp-director_v1beta2_openstackvmset.yaml
 - osp-director_v1beta2_openstackcontrolplane.yaml
+- osp-director_v1beta2_openstackbackup.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
 # These patches will "correct" some values for samples injected into the CSV,
 # but leave the samples as-is for functional testing purposes
 patchesJson6902:
 - target:
-    version: v1beta1
+    version: v1beta2
     kind: OpenStackControlPlane
     name: overcloud
   path: patches/openstackcontrolplane_base_image_volume_name_patch.yaml
 - target:
-    version: v1beta1
+    version: v1beta2
     kind: OpenStackControlPlane
     name: overcloud
   path: patches/openstackcontrolplane_controller_count_patch.yaml

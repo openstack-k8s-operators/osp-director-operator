@@ -208,4 +208,15 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: openstack.org
+  group: osp-director
+  kind: OpenStackBackup
+  path: github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2
+  version: v1beta2
+  webhooks:
+    validation: true
+    webhookVersion: v1
 version: "3"

@@ -26,7 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 )
 
 // OpenStackBackupReconciler reconciles a OpenStackBackup object
@@ -66,7 +66,7 @@ func (r *OpenStackBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	_ = r.Log.WithValues("openstackbackup", req.NamespacedName)
 
 	// Fetch the instance
-	instance := &ospdirectorv1beta1.OpenStackBackup{}
+	instance := &ospdirectorv1beta2.OpenStackBackup{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
@@ -83,6 +83,6 @@ func (r *OpenStackBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *OpenStackBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ospdirectorv1beta1.OpenStackBackup{}).
+		For(&ospdirectorv1beta2.OpenStackBackup{}).
 		Complete(r)
 }

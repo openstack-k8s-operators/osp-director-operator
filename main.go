@@ -42,11 +42,12 @@ import (
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 
+	"kubevirt.io/client-go/kubecli"
+	storageversionmigrations "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
+
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
-	"kubevirt.io/client-go/kubecli"
-	storageversionmigrations "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/controllers"
 	//cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -393,7 +394,7 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackNet")
 			os.Exit(1)
 		}
-		if err = (&ospdirectorv1beta1.OpenStackBackup{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&ospdirectorv1beta2.OpenStackBackup{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackBackup")
 			os.Exit(1)
 		}
