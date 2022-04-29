@@ -420,8 +420,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 	(*envVars)["FQDN"] = common.EnvValue(instance.Name + "." + osNetCfg.Spec.DomainName)
 
-	env := common.MergeEnvs([]corev1.EnvVar{}, *envVars)
-
 	initEnvVars := make(map[string]common.EnvSetter)
 	for k, v := range *envVars {
 		initEnvVars[k] = v
@@ -473,7 +471,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		}
 		initEnvVars["IPA_DOMAIN"] = common.EnvValue(osNetCfg.Spec.DomainName)
 	}
-	initEnv := common.MergeEnvs([]corev1.EnvVar{}, initEnvVars)
 
 	// create k8s.v1.cni.cncf.io/networks network annotation to attach OpenStackClient to networks set in instance.Spec.Networks
 	annotations := ""
@@ -554,29 +551,25 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 			pod.Labels[k] = v
 		}
 
-		if isPodUpdate {
-			// must merge envs/volumes etc... when the pod already exists
-			env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
-			initEnv = common.MergeEnvs(pod.Spec.InitContainers[0].Env, initEnvVars)
-			volumeMounts = common.MergeVolumeMounts(pod.Spec.Containers[0].VolumeMounts, volumeMounts)
-			initVolumeMounts = common.MergeVolumeMounts(pod.Spec.InitContainers[0].VolumeMounts, initVolumeMounts)
-			volumes = common.MergeVolumes(pod.Spec.Volumes, volumes)
-		}
-
 		pod.Spec.SecurityContext.RunAsUser = &runAsUser
 		pod.Spec.SecurityContext.RunAsGroup = &runAsGroup
 		pod.Spec.SecurityContext.FSGroup = &runAsGroup
 		pod.Spec.ServiceAccountName = openstackclient.ServiceAccount
 		pod.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
-		pod.Spec.Volumes = volumes
-		pod.Spec.Containers[0].Image = instance.Spec.ImageURL
+		pod.Spec.Volumes = common.MergeVolumes(pod.Spec.Volumes, volumes)
 		pod.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
-		pod.Spec.Containers[0].Env = env
-		pod.Spec.Containers[0].VolumeMounts = volumeMounts
-		pod.Spec.InitContainers[0].Image = instance.Spec.ImageURL
+		pod.Spec.Containers[0].Env = common.MergeEnvs(pod.Spec.Containers[0].Env, *envVars)
+		pod.Spec.Containers[0].VolumeMounts = common.MergeVolumeMounts(pod.Spec.Containers[0].VolumeMounts, volumeMounts)
 		pod.Spec.InitContainers[0].ImagePullPolicy = corev1.PullAlways
-		pod.Spec.InitContainers[0].Env = initEnv
-		pod.Spec.InitContainers[0].VolumeMounts = initVolumeMounts
+		pod.Spec.InitContainers[0].Env = common.MergeEnvs(pod.Spec.InitContainers[0].Env, initEnvVars)
+		imageUpdate := false
+		if pod.Spec.InitContainers[0].Image != instance.Spec.ImageURL {
+			pod.Spec.Containers[0].Image = instance.Spec.ImageURL
+			pod.Spec.InitContainers[0].Image = instance.Spec.ImageURL
+			imageUpdate = true
+		}
+
+		pod.Spec.InitContainers[0].VolumeMounts = common.MergeVolumeMounts(pod.Spec.InitContainers[0].VolumeMounts, initVolumeMounts)
 
 		if len(osNetCfg.Spec.DNSServers) != 0 {
 			pod.Spec.DNSPolicy = corev1.DNSNone
@@ -591,11 +584,9 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 			pod.Spec.DNSConfig.Searches = []string{}
 		}
 
-		if isPodUpdate && len(pod.Status.InitContainerStatuses) > 0 {
-			if pod.Status.InitContainerStatuses[0].Image != pod.Spec.InitContainers[0].Image {
-				// init container image is mutable but does nothing so force a delete
-				return &common.ForbiddenPodSpecChangeError{Field: "Spec.InitContainers[0].Image"}
-			}
+		if imageUpdate && isPodUpdate {
+			// init container image is mutable but does nothing so force a delete
+			return &common.ForbiddenPodSpecChangeError{Field: "Spec.InitContainers[0].Image"}
 		}
 
 		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
