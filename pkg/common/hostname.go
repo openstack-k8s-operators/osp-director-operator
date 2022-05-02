@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 )
 
 // HostnameStore -
@@ -92,11 +92,11 @@ func CreateOrGetHostname(
 			chosenNumber = len(foundNumbers)
 		}
 		host.Hostname = fmt.Sprintf("%s-%d", strings.ToLower(host.Basename), chosenNumber)
-		host.HostRef = ospdirectorv1beta1.HostRefInitState
+		host.HostRef = shared.HostRefInitState
 	} else {
 		// in case of vip there is only one hostname, set to basename
 		host.Hostname = strings.ToLower(host.Basename)
-		host.HostRef = ospdirectorv1beta1.HostRefInitState
+		host.HostRef = shared.HostRefInitState
 	}
 
 	return nil

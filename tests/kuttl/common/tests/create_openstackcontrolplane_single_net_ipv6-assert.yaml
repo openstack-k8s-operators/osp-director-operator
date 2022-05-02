@@ -9,7 +9,7 @@
 # - 1 OpenStackMACAddress
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackControlPlane
 metadata:
   name: overcloud
@@ -24,19 +24,22 @@ spec:
   passwordSecret: userpassword
   virtualMachineRoles:
     controller:
-      baseImageVolumeName: controller-base-img
       cores: 6
       ctlplaneInterface: enp2s0
-      diskSize: 50
       isTripleoRole: true
       memory: 20
       networks:
       - ctlplane
       roleCount: 0
       roleName: Controller
-      storageAccessMode: ReadWriteMany
-      storageClass: host-nfs-storageclass
-      storageVolumeMode: Filesystem
+      rootDisk:
+        baseImageVolumeName: controller-base-img
+        dedicatedIOThread: false
+        diskSize: 50
+        name: ""
+        storageAccessMode: ReadWriteMany
+        storageClass: host-nfs-storageclass
+        storageVolumeMode: Filesystem
 status:
   ospVersion: "16.2"
   provisioningStatus:
@@ -54,7 +57,7 @@ status:
         ctlplane: 2001:db8:fd00:2000::10/64
       provisioningState: Created
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   finalizers:
@@ -62,20 +65,23 @@ metadata:
   name: controller
   namespace: openstack
 spec:
-  baseImageVolumeName: controller-base-img
   cores: 6
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  diskSize: 50
   isTripleoRole: true
   memory: 20
   networks:
   - ctlplane
   passwordSecret: userpassword
   roleName: Controller
-  storageAccessMode: ReadWriteMany
-  storageClass: host-nfs-storageclass
-  storageVolumeMode: Filesystem
+  rootDisk:
+    baseImageVolumeName: controller-base-img
+    dedicatedIOThread: false
+    diskSize: 50
+    name: ""
+    storageAccessMode: ReadWriteMany
+    storageClass: host-nfs-storageclass
+    storageVolumeMode: Filesystem
   vmCount: 0
 status:
   baseImageDVReady: true

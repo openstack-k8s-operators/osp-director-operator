@@ -24,6 +24,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,17 +54,17 @@ var _ webhook.Validator = &OpenStackBaremetalSet{}
 func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	baremetalsetlog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
 	//
 	// Fail early on create if osnetcfg ist not found
 	//
-	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
-			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err))
 	}
@@ -71,7 +72,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -85,7 +86,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 	//
 	// validate that for all configured subnets an osnet exists
 	//
-	if err := validateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
+	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
 	}
 
@@ -97,7 +98,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 func (r *OpenStackBaremetalSet) ValidateDelete() error {
 	baremetalsetlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=create;update,versions=v1beta1,name=mopenstackbaremetalset.kb.io,admissionReviewVersions=v1
@@ -112,7 +113,7 @@ func (r *OpenStackBaremetalSet) Default() {
 	// set OpenStackNetConfig reference label if not already there
 	// Note, any rename of the osnetcfg won't be reflected
 	//
-	if _, ok := r.GetLabels()[OpenStackNetConfigReconcileLabel]; !ok {
+	if _, ok := r.GetLabels()[shared.OpenStackNetConfigReconcileLabel]; !ok {
 		labels, err := AddOSNetConfigRefLabel(
 			webhookClient,
 			r.Namespace,
@@ -146,10 +147,10 @@ func (r *OpenStackBaremetalSet) Default() {
 	//
 	// set spec.domainName , dnsSearchDomains and dnsServers from osnetcfg if not specified
 	//
-	osNetCfg, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[OpenStackNetConfigReconcileLabel])
+	osNetCfg, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
 		baremetalsetlog.Error(err, fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
-			r.GetLabels()[OpenStackNetConfigReconcileLabel],
+			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err))
 	}

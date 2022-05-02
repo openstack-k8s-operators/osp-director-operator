@@ -17,27 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// OSPVersion - OSP template version
-type OSPVersion string
-
-const (
-	//
-	// OSPVersion
-	//
-
-	// TemplateVersionTrain - upstream train template version
-	TemplateVersionTrain OSPVersion = "train"
-	// TemplateVersion16_2 - OSP 16.2 template version
-	TemplateVersion16_2 OSPVersion = "16.2"
-	// TemplateVersionWallaby - upstream wallaby template version
-	TemplateVersionWallaby OSPVersion = "wallaby"
-	// TemplateVersion17_0 - OSP 17.0 template version
-	TemplateVersion17_0 OSPVersion = "17.0"
 )
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
@@ -96,13 +77,11 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=ReadWriteMany
 	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
 	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
 	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
 	StorageAccessMode string `json:"storageAccessMode,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=Filesystem
 	// +kubebuilder:validation:Enum=Block;Filesystem
 	// StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
 	// specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
@@ -130,65 +109,29 @@ type OpenStackVirtualMachineRoleSpec struct {
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
 type OpenStackControlPlaneStatus struct {
 	VIPStatus          map[string]HostStatus                   `json:"vipStatus,omitempty"`
-	Conditions         ConditionList                           `json:"conditions,omitempty" optional:"true"`
+	Conditions         shared.ConditionList                    `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackControlPlaneProvisioningStatus `json:"provisioningStatus,omitempty"`
 
 	// OSPVersion the OpenStack version to render templates files
-	OSPVersion OSPVersion `json:"ospVersion"`
+	OSPVersion shared.OSPVersion `json:"ospVersion"`
 }
 
 // OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
 // the OpenStackControlPlane (with an optional explanatory message)
 type OpenStackControlPlaneProvisioningStatus struct {
-	State        ProvisioningState `json:"state,omitempty"`
-	Reason       string            `json:"reason,omitempty"`
-	DesiredCount int               `json:"desiredCount,omitempty"`
-	ReadyCount   int               `json:"readyCount,omitempty"`
-	ClientReady  bool              `json:"clientReady,omitempty"`
+	State        shared.ProvisioningState `json:"state,omitempty"`
+	Reason       string                   `json:"reason,omitempty"`
+	DesiredCount int                      `json:"desiredCount,omitempty"`
+	ReadyCount   int                      `json:"readyCount,omitempty"`
+	ClientReady  bool                     `json:"clientReady,omitempty"`
 }
 
 // ControlPlaneProvisioningReason - the reason of the condition for this openstack ctlplane
 type ControlPlaneProvisioningReason string
 
-const (
-	// ControlPlaneEmpty - special state for 0 requested VMs and 0 already provisioned
-	ControlPlaneEmpty ProvisioningState = "Empty"
-	// ControlPlaneWaiting - something is causing the OpenStackBaremetalSet to wait
-	ControlPlaneWaiting ProvisioningState = "Waiting"
-	// ControlPlaneProvisioning - one or more VMs are provisioning
-	ControlPlaneProvisioning ProvisioningState = "Provisioning"
-	// ControlPlaneProvisioned - the requested VM count for all roles has been satisfied
-	ControlPlaneProvisioned ProvisioningState = "Provisioned"
-	// ControlPlaneDeprovisioning - one or more VMs are deprovisioning
-	ControlPlaneDeprovisioning ProvisioningState = "Deprovisioning"
-	// ControlPlaneError - general catch-all for actual errors
-	ControlPlaneError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// ControlPlaneReasonNetNotFound - osctlplane not found
-	ControlPlaneReasonNetNotFound ConditionReason = "CtlPlaneNotFound"
-	// ControlPlaneReasonNotSupportedVersion - osctlplane not found
-	ControlPlaneReasonNotSupportedVersion ConditionReason = "CtlPlaneNotSupportedVersion"
-	// ControlPlaneReasonTripleoPasswordsSecretError - Tripleo password secret error
-	ControlPlaneReasonTripleoPasswordsSecretError ConditionReason = "TripleoPasswordsSecretError"
-	// ControlPlaneReasonTripleoPasswordsSecretNotFound - Tripleo password secret not found
-	ControlPlaneReasonTripleoPasswordsSecretNotFound ConditionReason = "TripleoPasswordsSecretNotFound"
-	// ControlPlaneReasonTripleoPasswordsSecretCreateError - Tripleo password secret create error
-	ControlPlaneReasonTripleoPasswordsSecretCreateError ConditionReason = "TripleoPasswordsSecretCreateError"
-	// ControlPlaneReasonDeploymentSSHKeysSecretError - Deployment SSH Keys Secret Error
-	ControlPlaneReasonDeploymentSSHKeysSecretError ConditionReason = "DeploymentSSHKeysSecretError"
-	// ControlPlaneReasonDeploymentSSHKeysGenError - Deployment SSH Keys generation Error
-	ControlPlaneReasonDeploymentSSHKeysGenError ConditionReason = "DeploymentSSHKeysGenError"
-	// ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError - Deployment SSH Keys Secret Crate or Update Error
-	ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError ConditionReason = "DeploymentSSHKeysSecretCreateOrUpdateError"
-)
-
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackControlPlane) IsReady() bool {
-	return instance.Status.ProvisioningStatus.State == ControlPlaneProvisioned
+	return instance.Status.ProvisioningStatus.State == shared.ProvisioningState(shared.ControlPlaneProvisioned)
 }
 
 // +kubebuilder:object:root=true
@@ -230,27 +173,4 @@ func (instance OpenStackControlPlane) GetHostnames() map[string]string {
 		ret[val.Hostname] = val.HostRef
 	}
 	return ret
-}
-
-// GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
-//  - TemplateVersion16_2 for eitner 16.2 or upstream train
-//  - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
-func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
-	switch parsedVersion {
-	case string(TemplateVersionTrain):
-		return TemplateVersion16_2, nil
-
-	case string(TemplateVersion16_2):
-		return TemplateVersion16_2, nil
-
-	case string(TemplateVersionWallaby):
-		return TemplateVersion17_0, nil
-
-	case string(TemplateVersion17_0):
-		return TemplateVersion17_0, nil
-	default:
-		err := fmt.Errorf("not a supported OSP version: %v", parsedVersion)
-		return "", err
-
-	}
 }

@@ -33,7 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackbackup"
 )
 
@@ -111,21 +113,21 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 	// get a copy of the current CR status
 	oldStatus := instance.Status.DeepCopy()
 
-	if instance.Spec.Mode == ospdirectorv1beta1.BackupSave &&
-		(instance.Status.CurrentState != ospdirectorv1beta1.BackupSaveError &&
-			instance.Status.CurrentState != ospdirectorv1beta1.BackupSaved) {
+	if instance.Spec.Mode == shared.BackupSave &&
+		(instance.Status.CurrentState != shared.BackupSaveError &&
+			instance.Status.CurrentState != shared.BackupSaved) {
 		if err := r.saveBackup(ctx, instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
-			instance.Status.CurrentState = ospdirectorv1beta1.BackupSaveError
+			instance.Status.CurrentState = shared.BackupSaveError
 			_ = r.setStatus(ctx, instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
-	} else if (instance.Spec.Mode == ospdirectorv1beta1.BackupRestore ||
-		instance.Spec.Mode == ospdirectorv1beta1.BackupCleanRestore) &&
-		(instance.Status.CurrentState != ospdirectorv1beta1.BackupRestoreError &&
-			instance.Status.CurrentState != ospdirectorv1beta1.BackupRestored) {
+	} else if (instance.Spec.Mode == shared.BackupRestore ||
+		instance.Spec.Mode == shared.BackupCleanRestore) &&
+		(instance.Status.CurrentState != shared.BackupRestoreError &&
+			instance.Status.CurrentState != shared.BackupRestored) {
 		if err := r.restoreBackup(ctx, instance, oldStatus); err != nil && !k8s_errors.IsConflict(err) {
-			instance.Status.CurrentState = ospdirectorv1beta1.BackupRestoreError
+			instance.Status.CurrentState = shared.BackupRestoreError
 			_ = r.setStatus(ctx, instance, oldStatus, err.Error())
 			return ctrl.Result{}, err
 		}
@@ -139,16 +141,16 @@ func (r *OpenStackBackupRequestReconciler) Reconcile(ctx context.Context, req ct
 func (r *OpenStackBackupRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackBackupRequest{}).
-		Owns(&ospdirectorv1beta1.OpenStackBackup{}).
+		Owns(&ospdirectorv1beta2.OpenStackBackup{}).
 		Owns(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackClient{}).
-		Owns(&ospdirectorv1beta1.OpenStackControlPlane{}).
+		Owns(&ospdirectorv1beta2.OpenStackControlPlane{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
 		Owns(&ospdirectorv1beta1.OpenStackNetConfig{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
-		Owns(&ospdirectorv1beta1.OpenStackVMSet{}).
+		Owns(&ospdirectorv1beta2.OpenStackVMSet{}).
 		Complete(r)
 }
 
@@ -164,7 +166,7 @@ func (r *OpenStackBackupRequestReconciler) setStatus(
 	}
 
 	if !reflect.DeepEqual(instance.Status, oldStatus) {
-		instance.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(instance.Status.CurrentState), ospdirectorv1beta1.ConditionReason(msg), msg)
+		instance.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(instance.Status.CurrentState), shared.ConditionReason(msg), msg)
 		if err := r.Status().Update(ctx, instance); err != nil {
 			r.Log.Error(err, "OpenStackBackupRequest update status error: %v")
 			return err
@@ -191,12 +193,12 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 		// Set the state to quiescing to indicate to other controllers that they should finish
 		// provisioning any CRs that haven't already completed.  This will also prevent their
 		// associated webhooks from allowing certain actions.
-		instance.Status.CurrentState = ospdirectorv1beta1.BackupQuiescing
+		instance.Status.CurrentState = shared.BackupQuiescing
 
 		if err := r.setStatus(ctx, instance, oldStatus, "OpenStackBackupRequest is waiting for other controllers to quiesce"); err != nil {
 			return err
 		}
-	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupQuiescing {
+	} else if instance.Status.CurrentState == shared.BackupQuiescing {
 		// If we aren't saving yet, then we are trying to quiesce all other controllers.
 		// Get all OSP-D operator CRs for all CRDs in the namespace and check all of their
 		// statuses.  If all CRs have all reached their respective "finished" states, then
@@ -233,7 +235,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 				return err
 			}
 
-			backup := &ospdirectorv1beta1.OpenStackBackup{
+			backup := &ospdirectorv1beta2.OpenStackBackup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", instance.Name, time.Now().Unix()),
 					Namespace: instance.Namespace,
@@ -248,7 +250,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 				return nil
 			})
 			if err != nil {
-				instance.Status.CurrentState = ospdirectorv1beta1.BackupSaveError
+				instance.Status.CurrentState = shared.BackupSaveError
 
 				_ = r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s save failed: %s", instance.Name, err))
 				return err
@@ -257,7 +259,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 				r.Log.Info(fmt.Sprintf("OpenStackBackup CR successfully reconciled - operation: %s", string(op)))
 
 				instance.Status.CompletionTimestamp = metav1.Now()
-				instance.Status.CurrentState = ospdirectorv1beta1.BackupSaved
+				instance.Status.CurrentState = shared.BackupSaved
 				if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been saved", instance.Name)); err != nil {
 					return err
 				}
@@ -274,7 +276,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
 ) error {
 	// Get the backup we are restoring
-	backup := &ospdirectorv1beta1.OpenStackBackup{}
+	backup := &ospdirectorv1beta2.OpenStackBackup{}
 
 	if err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.RestoreSource, Namespace: instance.Namespace}, backup); err != nil {
 		return err
@@ -284,22 +286,22 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 		// If no state is set yet, then we are just beginning
 		action := "loading"
 
-		if instance.Spec.Mode == ospdirectorv1beta1.BackupRestore {
+		if instance.Spec.Mode == shared.BackupRestore {
 			// If mode is "restore", set the state to loading to indicate to other controllers that they should pause all
 			// reconcile activity
-			instance.Status.CurrentState = ospdirectorv1beta1.BackupLoading
-		} else if instance.Spec.Mode == ospdirectorv1beta1.BackupCleanRestore {
+			instance.Status.CurrentState = shared.BackupLoading
+		} else if instance.Spec.Mode == shared.BackupCleanRestore {
 			// If mode is "cleanRestore", set the state to cleaning to indicate to other controllers' webhooks that they should
 			// not allow any new resources to be created (we allow reconciles to continue so that deletes of CRs issued by this
 			// controller will be processed)
-			instance.Status.CurrentState = ospdirectorv1beta1.BackupCleaning
+			instance.Status.CurrentState = shared.BackupCleaning
 			action = "cleaning to prepare for loading"
 		}
 
 		if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is %s OpenStackBackup %s", instance.Name, action, backup.Name)); err != nil {
 			return err
 		}
-	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupCleaning {
+	} else if instance.Status.CurrentState == shared.BackupCleaning {
 		// Delete all OSP-D-operator-generated resources in the namespace
 
 		// Get CRs, config maps and secrets we want to delete
@@ -330,13 +332,13 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 		}
 
 		if clean {
-			instance.Status.CurrentState = ospdirectorv1beta1.BackupLoading
+			instance.Status.CurrentState = shared.BackupLoading
 
 			if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is loading OpenStackBackup %s", instance.Name, backup.Name)); err != nil {
 				return err
 			}
 		}
-	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupLoading {
+	} else if instance.Status.CurrentState == shared.BackupLoading {
 		// Attempt to restore the backup (apply CRs, ConfigMaps and Secrets)
 		if err := r.ensureLoadBackup(ctx, instance, oldStatus, backup); err != nil {
 			// Ignore "object has been modified errors"
@@ -344,7 +346,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 				return err
 			}
 		}
-	} else if instance.Status.CurrentState == ospdirectorv1beta1.BackupReconciling {
+	} else if instance.Status.CurrentState == shared.BackupReconciling {
 		// Check status of all the backup's resources that are now reconciling
 		if err := r.ensureReconcileBackup(ctx, instance, oldStatus, backup); err != nil {
 			return err
@@ -358,7 +360,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBackupRequest,
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
-	backup *ospdirectorv1beta1.OpenStackBackup,
+	backup *ospdirectorv1beta2.OpenStackBackup,
 ) error {
 	// Create all CRs in the spec first, and set their status to some initial state
 
@@ -371,8 +373,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.NetWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.NetWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -385,8 +387,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.NetAttachWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.NetAttachWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -399,9 +401,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.NetConfigWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.NetConfigWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -414,8 +416,8 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.CurrentState = ospdirectorv1beta1.MACCondTypeWaiting
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.CurrentState), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.CurrentState = shared.MACCondTypeWaiting
+		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -428,9 +430,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ProvisionServerCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ProvisionServerCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -443,9 +445,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.BaremetalSetCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.BaremetalSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -458,7 +460,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.CommonCondTypeWaiting, ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.CommonCondTypeWaiting, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -471,9 +473,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.VMSetCondTypeWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.VMSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -486,9 +488,9 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		}
 
 		// Now try to update the status
-		item.Status.ProvisioningStatus.State = ospdirectorv1beta1.ControlPlaneWaiting
+		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ControlPlaneWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
-		item.Status.Conditions.UpdateCurrentCondition(ospdirectorv1beta1.ConditionType(item.Status.ProvisioningStatus.State), ospdirectorv1beta1.CommonCondReasonInit, msg)
+		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
 		}
@@ -508,7 +510,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 	}
 
 	// If we get here, everything has been loaded and we can transition to the reconciliation phase
-	instance.Status.CurrentState = ospdirectorv1beta1.BackupReconciling
+	instance.Status.CurrentState = shared.BackupReconciling
 	if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s is now reconciling", instance.Name)); err != nil {
 		return err
 	}
@@ -536,7 +538,7 @@ func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBackupRequest,
 	oldStatus *ospdirectorv1beta1.OpenStackBackupRequestStatus,
-	backup *ospdirectorv1beta1.OpenStackBackup,
+	backup *ospdirectorv1beta2.OpenStackBackup,
 ) error {
 	// Check each CR in the OpenStackBackup spec that has a state and wait for the "finished" equivalent for that CRD
 
@@ -564,7 +566,7 @@ func (r *OpenStackBackupRequestReconciler) ensureReconcileBackup(
 	} else {
 		// If we reach this point, all CRs from the backup have been successfully restored/configured
 		instance.Status.CompletionTimestamp = metav1.Now()
-		instance.Status.CurrentState = ospdirectorv1beta1.BackupRestored
+		instance.Status.CurrentState = shared.BackupRestored
 		if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackup %s has been successfully restored", backup.Name)); err != nil {
 			return err
 		}

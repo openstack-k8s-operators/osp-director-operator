@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -167,7 +169,7 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 		return err
 	}
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionCreate)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -218,7 +220,7 @@ func (r *OpenStackNetConfig) ValidateDelete() error {
 	openstacknetconfiglog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 // validateControlPlaneNetworkNames - validate that the specified control plane network name and name_lower match the expected ooo names
@@ -401,5 +403,15 @@ func (r *OpenStackNetConfig) validateStaticIPReservations() error {
 		}
 	}
 
+	return nil
+}
+
+func checkDomainName(domainName string) error {
+
+	// TODO: implement the same validation as freeipa validate_domain_name()
+	//       in https://github.com/freeipa/freeipa/blob/master/ipalib/util.py
+	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
+		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
+	}
 	return nil
 }

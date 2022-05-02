@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -172,7 +173,7 @@ type OVNBridgeMacMappingConfig struct {
 // OpenStackNetConfigStatus defines the observed state of OpenStackNetConfig
 type OpenStackNetConfigStatus struct {
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions         ConditionList                        `json:"conditions,omitempty" optional:"true"`
+	Conditions         shared.ConditionList                 `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackNetConfigProvisioningStatus `json:"provisioningStatus,omitempty"`
 
 	Hosts map[string]OpenStackHostStatus `json:"hosts"`
@@ -187,39 +188,15 @@ type OpenStackHostStatus struct {
 // OpenStackNetConfigProvisioningStatus represents the overall provisioning state of
 // the OpenStackNetConfig (with an optional explanatory message)
 type OpenStackNetConfigProvisioningStatus struct {
-	State               ProvisioningState `json:"state,omitempty"`
-	Reason              string            `json:"reason,omitempty"`
-	AttachDesiredCount  int               `json:"attachDesiredCount,omitempty"`
-	AttachReadyCount    int               `json:"attachReadyCount,omitempty"`
-	NetDesiredCount     int               `json:"netDesiredCount,omitempty"`
-	NetReadyCount       int               `json:"netReadyCount,omitempty"`
-	PhysNetDesiredCount int               `json:"physNetDesiredCount,omitempty"`
-	PhysNetReadyCount   int               `json:"physNetReadyCount,omitempty"`
+	State               shared.ProvisioningState `json:"state,omitempty"`
+	Reason              string                   `json:"reason,omitempty"`
+	AttachDesiredCount  int                      `json:"attachDesiredCount,omitempty"`
+	AttachReadyCount    int                      `json:"attachReadyCount,omitempty"`
+	NetDesiredCount     int                      `json:"netDesiredCount,omitempty"`
+	NetReadyCount       int                      `json:"netReadyCount,omitempty"`
+	PhysNetDesiredCount int                      `json:"physNetDesiredCount,omitempty"`
+	PhysNetReadyCount   int                      `json:"physNetReadyCount,omitempty"`
 }
-
-const (
-	// NetConfigWaiting - the network configuration is blocked by prerequisite objects
-	NetConfigWaiting ProvisioningState = "Waiting"
-	// NetConfigInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetConfigInitializing ProvisioningState = "Initializing"
-	// NetConfigConfiguring - the underlying network resources are configuring the nodes
-	NetConfigConfiguring ProvisioningState = "Configuring"
-	// NetConfigConfigured - the nodes have been configured by the underlying network resources
-	NetConfigConfigured ProvisioningState = "Configured"
-	// NetConfigError - the network configuration hit a generic error
-	NetConfigError ProvisioningState = "Error"
-
-	// NetConfigCondReasonError - osnetcfg error
-	NetConfigCondReasonError ConditionReason = "OpenStackNetConfigError"
-	// NetConfigCondReasonWaitingOnIPsForHost - waiting on IPs for all configured networks to be created
-	NetConfigCondReasonWaitingOnIPsForHost ConditionReason = "WaitingOnIPsForHost"
-	// NetConfigCondReasonWaitingOnHost - waiting on host to be added to osnetcfg
-	NetConfigCondReasonWaitingOnHost ConditionReason = "WaitingOnHost"
-	// NetConfigCondReasonIPReservationError - Failed to do ip reservation
-	NetConfigCondReasonIPReservationError ConditionReason = "IPReservationError"
-	// NetConfigCondReasonIPReservation - ip reservation created
-	NetConfigCondReasonIPReservation ConditionReason = "IPReservationCreated"
-)
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackNetConfig) IsReady() bool {

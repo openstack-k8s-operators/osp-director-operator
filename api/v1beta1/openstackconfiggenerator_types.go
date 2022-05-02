@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,13 +53,13 @@ type OpenStackConfigGeneratorStatus struct {
 	ConfigHash string `json:"configHash"`
 
 	// CurrentState
-	CurrentState ConfigGeneratorState `json:"currentState"`
+	CurrentState shared.ConditionType `json:"currentState"`
 
 	// CurrentReason
-	CurrentReason ConfigGeneratorReason `json:"currentReason"`
+	CurrentReason shared.ConditionReason `json:"currentReason"`
 
 	// Conditions
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 // ConfigGeneratorState - the state of the execution of this config generator
@@ -67,75 +68,11 @@ type ConfigGeneratorState string
 // ConfigGeneratorReason - the reason of the condition for this config generator
 type ConfigGeneratorReason string
 
-const (
-	//
-	// condition types
-	//
-
-	// ConfigGeneratorCondTypeWaiting - the config generator is blocked by prerequisite objects
-	ConfigGeneratorCondTypeWaiting ConfigGeneratorState = "Waiting"
-	// ConfigGeneratorCondTypeInitializing - the config generator is preparing to execute
-	ConfigGeneratorCondTypeInitializing ConfigGeneratorState = "Initializing"
-	// ConfigGeneratorCondTypeGenerating - the config generator is executing
-	ConfigGeneratorCondTypeGenerating ConfigGeneratorState = "Generating"
-	// ConfigGeneratorCondTypeFinished - the config generation has finished executing
-	ConfigGeneratorCondTypeFinished ConfigGeneratorState = "Finished"
-	// ConfigGeneratorCondTypeError - the config generation hit a generic error
-	ConfigGeneratorCondTypeError ConfigGeneratorState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// ConfigGeneratorCondReasonCMUpdated - configmap updated
-	ConfigGeneratorCondReasonCMUpdated ConfigGeneratorReason = "ConfigMapUpdated"
-	// ConfigGeneratorCondReasonCMNotFound - configmap not found
-	ConfigGeneratorCondReasonCMNotFound ConfigGeneratorReason = "ConfigMapNotFound"
-	// ConfigGeneratorCondReasonCMCreateError - error creating/update CM
-	ConfigGeneratorCondReasonCMCreateError ConfigGeneratorReason = "ConfigMapCreateError"
-	// ConfigGeneratorCondReasonCMHashError - error creating/update CM
-	ConfigGeneratorCondReasonCMHashError ConfigGeneratorReason = "ConfigMapHashError"
-	// ConfigGeneratorCondReasonCMHashChanged - cm hash changed
-	ConfigGeneratorCondReasonCMHashChanged ConfigGeneratorReason = "ConfigMapHashChanged"
-	// ConfigGeneratorCondReasonCustomRolesNotFound - custom roles file not found
-	ConfigGeneratorCondReasonCustomRolesNotFound ConfigGeneratorReason = "CustomRolesNotFound"
-	// ConfigGeneratorCondReasonVMInstanceList - VM instance list error
-	ConfigGeneratorCondReasonVMInstanceList ConfigGeneratorReason = "VMInstanceListError"
-	// ConfigGeneratorCondReasonFencingTemplateError - Error creating fencing config parameters
-	ConfigGeneratorCondReasonFencingTemplateError ConfigGeneratorReason = "FencingTemplateError"
-	// ConfigGeneratorCondReasonEphemeralHeatUpdated - Ephemeral heat created/updated
-	ConfigGeneratorCondReasonEphemeralHeatUpdated ConfigGeneratorReason = "EphemeralHeatUpdated"
-	// ConfigGeneratorCondReasonEphemeralHeatLaunch - Ephemeral heat to launch
-	ConfigGeneratorCondReasonEphemeralHeatLaunch ConfigGeneratorReason = "EphemeralHeatLaunch"
-	// ConfigGeneratorCondReasonEphemeralHeatDelete - Ephemeral heat delete
-	ConfigGeneratorCondReasonEphemeralHeatDelete ConfigGeneratorReason = "EphemeralHeatDelete"
-	// ConfigGeneratorCondReasonExportFailed - Export of Ctlplane Heat Parameters Failed
-	ConfigGeneratorCondReasonExportFailed ConfigGeneratorReason = "CtlplaneExportFailed"
-	// ConfigGeneratorCondReasonJobCreated - created job
-	ConfigGeneratorCondReasonJobCreated ConfigGeneratorReason = "JobCreated"
-	// ConfigGeneratorCondReasonJobDelete - delete job
-	ConfigGeneratorCondReasonJobDelete ConfigGeneratorReason = "JobDelete"
-	// ConfigGeneratorCondReasonJobFailed - failed job
-	ConfigGeneratorCondReasonJobFailed ConfigGeneratorReason = "JobFailed"
-	// ConfigGeneratorCondReasonJobFinished - job finished
-	ConfigGeneratorCondReasonJobFinished ConfigGeneratorReason = "JobFinished"
-	// ConfigGeneratorCondReasonConfigCreate - config create in progress
-	ConfigGeneratorCondReasonConfigCreate ConfigGeneratorReason = "ConfigCreate"
-	// ConfigGeneratorCondReasonWaitingNodesProvisioned - waiting on nodes be provisioned
-	ConfigGeneratorCondReasonWaitingNodesProvisioned ConfigGeneratorReason = "WaitingNodesProvisioned"
-	// ConfigGeneratorCondReasonInputLabelError - error adding/update ConfigGeneratorInputLabel
-	ConfigGeneratorCondReasonInputLabelError ConfigGeneratorReason = "ConfigGeneratorInputLabelError"
-	// ConfigGeneratorCondReasonRenderEnvFilesError - error rendering environmane file
-	ConfigGeneratorCondReasonRenderEnvFilesError ConfigGeneratorReason = "RenderEnvFilesError"
-	// ConfigGeneratorCondReasonClusterServiceIPError - error rendering environmane file
-	ConfigGeneratorCondReasonClusterServiceIPError ConfigGeneratorReason = "ClusterServiceIPError"
-)
-
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackConfigGenerator) IsReady() bool {
 	cond := instance.Status.Conditions.InitCondition()
 
-	return cond.Type == ConditionType(ConfigGeneratorCondTypeFinished) && cond.Reason == ConditionReason(ConfigGeneratorCondReasonJobFinished)
+	return cond.Type == shared.ConfigGeneratorCondTypeFinished && cond.Reason == shared.ConfigGeneratorCondReasonJobFinished
 }
 
 // +kubebuilder:object:root=true

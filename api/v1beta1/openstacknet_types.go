@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -127,45 +128,17 @@ type OpenStackNetStatus struct {
 	ReservedIPCount int `json:"reservedIpCount"`
 
 	// CurrentState - the overall state of this network
-	CurrentState ProvisioningState `json:"currentState"`
+	CurrentState shared.ConditionType `json:"currentState"`
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
-
-const (
-	//
-	// condition types
-	//
-
-	// NetWaiting - the network configuration is blocked by prerequisite objects
-	NetWaiting ProvisioningState = "Waiting"
-	// NetInitializing - we are waiting for underlying OCP network resource(s) to appear
-	NetInitializing ProvisioningState = "Initializing"
-	// NetConfiguring - the underlying network resources are configuring the nodes
-	NetConfiguring ProvisioningState = "Configuring"
-	// NetConfigured - the nodes have been configured by the underlying network resources
-	NetConfigured ProvisioningState = "Configured"
-	// NetError - the network configuration hit a generic error
-	NetError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// NetCondReasonCreated - osnet created
-	NetCondReasonCreated ConditionReason = "OpenStackNetCreated"
-	// NetCondReasonCreateError - error creating osnet object
-	NetCondReasonCreateError ConditionReason = "OpenStackNetCreateError"
-	// NetCondReasonNetNotFound - error osnet not found
-	NetCondReasonNetNotFound ConditionReason = "OpenStackNetNotFound"
-)
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackNet) IsReady() bool {
-	return instance.Status.CurrentState == NetConfigured
+	return instance.Status.CurrentState == shared.NetConfigured
 }
 
 // +kubebuilder:object:root=true

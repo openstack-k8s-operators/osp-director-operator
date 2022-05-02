@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/openstackconfiggenerator"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,8 +20,8 @@ func GetCRLists(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	namespace string,
-) (ospdirectorv1beta1.CrsForBackup, error) {
-	crLists := ospdirectorv1beta1.CrsForBackup{}
+) (ospdirectorv1beta2.CrsForBackup, error) {
+	crLists := ospdirectorv1beta2.CrsForBackup{}
 
 	listOpts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -54,7 +55,7 @@ func GetCRLists(
 
 	// OpenStackControlPlanes
 
-	osCtlPlanes := ospdirectorv1beta1.OpenStackControlPlaneList{}
+	osCtlPlanes := ospdirectorv1beta2.OpenStackControlPlaneList{}
 
 	if err := r.GetClient().List(ctx, &osCtlPlanes, listOpts...); err != nil {
 		return crLists, err
@@ -132,7 +133,7 @@ func GetCRLists(
 
 	// OpenStackVMSets
 
-	osVms := ospdirectorv1beta1.OpenStackVMSetList{}
+	osVms := ospdirectorv1beta2.OpenStackVMSetList{}
 
 	if err := r.GetClient().List(ctx, &osVms, listOpts...); err != nil {
 		return crLists, err
@@ -151,7 +152,7 @@ func GetConfigMapList(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	request *ospdirectorv1beta1.OpenStackBackupRequest,
-	desiredCrs *ospdirectorv1beta1.CrsForBackup,
+	desiredCrs *ospdirectorv1beta2.CrsForBackup,
 ) (corev1.ConfigMapList, error) {
 	configMapList := &corev1.ConfigMapList{}
 
@@ -244,7 +245,7 @@ func GetSecretList(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	request *ospdirectorv1beta1.OpenStackBackupRequest,
-	desiredCrs *ospdirectorv1beta1.CrsForBackup,
+	desiredCrs *ospdirectorv1beta2.CrsForBackup,
 ) (corev1.SecretList, error) {
 	secretList := &corev1.SecretList{}
 
@@ -350,7 +351,10 @@ func addSecretToList(
 }
 
 // GetAreControllersQuiesced - returns true if all desired CRs for backup are in their respective "finished" state, or false with a list of "bad" CRs if otherwise
-func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupRequest, crLists ospdirectorv1beta1.CrsForBackup) (bool, []client.Object) {
+func GetAreControllersQuiesced(
+	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	crLists ospdirectorv1beta2.CrsForBackup,
+) (bool, []client.Object) {
 	badCrs := []client.Object{}
 
 	// Check provisioning status of all OpenStackBaremetalSets
@@ -429,7 +433,10 @@ func GetAreControllersQuiesced(instance *ospdirectorv1beta1.OpenStackBackupReque
 }
 
 // GetAreResourcesRestored - returns true if all desired CRs for backup restore are in their respective "finished" state, or false with a list of "bad" CRs if otherwise
-func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists ospdirectorv1beta1.CrsForBackup) (bool, []client.Object) {
+func GetAreResourcesRestored(
+	backup *ospdirectorv1beta2.OpenStackBackup,
+	crLists ospdirectorv1beta2.CrsForBackup,
+) (bool, []client.Object) {
 	badCrs := []client.Object{}
 
 	// OpenStackNets
@@ -546,7 +553,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 
 	// OpenStackVMSets
 	for _, desired := range backup.Spec.Crs.OpenStackVMSets.Items {
-		found := &ospdirectorv1beta1.OpenStackVMSet{}
+		found := &ospdirectorv1beta2.OpenStackVMSet{}
 
 		for _, actual := range crLists.OpenStackVMSets.Items {
 			if actual.Name == desired.Name {
@@ -562,7 +569,7 @@ func GetAreResourcesRestored(backup *ospdirectorv1beta1.OpenStackBackup, crLists
 
 	// OpenStackControlPlanes
 	for _, desired := range backup.Spec.Crs.OpenStackControlPlanes.Items {
-		found := &ospdirectorv1beta1.OpenStackControlPlane{}
+		found := &ospdirectorv1beta2.OpenStackControlPlane{}
 
 		for _, actual := range crLists.OpenStackControlPlanes.Items {
 			if actual.Name == desired.Name {
@@ -584,7 +591,7 @@ func CleanNamespace(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	namespace string,
-	crLists ospdirectorv1beta1.CrsForBackup,
+	crLists ospdirectorv1beta2.CrsForBackup,
 	cmList corev1.ConfigMapList,
 	secretList corev1.SecretList,
 ) (bool, error) {
@@ -612,14 +619,14 @@ func CleanNamespace(
 
 	if len(crLists.OpenStackControlPlanes.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackControlPlane{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta2.OpenStackControlPlane{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}
 
 	if len(crLists.OpenStackVMSets.Items) > 0 {
 		foundRemaining = true
-		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackVMSet{}, client.InNamespace(namespace)); err != nil {
+		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta2.OpenStackVMSet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 	}

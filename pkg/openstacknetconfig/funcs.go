@@ -8,6 +8,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,7 +18,7 @@ import (
 func WaitOnIPsCreated(
 	r common.ReconcilerCommon,
 	obj client.Object,
-	cond *ospdirectorv1beta1.Condition,
+	cond *shared.Condition,
 	osnetcfg *ospdirectorv1beta1.OpenStackNetConfig,
 	networks []string,
 	hostname string,
@@ -44,8 +45,8 @@ func WaitOnIPsCreated(
 			obj.GetObjectKind().GroupVersionKind().Kind,
 			obj.GetName(),
 		)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnIPsForHost)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.NetConfigCondReasonWaitingOnIPsForHost
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return k8s_errors.NewNotFound(v1.Resource(obj.GetObjectKind().GroupVersionKind().Kind), cond.Message)
 	}
@@ -73,8 +74,8 @@ func WaitOnIPsCreated(
 			obj.GetObjectKind().GroupVersionKind().Kind,
 			obj.GetName(),
 		)
-		cond.Reason = ospdirectorv1beta1.ConditionReason(ospdirectorv1beta1.NetConfigCondReasonWaitingOnIPsForHost)
-		cond.Type = ospdirectorv1beta1.ConditionType(ospdirectorv1beta1.CommonCondTypeWaiting)
+		cond.Reason = shared.NetConfigCondReasonWaitingOnIPsForHost
+		cond.Type = shared.CommonCondTypeWaiting
 
 		return k8s_errors.NewNotFound(v1.Resource(obj.GetObjectKind().GroupVersionKind().Kind), cond.Message)
 	}

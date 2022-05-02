@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,33 +44,8 @@ type OpenStackEphemeralHeatStatus struct {
 	Active bool `json:"active"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
-
-const (
-	//
-	// condition reasons
-	//
-
-	// EphemeralHeatCondGenPassSecretError - error generating password secret
-	EphemeralHeatCondGenPassSecretError ConditionReason = "EphemeralHeatCondGenPassSecretError"
-	// EphemeralHeatCondWaitOnPassSecret - waiting for the generated password secret to populate
-	EphemeralHeatCondWaitOnPassSecret ConditionReason = "EphemeralHeatCondWaitOnPassSecret"
-	// EphemeralHeatCondMariaDBError - error creating/updating MariaDB pod or service
-	EphemeralHeatCondMariaDBError ConditionReason = "EphemeralHeatCondMariaDBError"
-	// EphemeralHeatCondWaitOnMariaDB - waiting for MariaDB pod to be ready
-	EphemeralHeatCondWaitOnMariaDB ConditionReason = "EphemeralHeatCondWaitOnMariaDB"
-	// EphemeralHeatCondRabbitMQError - error creating/updating RabbitMQ pod or service
-	EphemeralHeatCondRabbitMQError ConditionReason = "EphemeralHeatCondRabbitMQError"
-	// EphemeralHeatCondWaitOnRabbitMQ - waiting for RabbitMQ pod to be ready
-	EphemeralHeatCondWaitOnRabbitMQ ConditionReason = "EphemeralHeatCondWaitOnRabbitMQ"
-	// EphemeralHeatCondHeatError - error creating/updating Heat pod or service
-	EphemeralHeatCondHeatError ConditionReason = "EphemeralHeatCondHeatError"
-	// EphemeralHeatCondWaitOnHeat - waiting for Heat pod to be ready
-	EphemeralHeatCondWaitOnHeat ConditionReason = "EphemeralHeatCondWaitOnHeat"
-	// EphemeralHeatReady - Heat is available for use
-	EphemeralHeatReady ConditionReason = "EphemeralHeatReady"
-)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

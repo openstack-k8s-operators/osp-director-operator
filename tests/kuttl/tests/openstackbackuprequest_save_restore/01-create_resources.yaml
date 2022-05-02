@@ -11,7 +11,7 @@ commands:
     namespaced: true
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml
     namespaced: true
-  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackcontrolplane.yaml
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta2_openstackcontrolplane.yaml
     namespaced: true
   # Create the OpenStackBaremetalSet from sample YAML
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml

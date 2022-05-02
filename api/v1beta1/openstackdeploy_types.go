@@ -17,41 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	//
-	// condition types
-	//
-
-	// DeployCondTypeWaiting - the deployment is waiting
-	DeployCondTypeWaiting ProvisioningState = "Waiting"
-	// DeployCondTypeInitializing - the deployment is waiting
-	DeployCondTypeInitializing ProvisioningState = "Initializing"
-	// DeployCondTypeRunning - the deployment is running
-	DeployCondTypeRunning ProvisioningState = "Running"
-	// DeployCondTypeFinished - the deploy has finished executing
-	DeployCondTypeFinished ProvisioningState = "Finished"
-	// DeployCondTypeError - the deployment hit a generic error
-	DeployCondTypeError ProvisioningState = "Error"
-
-	// DeployCondReasonJobCreated - job created
-	DeployCondReasonJobCreated ConditionReason = "JobCreated"
-	// DeployCondReasonJobCreateFailed - job create failed
-	DeployCondReasonJobCreateFailed ConditionReason = "JobCreated"
-	// DeployCondReasonJobDelete - job deleted
-	DeployCondReasonJobDelete ConditionReason = "JobDeleted"
-	// DeployCondReasonJobFinished - job deleted
-	DeployCondReasonJobFinished ConditionReason = "JobFinished"
-	// DeployCondReasonCVUpdated - error creating/update ConfigVersion
-	DeployCondReasonCVUpdated ConditionReason = "ConfigVersionUpdated"
-	// DeployCondReasonConfigVersionNotFound - error finding ConfigVersion
-	DeployCondReasonConfigVersionNotFound ConditionReason = "ConfigVersionNotFound"
-	// DeployCondReasonJobFailed - error creating/update CM
-	DeployCondReasonJobFailed ConditionReason = "JobFailed"
-	// DeployCondReasonConfigCreate - error creating/update CM
-	DeployCondReasonConfigCreate ConditionReason = "ConfigCreate"
 )
 
 // OpenStackDeployAdvancedSettingsSpec defines advanced deployment settings
@@ -108,12 +75,12 @@ type OpenStackDeployStatus struct {
 	ConfigVersion string `json:"configVersion"`
 
 	// CurrentState
-	CurrentState ProvisioningState `json:"currentState"`
+	CurrentState shared.ProvisioningState `json:"currentState"`
 
 	// CurrentReason
-	CurrentReason ConditionReason `json:"currentReason"`
+	CurrentReason shared.ConditionReason `json:"currentReason"`
 
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true

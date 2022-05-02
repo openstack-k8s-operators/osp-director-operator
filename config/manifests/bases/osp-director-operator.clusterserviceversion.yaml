@@ -15,24 +15,18 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: VMSet represents a set of virtual machines hosts for a specific
-        role within the Overcloud deployment
-      displayName: VMSet
-      kind: VMSet
-      name: openstackvmsets.osp-director.openstack.org
-      version: v1beta1
-    - description: OpenStackProvisionServer is the Schema for the provisionservers
-        API
-      displayName: OpenStack Provision Server
-      kind: ProvisionServer
-      name: openstackprovisionservers.osp-director.openstack.org
-      version: v1beta1
     - description: OpenStackBackupRequest a request to backup the OpenStack Director
         Operator
       displayName: OpenStack Backup Request
       kind: OpenStackBackupRequest
       name: openstackbackuprequests.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackBackup is used to backup OpenShift resources representing
+        an OSP overcloud
+      displayName: OpenStack Backup
+      kind: OpenStackBackup
+      name: openstackbackups.osp-director.openstack.org
+      version: v1beta2
     - description: OpenStackBackup is used to backup OpenShift resources representing
         an OSP overcloud
       displayName: OpenStack Backup
@@ -63,6 +57,12 @@ spec:
       kind: OpenStackConfigVersion
       name: openstackconfigversions.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackControlPlane represents a virtualized OpenStack control
+        plane configuration
+      displayName: OpenStack ControlPlane
+      kind: OpenStackControlPlane
+      name: openstackcontrolplanes.osp-director.openstack.org
+      version: v1beta2
     - description: OpenStackControlPlane represents a virtualized OpenStack control
         plane configuration
       displayName: OpenStack ControlPlane
@@ -117,6 +117,12 @@ spec:
       kind: OpenStackProvisionServer
       name: openstackprovisionservers.osp-director.openstack.org
       version: v1beta1
+    - description: OpenStackVMSet represents a set of virtual machines hosts for a
+        specific role within the Overcloud deployment
+      displayName: OpenStack VMSet
+      kind: OpenStackVMSet
+      name: openstackvmsets.osp-director.openstack.org
+      version: v1beta2
     - description: OpenStackVMSet represents a set of virtual machines hosts for a
         specific role within the Overcloud deployment
       displayName: OpenStack VMSet

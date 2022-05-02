@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,38 +71,6 @@ type OpenStackMACNodeReservation struct {
 	Deleted bool `json:"deleted"`
 }
 
-const (
-	//
-	// condition types
-	//
-
-	// MACCondTypeWaiting - the mac creation is blocked by prerequisite objects
-	MACCondTypeWaiting ProvisioningState = "Waiting"
-	// MACCondTypeCreating - we are waiting for mac addresses to be created
-	MACCondTypeCreating ProvisioningState = "Creating"
-	// MACCondTypeConfigured - the MAC addresses have been created
-	MACCondTypeConfigured ProvisioningState = "Created"
-	// MACCondTypeError - the mac creation hit a error
-	MACCondTypeError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// MACCondReasonRemovedIPs - the removed MAC reservations
-	MACCondReasonRemovedIPs ConditionReason = "RemovedIPs"
-	// MACCondReasonNetNotFound - osnet not found
-	MACCondReasonNetNotFound ConditionReason = "NetNotFound"
-	// MACCondReasonCreateMACError - error creating MAC address
-	MACCondReasonCreateMACError ConditionReason = "CreateMACError"
-	// MACCondReasonAllMACAddressesCreated - all MAC addresses created
-	MACCondReasonAllMACAddressesCreated ConditionReason = "MACAddressesCreated"
-	// MACCondReasonError - General error getting the OSMACaddr object
-	MACCondReasonError ConditionReason = "MACError"
-	// MACCondReasonMACNotFound - osmacaddr object not found
-	MACCondReasonMACNotFound ConditionReason = "OpenStackMACNotFound"
-)
-
 // OpenStackMACAddressStatus defines the observed state of OpenStackMACAddress
 type OpenStackMACAddressStatus struct {
 	// Reservations MAC address reservations per node
@@ -111,15 +80,15 @@ type OpenStackMACAddressStatus struct {
 	ReservedMACCount int `json:"reservedMACCount"`
 
 	// CurrentState - the overall state of the OSMAC cr
-	CurrentState ProvisioningState `json:"currentState"`
+	CurrentState shared.ConditionType `json:"currentState"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackMACAddress) IsReady() bool {
-	return instance.Status.CurrentState == MACCondTypeConfigured
+	return instance.Status.CurrentState == shared.MACCondTypeConfigured
 }
 
 // +kubebuilder:object:root=true

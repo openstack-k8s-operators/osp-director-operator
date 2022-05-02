@@ -8,7 +8,7 @@
 # - 1 OpenStackMACAddress
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackControlPlane
 metadata:
   name: overcloud
@@ -18,7 +18,7 @@ spec:
     controller:
       roleCount: 3
 ---
-apiVersion: osp-director.openstack.org/v1beta1
+apiVersion: osp-director.openstack.org/v1beta2
 kind: OpenStackVMSet
 metadata:
   finalizers:
@@ -26,11 +26,20 @@ metadata:
   name: controller
   namespace: openstack
 spec:
-  baseImageVolumeName: controller-base-img
+  additionalDisks:
+  - baseImageVolumeName: ""
+    dedicatedIOThread: false
+    diskSize: 1
+    name: datadisk1
+    storageAccessMode: ReadWriteMany
+    storageClass: host-nfs-storageclass
+    storageVolumeMode: Filesystem
+  blockMultiQueue: false
+  bootstrapDns:
+  - 172.22.0.1
   cores: 6
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  diskSize: 50
   isTripleoRole: true
   memory: 20
   networks:
@@ -42,9 +51,14 @@ spec:
   - tenant
   passwordSecret: userpassword
   roleName: Controller
-  storageAccessMode: ReadWriteMany
-  storageClass: host-nfs-storageclass
-  storageVolumeMode: Filesystem
+  rootDisk:
+    baseImageVolumeName: controller-base-img
+    dedicatedIOThread: false
+    diskSize: 50
+    name: ""
+    storageAccessMode: ReadWriteMany
+    storageClass: host-nfs-storageclass
+    storageVolumeMode: Filesystem
   vmCount: 3
 status:
   baseImageDVReady: true

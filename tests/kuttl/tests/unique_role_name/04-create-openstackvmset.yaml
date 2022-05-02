@@ -6,4 +6,4 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
-      oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackvmset.yaml --dry-run=client -o yaml | sed 's/customvmset/badvmset/g' | oc apply -f - || true
+      oc apply -f ../../../../config/samples/osp-director_v1beta2_openstackvmset.yaml --dry-run=client -o yaml | sed 's/customvmset/badvmset/g' | oc apply -f - || true

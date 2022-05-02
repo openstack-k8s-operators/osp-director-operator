@@ -28,6 +28,7 @@ import (
 
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 )
 
@@ -121,14 +122,14 @@ func (r *OpenStackDeploy) validateNNCP() error {
 		return err
 	}
 
-	osnetcfgName := osctlplane.GetLabels()[OpenStackNetConfigReconcileLabel]
+	osnetcfgName := osctlplane.GetLabels()[shared.OpenStackNetConfigReconcileLabel]
 
 	// 2) get all nncp with osnetcfg ref label ospdirectorv1beta1.OpenStackNetConfigReconcileLabel
 	nncpList := &nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
 	listOpts := []client.ListOption{
 		client.MatchingLabels(
 			map[string]string{
-				OpenStackNetConfigReconcileLabel: osnetcfgName,
+				shared.OpenStackNetConfigReconcileLabel: osnetcfgName,
 			},
 		),
 	}
@@ -139,7 +140,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 
 	if len(nncpList.Items) == 0 {
 		return fmt.Errorf("no NodeNetworkConfigurationPolicy found for reference label %s %s",
-			OpenStackNetConfigReconcileLabel,
+			shared.OpenStackNetConfigReconcileLabel,
 			osnetcfgName)
 	}
 

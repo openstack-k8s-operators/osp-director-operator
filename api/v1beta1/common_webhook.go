@@ -6,9 +6,7 @@ package v1beta1
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -67,72 +65,4 @@ func getRoleNames(namespace string) (map[string]string, error) {
 	}
 
 	return found, nil
-}
-
-func checkDomainName(domainName string) error {
-
-	// TODO: implement the same validation as freeipa validate_domain_name()
-	//       in https://github.com/freeipa/freeipa/blob/master/ipalib/util.py
-	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
-		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
-	}
-	return nil
-}
-
-func checkBackupOperationBlocksAction(namespace string, action APIAction) error {
-	op, err := GetOpenStackBackupOperationInProgress(webhookClient, namespace)
-
-	if err != nil {
-		return err
-	}
-
-	if action == APIActionCreate && (op == BackupCleaning || op == BackupSaving || op == BackupReconciling) {
-		// Don't allow creation of certain OSP-D-operator-specific CRDs during backup save, (restore) clean or (restore) reconcile
-		err = fmt.Errorf("OSP-D operator API is disabled for creating resources while certain backup operations are in progress")
-	} else if action == APIActionDelete && (op == BackupLoading || op == BackupSaving || op == BackupReconciling) {
-		// Don't allow deletion of certain OSP-D-operator-specific CRDs during backup save, (restore) load or (restore) reconcile
-		err = fmt.Errorf("OSP-D operator API is disabled for deleting resources while certain backup operations are in progress")
-	}
-
-	return err
-}
-
-// getAllMACReservations - get all MAC reservations in format MAC -> hostname
-func getAllMACReservations(macNodeStatus map[string]OpenStackMACNodeReservation) map[string]string {
-	ret := make(map[string]string)
-	for hostname, status := range macNodeStatus {
-		for _, mac := range status.Reservations {
-			ret[mac] = hostname
-		}
-	}
-	return ret
-}
-
-// IsUniqMAC - check if the MAC address is uniq or already present in the reservations
-func IsUniqMAC(macNodeStatus map[string]OpenStackMACNodeReservation, mac string) bool {
-	reservations := getAllMACReservations(macNodeStatus)
-	if _, ok := reservations[mac]; !ok {
-		return true
-	}
-	return false
-}
-
-// validateNetworks - validate that for all configured subnets an osnet exists
-func validateNetworks(namespace string, networks []string) error {
-	for _, subnetName := range networks {
-		//
-		// Get OSnet with SubNetNameLabelSelector: subnetName
-		//
-		labelSelector := map[string]string{
-			SubNetNameLabelSelector: subnetName,
-		}
-		osnet, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
-		if err != nil && k8s_errors.IsNotFound(err) {
-			return fmt.Errorf(fmt.Sprintf("%s %s not found, validate the object network list!", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
-		} else if err != nil {
-			return fmt.Errorf(fmt.Sprintf("Failed to get %s %s", osnet.Kind, subnetName))
-		}
-	}
-
-	return nil
 }

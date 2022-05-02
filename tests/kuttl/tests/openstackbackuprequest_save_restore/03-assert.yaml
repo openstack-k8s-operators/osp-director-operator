@@ -73,7 +73,7 @@ spec:
           namespace: openstack
     openStackControlPlanes:
       items:
-      - apiVersion: osp-director.openstack.org/v1beta1
+      - apiVersion: osp-director.openstack.org/v1beta2
         kind: OpenStackControlPlane
         metadata:
           name: overcloud
@@ -227,7 +227,7 @@ spec:
           namespace: openstack
     openStackVMSets:
       items:
-      - apiVersion: osp-director.openstack.org/v1beta1
+      - apiVersion: osp-director.openstack.org/v1beta2
         kind: OpenStackVMSet
         metadata:
           finalizers:

@@ -17,11 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	goClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OpenStackBackupSpec defines the desired state of OpenStackBackup
@@ -88,26 +85,6 @@ type OpenStackBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OpenStackBackup `json:"items"`
-}
-
-// GetOpenStackBackupsWithLabel - Return a list of all OpenStackBackups in the namespace that have (optional) labels
-func GetOpenStackBackupsWithLabel(client goClient.Client, namespace string, labelSelector map[string]string) (*OpenStackBackupList, error) {
-	osBackupList := &OpenStackBackupList{}
-
-	listOpts := []goClient.ListOption{
-		goClient.InNamespace(namespace),
-	}
-
-	if len(labelSelector) > 0 {
-		labels := goClient.MatchingLabels(labelSelector)
-		listOpts = append(listOpts, labels)
-	}
-
-	if err := client.List(context.Background(), osBackupList, listOpts...); err != nil {
-		return nil, err
-	}
-
-	return osBackupList, nil
 }
 
 func init() {

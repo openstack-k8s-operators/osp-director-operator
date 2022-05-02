@@ -24,6 +24,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -64,7 +65,7 @@ var _ webhook.Validator = &OpenStackProvisionServer{}
 func (r *OpenStackProvisionServer) ValidateCreate() error {
 	openstackprovisionserverlog.Info("validate create", "name", r.Name)
 
-	if err := checkBackupOperationBlocksAction(r.Namespace, APIActionCreate); err != nil {
+	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
 		return err
 	}
 
@@ -79,7 +80,7 @@ func (r *OpenStackProvisionServer) ValidateUpdate(old runtime.Object) error {
 }
 
 func (r *OpenStackProvisionServer) validateCr() error {
-	existingPorts, err := r.GetExistingProvServerPorts(&Condition{}, webhookClient)
+	existingPorts, err := r.GetExistingProvServerPorts(&shared.Condition{}, webhookClient)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func (r *OpenStackProvisionServer) validateCr() error {
 func (r *OpenStackProvisionServer) ValidateDelete() error {
 	openstackprovisionserverlog.Info("validate delete", "name", r.Name)
 
-	return checkBackupOperationBlocksAction(r.Namespace, APIActionDelete)
+	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackprovisionserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackprovisionservers,verbs=create;update,versions=v1beta1,name=mopenstackprovisionserver.kb.io,admissionReviewVersions=v1

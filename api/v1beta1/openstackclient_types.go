@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,44 +57,17 @@ type OpenStackClientSpec struct {
 	CAConfigMap string `json:"caConfigMap,omitempty"`
 }
 
-const (
-	//
-	// condition reasones
-	//
-
-	// OsClientCondReasonError - error creating openstackclient
-	OsClientCondReasonError ConditionReason = "OpenStackClientError"
-	// OsClientCondReasonProvisioned - pod created
-	OsClientCondReasonProvisioned ConditionReason = "OpenStackClientProvisioned"
-	// OsClientCondReasonCreated - created openstackclient
-	OsClientCondReasonCreated ConditionReason = "OpenStackClientCreated"
-	// OsClientCondReasonPVCError - error creating pvc
-	OsClientCondReasonPVCError ConditionReason = "PVCError"
-	// OsClientCondReasonPVCProvisioned - pvcs provisioned
-	OsClientCondReasonPVCProvisioned ConditionReason = "PVCProvisioned"
-	// OsClientCondReasonPodError - error creating pod
-	OsClientCondReasonPodError ConditionReason = "PodError"
-	// OsClientCondReasonPodProvisioned - pod created
-	OsClientCondReasonPodProvisioned ConditionReason = "OpenStackClientPodProvisioned"
-	// OsClientCondReasonPodDeleted - pod deleted
-	OsClientCondReasonPodDeleted ConditionReason = "OpenStackClientPodDeleted"
-	// OsClientCondReasonPodDeleteError - pod delete error
-	OsClientCondReasonPodDeleteError ConditionReason = "PodDeleteError"
-	// OsClientCondReasonPodMissing - openstackclient pod missing
-	OsClientCondReasonPodMissing ConditionReason = "OpenStackClientPodMissing"
-)
-
 // OpenStackClientStatus defines the observed state of OpenStackClient
 type OpenStackClientStatus struct {
 	OpenStackClientNetStatus map[string]HostStatus `json:"netStatus,omitempty"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 // IsReady - Is this resource in its fully-configured (quiesced) state?
 func (instance *OpenStackClient) IsReady() bool {
-	return instance.Status.Conditions.InitCondition().Reason == OsClientCondReasonPodProvisioned
+	return instance.Status.Conditions.InitCondition().Reason == shared.OsClientCondReasonPodProvisioned
 }
 
 // +kubebuilder:object:root=true

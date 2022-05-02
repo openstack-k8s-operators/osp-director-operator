@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -79,7 +80,7 @@ type OpenStackVMSetSpec struct {
 type OpenStackVMSetStatus struct {
 	// BaseImageDVReady is the status of the BaseImage DataVolume
 	BaseImageDVReady   bool                             `json:"baseImageDVReady,omitempty"`
-	Conditions         ConditionList                    `json:"conditions,omitempty" optional:"true"`
+	Conditions         shared.ConditionList             `json:"conditions,omitempty" optional:"true"`
 	ProvisioningStatus OpenStackVMSetProvisioningStatus `json:"provisioningStatus,omitempty"`
 	// VMpods are the names of the kubevirt controller vm pods
 	VMpods  []string              `json:"vmpods,omitempty"`
@@ -89,87 +90,10 @@ type OpenStackVMSetStatus struct {
 // OpenStackVMSetProvisioningStatus represents the overall provisioning state of all VMs in
 // the OpenStackVMSet (with an optional explanatory message)
 type OpenStackVMSetProvisioningStatus struct {
-	State      ProvisioningState `json:"state,omitempty"`
-	Reason     string            `json:"reason,omitempty"`
-	ReadyCount int               `json:"readyCount,omitempty"`
+	State      shared.ProvisioningState `json:"state,omitempty"`
+	Reason     string                   `json:"reason,omitempty"`
+	ReadyCount int                      `json:"readyCount,omitempty"`
 }
-
-const (
-	//
-	// condition types
-	//
-
-	// VMSetCondTypeEmpty - special state for 0 requested VMs and 0 already provisioned
-	VMSetCondTypeEmpty ProvisioningState = "Empty"
-	// VMSetCondTypeWaiting - something is causing the OpenStackVmSet to wait
-	VMSetCondTypeWaiting ProvisioningState = "Waiting"
-	// VMSetCondTypeProvisioning - one or more VMs are provisioning
-	VMSetCondTypeProvisioning ProvisioningState = "Provisioning"
-	// VMSetCondTypeProvisioned - the requested VM count has been satisfied
-	VMSetCondTypeProvisioned ProvisioningState = "Provisioned"
-	// VMSetCondTypeDeprovisioning - one or more VMs are deprovisioning
-	VMSetCondTypeDeprovisioning ProvisioningState = "Deprovisioning"
-	// VMSetCondTypeError - general catch-all for actual errors
-	VMSetCondTypeError ProvisioningState = "Error"
-
-	//
-	// condition reasones
-	//
-
-	// VMSetCondReasonError - error creating osvmset
-	VMSetCondReasonError ConditionReason = "OpenStackVMSetError"
-	// VMSetCondReasonInitialize - vmset initialize
-	VMSetCondReasonInitialize ConditionReason = "OpenStackVMSetInitialize"
-	// VMSetCondReasonProvisioning - vmset provisioning
-	VMSetCondReasonProvisioning ConditionReason = "OpenStackVMSetProvisioning"
-	// VMSetCondReasonDeprovisioning - vmset deprovisioning
-	VMSetCondReasonDeprovisioning ConditionReason = "OpenStackVMSetDeprovisioning"
-	// VMSetCondReasonProvisioned - vmset provisioned
-	VMSetCondReasonProvisioned ConditionReason = "OpenStackVMSetProvisioned"
-	// VMSetCondReasonCreated - vmset created
-	VMSetCondReasonCreated ConditionReason = "OpenStackVMSetCreated"
-
-	// VMSetCondReasonNamespaceFencingDataError - error creating the namespace fencing data
-	VMSetCondReasonNamespaceFencingDataError ConditionReason = "NamespaceFencingDataError"
-	// VMSetCondReasonKubevirtFencingServiceAccountError - error creating/reading the KubevirtFencingServiceAccount secret
-	VMSetCondReasonKubevirtFencingServiceAccountError ConditionReason = "KubevirtFencingServiceAccountError"
-	// VMSetCondReasonKubeConfigError - error getting the KubeConfig used by the operator
-	VMSetCondReasonKubeConfigError ConditionReason = "KubeConfigError"
-	// VMSetCondReasonCloudInitSecretError - error creating the CloudInitSecret
-	VMSetCondReasonCloudInitSecretError ConditionReason = "CloudInitSecretError"
-	// VMSetCondReasonDeploymentSecretMissing - deployment secret does not exist
-	VMSetCondReasonDeploymentSecretMissing ConditionReason = "DeploymentSecretMissing"
-	// VMSetCondReasonDeploymentSecretError - deployment secret error
-	VMSetCondReasonDeploymentSecretError ConditionReason = "DeploymentSecretError"
-	// VMSetCondReasonPasswordSecretMissing - password secret does not exist
-	VMSetCondReasonPasswordSecretMissing ConditionReason = "PasswordSecretMissing"
-	// VMSetCondReasonPasswordSecretError - password secret error
-	VMSetCondReasonPasswordSecretError ConditionReason = "PasswordSecretError"
-
-	// VMSetCondReasonVirtualMachineGetError - failed to get virtual machine
-	VMSetCondReasonVirtualMachineGetError ConditionReason = "VirtualMachineGetError"
-	// VMSetCondReasonVirtualMachineAnnotationMissmatch - Unable to find sufficient amount of VirtualMachine replicas annotated for scale-down
-	VMSetCondReasonVirtualMachineAnnotationMissmatch ConditionReason = "VirtualMachineAnnotationMissmatch"
-	// VMSetCondReasonVirtualMachineNetworkDataError - Error creating VM NetworkData
-	VMSetCondReasonVirtualMachineNetworkDataError ConditionReason = "VMSetCondReasonVirtualMachineNetworkDataError"
-	// VMSetCondReasonVirtualMachineProvisioning - virtual machine provisioning in progress
-	VMSetCondReasonVirtualMachineProvisioning ConditionReason = "VirtualMachineProvisioning"
-	// VMSetCondReasonVirtualMachineDeprovisioning - virtual machine deprovisioning in progress
-	VMSetCondReasonVirtualMachineDeprovisioning ConditionReason = "VirtualMachineDeprovisioning"
-	// VMSetCondReasonVirtualMachineProvisioned - virtual machines provisioned
-	VMSetCondReasonVirtualMachineProvisioned ConditionReason = "VirtualMachineProvisioned"
-	// VMSetCondReasonVirtualMachineCountZero - no virtual machines requested
-	VMSetCondReasonVirtualMachineCountZero ConditionReason = "VirtualMachineCountZero"
-
-	// VMSetCondReasonPersitentVolumeClaimNotFound - Persitent Volume Claim Not Found
-	VMSetCondReasonPersitentVolumeClaimNotFound ConditionReason = "PersitentVolumeClaimNotFound"
-	// VMSetCondReasonPersitentVolumeClaimError - Persitent Volume Claim error
-	VMSetCondReasonPersitentVolumeClaimError ConditionReason = "PersitentVolumeClaimError"
-	// VMSetCondReasonPersitentVolumeClaimCreating - Persitent Volume Claim create in progress
-	VMSetCondReasonPersitentVolumeClaimCreating ConditionReason = "PersitentVolumeClaimCreating"
-	// VMSetCondReasonBaseImageNotReady - VM base image not ready
-	VMSetCondReasonBaseImageNotReady ConditionReason = "BaseImageNotReady"
-)
 
 // Host -
 type Host struct {
@@ -188,7 +112,7 @@ type Host struct {
 func (instance *OpenStackVMSet) IsReady() bool {
 	cond := instance.Status.Conditions.InitCondition()
 
-	return cond.Reason == VMSetCondReasonProvisioned || cond.Reason == VMSetCondReasonVirtualMachineCountZero
+	return cond.Reason == shared.VMSetCondReasonProvisioned || cond.Reason == shared.VMSetCondReasonVirtualMachineCountZero
 }
 
 // +kubebuilder:object:root=true
