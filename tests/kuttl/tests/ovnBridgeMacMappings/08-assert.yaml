@@ -17,7 +17,6 @@ metadata:
   name: openstacknetconfig
   namespace: openstack
 spec:
-spec:
   attachConfigurations:
     br-osp:
       nodeNetworkConfigurationPolicy:
@@ -44,8 +43,9 @@ spec:
           port: ""
           spoofCheck: "on"
           trust: "off"
-  dnsServers: []
-  domainName: localdomain
+  dnsServers:
+  - 172.22.0.1
+  domainName: osptest.test.metalkube.org
   networks:
   - isControlPlane: true
     mtu: 1500
@@ -125,7 +125,6 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  domainName: ostest.test.metalkube.org
   enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
@@ -145,7 +144,9 @@ spec:
       - ctlplane
       roleCount: 1
       roleName: Controller
+      storageAccessMode: ReadWriteMany
       storageClass: host-nfs-storageclass
+      storageVolumeMode: Filesystem
 status:
   ospVersion: "16.2"
   provisioningStatus:
@@ -176,14 +177,15 @@ spec:
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
-  domainName: ostest.test.metalkube.org
   isTripleoRole: true
   memory: 20
   networks:
   - ctlplane
   passwordSecret: userpassword
   roleName: Controller
+  storageAccessMode: ReadWriteMany
   storageClass: host-nfs-storageclass
+  storageVolumeMode: Filesystem
   vmCount: 1
 status:
   baseImageDVReady: true
@@ -211,7 +213,6 @@ metadata:
 spec:
   cloudName: overcloud
   deploymentSSHSecret: osp-controlplane-ssh-keys
-  domainName: ostest.test.metalkube.org
   imageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   networks:
   - ctlplane
@@ -248,7 +249,7 @@ spec:
   allocationStart: 172.22.0.100
   attachConfiguration: br-osp
   cidr: 172.22.0.0/24
-  domainName: ctlplane.localdomain
+  domainName: ctlplane.osptest.test.metalkube.org
   gateway: 172.22.0.1
   mtu: 1500
   name: Control

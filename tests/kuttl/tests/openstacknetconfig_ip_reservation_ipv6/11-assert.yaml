@@ -38,8 +38,9 @@ spec:
           port: ""
           spoofCheck: "on"
           trust: "off"
-  dnsServers: []
-  domainName: localdomain
+  dnsServers:
+  - 172.22.0.1
+  domainName: osptest.test.metalkube.org
   networks:
   - isControlPlane: true
     mtu: 1500
@@ -145,7 +146,7 @@ spec:
   allocationStart: 2001:db8:fd00:2000::100
   attachConfiguration: br-osp
   cidr: 2001:db8:fd00:2000::/64
-  domainName: ctlplane.localdomain
+  domainName: ctlplane.osptest.test.metalkube.org
   gateway: 2001:db8:fd00:2000::1
   mtu: 1500
   name: Control
@@ -199,7 +200,7 @@ spec:
   allocationStart: fd00:fd00:fd00:2000::10
   attachConfiguration: br-osp
   cidr: fd00:fd00:fd00:2000::/64
-  domainName: internalapi.localdomain
+  domainName: internalapi.osptest.test.metalkube.org
   gateway: ""
   mtu: 1500
   name: InternalApi
@@ -244,7 +245,6 @@ spec:
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
-  domainName: ostest.test.metalkube.org
   isTripleoRole: true
   memory: 20
   networks:

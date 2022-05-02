@@ -9,6 +9,8 @@ commands:
     namespaced: true
   - command: oc apply -f ../../common/manifests/userpassword.yaml
     namespaced: true
+  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml
+    namespaced: true
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackcontrolplane.yaml
     namespaced: true
   # Create the OpenStackBaremetalSet from sample YAML

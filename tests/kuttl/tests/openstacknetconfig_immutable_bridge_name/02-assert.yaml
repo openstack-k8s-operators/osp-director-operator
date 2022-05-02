@@ -9,8 +9,6 @@ kind: OpenStackNetAttachment
 metadata:
   finalizers:
   - openstacknetattachment
-  name: br-osp-bridge
-  namespace: openstack
   labels:
     bridge: br-osp
     ooo-attach-reference: br-osp
@@ -18,6 +16,8 @@ metadata:
     osp-director.openstack.org/controller: osp-openstacknetconfig
     osp-director.openstack.org/name: openstacknetconfig
     osp-director.openstack.org/namespace: openstack
+  name: br-osp-bridge
+  namespace: openstack
 spec:
   attachConfiguration:
     nodeNetworkConfigurationPolicy:
@@ -30,22 +30,34 @@ spec:
             port:
             - name: enp7s0
           description: Linux bridge with enp7s0 as a port
-          mtu: 1500
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+          mtu: 9000
           name: br-osp
           state: up
           type: linux-bridge
+        - description: Configuring enp7s0 on workers
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: false
+          mtu: 9000
+          name: enp7s0
+          state: up
+          type: ethernet
       nodeSelector:
         node-role.kubernetes.io/worker: ""
+    nodeSriovConfigurationPolicy:
+      desiredState:
+        deviceType: vfio-pci
+        mtu: 9000
+        numVfs: 0
+        port: ""
+        spoofCheck: "on"
+        trust: "off"
 status:
   attachType: bridge
   bridgeName: br-osp
-  conditions:
-  - message: NodeNetworkConfigurationPolicy br-osp is configuring targeted node(s)
-    reason: NodeNetworkConfigurationPolicy br-osp is configuring targeted node(s)
-    status: "False"
-    type: Configuring
-  - message: 'NodeNetworkConfigurationPolicy br-osp: 3/3 nodes successfully configured'
-    reason: 'NodeNetworkConfigurationPolicy br-osp: 3/3 nodes successfully configured'
-    status: "True"
-    type: Configured
   currentState: Configured

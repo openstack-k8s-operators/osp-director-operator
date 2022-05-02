@@ -31,7 +31,6 @@ spec:
   ctlplaneInterface: enp2s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
   diskSize: 50
-  domainName: ostest.test.metalkube.org
   isTripleoRole: true
   memory: 20
   networks:
@@ -43,7 +42,9 @@ spec:
   - tenant
   passwordSecret: userpassword
   roleName: Controller
+  storageAccessMode: ReadWriteMany
   storageClass: host-nfs-storageclass
+  storageVolumeMode: Filesystem
   vmCount: 3
 status:
   baseImageDVReady: true

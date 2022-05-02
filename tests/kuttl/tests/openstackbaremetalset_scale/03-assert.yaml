@@ -15,7 +15,7 @@ metadata:
     ooo-subnetname/ctlplane: "true"
     ooo-subnetname/internal_api: "true"
     ooo-subnetname/tenant: "true"
-    osnetconfig-reconcile-dep: openstacknetconfig
+    osnetconfig-ref: openstacknetconfig
   name: compute
   namespace: openstack
 spec:
