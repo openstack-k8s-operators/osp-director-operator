@@ -193,20 +193,6 @@ func GetIPRange(ip net.IP, ipnet net.IPNet) (net.IP, net.IP, error) {
 
 }
 
-// IsIPv4 checks if an IP is v4.
-func IsIPv4(ip net.IP) bool {
-	return ip.To4() != nil
-}
-
-// IsIPv6 checks if an IP is v6.
-func IsIPv6(ip net.IP) bool {
-	if IsIPv4(ip) {
-		return false
-	}
-
-	return ip.To16() != nil
-}
-
 func isIntIPv4(checkipint *big.Int) bool {
 	return !(len(checkipint.Bytes()) == net.IPv6len)
 }

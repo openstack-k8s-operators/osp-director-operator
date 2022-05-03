@@ -1,0 +1,32 @@
+#
+# Annotate 2 OpenStackVMSet VMs for deletion and scale OpenStackControlPlane down to 1 controller
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: |
+      # blocked by webhook as there is no ctlplane network, or other network tagged as isControlPlane
+      oc apply -f ./osp-director_v1beta1_openstacknetconfig_no_ctlplane_net.yaml
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # blocked by webhook as there is IPv4 and IPv6 network information specified in the same subnet
+      oc apply -f ./osp-director_v1beta1_openstacknetconfig_ipv4_and_ipv6_subnet.yaml
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # blocked by webhook as there is IPv6 allocationEnd specified in IPv4 network information
+      oc apply -f ./osp-director_v1beta1_openstacknetconfig_ipv4_mix_ipv6_details.yaml
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # blocked by webhook as there is IPv6 information specified as IPv4 network information
+      oc apply -f ./osp-director_v1beta1_openstacknetconfig_ipv6_in_ipv4.yaml
+    namespaced: true
+    ignoreFailure: true
+  - command: |
+      # blocked by webhook as the AllocationEnd does not match the IPv4 cidr information
+      oc apply -f ./osp-director_v1beta1_openstacknetconfig_ipv4_outside_range.yaml
+    namespaced: true
+    ignoreFailure: true

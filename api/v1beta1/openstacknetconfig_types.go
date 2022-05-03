@@ -68,6 +68,7 @@ type Subnet struct {
 	IPv6 NetDetails `json:"ipv6"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=4094
 	// Vlan ID of the network
 	Vlan int `json:"vlan"`
 

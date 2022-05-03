@@ -1,0 +1,36 @@
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: noctlplane
+spec:
+  attachConfigurations:
+    br-osp:
+      nodeNetworkConfigurationPolicy:
+        nodeSelector:
+          node-role.kubernetes.io/worker: ""
+        desiredState:
+          interfaces:
+          - bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+              - name: enp7s0
+            description: Linux bridge with enp7s0 as a port
+            name: br-osp
+            state: up
+            type: linux-bridge
+            mtu: 1500
+  domainName: osptest.test.metalkube.org
+  dnsServers: ['172.22.0.1']
+  networks:
+  - name: NoCtlplane
+    nameLower: noctlplane
+    subnets:
+    - name: noctlplane
+      ipv4:
+        allocationEnd: 172.22.0.250
+        allocationStart: 172.22.0.100
+        cidr: 172.22.0.0/24
+        gateway: 172.22.0.1
+      attachConfiguration: br-osp

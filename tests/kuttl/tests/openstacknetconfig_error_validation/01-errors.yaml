@@ -1,0 +1,30 @@
+#
+# Check for:
+#
+# - No noctlplane OpenStackNetConfig got created
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: noctlplane
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: ipv4andipv6
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: ipv4mixipv6
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: ipv6inipv4
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNetConfig
+metadata:
+  name: allocoutsidecidr
