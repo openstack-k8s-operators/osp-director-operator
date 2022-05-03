@@ -141,6 +141,9 @@ replace (
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/irifrance/gini => github.com/go-air/gini v1.0.4
 
+	// dependabot (NULL Pointer Dereference in Kubernetes CSI snapshot-controller)
+	github.com/kubernetes-csi/external-snapshotter/v2 => github.com/kubernetes-csi/external-snapshotter/v2 v2.1.3
+
 	// required by client-go, prometheus-operator..
 	// Bump to avoid CVE detection with v1.1.22. https://bugzilla.redhat.com/show_bug.cgi?id=1786761
 	github.com/miekg/dns => github.com/miekg/dns v1.1.43
@@ -190,4 +193,5 @@ replace (
 
 	// pinned because no tag supports 1.18 yet
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
+
 )
