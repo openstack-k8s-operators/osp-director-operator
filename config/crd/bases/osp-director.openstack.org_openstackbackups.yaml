@@ -1877,6 +1877,7 @@ spec:
                                               type: string
                                             vlan:
                                               description: Vlan ID of the network
+                                              maximum: 4094
                                               type: integer
                                           required:
                                           - attachConfiguration
@@ -2261,6 +2262,7 @@ spec:
                                   type: boolean
                                 vlan:
                                   description: Vlan ID of the network
+                                  maximum: 4094
                                   type: integer
                               required:
                               - allocationEnd
@@ -5078,6 +5080,7 @@ spec:
                                               type: string
                                             vlan:
                                               description: Vlan ID of the network
+                                              maximum: 4094
                                               type: integer
                                           required:
                                           - attachConfiguration
@@ -5462,6 +5465,7 @@ spec:
                                   type: boolean
                                 vlan:
                                   description: Vlan ID of the network
+                                  maximum: 4094
                                   type: integer
                               required:
                               - allocationEnd

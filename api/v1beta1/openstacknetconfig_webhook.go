@@ -139,9 +139,17 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 	openstacknetconfiglog.Info("validate create", "name", r.Name)
 
 	//
+	// Verify that network definitions
+	//
+	err := r.validateNetworks()
+	if err != nil {
+		return err
+	}
+
+	//
 	// Verify that the specified control plane network name and name_lower match the expected ooo names
 	//
-	err := r.validateControlPlaneNetworkNames()
+	err = r.validateControlPlaneNetworkNames()
 	if err != nil {
 		return err
 	}
@@ -369,7 +377,7 @@ func (r *OpenStackNetConfig) validateStaticIPReservations() error {
 								resIP,
 								node,
 								netName,
-								ipnet.Network(),
+								ipnet.String(),
 							)
 						}
 					}
@@ -413,5 +421,100 @@ func checkDomainName(domainName string) error {
 	if domainName != "" && len(strings.Split(domainName, ".")) < 2 {
 		return fmt.Errorf("domainName must include a top-level domain and at least one subdomain")
 	}
+	return nil
+}
+
+// validateNetworks - validates the details provided for a networks definition
+func (r *OpenStackNetConfig) validateNetworks() error {
+
+	isCtlplaneNetwork := false
+
+	for _, osnet := range r.Spec.Networks {
+		if osnet.IsControlPlane {
+			isCtlplaneNetwork = true
+		}
+
+		for _, subnet := range osnet.Subnets {
+			//
+			// A subnet can only have either IPv4 or IPv6 definition
+			//
+			if subnet.IPv4.Cidr != "" && subnet.IPv6.Cidr != "" {
+				return fmt.Errorf("subnet %s can only be IPv4 or IPv6, not both", subnet.Name)
+			}
+
+			var ipnet *net.IPNet
+			var err error
+			subnetDetails := map[string]string{}
+			if subnet.IPv4.Cidr != "" {
+				var ip net.IP
+				ip, ipnet, err = net.ParseCIDR(subnet.IPv4.Cidr)
+				if err != nil {
+					return err
+				}
+
+				// validate provided IP is correct IPv4
+				if shared.IsIPv4(ip) {
+					subnetDetails["AllocationStart"] = subnet.IPv4.AllocationStart
+					subnetDetails["AllocationEnd"] = subnet.IPv4.AllocationEnd
+					if subnet.IPv4.Gateway != "" {
+						subnetDetails["Gateway"] = subnet.IPv4.Gateway
+					}
+				} else {
+					return fmt.Errorf("%s is not a valid IPv4 cidr", subnet.IPv4.Cidr)
+				}
+			} else if subnet.IPv6.Cidr != "" {
+				var ip net.IP
+				ip, ipnet, err = net.ParseCIDR(subnet.IPv6.Cidr)
+				if err != nil {
+					return err
+				}
+
+				// validate provided IP is correct IPv6
+				if shared.IsIPv6(ip) {
+					subnetDetails["AllocationStart"] = subnet.IPv6.AllocationStart
+					subnetDetails["AllocationEnd"] = subnet.IPv6.AllocationEnd
+					if subnet.IPv6.Gateway != "" {
+						subnetDetails["Gateway"] = subnet.IPv6.Gateway
+					}
+
+				} else {
+					return fmt.Errorf("%s is not a valid IPv6 cidr", subnet.IPv4.Cidr)
+				}
+			} else {
+				// we should never hit this as cidr is a required parameter
+				return fmt.Errorf("either IPv4.Cidr or IPv6.Cidr must be provided %s", subnet.Name)
+			}
+
+			//
+			// check if subnet AllocationStart, AllocationEnd and Gateway has
+			// * a valid format
+			// * are part of the specified subnet.Cird
+			//
+			for ipType, ipToTest := range subnetDetails {
+				ip := net.ParseIP(ipToTest)
+				if ip == nil {
+					return fmt.Errorf("%s IP address %s of subnet %s has an invalid format",
+						ipType,
+						ipToTest,
+						subnet.Name)
+				}
+				if !ipnet.Contains(ip) {
+					return fmt.Errorf("%s IP address %s of subnet %s conflicts with cidr %s",
+						ipType,
+						ipToTest,
+						subnet.Name,
+						ipnet.String())
+				}
+			}
+		}
+	}
+
+	//
+	// if there is no ctlplane tagged network, return error
+	//
+	if !isCtlplaneNetwork {
+		return fmt.Errorf("no network tagged as IsControlPlane")
+	}
+
 	return nil
 }

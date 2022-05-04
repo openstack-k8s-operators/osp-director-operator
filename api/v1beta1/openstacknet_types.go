@@ -63,6 +63,7 @@ type OpenStackNetSpec struct {
 	Cidr string `json:"cidr"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=4094
 	// Vlan ID of the network
 	Vlan int `json:"vlan"`
 

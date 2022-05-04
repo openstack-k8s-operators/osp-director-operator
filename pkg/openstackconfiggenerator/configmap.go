@@ -293,7 +293,7 @@ func createNetworksMap(
 					return networksMap, networkMappingList, err
 				}
 
-				if common.IsIPv4(net.ParseIP(ip)) {
+				if shared.IsIPv4(net.ParseIP(ip)) {
 					network.IPv6 = false
 					subnetDetailsV4 = netDetailsType{
 						AllocationEnd:   s.IPv4.AllocationEnd,
@@ -317,7 +317,7 @@ func createNetworksMap(
 					return networksMap, networkMappingList, err
 				}
 
-				if common.IsIPv6(net.ParseIP(ip)) {
+				if shared.IsIPv6(net.ParseIP(ip)) {
 					network.IPv6 = true
 					subnetDetailsV6 = netDetailsType{
 						AllocationEnd:   s.IPv6.AllocationEnd,
@@ -430,7 +430,7 @@ func createRolesMap(
 				}
 
 				isIPv6 := false
-				if common.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
+				if shared.IsIPv6(net.ParseIP(osnet.Spec.Cidr)) {
 					isIPv6 = true
 				}
 
@@ -485,7 +485,7 @@ func createRolesMap(
 						}
 
 						uri := reservation.IP
-						if common.IsIPv6(net.ParseIP(reservation.IP)) {
+						if shared.IsIPv6(net.ParseIP(reservation.IP)) {
 							// IP address with brackets in case of IPv6, e.g. [2001:DB8:24::15]
 							uri = fmt.Sprintf("[%s]", uri)
 						}
