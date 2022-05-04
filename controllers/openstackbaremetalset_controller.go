@@ -921,6 +921,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	templateParameters := make(map[string]interface{})
 	templateParameters["AuthorizedKeys"] = sshSecret
 	templateParameters["Hostname"] = bmhStatus.Hostname
+	templateParameters["DomainName"] = osNetCfg.Spec.DomainName
 
 	//
 	// use same NodeRootPassword paremater as tripleo have
@@ -981,7 +982,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneGateway"] = ctlPlaneNetwork.Spec.Gateway
 	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
-	templateParameters["DomainName"] = osNetCfg.Spec.DomainName
 	if len(instance.Spec.BootstrapDNS) > 0 {
 		templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
 	} else {
