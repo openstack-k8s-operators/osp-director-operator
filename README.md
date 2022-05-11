@@ -522,6 +522,8 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     ```bash
     oc create -f openstackcontrolplane.yaml
     ```
+    **NOTE** VMs within the same VMSet (VM role) get distributed throughout the available worker nodes using a pod anti affinity rule (PreferredDuringSchedulingIgnoredDuringExecution). With this it is still possible that multiple VMs of a role end up on the same worker node if no other resources are available (e.g. worker reboot during update). There is no auto live migration happening, if e.g. a node comes up after maintenance/reboot. On the next scheduling request the VM gets relocated again.
+
 
 5) Define an OpenStackBaremetalSet to scale out OSP Compute hosts. The OpenStackBaremetal resource can be used to define and scale Compute resources and optionally be used to define and scale out baremetal hosts for other types of TripleO roles. The example below defines a single Compute host to be created.
 

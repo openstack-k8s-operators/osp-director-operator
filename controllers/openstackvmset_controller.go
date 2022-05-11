@@ -874,6 +874,18 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 		)
 		vm.Spec.RunStrategy = &runStrategy
 
+		// If possible two VMs of the same roleshould not
+		// run on the same worker node. This still allows to
+		// manually migrate instances and they run on the same node.
+		// On the next migration action they get again distributed.
+		vm.Spec.Template.Spec.Affinity = common.DistributePods(
+			common.OwnerNameLabelSelector,
+			[]string{
+				instance.Name,
+			},
+			corev1.LabelHostname,
+		)
+
 		if len(instance.Spec.BootstrapDNS) != 0 {
 			vm.Spec.Template.Spec.DNSPolicy = corev1.DNSNone
 			vm.Spec.Template.Spec.DNSConfig = &corev1.PodDNSConfig{
