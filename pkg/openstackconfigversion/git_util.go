@@ -37,6 +37,7 @@ import (
 
 	"github.com/go-logr/logr"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -122,103 +123,105 @@ func SyncGit(
 	foundSecret := &corev1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Name: inst.Spec.GitSecret, Namespace: inst.Namespace}, foundSecret)
 	if err != nil {
-		log.Error(err, "GitRepo secret was not found.")
+		if k8s_errors.IsNotFound(err) {
+			log.Error(err, "GitRepo secret was not found.")
+			return nil, err
+		}
 		return nil, err
-	} else if foundSecret != nil {
-		log.Info("GitRepo foundSecret")
-		pkey := foundSecret.Data["git_ssh_identity"]
-		if err != nil {
-			log.Info(fmt.Sprintf("parse private key failed: %s\n", err.Error()))
-			return nil, err
-		}
+	}
 
-		publicKeys, err := ssh.NewPublicKeys("git", pkey, "")
-		publicKeys.HostKeyCallback = crypto_ssh.InsecureIgnoreHostKey()
-		if err != nil {
-			log.Info(fmt.Sprintf("generate publickeys failed: %s\n", err.Error()))
-			return nil, err
-		}
+	log.Info("GitRepo foundSecret")
+	pkey := foundSecret.Data["git_ssh_identity"]
+	if err != nil {
+		log.Info(fmt.Sprintf("parse private key failed: %s\n", err.Error()))
+		return nil, err
+	}
 
-		repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-			URL:  string(foundSecret.Data["git_url"]),
-			Auth: publicKeys,
-		})
-		// Failed to create Git repo: URL field is required
-		if err != nil {
-			log.Info(fmt.Sprintf("Failed to create Git repo: %s\n", err.Error()))
-			return nil, err
-		}
+	publicKeys, err := ssh.NewPublicKeys("git", pkey, "")
+	publicKeys.HostKeyCallback = crypto_ssh.InsecureIgnoreHostKey()
+	if err != nil {
+		log.Info(fmt.Sprintf("generate publickeys failed: %s\n", err.Error()))
+		return nil, err
+	}
 
-		// Create the remote with repository URL
-		rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-			Name: "origin",
-			URLs: []string{string(foundSecret.Data["git_url"])},
-		})
+	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL:  string(foundSecret.Data["git_url"]),
+		Auth: publicKeys,
+	})
+	// Failed to create Git repo: URL field is required
+	if err != nil {
+		log.Info(fmt.Sprintf("Failed to create Git repo: %s\n", err.Error()))
+		return nil, err
+	}
 
-		refs, err := rem.List(&git.ListOptions{
-			Auth: publicKeys,
-		})
-		if err != nil {
-			log.Info(fmt.Sprintf("Failed to list remote: %s\n", err.Error()))
-			return nil, err
-		}
+	// Create the remote with repository URL
+	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{string(foundSecret.Data["git_url"])},
+	})
 
-		m1 := regexp.MustCompile(`/`)
-		for _, ref := range refs {
-			if ref.Name().IsBranch() {
-				if ref.Name() == "refs/heads/master" || ref.Name() == "HEAD" {
-					continue
-				}
-				commit, err := repo.CommitObject(ref.Hash())
-				if err != nil {
-					log.Info(fmt.Sprintf("Failed to get commit object: %s\n", err.Error()))
-					return nil, err
-				}
+	refs, err := rem.List(&git.ListOptions{
+		Auth: publicKeys,
+	})
+	if err != nil {
+		log.Info(fmt.Sprintf("Failed to list remote: %s\n", err.Error()))
+		return nil, err
+	}
 
-				latest, err := repo.Tag("latest")
-				if err != nil {
-					log.Info(fmt.Sprintf("Failed to get 'latest' tag: %s\n. No git diffs will be calculated.", err.Error()))
-				}
-				var configVersion ospdirectorv1beta1.OpenStackConfigVersion
-
-				if latest != nil {
-					commitLatest, err := repo.CommitObject(latest.Hash())
-					if err != nil {
-						return nil, err
-					}
-					patch, err := commit.PatchContext(ctx, commitLatest)
-
-					filterPatch := Patch{
-						message:     patch.Message(),
-						filePatches: filterPatches(patch.FilePatches()),
-					}
-					if err != nil {
-						return nil, err
-					}
-					buffer := bytes.NewBuffer(nil)
-					e := diff.NewUnifiedEncoder(buffer, 0)
-					err = e.Encode(filterPatch)
-					if err != nil {
-						return nil, err
-					}
-					//fmt.Println(buffer.String())
-					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      m1.Split(ref.Name().String(), -1)[2],
-							Namespace: inst.Namespace,
-						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String(), ConfigGeneratorName: inst.Name}}
-				} else {
-					configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      m1.Split(ref.Name().String(), -1)[2],
-							Namespace: inst.Namespace,
-						},
-						Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: "", ConfigGeneratorName: inst.Name}}
-				}
-				configVersions[ref.Hash().String()] = configVersion
+	m1 := regexp.MustCompile(`/`)
+	for _, ref := range refs {
+		if ref.Name().IsBranch() {
+			if ref.Name() == "refs/heads/master" || ref.Name() == "HEAD" {
+				continue
+			}
+			commit, err := repo.CommitObject(ref.Hash())
+			if err != nil {
+				log.Info(fmt.Sprintf("Failed to get commit object: %s\n", err.Error()))
+				return nil, err
 			}
 
+			latest, err := repo.Tag("latest")
+			if err != nil {
+				log.Info(fmt.Sprintf("Failed to get 'latest' tag: %s\n. No git diffs will be calculated.", err.Error()))
+			}
+			var configVersion ospdirectorv1beta1.OpenStackConfigVersion
+
+			if latest != nil {
+				commitLatest, err := repo.CommitObject(latest.Hash())
+				if err != nil {
+					return nil, err
+				}
+				patch, err := commit.PatchContext(ctx, commitLatest)
+
+				filterPatch := Patch{
+					message:     patch.Message(),
+					filePatches: filterPatches(patch.FilePatches()),
+				}
+				if err != nil {
+					return nil, err
+				}
+				buffer := bytes.NewBuffer(nil)
+				e := diff.NewUnifiedEncoder(buffer, 0)
+				err = e.Encode(filterPatch)
+				if err != nil {
+					return nil, err
+				}
+				//fmt.Println(buffer.String())
+				configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      m1.Split(ref.Name().String(), -1)[2],
+						Namespace: inst.Namespace,
+					},
+					Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String(), ConfigGeneratorName: inst.Name}}
+			} else {
+				configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      m1.Split(ref.Name().String(), -1)[2],
+						Namespace: inst.Namespace,
+					},
+					Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: "", ConfigGeneratorName: inst.Name}}
+			}
+			configVersions[ref.Hash().String()] = configVersion
 		}
 
 	}

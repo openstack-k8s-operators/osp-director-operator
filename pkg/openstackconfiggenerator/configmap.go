@@ -521,13 +521,12 @@ func isVMRole(
 	vmset := &ospdirectorv1beta2.OpenStackVMSet{}
 
 	err := r.GetClient().Get(ctx, types.NamespacedName{Name: roleName, Namespace: namespace}, vmset)
-	if err != nil && !k8s_errors.IsNotFound(err) {
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return false, false, nil
+		}
 		return false, false, err
 	}
 
-	if vmset != nil {
-		return true, vmset.Spec.IsTripleoRole, nil
-	}
-
-	return false, false, nil
+	return true, vmset.Spec.IsTripleoRole, nil
 }
