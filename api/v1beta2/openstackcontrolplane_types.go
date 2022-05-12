@@ -127,6 +127,10 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// in case of external functionality, like 3rd party network controllers, set to false to ignore role in rendered overcloud templates.
 	// +kubebuilder:default=true
 	IsTripleoRole bool `json:"isTripleoRole,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// NodeSelector to target subset of worker nodes running this VMset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane

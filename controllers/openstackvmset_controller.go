@@ -873,6 +873,10 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			common.GetLabels(instance, vmset.AppLabel, map[string]string{}),
 		)
 		vm.Spec.RunStrategy = &runStrategy
+		vm.Spec.Template.Spec.NodeSelector = shared.MergeStringMaps(
+			vm.Spec.Template.Spec.NodeSelector,
+			instance.Spec.NodeSelector,
+		)
 
 		// If possible two VMs of the same roleshould not
 		// run on the same worker node. This still allows to
