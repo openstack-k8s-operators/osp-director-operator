@@ -997,6 +997,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			instance.Namespace,
 		)
 
+		bootDevice := uint(1)
 		vm.Spec.Template.Spec.Domain.Devices.Disks = vmset.MergeVMDisks(
 			vm.Spec.Template.Spec.Domain.Devices.Disks,
 			vmset.DiskSetterMap{
@@ -1005,18 +1006,21 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 					"virtio",
 					"",
 					instance.Spec.RootDisk.DedicatedIOThread,
+					&bootDevice,
 				),
 				"cloudinitdisk": vmset.Disk(
 					"cloudinitdisk",
 					"virtio",
 					"",
 					false,
+					nil,
 				),
 				"fencingdisk": vmset.Disk(
 					"fencingdisk",
 					"virtio",
 					"fencingdisk",
 					false,
+					nil,
 				),
 			},
 		)
@@ -1068,6 +1072,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 						"virtio",
 						"",
 						disk.DedicatedIOThread,
+						nil,
 					),
 				},
 			)

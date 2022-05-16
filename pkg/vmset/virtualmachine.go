@@ -39,6 +39,7 @@ func Disk(
 	bus string,
 	serial string,
 	dedicatedIOThread bool,
+	bootOrder *uint,
 ) DiskSetter {
 	return func(disk *virtv1.Disk) {
 		disk.Name = diskName
@@ -48,6 +49,9 @@ func Disk(
 		disk.DiskDevice.Disk = &virtv1.DiskTarget{}
 		disk.DiskDevice.Disk.Bus = bus
 		disk.DedicatedIOThread = &dedicatedIOThread
+		if bootOrder != nil {
+			disk.BootOrder = bootOrder
+		}
 	}
 }
 
