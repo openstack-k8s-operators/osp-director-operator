@@ -72,6 +72,10 @@ type OpenStackVMSetSpec struct {
 	// Note that subsequent TripleO deployment will overwrite these values
 	BootstrapDNS     []string `json:"bootstrapDns,omitempty"`
 	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// NodeSelector to target subset of worker nodes running this VMset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // OpenStackVMSetDisk defines additional disk properties

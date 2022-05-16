@@ -4050,6 +4050,12 @@ spec:
                                         items:
                                           type: string
                                         type: array
+                                      nodeSelector:
+                                        additionalProperties:
+                                          type: string
+                                        description: NodeSelector to target subset
+                                          of worker nodes running this VMset
+                                        type: object
                                       roleCount:
                                         description: Number of VMs for the role
                                         type: integer
@@ -5987,6 +5993,12 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                nodeSelector:
+                                  additionalProperties:
+                                    type: string
+                                  description: NodeSelector to target subset of worker
+                                    nodes running this VMset
+                                  type: object
                                 passwordSecret:
                                   description: 'PasswordSecret the name of the secret
                                     used to optionally set the root pwd by adding
