@@ -344,9 +344,8 @@ func createNetworksMap(
 			if ospVersion == shared.OSPVersion(shared.TemplateVersion16_2) &&
 				n.NameLower == s.Name {
 				network.DefaultSubnet = subnet
-			} else {
-				network.Subnets[s.Name] = subnet
 			}
+			network.Subnets[s.Name] = subnet
 		}
 		networksMap[n.NameLower] = network
 	}

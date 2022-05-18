@@ -156,7 +156,6 @@ parameter_defaults:
     net_attributes_map:
       {{- $net_idx := 0 }}
       {{- range $netname, $net := .NetworksMap }}
-      {{- $netname_lower := lower $net.Name }}
       {{- if not $net.IsControlPlane }}
       {{ $net.NameLower }}:
         network:
@@ -240,7 +239,6 @@ parameter_defaults:
   # CtlplaneNetworkAttributes
   CtlplaneNetworkAttributes:
     {{- range $netname, $net := .NetworksMap }}
-    {{- $netname_lower := lower $net.Name }}
     {{- if $net.IsControlPlane }}
     network:
       dns_domain: {{ $net.DomainName }}.
