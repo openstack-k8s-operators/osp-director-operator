@@ -119,9 +119,11 @@ resources:
                 routes:
                   list_concat_unique:
                     - get_param: ControlPlaneStaticRoutes
+{{`{%- if role.default_route_networks is not defined or 'ControlPlane' in role.default_route_networks %}`}}
                     - - default: true
                         next_hop:
                           get_param: ControlPlaneDefaultRoute
+{{`{%- endif %}`}}
 {{- $nic_counter := 2 }}
 {{- range $netid, $net := .Role.Networks }}
 {{- if and (ne $net.Name "External") (ne $net.Name "Tenant") (ne $net.NameLower "ctlplane") }}
@@ -138,6 +140,11 @@ resources:
                   list_concat_unique:
                     - get_param: {{ $net.Name }}Routes
                     - get_param: {{ $net.Name }}InterfaceRoutes
+{{`{%- if '`}}{{ $net.Name }}{{`' in role.default_route_networks %}`}}
+                    - - default: true
+                        next_hop:
+                          get_param: {{ $net.Name }}InterfaceDefaultRoute
+{{`{%- endif %}`}}
 {{- else if ne $net.NameLower "ctlplane" }}
 {{- $nic_counter = add $nic_counter 1 }}
               - type: ovs_bridge
@@ -158,9 +165,11 @@ resources:
                   list_concat_unique:
                     - get_param: {{ $net.Name }}Routes
                     - get_param: {{ $net.Name }}InterfaceRoutes
+{{`{%- if '`}}{{ $net.Name }}{{`' in role.default_route_networks %}`}}
                     - - default: true
                         next_hop:
                           get_param: {{ $net.Name }}InterfaceDefaultRoute
+{{`{%- endif %}`}}
                 members:
                 - type: interface
                   name: nic{{ $nic_counter }}

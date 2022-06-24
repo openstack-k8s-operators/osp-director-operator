@@ -21,10 +21,10 @@ const (
 	AppLabel = "osp-openstackconfiggenerator"
 
 	// NicTemplateTrain - nic template file for train/16.2
-	NicTemplateTrain = "net-config-multi-nic.yaml"
+	NicTemplateTrain = "net-config-multi-nic.role.j2.yaml"
 
 	// RenderedNicFileTrain - suffix of the renered train/16.2 file
-	RenderedNicFileTrain = "nic-template.yaml"
+	RenderedNicFileTrain = "nic-template.role.j2.yaml"
 
 	// NicTemplateWallaby - nic template file for wallaby/17.0 and later
 	NicTemplateWallaby = "multiple_nics_dvr.j2"
