@@ -1611,3 +1611,7 @@ controller   8       22    1         1       Provisioned   All requested Virtual
 ```
 
 * schedule a restart of the virtual machines, one at a time, to get the change reflected inside the virtual machine (**Important** it is required to power off/on the virtual machine). The recommended way is to do a graceful shutdown from inside the virtual machine and use `virtctl start <VM>` to power the VM back on.
+
+## OSP minor version updates
+
+See the [OSP update process](docs/README-osp-update.md) document
