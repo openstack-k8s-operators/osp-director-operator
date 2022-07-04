@@ -2228,7 +2228,6 @@ spec:
                                           - deleted
                                           - hostname
                                           - ip
-                                          - serviceVIP
                                           - vip
                                           type: object
                                         type: array
@@ -5437,7 +5436,6 @@ spec:
                                           - deleted
                                           - hostname
                                           - ip
-                                          - serviceVIP
                                           - vip
                                           type: object
                                         type: array

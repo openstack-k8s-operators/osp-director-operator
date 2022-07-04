@@ -26,7 +26,7 @@ type IPReservation struct {
 	IP         string `json:"ip"`
 	Hostname   string `json:"hostname"`
 	VIP        bool   `json:"vip"`
-	ServiceVIP bool   `json:"serviceVIP"`
+	ServiceVIP bool   `json:"serviceVIP,omitempty"`
 	Deleted    bool   `json:"deleted"`
 }
 

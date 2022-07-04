@@ -129,7 +129,6 @@ spec:
                         - deleted
                         - hostname
                         - ip
-                        - serviceVIP
                         - vip
                         type: object
                       type: array
