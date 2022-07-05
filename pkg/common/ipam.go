@@ -217,9 +217,7 @@ func BigIntToIP(inipint big.Int) net.IP {
 	intbytes := inipint.Bytes()
 	if len(intbytes) == net.IPv6len {
 		// This is an IPv6 address.
-		for i := 0; i < len(intbytes); i++ {
-			outip[i] = intbytes[i]
-		}
+		copy(outip, intbytes)
 	} else {
 		// It's an IPv4 address.
 		for i := 0; i < len(intbytes); i++ {
