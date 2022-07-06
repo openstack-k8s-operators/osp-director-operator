@@ -134,58 +134,60 @@ func (r *OpenStackControlPlane) Default() {
 	//
 	// set defaults on VM roles
 	//
-	for role, vmspec := range r.Spec.VirtualMachineRoles {
-
-		//
-		// if the VM role spec has the old root disk definition, convert it
-		//
-		if _, ok := r.Annotations[shared.RootDiskConvertedAnnotation]; !ok && vmspec.DiskSize > 0 {
-			convertedRole := OpenStackVirtualMachineRoleSpec{}
-
-			//if role.DiskSize > 0 {
-			convertedRole.RoleCount = vmspec.RoleCount
-			convertedRole.Cores = vmspec.Cores
-			convertedRole.Memory = vmspec.Memory
+	if _, ok := r.Annotations[shared.RootDiskConvertedAnnotation]; !ok {
+		for role, vmspec := range r.Spec.VirtualMachineRoles {
 
 			//
-			// Convert root disk
+			// if the VM role spec has the old root disk definition, convert it
 			//
-			convertedRole.RootDisk.DiskSize = vmspec.DiskSize
-			convertedRole.RootDisk.StorageClass = vmspec.StorageClass
-			convertedRole.RootDisk.StorageAccessMode = vmspec.StorageAccessMode
-			convertedRole.RootDisk.StorageVolumeMode = vmspec.StorageVolumeMode
-			convertedRole.RootDisk.BaseImageVolumeName = vmspec.BaseImageVolumeName
+			if vmspec.DiskSize > 0 {
+				convertedRole := OpenStackVirtualMachineRoleSpec{}
 
-			if len(vmspec.AdditionalDisks) > 0 {
-				convertedRole.AdditionalDisks = vmspec.AdditionalDisks
+				//if role.DiskSize > 0 {
+				convertedRole.RoleCount = vmspec.RoleCount
+				convertedRole.Cores = vmspec.Cores
+				convertedRole.Memory = vmspec.Memory
+
+				//
+				// Convert root disk
+				//
+				convertedRole.RootDisk.DiskSize = vmspec.DiskSize
+				convertedRole.RootDisk.StorageClass = vmspec.StorageClass
+				convertedRole.RootDisk.StorageAccessMode = vmspec.StorageAccessMode
+				convertedRole.RootDisk.StorageVolumeMode = vmspec.StorageVolumeMode
+				convertedRole.RootDisk.BaseImageVolumeName = vmspec.BaseImageVolumeName
+
+				if len(vmspec.AdditionalDisks) > 0 {
+					convertedRole.AdditionalDisks = vmspec.AdditionalDisks
+				}
+				if strings.EqualFold(vmspec.IOThreadsPolicy, "auto") || strings.EqualFold(vmspec.IOThreadsPolicy, "shared") {
+					convertedRole.IOThreadsPolicy = vmspec.IOThreadsPolicy
+				}
+				convertedRole.BlockMultiQueue = vmspec.BlockMultiQueue
+				convertedRole.CtlplaneInterface = vmspec.CtlplaneInterface
+				convertedRole.Networks = vmspec.Networks
+				convertedRole.RoleName = vmspec.RoleName
+				convertedRole.IsTripleoRole = vmspec.IsTripleoRole
+
+				controlplanelog.Info(fmt.Sprintf("Converted %s %s role %s: %+v",
+					r.GetObjectKind().GroupVersionKind().Kind,
+					r.Name,
+					role,
+					convertedRole,
+				))
+				r.Spec.VirtualMachineRoles[role] = convertedRole
 			}
-			if strings.EqualFold(vmspec.IOThreadsPolicy, "auto") || strings.EqualFold(vmspec.IOThreadsPolicy, "shared") {
-				convertedRole.IOThreadsPolicy = vmspec.IOThreadsPolicy
-			}
-			convertedRole.BlockMultiQueue = vmspec.BlockMultiQueue
-			convertedRole.CtlplaneInterface = vmspec.CtlplaneInterface
-			convertedRole.Networks = vmspec.Networks
-			convertedRole.RoleName = vmspec.RoleName
-			convertedRole.IsTripleoRole = vmspec.IsTripleoRole
-
-			controlplanelog.Info(fmt.Sprintf("Converted %s %s role %s: %+v",
-				r.GetObjectKind().GroupVersionKind().Kind,
-				r.Name,
-				role,
-				convertedRole,
-			))
-			r.Spec.VirtualMachineRoles[role] = convertedRole
-
-			// add RootDiskConvertedAnnotation annotation to skip convertion on next edit
-			r.SetAnnotations(
-				shared.MergeStringMaps(
-					r.GetAnnotations(),
-					map[string]string{
-						shared.RootDiskConvertedAnnotation: "true",
-					},
-				),
-			)
 		}
+
+		// add RootDiskConvertedAnnotation annotation to skip convertion on next edit
+		r.SetAnnotations(
+			shared.MergeStringMaps(
+				r.GetAnnotations(),
+				map[string]string{
+					shared.RootDiskConvertedAnnotation: "true",
+				},
+			),
+		)
 	}
 }
 
