@@ -1,7 +1,17 @@
 {{- /* golang template - https://pkg.go.dev/text/template */ -}}
+{#- NOTE(hjensas): For backward compatibility support role data with both #}
+{#-                networks map (new schema) and network list (old schema). #}
+{%- if role.networks is mapping %}
+{%-     set _role_networks = [] %}
+{%-     for key, val in role.networks.items() %}
+{%-         set _ = _role_networks.append(key) %}
+{%-     endfor %}
+{%- else %}
+{%-     set _role_networks = role.networks %}
+{%- endif %}
 heat_template_version: rocky
 description: >
-  Software Config to drive os-net-config to configure multiple interfaces for the Controller role.
+  Software Config to drive os-net-config to configure multiple interfaces for the {{`{{role.name}}`}} role.
 parameters:
   ControlPlaneIp:
     default: ''
@@ -32,44 +42,46 @@ parameters:
       guaranteed to pass through the data path of the segments in the network.
       (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
     type: number
-{{- range $netid, $net := .Role.Networks }}
-{{- if ne $net.NameLower "ctlplane" }}
-  {{ $net.Name }}IpSubnet:
+{% for network in networks if network.enabled|default(true) and network.name in _role_networks %}
+  {{`{{network.name}}`}}IpSubnet:
     default: ''
-    description: IP address/subnet on the {{ $net.NameLower }} network
+    description: IP address/subnet on the {{`{{network.name_lower}}`}} network
     type: string
-  {{ $net.Name }}NetworkVlanID:
-    default: {{ $net.Vlan }}
-    description: Vlan ID for the {{ $net.NameLower }} network traffic.
+{%- if network.vlan %}
+  {{`{{network.name}}`}}NetworkVlanID:
+    default: {{`{{network.vlan|default(1)}}`}}
+    description: Vlan ID for the {{`{{network.name_lower}}`}} network traffic.
     type: number
-  {{ $net.Name }}Mtu:
-    default: {{ $net.MTU }}
+{%- endif %}
+  {{`{{network.name}}`}}Mtu:
+    default: {{`{{network.mtu|default('1500')}}`}}
     description: The maximum transmission unit (MTU) size(in bytes) that is
       guaranteed to pass through the data path of the segments in the
-      Storage network.
+      {{`{{network.name}}`}} network.
     type: number
-  {{ $net.Name }}InterfaceDefaultRoute:
+{%- if network.name in role.default_route_networks %}
+  {{`{{network.name}}`}}InterfaceDefaultRoute:
     default: ''
-    description: default route for the external network
+    description: default route for the {{`{{network.name_lower}}`}} network
     type: string
-  {{ $net.Name }}InterfaceRoutes:
+{%- endif %}
+  {{`{{network.name}}`}}InterfaceRoutes:
     default: []
     description: >
-      Routes for the storage network traffic.
+      Routes for the {{`{{network.name_lower}}`}} network traffic.
       JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
-  {{ $net.Name }}Routes:
-    default: []
-    description: >
-      Routes for the storage network traffic.
-      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
-      Unless the default is changed, the parameter is automatically resolved
-      from the subnet host_routes attribute.
-    type: json
-{{- end }}
-{{- end }}
+{%- endfor %}
+{% for network in networks if network.name == "External" and 'external_bridge' in role.tags and not network.name in _role_networks %}
+  {{`{{network.name}}`}}Mtu:
+    default: {{`{{network.mtu|default('1500')}}`}}
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      {{`{{network.name}}`}} network.
+    type: number
+{% endfor %}
   DnsServers: # Override this via parameter_defaults
     default: []
     description: >
@@ -119,66 +131,72 @@ resources:
                 routes:
                   list_concat_unique:
                     - get_param: ControlPlaneStaticRoutes
-{{`{%- if role.default_route_networks is not defined or 'ControlPlane' in role.default_route_networks %}`}}
+{%- if role.default_route_networks is not defined or 'ControlPlane' in role.default_route_networks %}
                     - - default: true
                         next_hop:
                           get_param: ControlPlaneDefaultRoute
-{{`{%- endif %}`}}
-{{- $nic_counter := 2 }}
-{{- range $netid, $net := .Role.Networks }}
-{{- if and (ne $net.Name "External") (ne $net.Name "Tenant") (ne $net.NameLower "ctlplane") }}
-{{- $nic_counter = add $nic_counter 1 }}
+{%- endif %}
+{#- NOTE(mschuppert): Use niccount instead of loop.index to only increase if role really #}
+{#-                   has the network and do not count the ones we skip. Otherwise if a role #}
+{#-                   does not use the network the next used nicX is wrong. #}
+{#-                   Start with 2 as we defined the 2 static onces above, pod and ctlplane network. #}
+{%- set niccount = namespace(value=2) %}
+{%- for network in networks if network.enabled|default(true) and network.name not in role.networks_skip_config|default([]) %}
+{%-     if network.name not in ["External", "Tenant"] %}
+{%-         if network.name in _role_networks %}
+{%-           set niccount.value = niccount.value + 1 %}
               - type: interface
-                name: nic{{ $nic_counter }}
+                name: nic{{`{{niccount.value}}`}}
                 mtu:
-                  get_param: {{ $net.Name }}Mtu
+                  get_param: {{`{{network.name}}`}}Mtu
                 use_dhcp: false
                 addresses:
                 - ip_netmask:
-                    get_param: {{ $net.Name }}IpSubnet
+                    get_param: {{`{{network.name}}`}}IpSubnet
                 routes:
                   list_concat_unique:
-                    - get_param: {{ $net.Name }}Routes
-                    - get_param: {{ $net.Name }}InterfaceRoutes
-{{`{%- if '`}}{{ $net.Name }}{{`' in role.default_route_networks %}`}}
+                    - get_param: {{`{{network.name}}`}}InterfaceRoutes
+{%-             if network.name in role.default_route_networks %}
                     - - default: true
                         next_hop:
-                          get_param: {{ $net.Name }}InterfaceDefaultRoute
-{{`{%- endif %}`}}
-{{- else if ne $net.NameLower "ctlplane" }}
-{{- $nic_counter = add $nic_counter 1 }}
+                          get_param: {{`{{network.name}}`}}InterfaceDefaultRoute
+{%-             endif %}
+{%-         endif %}
+{%-     elif network.name in _role_networks or 'external_bridge' in role.tags %}
+{%-         set niccount.value = niccount.value + 1 %}
               - type: ovs_bridge
-{{- if eq $net.Name "External" }}
+{%-         if network.name == "External" %}
                 name: bridge_name
-{{- else }}
-                name: br-{{ $net.NameLower }}
-{{- end }}
+{%-         else %}
+                name: br-{{`{{network.name_lower}}`}}
+{%-         endif %}
                 mtu:
-                  get_param: {{ $net.Name }}Mtu
+                  get_param: {{`{{network.name}}`}}Mtu
                 dns_servers:
                   get_param: DnsServers
                 use_dhcp: false
+{%-         if network.name in _role_networks %}
                 addresses:
                 - ip_netmask:
-                    get_param: {{ $net.Name }}IpSubnet
+                    get_param: {{`{{network.name}}`}}IpSubnet
                 routes:
                   list_concat_unique:
-                    - get_param: {{ $net.Name }}Routes
-                    - get_param: {{ $net.Name }}InterfaceRoutes
-{{`{%- if '`}}{{ $net.Name }}{{`' in role.default_route_networks %}`}}
+                    - get_param: {{`{{network.name}}`}}InterfaceRoutes
+{%-             if network.name in role.default_route_networks %}
                     - - default: true
                         next_hop:
-                          get_param: {{ $net.Name }}InterfaceDefaultRoute
-{{`{%- endif %}`}}
+                          get_param: {{`{{network.name}}`}}InterfaceDefaultRoute
+{%-             endif %}
+{%-         endif %}
                 members:
                 - type: interface
-                  name: nic{{ $nic_counter }}
+                  name: nic{{`{{niccount.value}}`}}
                   mtu:
-                    get_param: {{ $net.Name }}Mtu
+                    get_param: {{`{{network.name}}`}}Mtu
                   use_dhcp: false
                   primary: true
-{{- end }}
-{{- end }}
+{%-     endif %}
+{%- endfor %}
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
