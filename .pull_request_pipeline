@@ -12,7 +12,7 @@ pipeline {
                         build job: 'osp-director-operator-distgit-pr',
                                   parameters: [
                                       string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
-                                      string(name: 'GITHUB_BRANCH', value: 'v1.2.x')
+                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'v1.2.x')
                                   ]
                     }
                 }
@@ -22,7 +22,7 @@ pipeline {
                         build job: 'osp-director-operator-buildah',
                                   parameters: [
                                       string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
-                                      string(name: 'GITHUB_BRANCH', value: 'v1.2.x')
+                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'v1.2.x')
                                   ]
                     }
                 }
