@@ -93,21 +93,20 @@ gofmt: get-ci-tools
 	$(CI_TOOLS_REPO_DIR)/test-runner/gofmt.sh
 
 # Run go vet against code
-govet: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/govet.sh
+govet:
+	./govet.sh
 
 # Run go test against code
 gotest: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
+	./gotest.sh
 
 # Run golangci-lint test against code
 golangci: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
+	./golangci.sh
 
 # Run go lint against code
 golint: get-ci-tools
-	PATH=$(GOBIN):$(PATH); $(CI_TOOLS_REPO_DIR)/test-runner/golint.sh
-
+	PATH=$(GOBIN):$(PATH); ./golint.sh
 
 ##@ General
 

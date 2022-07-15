@@ -36,6 +36,11 @@ require (
 )
 
 require (
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/tools v0.1.11 // indirect
+)
+
+require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect

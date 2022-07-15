@@ -1,0 +1,6 @@
+#!/bin/bash
+set -ex
+
+#export GOFLAGS=-mod=mod
+#go vet ./...
+go vet -mod=mod ./...
