@@ -90,8 +90,13 @@ HEAT_ENVIRONMENT_FILES="
     -e $TEMPLATES_DIR/tripleo-overcloud-images.yaml \
     -e $TEMPLATES_DIR/environments/deployed-server-environment.yaml \
     -e $TEMPLATES_DIR/environments/docker-ha.yaml \
+{{- if eq .OSPVersion "16.2" }}
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/network-environment.yaml \
+{{- end }}
+{{- if eq .OSPVersion "17.0" }}
+    -e $TEMPLATES_DIR/environments/deployed-network-environment.yaml \
+{{- end }}
 {{- range $i, $value := .TripleoEnvironmentFiles }}
     -e $TEMPLATES_DIR/{{ $value }} \
 {{- end }}

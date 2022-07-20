@@ -2,22 +2,6 @@
 # Resource Registry
 resource_registry:
   OS::TripleO::Server: deployed-server/deployed-server.yaml
-  OS::TripleO::Network: network/deployed_networks.yaml
-  OS::TripleO::DeployedServer::ControlPlanePort: deployed-server/deployed-neutron-port.yaml
-  OS::TripleO::Network::Ports::ControlPlaneVipPort: network/ports/deployed_vip_ctlplane.yaml
-  OS::TripleO::Network::Ports::ExternalVipPort: network/ports/deployed_vip_external.yaml
-  OS::TripleO::Network::Ports::InternalApiVipPort: network/ports/deployed_vip_internal_api.yaml
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: network/ports/deployed_vip_storage_mgmt.yaml
-  OS::TripleO::Network::Ports::StorageVipPort: network/ports/deployed_vip_storage.yaml
-{{- range $roleid, $role := .RolesMap }}
-{{- if not $role.IsControlPlane }}
-{{- range $netid, $net := $role.Networks }}
-{{- if not $net.IsControlPlane }}
-  OS::TripleO::{{ $role.Name }}::Ports::{{ $net.Name }}Port: network/ports/deployed_{{ $net.NameLower }}.yaml
-{{- end}}
-{{- end }}
-{{- end }}
-{{- end }}
 
 # Parameter Defaults
 parameter_defaults:
@@ -149,92 +133,6 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
-  #
-  # DeployedNetworkEnvironment
-  DeployedNetworkEnvironment:
-    {{- /* net_attributes_map start */}}
-    net_attributes_map:
-      {{- $net_idx := 0 }}
-      {{- range $netname, $net := .NetworksMap }}
-      {{- if not $net.IsControlPlane }}
-      {{ $net.NameLower }}:
-        network:
-          dns_domain: {{ $net.DomainName }}.
-          mtu: {{ $net.MTU }}
-          name: {{ $net.NameLower }}
-          tags:
-          - tripleo_network_name={{$net.Name }}
-          - tripleo_net_idx={{ $net_idx }}
-          {{- $net_idx = add $net_idx 1 }}
-          - tripleo_vip={{ $net.VIP }}
-        {{- /* subnets start */}}
-        subnets:
-        {{- range $subnetname, $subnet := $net.Subnets }}
-          {{ $subnetname }}_subnet:
-          {{- /* IPv4 subnet start */ -}}
-          {{- if ne $subnet.IPv4.Cidr "" }}
-            cidr: '{{ $subnet.IPv4.Cidr }}'
-            dns_nameservers: []
-            gateway_ip: {{ $subnet.IPv4.Gateway }}
-            host_routes: {{ if eq (len $subnet.IPv4.Routes) 0 }}[]{{ else }}
-              {{- range $netname, $route := $subnet.IPv4.Routes }}
-              - destination: '{{ $route.Destination }}'
-                nexthop: '{{ $route.Nexthop }}'
-              {{- end }}
-              {{- end }}
-            ip_version: 4
-            name: {{ $subnetname }}
-            tags: {{ if eq $subnet.Vlan 0 }}[]{{ else }}
-              - tripleo_vlan_id={{ $subnet.Vlan }}
-            {{- end }}
-          {{- end }}
-          {{- /* IPv4 subnet end */}}
-          {{- /* IPv6 subnet start */ -}}
-          {{- if ne $subnet.IPv6.Cidr "" }}
-            cidr: '{{ $subnet.IPv6.Cidr }}'
-            dns_nameservers: []
-            gateway_ip: {{ $subnet.IPv6.Gateway }}
-            host_routes: {{ if eq (len $subnet.IPv6.Routes) 0 }}[]{{ else }}
-              {{- range $netname, $route := $subnet.IPv6.Routes }}
-              - destination: '{{ $route.Destination }}'
-                nexthop: '{{ $route.Nexthop }}'
-              {{- end }}
-              {{- end }}
-            ip_version: 6
-            name: {{ $subnetname }}
-            tags: {{ if eq $subnet.Vlan 0 }}[]{{ else }}
-              - tripleo_vlan_id={{ $subnet.Vlan }}
-            {{- end }}
-          {{- end }}
-          {{- /* IPv6 subnet end */ -}}
-        {{- end }}
-        {{- /* subnets end */ -}}
-      {{- end }}
-      {{- end }}
-    {{- /* net_attributes_map end */ -}}
-    {{- /* net_cidr_map start */}}
-    net_cidr_map:
-      {{- range $netname, $net := .NetworksMap }}
-      {{- if not $net.IsControlPlane }}
-      {{ $net.NameLower }}:
-      {{- range $subnetname, $subnet := $net.Subnets }}
-      {{- if $net.IPv6 }}
-      - '{{ $subnet.IPv6.Cidr }}'
-      {{-  else }}
-      - '{{ $subnet.IPv4.Cidr }}'
-      {{- end }}
-      {{- end }}
-      {{- end }}
-      {{- end }}
-    {{- /* net_cidr_map end */ -}}
-    {{- /* net_ip_version_map start */}}
-    net_ip_version_map:
-      {{- range $netname, $net := .NetworksMap }}
-      {{- if not $net.IsControlPlane }}
-      {{ $net.NameLower }}: {{ if $net.IPv6 }}6{{ else }}4{{ end }}
-      {{- end }}
-      {{- end }}
-    {{- /* net_ip_version_map end */}}
   #
   # CtlplaneNetworkAttributes
   CtlplaneNetworkAttributes:
