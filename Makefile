@@ -102,7 +102,7 @@ gotest: get-ci-tools
 
 # Run golangci-lint test against code
 golangci: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
+	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh "." 10
 
 # Run go lint against code
 golint: get-ci-tools
