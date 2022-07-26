@@ -16,6 +16,8 @@ limitations under the License.
 
 package main
 
+hello hello this is a test
+
 import (
 	"flag"
 	"fmt"
