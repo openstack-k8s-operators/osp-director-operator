@@ -71,6 +71,7 @@ func passwordNames() []string {
 		"ManilaPassword",
 		"MistralPassword",
 		"MysqlClustercheckPassword",
+		"MysqlMariabackupPassword",
 		"MysqlRootPassword",
 		"NeutronMetadataProxySharedSecret",
 		"NeutronPassword",

@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
@@ -60,7 +59,7 @@ func GetCustomFencingRoles(customBinaryData map[string][]byte) ([]string, error)
 			switch header.Typeflag {
 			case tar.TypeReg:
 				if header.Name == TripleORolesDataFile {
-					buf, err := ioutil.ReadAll(tarReader)
+					buf, err := io.ReadAll(tarReader)
 
 					if err != nil {
 						return nil, err
