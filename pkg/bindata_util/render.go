@@ -3,7 +3,6 @@ package bindatautil
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,7 +74,7 @@ func RenderTemplate(path string, d *RenderData) ([]*unstructured.Unstructured, e
 	tmpl.Funcs(template.FuncMap{"getOr": common.GetOr, "isSet": common.IsSet})
 	tmpl.Funcs(sprig.TxtFuncMap())
 
-	source, err := ioutil.ReadFile(path)
+	source, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read manifest %s", path)
 	}
