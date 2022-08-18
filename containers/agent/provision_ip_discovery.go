@@ -5,7 +5,6 @@ import (
 	"flag"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -129,9 +128,23 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 					panic(err.Error())
 				}
 
-				if len(addrs) > 0 {
-					curIP = addrs[0].String()
-					curIP = strings.Split(curIP, "/")[0]
+				for _, addr := range addrs {
+					ipObj, _, err := net.ParseCIDR(addr.String())
+
+					if err != nil || ipObj == nil {
+						glog.V(0).Infof("WARNING: Cannot parse IP address for OpenStackProvisionServer %s (namespace %s) on interface %s!\n", startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
+						if err != nil {
+							glog.V(0).Infof("ERROR: %s", err.Error())
+						}
+						continue
+					}
+
+					if ipObj = ipObj.To4(); ipObj != nil {
+						curIP = ipObj.String()
+						break
+					} else {
+						glog.V(0).Infof("INFO: Ignoring IPv6 address (%s) for OpenStackProvisionServer %s (namespace %s) on interface %s!\n", addr, startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
+					}
 				}
 				break
 			}
