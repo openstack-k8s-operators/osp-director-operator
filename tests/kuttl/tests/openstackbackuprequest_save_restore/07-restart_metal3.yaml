@@ -1,0 +1,11 @@
+#
+# Restart Metal3 since the NNCPs responsible for configuring the br-ctlplane
+# provisioning interface bridge were deleted and recreated.  In such a scenario,
+# restarting Metal3 allows DHCP to work properly again.
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc scale deployment metal3 -n openshift-machine-api --replicas=0
+    namespaced: true

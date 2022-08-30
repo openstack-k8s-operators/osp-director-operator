@@ -2,9 +2,6 @@
 # Check for:
 #
 # - 1 OpenStackNetConfig
-# - 1 OpenStackControlPlane
-# - 1 OpenStackBaremetalSet
-# - 1 OpenStackVMSet
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -26,37 +23,3 @@ status:
     physNetReadyCount: 2
     reason: OpenStackNetConfig openstacknetconfig all resources configured
     state: Configured
----
-apiVersion: osp-director.openstack.org/v1beta2
-kind: OpenStackControlPlane
-metadata:
-  name: overcloud
-  namespace: openstack
-status:
-  provisioningStatus:
-    clientReady: true
-    desiredCount: 1
-    readyCount: 1
-    reason: All requested OSVMSets have been provisioned
-    state: Provisioned
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBaremetalSet
-metadata:
-  name: compute
-  namespace: openstack
-status:
-  provisioningStatus:
-    readyCount: 1
-    reason: All requested BaremetalHosts have been provisioned
-    state: Provisioned
----
-apiVersion: osp-director.openstack.org/v1beta2
-kind: OpenStackVMSet
-metadata:
-  name: controller
-  namespace: openstack
-status:
-  provisioningStatus:
-    reason: No VirtualMachines have been requested
-    state: Empty

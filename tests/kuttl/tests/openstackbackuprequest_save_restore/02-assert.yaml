@@ -1,22 +1,44 @@
 #
 # Check for:
 #
-# - 1 OpenStackBackupRequest (should be quiescing)
+# - 1 OpenStackControlPlane
+# - 1 OpenStackBaremetalSet
+# - 1 OpenStackVMSet
 #
 
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackBackupRequest
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 420
+---
+apiVersion: osp-director.openstack.org/v1beta2
+kind: OpenStackControlPlane
 metadata:
-  name: openstackbackuprequest
+  name: overcloud
   namespace: openstack
 status:
-  conditions:
-  - message: OpenStackBackupRequest is waiting for other controllers to quiesce
-    reason: OpenStackBackupRequest is waiting for other controllers to quiesce
-    status: "False"
-    type: Quiescing
-  - message: OpenStackBackup openstackbackuprequest has been saved
-    reason: OpenStackBackup openstackbackuprequest has been saved
-    status: "True"
-    type: Saved
-  currentState: Saved
+  provisioningStatus:
+    clientReady: true
+    desiredCount: 1
+    readyCount: 1
+    reason: All requested OSVMSets have been provisioned
+    state: Provisioned
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  name: compute
+  namespace: openstack
+status:
+  provisioningStatus:
+    reason: No BaremetalHost have been requested
+    state: Empty
+---
+apiVersion: osp-director.openstack.org/v1beta2
+kind: OpenStackVMSet
+metadata:
+  name: controller
+  namespace: openstack
+status:
+  provisioningStatus:
+    reason: No VirtualMachines have been requested
+    state: Empty

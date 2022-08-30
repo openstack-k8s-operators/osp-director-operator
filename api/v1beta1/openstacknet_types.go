@@ -23,11 +23,13 @@ import (
 
 // IPReservation contains an IP, Hostname, and a VIP flag
 type IPReservation struct {
-	IP         string `json:"ip"`
-	Hostname   string `json:"hostname"`
-	VIP        bool   `json:"vip"`
-	ServiceVIP bool   `json:"serviceVIP,omitempty"`
-	Deleted    bool   `json:"deleted"`
+	IP       string `json:"ip"`
+	Hostname string `json:"hostname"`
+	VIP      bool   `json:"vip"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	ServiceVIP bool `json:"serviceVIP,omitempty"`
+	Deleted    bool `json:"deleted"`
 }
 
 // NodeIPReservation contains an IP and Deleted flag
