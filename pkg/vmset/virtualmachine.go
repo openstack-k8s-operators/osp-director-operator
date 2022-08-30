@@ -171,6 +171,7 @@ func DataVolume(
 		dataVolume.Spec.PVC.AccessModes = []corev1.PersistentVolumeAccessMode{
 			corev1.PersistentVolumeAccessMode(pvAccessMode),
 		}
+		dataVolume.Spec.PVC.StorageClassName = &storageClass
 
 		dataVolume.Spec.PVC.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
