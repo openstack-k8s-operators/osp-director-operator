@@ -122,6 +122,7 @@ spec:
                           ip:
                             type: string
                           serviceVIP:
+                            default: false
                             type: boolean
                           vip:
                             type: boolean

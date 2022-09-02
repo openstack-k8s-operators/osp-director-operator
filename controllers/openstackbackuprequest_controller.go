@@ -363,16 +363,23 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 	backup *ospdirectorv1beta2.OpenStackBackup,
 ) error {
 	// Create all CRs in the spec first, and set their status to some initial state
+	// NOTE: The "status" of each CR is removed during "ensureLoadBackupResource"'s
+	//       call to "CreateOrPatch" (which we cannot control), so we need to make a
+	//       deep copy of each CR's status before that call and then re-inject it
+	//       into the CR to then properly restore the status.
 
 	msg := fmt.Sprintf("OpenStackBackup %s initial load", backup.Name)
 
 	// OpenStackNets
 	for _, item := range backup.Spec.Crs.OpenStackNets.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.CurrentState = shared.NetWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
@@ -382,11 +389,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackNetAttachments
 	for _, item := range backup.Spec.Crs.OpenStackNetAttachments.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.CurrentState = shared.NetAttachWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
@@ -396,11 +406,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackNetConfigs
 	for _, item := range backup.Spec.Crs.OpenStackNetConfigs.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.NetConfigWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
@@ -411,11 +424,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackMACAddresses
 	for _, item := range backup.Spec.Crs.OpenStackMACAddresses.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.CurrentState = shared.MACCondTypeWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
@@ -425,11 +441,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackProvisionServers
 	for _, item := range backup.Spec.Crs.OpenStackProvisionServers.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ProvisionServerCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
@@ -440,11 +459,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackBaremetalSets
 	for _, item := range backup.Spec.Crs.OpenStackBaremetalSets.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.BaremetalSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
@@ -455,11 +477,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackClients
 	for _, item := range backup.Spec.Crs.OpenStackClients.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.Conditions.UpdateCurrentCondition(shared.CommonCondTypeWaiting, shared.CommonCondReasonInit, msg)
 		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
 			return err
@@ -468,11 +493,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackVMSets
 	for _, item := range backup.Spec.Crs.OpenStackVMSets.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.VMSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
@@ -483,11 +511,14 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 
 	// OpenStackControlPlanes
 	for _, item := range backup.Spec.Crs.OpenStackControlPlanes.Items {
+		status := item.Status.DeepCopy()
+
 		if err := r.ensureLoadBackupResource(ctx, &item); err != nil {
 			return err
 		}
 
 		// Now try to update the status
+		item.Status = *status
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ControlPlaneWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
