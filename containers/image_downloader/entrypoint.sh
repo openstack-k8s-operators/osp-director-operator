@@ -44,6 +44,7 @@ else
     # Source image not found locally, so download it and then compress it
     CONNECT_TIMEOUT=120
     MAX_ATTEMPTS=5
+    DOWNLOADED=0
     COMPRESSED_FLAG=""
 
     if [ -n "$IMAGE_FILENAME_EXTENSION" ]; then
@@ -57,9 +58,15 @@ else
           echo "Download failed, retrying after ${SLEEP_TIME} seconds..."; 
           sleep ${SLEEP_TIME}
         else
+          DOWNLOADED=1
           break
         fi
     done
+
+    if [ $DOWNLOADED -ne 1 ]; then
+      echo "Download failed for ${IMAGE_URL}/${RHEL_IMAGE_FILENAME_RAW}"
+      exit 1
+    fi
 
     # If the source file is compressed, unzip it
     if [[ $IMAGE_FILENAME_EXTENSION == .gz ]]; then
