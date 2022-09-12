@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=centos:centos7
+ARG BASE_IMAGE=centos:stream8
 
 FROM $BASE_IMAGE
 
