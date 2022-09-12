@@ -36,7 +36,7 @@ type DiskSetterMap map[string]DiskSetter
 // Disk - create additional Disk, ATM only virtio
 func Disk(
 	diskName string,
-	bus string,
+	bus virtv1.DiskBus,
 	serial string,
 	dedicatedIOThread bool,
 	bootOrder *uint,
