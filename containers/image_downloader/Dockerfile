@@ -2,13 +2,14 @@ ARG BASE_IMAGE=centos:stream8
 
 FROM $BASE_IMAGE
 
-ARG PKG_CMD=yum
+ARG PKG_CMD=dnf
 ARG REMOTE_SOURCE=
 # Buildah expects the entrypoint.sh to be relative to pwd, podman expects
 # the file to be relative to the Dockerfile location
 ARG ENTRYPOINT_PATH=entrypoint.sh
 
-RUN ${PKG_CMD} install -y qemu-img
+RUN ${PKG_CMD} install -y qemu-img && \
+    ${PKG_CMD} clean all
 
 ARG IMAGE_COMPONENT="osp-director-downloader-container"
 ARG IMAGE_NAME="osp-director-downloader"
