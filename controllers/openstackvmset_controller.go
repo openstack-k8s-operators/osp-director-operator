@@ -1003,21 +1003,21 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			vmset.DiskSetterMap{
 				"rootdisk": vmset.Disk(
 					"rootdisk",
-					"virtio",
+					virtv1.DiskBusVirtio,
 					"",
 					instance.Spec.RootDisk.DedicatedIOThread,
 					&bootDevice,
 				),
 				"cloudinitdisk": vmset.Disk(
 					"cloudinitdisk",
-					"virtio",
+					virtv1.DiskBusVirtio,
 					"",
 					false,
 					nil,
 				),
 				"fencingdisk": vmset.Disk(
 					"fencingdisk",
-					"virtio",
+					virtv1.DiskBusVirtio,
 					"fencingdisk",
 					false,
 					nil,
@@ -1069,7 +1069,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				vmset.DiskSetterMap{
 					name: vmset.Disk(
 						name,
-						"virtio",
+						virtv1.DiskBusVirtio,
 						"",
 						disk.DedicatedIOThread,
 						nil,
