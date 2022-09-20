@@ -99,6 +99,7 @@ func (r *OpenStackVMSetReconciler) GetScheme() *runtime.Scheme {
 // FIXME: Cluster-scope required below for now, as the operator watches openshift-machine-api namespace as well
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list
 // +kubebuilder:rbac:groups=kubevirt.io,namespace=openstack,resources=virtualmachines,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=subresources.kubevirt.io,namespace=openstack,resources=virtualmachines/start,verbs=update
 // FIXME: Is there a way to scope the following RBAC annotation to just the "openshift-machine-api" namespace?
 // +kubebuilder:rbac:groups=kubevirt.io,resources=virtualmachines,verbs=list;watch
 // +kubebuilder:rbac:groups=nmstate.io,resources=nodenetworkconfigurationpolicies,verbs=get;list
@@ -765,11 +766,14 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	trueValue := true
 	terminationGracePeriodSeconds := int64(0)
-	// This run strategy ensures that the VM boots upon creation and reboots upon
-	// failure, but also allows us to issue manual power commands to the Kubevirt API.
-	// The default strategy, "Always", disallows the direct power command API calls
-	// that are required by the Kubevirt fencing agent
-	runStrategy := virtv1.RunStrategyRerunOnFailure
+
+	// VMs should only be started via the operator once right after creation.
+	// after that its the responsibility if the end user, or pacemaker to manage
+	// the run state. virtv1.RunStrategyOnce could be an option, but is not available
+	// in kubevirt 0.49.0 api.
+	// https://docs.openshift.com/container-platform/4.10/virt/virtual_machines/virt-create-vms.html
+	// references https://kubevirt.io/api-reference/v0.49.0/definitions.html#_v1_virtualmachinespec
+	runStrategy := virtv1.RunStrategyManual
 
 	// get deployment userdata from secret
 	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
@@ -1111,6 +1115,16 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	}
 
 	if op != controllerutil.OperationResultNone {
+		if op == controllerutil.OperationResultCreated {
+			// start VM once when it gets created
+			if err := r.KubevirtClient.VirtualMachine(instance.Namespace).Start(vm.Name, &virtv1.StartOptions{}); err != nil {
+				return common.WrapErrorForObject(
+					fmt.Sprintf("VirtualMachine %s ERROR start after initial create: %s", vm.Name, err.Error()),
+					instance,
+					err,
+				)
+			}
+		}
 		common.LogForObject(
 			r,
 			fmt.Sprintf("VirtualMachine %s successfully reconciled - operation: %s", vm.Name, string(op)),
