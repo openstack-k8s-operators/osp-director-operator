@@ -823,6 +823,12 @@ rules:
   verbs:
   - use
 - apiGroups:
+  - subresources.kubevirt.io
+  resources:
+  - virtualmachines/start
+  verbs:
+  - update
+- apiGroups:
   - template.openshift.io
   resourceNames:
   - privileged
