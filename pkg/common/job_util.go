@@ -76,8 +76,8 @@ func WaitOnJob(
 	if foundJob.Status.Active > 0 {
 		log.Info("Job Status Active... requeuing")
 		return true, err
-        } else if foundJob.Status.Succeeded > 0 {
-                log.Info("Job Status Successful")
+	} else if foundJob.Status.Succeeded > 0 {
+		log.Info("Job Status Successful")
 	} else if foundJob.Status.Failed > 0 {
 		log.Info("Job Status Failed")
 		return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs"))
