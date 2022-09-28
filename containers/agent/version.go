@@ -28,7 +28,7 @@ func runVersionCmd(cmd *cobra.Command, args []string) {
 	flag.Parse()
 
 	program := "OSPDirectorOperatorAgent"
-	version := "v1.3.0"
+	version := "v1.4.0"
 
 	fmt.Println(program, version)
 }
