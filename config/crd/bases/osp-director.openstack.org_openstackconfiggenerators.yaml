@@ -46,6 +46,13 @@ spec:
             description: OpenStackConfigGeneratorSpec defines the desired state of
               OpenStackConfigGenerator
             properties:
+              enableFencing:
+                description: 'EnableFencing allows the automatic creation of required
+                  heat environment files to enable fencing. Note: - Production OSP
+                  environments MUST have fencing enabled. - Requires the fence-agents-kubevirt
+                  package to be installed in the virtual machines for the roles running
+                  pacemaker.'
+                type: boolean
               ephemeralHeatSettings:
                 description: Advanced Heat Settings can be used to increase the Heat
                   Engine replicas or customize container images used during config
@@ -119,6 +126,7 @@ spec:
                   Heat template tarball which will be extracted prior to config generation
                 type: string
             required:
+            - enableFencing
             - gitSecret
             - heatEnvConfigMap
             type: object

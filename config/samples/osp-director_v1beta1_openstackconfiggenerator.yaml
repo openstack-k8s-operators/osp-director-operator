@@ -3,6 +3,7 @@ kind: OpenStackConfigGenerator
 metadata:
   name: default
 spec:
+  enableFencing: false
   gitSecret: git-secret
   heatEnvConfigMap: heat-env-config
   tarballConfigMap: tripleo-tarball-config

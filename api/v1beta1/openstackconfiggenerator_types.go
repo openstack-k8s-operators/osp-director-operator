@@ -45,6 +45,11 @@ type OpenStackConfigGeneratorSpec struct {
 	// +kubebuilder:default={}
 	// Optional. List of Roles used to limit which roles have network information injected during playbook generation. By default the list is empty and all Roles are included for Baremetal/Vmsets within the project.
 	Roles []string `json:"roles,omitempty"`
+	// EnableFencing allows the automatic creation of required heat environment files to enable fencing.
+	// Note:
+	// - Production OSP environments MUST have fencing enabled.
+	// - Requires the fence-agents-kubevirt package to be installed in the virtual machines for the roles running pacemaker.
+	EnableFencing bool `json:"enableFencing"`
 }
 
 // OpenStackConfigGeneratorStatus defines the observed state of OpenStackConfigGenerator
