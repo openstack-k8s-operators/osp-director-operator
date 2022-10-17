@@ -613,6 +613,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
       name: default
       namespace: openstack
     spec:
+      enableFencing: False
       imageURL: quay.io/openstack-k8s-operators/rhosp16-openstack-tripleoclient:16.2_20210713.1
       gitSecret: git-secret
       heatEnvConfigMap: heat-env-config
@@ -1364,7 +1365,6 @@ spec:
         storageClass: host-nfs-storageclass
         storageAccessMode: ReadWriteMany
         storageVolumeMode: Filesystem
-  enableFencing: False
 ```
 
 ### Create the computes for the leafs

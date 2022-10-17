@@ -720,7 +720,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 	//
 	templateParameters["EnableFencing"] = false
 
-	if controlPlane.Spec.EnableFencing {
+	if instance.Spec.EnableFencing {
 		fencingRoles := common.GetFencingRoles()
 
 		// First check if custom roles were included that require fencing
