@@ -38,11 +38,6 @@ type OpenStackControlPlaneSpec struct {
 	// OpenStackClientNetworks the name(s) of the OpenStackClientNetworks used to attach the openstackclient to
 	OpenStackClientNetworks []string `json:"openStackClientNetworks"`
 
-	// +kubebuilder:default=false
-	// EnableFencing is provided so that users have the option to disable fencing if desired
-	// FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
-	EnableFencing bool `json:"enableFencing"`
-
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
 	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image

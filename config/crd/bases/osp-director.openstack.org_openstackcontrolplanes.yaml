@@ -361,12 +361,6 @@ spec:
                 description: Name of the config map containing custom CA certificates
                   to trust
                 type: string
-              enableFencing:
-                default: false
-                description: 'EnableFencing is provided so that users have the option
-                  to disable fencing if desired FIXME: Defaulting to false until Kubevirt
-                  agent merged into RHEL overcloud image'
-                type: boolean
               idmSecret:
                 description: Idm secret used to register openstack client in IPA
                 type: string
@@ -632,7 +626,6 @@ spec:
                 description: List of VirtualMachine roles
                 type: object
             required:
-            - enableFencing
             - virtualMachineRoles
             type: object
           status:
