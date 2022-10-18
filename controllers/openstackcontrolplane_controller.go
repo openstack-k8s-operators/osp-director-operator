@@ -18,11 +18,14 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -435,41 +438,23 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 	//
 	// check if "tripleo-passwords" controlplane.TripleoPasswordSecret secret already exist
 	//
-	_, secretHash, err := common.GetSecret(ctx, r, controlplane.TripleoPasswordSecret, instance.Namespace)
+	secret, secretHash, err := common.GetSecret(ctx, r, controlplane.TripleoPasswordSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 
-			common.LogForObject(
-				r,
-				fmt.Sprintf("Creating password secret: %s", controlplane.TripleoPasswordSecret),
-				instance,
-			)
-
-			pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
-
 			templateParameters := make(map[string]interface{})
 			templateParameters["TripleoPasswords"] = common.GeneratePasswords()
-			pwSecret := []common.Template{
-				{
-					Name:               controlplane.TripleoPasswordSecret,
-					Namespace:          instance.Namespace,
-					Type:               common.TemplateTypeConfig,
-					InstanceType:       instance.Kind,
-					AdditionalTemplate: map[string]string{},
-					Labels:             pwSecretLabel,
-					ConfigOptions:      templateParameters,
-				},
-			}
 
-			err = common.EnsureSecrets(ctx, r, instance, pwSecret, envVars)
+			err := r.createOrUpdatePasswordSecret(ctx, instance, cond, envVars, templateParameters)
 			if err != nil {
-				cond.Message = fmt.Sprintf("Error creating TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
-				cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretCreateError
-				cond.Type = shared.CommonCondTypeError
-				err = common.WrapErrorForObject(cond.Message, instance, err)
-
 				return err
 			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Created Tripleo Passwords Secret: %s", controlplane.TripleoPasswordSecret),
+				instance,
+			)
 		} else {
 			cond.Message = fmt.Sprintf("Error get TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
 			cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
@@ -478,9 +463,131 @@ func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 
 			return err
 		}
+	} else {
+		tripleoPasswordsByte := secret.Data["tripleo-overcloud-passwords.yaml"]
+
+		tripleoPasswordsRaw := make(map[string]interface{})
+		if err := yaml.Unmarshal(tripleoPasswordsByte, &tripleoPasswordsRaw); err != nil {
+			cond.Message = fmt.Sprintf("Error extract TripleoPasswords from Secret %s", controlplane.TripleoPasswordSecret)
+			cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
+			cond.Type = shared.CommonCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+
+		// recursive convert nested map[interface{}]interface{} password data
+		// into map[string]interface{} and merge into a new tripleoPasswords map
+		tripleoPasswords, err := common.RecursiveMergeMaps(
+			map[string]interface{}{},
+			tripleoPasswordsRaw,
+			common.PasswordMaxDepth,
+		)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Error recursive merge TripleoPasswords from Secret %s", controlplane.TripleoPasswordSecret)
+			cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
+			cond.Type = shared.CommonCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+
+		// get actual password level of the password data, so everything bellow "parameter_defaults"
+		currentPasswordsMap := tripleoPasswords["parameter_defaults"].(map[string]interface{})
+
+		// If there are netsted maps bellow the highest level, Marshal them into a json string
+		for key, val := range currentPasswordsMap {
+			if val == nil {
+				cond.Message = fmt.Sprintf("Error, password for %s is nil!", key)
+				cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
+				cond.Type = shared.CommonCondTypeError
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return err
+			}
+
+			if common.IsInterfaceMap(val) {
+				b, err := json.Marshal(val)
+				if err != nil {
+					cond.Message = fmt.Sprintf("Error marshal nested password maps from TripleoPasswords from Secret %s", controlplane.TripleoPasswordSecret)
+					cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretError
+					cond.Type = shared.CommonCondTypeError
+					err = common.WrapErrorForObject(cond.Message, instance, err)
+
+					return err
+				}
+
+				currentPasswordsMap[key] = string(b)
+			}
+		}
+
+		// validate if new password entries need to be added
+		newPasswordsMap := make(map[string]interface{})
+		for _, pwName := range common.PasswordNames() {
+			if _, ok := currentPasswordsMap[pwName]; !ok {
+				newPasswordsMap[pwName] = common.GeneratePassword(pwName)
+
+				common.LogForObject(
+					r,
+					fmt.Sprintf("New Password %s added to TripleoPasswords list", pwName),
+					instance,
+				)
+			}
+		}
+
+		if len(newPasswordsMap) > 0 {
+			templateParameters := make(map[string]interface{})
+			templateParameters["TripleoPasswords"] = common.MergeMaps(currentPasswordsMap, newPasswordsMap)
+
+			err := r.createOrUpdatePasswordSecret(ctx, instance, cond, envVars, templateParameters)
+			if err != nil {
+				return err
+			}
+
+			common.LogForObject(
+				r,
+				fmt.Sprintf("Updated Tripleo Passwords Secret with: %v", reflect.ValueOf(newPasswordsMap).MapKeys()),
+				instance,
+			)
+		}
 	}
 
 	(*envVars)[controlplane.TripleoPasswordSecret] = common.EnvValue(secretHash)
+
+	return nil
+}
+
+func (r *OpenStackControlPlaneReconciler) createOrUpdatePasswordSecret(
+	ctx context.Context,
+	instance *ospdirectorv1beta2.OpenStackControlPlane,
+	cond *shared.Condition,
+	envVars *map[string]common.EnvSetter,
+	templateParameters map[string]interface{},
+) error {
+
+	pwSecretLabel := common.GetLabels(instance, controlplane.AppLabel, map[string]string{})
+
+	pwSecret := []common.Template{
+		{
+			Name:               controlplane.TripleoPasswordSecret,
+			Namespace:          instance.Namespace,
+			Type:               common.TemplateTypeConfig,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: map[string]string{},
+			Labels:             pwSecretLabel,
+			ConfigOptions:      templateParameters,
+		},
+	}
+
+	err := common.EnsureSecrets(ctx, r, instance, pwSecret, envVars)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Error creating TripleoPasswordsSecret %s", controlplane.TripleoPasswordSecret)
+		cond.Reason = shared.ControlPlaneReasonTripleoPasswordsSecretCreateError
+		cond.Type = shared.CommonCondTypeError
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+
+		return err
+	}
 
 	return nil
 }
