@@ -5,7 +5,6 @@ metadata:
   namespace: openstack
 spec:
   domainName: ostest.test.metalkube.org
-  enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
