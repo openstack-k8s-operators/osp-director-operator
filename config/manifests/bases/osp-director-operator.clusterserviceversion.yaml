@@ -177,6 +177,6 @@ spec:
     name: osp-director-operator
   - image: registry.redhat.io/rhel8/httpd-24:latest
     name: apache
-  - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+  - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
     name: kube-rbac-proxy
   version: 0.0.0
