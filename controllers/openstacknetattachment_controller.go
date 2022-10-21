@@ -38,7 +38,7 @@ import (
 
 	"github.com/go-logr/logr"
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -301,7 +301,7 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNetAttachment{}).
-		Watches(&source.Kind{Type: &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}}, ownerLabelWatcher).
+		Watches(&source.Kind{Type: &nmstatev1.NodeNetworkConfigurationPolicy{}}, ownerLabelWatcher).
 		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}}, ownerLabelWatcher).
 		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}}, ownerLabelWatcher).
 		Complete(r)
@@ -326,7 +326,7 @@ func (r *OpenStackNetAttachmentReconciler) createOrUpdateNodeNetworkConfiguratio
 		return err
 	}
 
-	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	networkConfigurationPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 	networkConfigurationPolicy.Name = bridgeName
 
 	// set bridgeName to instance status to be able to consume information from there
@@ -382,7 +382,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *shared.Condition,
 ) error {
-	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	networkConfigurationPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
@@ -425,7 +425,7 @@ func (r *OpenStackNetAttachmentReconciler) cleanupNodeNetworkConfigurationPolicy
 	instance *ospdirectorv1beta1.OpenStackNetAttachment,
 	cond *shared.Condition,
 ) (ctrl.Result, error) {
-	networkConfigurationPolicy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	networkConfigurationPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil && !k8s_errors.IsNotFound(err) {
