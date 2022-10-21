@@ -35,7 +35,7 @@ import (
 
 	//cni "github.com/containernetworking/cni/pkg/types"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	virtv1 "kubevirt.io/api/core/v1"
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
@@ -77,7 +77,7 @@ func init() {
 	utilruntime.Must(ospdirectorv1beta2.AddToScheme(scheme))
 	//utilruntime.Must(templatev1.AddToScheme(scheme))
 	utilruntime.Must(virtv1.AddToScheme(scheme))
-	utilruntime.Must(nmstate.AddToScheme(scheme))
+	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(networkv1.AddToScheme(scheme))
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
 	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
