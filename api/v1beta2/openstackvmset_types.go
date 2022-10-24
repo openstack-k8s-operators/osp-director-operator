@@ -146,7 +146,7 @@ type Host struct {
 func (instance *OpenStackVMSet) IsReady() bool {
 	cond := instance.Status.Conditions.InitCondition()
 
-	return cond.Reason == shared.VMSetCondReasonProvisioned || cond.Reason == shared.VMSetCondReasonVirtualMachineCountZero
+	return cond.Reason == shared.VMSetCondReasonVirtualMachineProvisioned || cond.Reason == shared.VMSetCondReasonVirtualMachineCountZero
 }
 
 // +kubebuilder:object:root=true
