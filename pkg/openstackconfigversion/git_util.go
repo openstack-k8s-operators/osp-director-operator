@@ -206,13 +206,13 @@ func SyncGit(
 				if err != nil {
 					return nil, err
 				}
-				//fmt.Println(buffer.String())
+				diff := truncateDiff(buffer.String(), log)
 				configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      m1.Split(ref.Name().String(), -1)[2],
 						Namespace: inst.Namespace,
 					},
-					Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: buffer.String(), ConfigGeneratorName: inst.Name}}
+					Spec: ospdirectorv1beta1.OpenStackConfigVersionSpec{Hash: m1.Split(ref.Name().String(), -1)[2], Diff: diff, ConfigGeneratorName: inst.Name}}
 			} else {
 				configVersion = ospdirectorv1beta1.OpenStackConfigVersion{
 					ObjectMeta: metav1.ObjectMeta{
@@ -227,4 +227,13 @@ func SyncGit(
 	}
 
 	return configVersions, nil
+}
+
+// truncateDiff  truncate the diff size to less than 512KB
+func truncateDiff(diff string, log logr.Logger) string {
+	if len(diff) > 524800 {
+		log.Info(fmt.Sprintf("Git diff was truncated to 512KB.\n %s", diff[:524800]))
+		return diff[:524800]
+	}
+	return diff
 }
