@@ -16,7 +16,11 @@ limitations under the License.
 
 package common
 
-import "sort"
+import (
+	"fmt"
+	"reflect"
+	"sort"
+)
 
 // MergeMaps - merge two or more maps
 func MergeMaps(baseMap map[string]interface{}, extraMaps ...map[string]interface{}) map[string]interface{} {
@@ -56,4 +60,62 @@ func SortMapByValue(in map[string]string) List {
 	sort.Sort(sorted)
 
 	return sorted
+}
+
+// IsInterfaceMap - check if type interface{} is a map
+func IsInterfaceMap(v interface{}) bool {
+	return reflect.TypeOf(v).Kind() == reflect.Map
+}
+
+// RecursiveMergeMaps recursively merges the src into dst maps.
+func RecursiveMergeMaps(
+	dst, src map[string]interface{},
+	maxDepth int) (map[string]interface{},
+	error,
+) {
+	return recursiveMerge(dst, src, 0, maxDepth)
+}
+
+func recursiveMerge(
+	dst, src map[string]interface{},
+	depth int,
+	maxDepth int,
+) (map[string]interface{}, error) {
+	if depth > maxDepth {
+		return dst, fmt.Errorf("reached max depth of %d", maxDepth)
+	}
+	for key, srcVal := range src {
+		if dstVal, ok := dst[key]; !ok {
+			srcMap, srcMapOk := convertMap(srcVal)
+			dstMap, _ := convertMap(dstVal)
+
+			if srcMapOk {
+				var err error
+				srcVal, err = recursiveMerge(dstMap, srcMap, depth+1, maxDepth)
+				if err != nil {
+					return dst, err
+				}
+			}
+		}
+		dst[key] = srcVal
+	}
+	return dst, nil
+}
+
+// if i is of type Map, converts to map[string]interface{}
+// else returns an empty map[string]interface{} and returns
+// the map and true of it was a conversion job.
+func convertMap(i interface{}) (map[string]interface{}, bool) {
+	value := reflect.ValueOf(i)
+	if value.Kind() == reflect.Map {
+		// convert map to map[string]interface{}
+		m := map[string]interface{}{}
+		for _, k := range value.MapKeys() {
+			m[fmt.Sprintf("%v", k)] = value.MapIndex(k).Interface()
+		}
+
+		return m, true
+	}
+
+	return map[string]interface{}{}, false
 }
