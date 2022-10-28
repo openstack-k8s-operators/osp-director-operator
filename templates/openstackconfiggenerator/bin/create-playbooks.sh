@@ -57,8 +57,12 @@ sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tm
 cp -a $HOME/config-tmp/* "$TEMPLATES_DIR/"
 
 pushd $TEMPLATES_DIR
-python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
+# Remove unused roles from roles_data.yaml as container image prepate skips roles with count=0 but
+# process-templates.py currently does not
+/home/cloud-admin/process-roles.py -r $TEMPLATES_DIR/roles_data.yaml -e rendered-tripleo-config.yaml
+
+python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLATES_DIR/network_data.yaml
 
 # NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
 if [ -e ./network/scripts/run-os-net-config.sh ]; then
