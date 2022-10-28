@@ -53,6 +53,12 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []co
 			ReadOnly:  true,
 		},
 		{
+			Name:      "openstackconfig-scripts",
+			MountPath: "/home/cloud-admin/process-roles.py",
+			SubPath:   "process-roles.py",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "git-ssh-config",
 			MountPath: "/mnt/ssh-config/git_id_rsa",
 			SubPath:   "git_id_rsa",
@@ -126,6 +132,10 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.
 						{
 							Key:  "process-heat-environment.py",
 							Path: "process-heat-environment.py",
+						},
+						{
+							Key:  "process-roles.py",
+							Path: "process-roles.py",
 						},
 					},
 				},
