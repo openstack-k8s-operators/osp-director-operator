@@ -87,14 +87,6 @@ spec:
                           description: The desired configuration of the policy
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
-                        maxUnavailable:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          description: MaxUnavailable specifies percentage or number
-                            of machines that can be updating at a time. Default is
-                            "50%".
-                          x-kubernetes-int-or-string: true
                         nodeSelector:
                           additionalProperties:
                             type: string

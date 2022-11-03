@@ -27,8 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	nmstate "github.com/openstack-k8s-operators/osp-director-operator/pkg/nmstate"
 )
@@ -126,7 +125,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 	osnetcfgName := osctlplane.GetLabels()[shared.OpenStackNetConfigReconcileLabel]
 
 	// 2) get all nncp with osnetcfg ref label ospdirectorv1beta1.OpenStackNetConfigReconcileLabel
-	nncpList := &nmstatev1.NodeNetworkConfigurationPolicyList{}
+	nncpList := &nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
 	listOpts := []client.ListOption{
 		client.MatchingLabels(
 			map[string]string{
@@ -158,7 +157,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 				} else if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionDegraded {
 
 					// get NNCE list to receive more details on why nncp is Degraded
-					nnceList := &nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+					nnceList := &nmstatev1alpha1.NodeNetworkConfigurationEnactmentList{}
 					listOpts := []client.ListOption{
 						client.MatchingLabels(
 							map[string]string{
@@ -172,7 +171,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 					}
 
 					var nnceError string
-					var nnce nmstatev1beta1.NodeNetworkConfigurationEnactment
+					var nnce nmstatev1alpha1.NodeNetworkConfigurationEnactment
 					for _, nnce = range nnceList.Items {
 						if nnce.Status.Conditions != nil && len(nnce.Status.Conditions) > 0 {
 							condition := nmstate.GetCurrentCondition(nnce.Status.Conditions)
