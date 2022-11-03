@@ -201,14 +201,19 @@ func allNodesToYaml(allNodesData string, filter bool) (string, error) {
 		return "", err
 	}
 
+	filteredAllNodesUnstructured := make(map[string]interface{})
 	if filter {
-		for _, val := range filteredAllNodesConfig {
-			delete(allNodesUnstructured, val)
+		for _, key := range filteredAllNodesConfig {
+			if val, exists := allNodesUnstructured[key]; exists {
+				filteredAllNodesUnstructured[key] = val
+			}
 		}
+	} else {
+		filteredAllNodesUnstructured = allNodesUnstructured
 	}
 
 	// convert to string
-	yamlStr, err := yaml.Marshal(allNodesUnstructured)
+	yamlStr, err := yaml.Marshal(filteredAllNodesUnstructured)
 
 	return string(yamlStr), err
 }
