@@ -31,7 +31,7 @@ require (
 	kubevirt.io/api v0.53.2
 	kubevirt.io/client-go v0.53.2
 	kubevirt.io/containerized-data-importer-api v1.47.0
-	sigs.k8s.io/controller-runtime v0.13.0
+	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/yaml v1.3.0
 )
 
