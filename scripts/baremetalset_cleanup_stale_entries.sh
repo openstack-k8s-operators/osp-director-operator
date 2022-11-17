@@ -1,16 +1,36 @@
 #!/bin/bash
 # USAGE: ./script.sh <ROLE name - case sensitive> <list of compute names to remove>
 #        e.g. ./script.sh Compute compute-2 compute-3
+set -eu -o pipefail
+
+function cleanup()
+{
+  #
+  # Stop the kube proxy
+  #
+  kill $PROXY_PID
+}
+
+function usage()
+{
+  echo "Usage: $0 <ROLE name - case sensitive> <list of compute names to remove>"
+  echo "  e.g. $0 Compute compute-2 compute-3"
+  exit 1
+}
+
+if [  $# -le 1 ]; then
+  usage
+fi
 
 ROLE=$1
 COMPUTES="${@:2}"
 
 if [ -z "$ROLE" ]; then
-  echo "Please pass the role name as first argument"; exit 1
+  usage
 fi
 
 if [ -z "$COMPUTES" ]; then
-      echo "Please pass list of compute names to remove"; exit 1
+  usage
 fi
 
 #
@@ -27,6 +47,7 @@ oc wait pod -l control-plane=controller-manager --for=delete -n openstack --time
 #
 oc proxy &
 PROXY_PID=$!
+trap cleanup EXIT
 
 #
 # Handle status updates
@@ -108,8 +129,3 @@ for COMPUTE in $COMPUTES; do
     fi
   done
 done
-
-#
-# Stop the kube proxy
-#
-kill $PROXY_PID
