@@ -20,17 +20,5 @@ commands:
   - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml
     namespaced: true
   # Create the OpenStackBaremetalSet from sample YAML
-  - command: oc apply -f ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml
-    namespaced: true
-  # Drop the OpenStackBaremetalSet BaremetalHost count to 0 in spec
-  - command: |
-      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":0}]'
-    namespaced: true
-  # Remove sample YAML's bmhLabelSelector from spec
-  - command: |
-      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "remove", "path": "/spec/bmhLabelSelector"}]'
-    namespaced: true
-  # Remove sample YAML's hardwareReqs from spec
-  - command: |
-      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "remove", "path": "/spec/hardwareReqs"}]'
-    namespaced: true
+  - script: |
+      sed '/^\s\s#\sArbitrary/,$ d' ../../../../config/samples/osp-director_v1beta1_openstackbaremetalset.yaml | sed 's/count: 1/count: 0/' | oc apply -n openstack -f -

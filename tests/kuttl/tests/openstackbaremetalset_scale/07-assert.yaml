@@ -46,11 +46,12 @@ status:
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 namespaced: true
-timeout: 180
+timeout: 300
 commands:
   - script: |
       set -x
-      readyState=$(oc get bmh -n openshift-machine-api -o json | jq -r '.items[] | select(.status.provisioning.state=="ready") | .status.provisioning.state' | wc -l)
+      sleep 5
+      readyState=$(oc get bmh -n openshift-machine-api -o json | jq -r '.items[] | select(.status.provisioning.state=="available") | .status.provisioning.state' | wc -l)
       if [ $readyState -eq 1 ]; then
           exit 0
       else
