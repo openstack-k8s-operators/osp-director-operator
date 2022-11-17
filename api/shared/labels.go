@@ -32,4 +32,10 @@ const (
 	// OpenStackNetConfigReconcileLabel - label set on objects on which change
 	// trigger a reconcile of the osnetconfig
 	OpenStackNetConfigReconcileLabel = "osnetconfig-ref"
+	// OpenStackBaremetalSetAppLabel -
+	OpenStackBaremetalSetAppLabel = "osp-baremetalset"
+	// OwnerControllerNameLabelSelector -
+	OwnerControllerNameLabelSelector string = "osp-director.openstack.org/controller"
+	// OwnerUIDLabelSelector -
+	OwnerUIDLabelSelector string = "osp-director.openstack.org/uid"
 )
