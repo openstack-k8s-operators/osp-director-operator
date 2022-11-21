@@ -1396,7 +1396,7 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
 	// Get list of OSP hostnames from HostRemovalAnnotation annotated VMs
 	for _, vm := range vmHostList.Items {
 
-		if val, ok := vm.Annotations[common.HostRemovalAnnotation]; ok &&
+		if val, ok := vm.Annotations[shared.HostRemovalAnnotation]; ok &&
 			(strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 			ospHostname := vm.Spec.Template.Spec.Hostname
 			annotatedVMs = append(annotatedVMs, ospHostname)
@@ -1481,7 +1481,7 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 	for _, virtualMachine := range virtualMachineList.Items {
 		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
 
-		if val, ok := virtualMachine.Annotations[common.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
+		if val, ok := virtualMachine.Annotations[shared.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)
 		}
 	}
