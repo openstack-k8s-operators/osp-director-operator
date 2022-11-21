@@ -22,8 +22,10 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	"fmt"
 
+	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,6 +78,23 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 		return err
 	}
 
+	//
+	// Validate that there are enough available BMHs for the initial requested count
+	//
+	baremetalHostsList, err := GetBmhHosts(
+		context.TODO(),
+		webhookClient,
+		"openshift-machine-api",
+		r.Spec.BmhLabelSelector,
+	)
+	if err != nil {
+		return err
+	}
+
+	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, &metal3v1alpha1.BareMetalHostList{}); err != nil {
+		return err
+	}
+
 	return r.validateCr()
 }
 
@@ -88,6 +107,64 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 	//
 	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
 		return err
+	}
+
+	var ok bool
+	var oldInstance *OpenStackBaremetalSet
+
+	if oldInstance, ok = old.(*OpenStackBaremetalSet); !ok {
+		return fmt.Errorf("runtime object is not an OpenStackBaremetalSet")
+	}
+
+	//
+	// Validate that there are enough available BMHs for a potential scale-up or scale-down
+	//
+	if r.Spec.Count > oldInstance.Spec.Count {
+		baremetalHostsList, err := GetBmhHosts(
+			context.TODO(),
+			webhookClient,
+			"openshift-machine-api",
+			r.Spec.BmhLabelSelector,
+		)
+		if err != nil {
+			return err
+		}
+
+		existingBaremetalHosts, err := GetBmhHosts(
+			context.TODO(),
+			webhookClient,
+			"openshift-machine-api",
+			map[string]string{
+				shared.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
+				shared.OwnerUIDLabelSelector:            string(r.GetUID()),
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, existingBaremetalHosts); err != nil {
+			return err
+		}
+	} else if r.Spec.Count < oldInstance.Spec.Count {
+		existingBaremetalHosts, err := GetBmhHosts(
+			context.TODO(),
+			webhookClient,
+			"openshift-machine-api",
+			map[string]string{
+				shared.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
+				shared.OwnerUIDLabelSelector:            string(r.GetUID()),
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		annotatedBaremetalHosts := getDeletionAnnotatedBmhHosts(existingBaremetalHosts)
+
+		if err := VerifyBaremetalSetScaleDown(baremetalsetlog, r, existingBaremetalHosts, len(annotatedBaremetalHosts)); err != nil {
+			return err
+		}
 	}
 
 	return r.validateCr()
