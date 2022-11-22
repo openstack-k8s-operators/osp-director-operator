@@ -317,6 +317,31 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	//
+	// Check if any BMHs that this CR is using (i.e. that is present as a hostRef in
+	// the CR's Status.BaremetalHosts map) were inappropriately (manually) deleted.
+	// If so, we cannot proceed further as we will risk placing the CR into an
+	// inconsistent state and/or introducing unbounded reconciliation thrashing.
+	//
+	err = ospdirectorv1beta1.VerifyBaremetalStatusHostRefs(
+		ctx,
+		r.GetClient(),
+		instance,
+	)
+	if err != nil {
+		cond.Message = err.Error()
+		cond.Reason = shared.BaremetalSetCondReasonBaremetalHostNotFound
+		cond.Type = shared.BaremetalSetCondTypeError
+
+		common.LogForObject(
+			r,
+			cond.Message,
+			instance,
+		)
+
+		return ctrl.Result{}, err
+	}
+
+	//
 	// check/update instance status for annotated for deletion marged BMHs
 	//
 	deletionAnnotatedBMHs, err := r.checkBMHsAnnotatedForDeletion(
@@ -616,21 +641,9 @@ func (r *OpenStackBaremetalSetReconciler) doBMHDelete(
 ) ([]string, error) {
 	deletedHosts := []string{}
 
-	// Get all openshift-machine-api BaremetalHosts
-	baremetalHostsList, err := ospdirectorv1beta1.GetBmhHosts(
-		ctx,
-		r.GetClient(),
-		"openshift-machine-api",
-		map[string]string{
-			common.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
-			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
-		},
-	)
+	// Get BaremetalHosts that this instance is currently using
+	baremetalHostsList, err := r.getExistingBaremetalHosts(ctx, instance, cond)
 	if err != nil {
-		cond.Message = "Failed to get list of all BareMetalHost(s)"
-		cond.Reason = shared.BaremetalHostCondReasonListError
-		cond.Type = shared.BaremetalSetCondTypeError
-
 		return deletedHosts, err
 	}
 
@@ -732,20 +745,8 @@ func (r *OpenStackBaremetalSetReconciler) ensureBaremetalHosts(
 	}
 
 	// Get all existing BaremetalHosts of this CR
-	existingBaremetalHosts, err := ospdirectorv1beta1.GetBmhHosts(
-		ctx,
-		r.GetClient(),
-		"openshift-machine-api",
-		map[string]string{
-			common.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
-			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
-		},
-	)
+	existingBaremetalHosts, err := r.getExistingBaremetalHosts(ctx, instance, cond)
 	if err != nil {
-		cond.Message = "Failed to get list of all existing BareMetalHost(s)"
-		cond.Reason = shared.BaremetalHostCondReasonListError
-		cond.Type = shared.BaremetalSetCondTypeError
-
 		return err
 	}
 
@@ -1321,4 +1322,29 @@ func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 	}
 
 	return deletionAnnotatedBMHs, nil
+}
+
+func (r *OpenStackBaremetalSetReconciler) getExistingBaremetalHosts(
+	ctx context.Context,
+	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
+	cond *shared.Condition,
+) (*metal3v1alpha1.BareMetalHostList, error) {
+	baremetalHostsList, err := ospdirectorv1beta1.GetBmhHosts(
+		ctx,
+		r.GetClient(),
+		"openshift-machine-api",
+		map[string]string{
+			common.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
+			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+		},
+	)
+	if err != nil {
+		cond.Message = "Failed to get list of all BareMetalHost(s)"
+		cond.Reason = shared.BaremetalHostCondReasonListError
+		cond.Type = shared.BaremetalSetCondTypeError
+
+		return nil, err
+	}
+
+	return baremetalHostsList, nil
 }

@@ -19,14 +19,14 @@ oc delete openstackprovisionserver --all -n openstack
 # can cause the BMH to become stuck in its current state without manual intervention.
 echo "Waiting for all Metal3 BMHs to settle..."
 while true; do
-    found="false"
-    for i in $(oc get bmh -A | grep -v STATE | awk {'print $3'}); do
-        if [ "$i" == "provisioning" ] || [ "$i" == "deprovisioning" ]; then
-            found="true"
+    ready="true"
+    for i in $(oc get bmh -A | grep -v STATE | grep -v unmanaged | awk {'print $3'}); do
+        if [ "$i" != "available" ] && [ "$i" != "ready" ]; then
+            ready="false"
         fi
     done
 
-    if [ "$found" = "false" ]; then
+    if [ "$ready" = "true" ]; then
         break
     fi
 
@@ -45,4 +45,4 @@ oc patch provisioning provisioning-configuration --type='json' -p='[{"op": "repl
 oc scale deployment metal3 -n openshift-machine-api --replicas=0
 
 # Free any dead PVs
-for i in $(oc get pv | egrep "Failed|Released" | awk {'print $1'}); do oc patch pv $i --type='json' -p='[{"op": "remove", "path": "/spec/claimRef"}]'; done
+for i in $(oc get pv | grep -E "Failed|Released" | awk {'print $1'}); do oc patch pv "$i" --type='json' -p='[{"op": "remove", "path": "/spec/claimRef"}]'; done

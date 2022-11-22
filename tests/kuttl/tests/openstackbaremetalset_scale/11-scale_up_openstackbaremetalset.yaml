@@ -1,0 +1,18 @@
+#
+# - Scale OpenStackBaremetalSet to 3 BaremetalHosts (should fail because a BMH is missing that is
+#   listed as a hostRef in the OpenStackBaremetalSet's "status.baremetalHosts", which will cause
+#   validating webhook to block "spec.count" changes)
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc annotate bmh openshift-worker-1 osp-director.openstack.org/delete-host- -n openshift-machine-api --overwrite
+    namespaced: true
+  - script: |
+      RES=$(oc patch -n openstack openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":3}]' 2>&1)
+      if grep -q "Please check BaremetalHost resources and re-add" <<< "$RES"; then
+        exit 0
+      else
+        exit 1
+      fi

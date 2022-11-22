@@ -46,7 +46,7 @@ status:
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 namespaced: true
-timeout: 300
+timeout: 600
 commands:
   - script: |
       set -x

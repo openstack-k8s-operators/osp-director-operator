@@ -1,0 +1,119 @@
+#
+# Check for:
+#
+# - 1 OpenStackBaremetalSet
+# - 2 BaremetalHosts
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 1200
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackBaremetalSet
+metadata:
+  finalizers:
+  - baremetalset.osp-director.openstack.org-compute
+  name: compute
+  namespace: openstack
+spec:
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  count: 2
+  ctlplaneInterface: enp1s0
+  deploymentSSHSecret: osp-controlplane-ssh-keys
+  networks:
+  - ctlplane
+  - internal_api
+  - tenant
+  passwordSecret: userpassword
+  roleName: Compute
+status:
+  baremetalHosts:
+    compute-0:
+      annotatedForDeletion: false
+      ctlplaneIP: 172.22.0.140/24
+      hostname: compute-0
+      provisioningState: provisioned
+    compute-1:
+      annotatedForDeletion: false
+      ctlplaneIP: 172.22.0.100/24
+      hostname: compute-1
+      provisioningState: provisioned
+  provisioningStatus:
+    readyCount: 2
+    reason: All requested BaremetalHosts have been provisioned
+    state: Provisioned
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  finalizers:
+  - baremetalhost.metal3.io
+  labels:
+    osp-director.openstack.org/controller: osp-baremetalset
+    osp-director.openstack.org/name: compute
+    osp-director.openstack.org/namespace: openstack
+    osp-director.openstack.org/osphostname: compute-0
+  namespace: openshift-machine-api
+spec:
+  bootMode: legacy
+  consumerRef:
+    kind: OpenStackBaremetalSet
+    name: compute
+    namespace: openstack
+  hardwareProfile: unknown
+  networkData:
+    namespace: openshift-machine-api
+  online: true
+  rootDeviceHints:
+    deviceName: /dev/sda
+  userData:
+    namespace: openshift-machine-api
+status:
+  errorCount: 0
+  errorMessage: ""
+  hardwareProfile: unknown
+  operationalStatus: OK
+  poweredOn: true
+  provisioning:
+    bootMode: legacy
+    rootDeviceHints:
+      deviceName: /dev/sda
+    state: provisioned
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  finalizers:
+  - baremetalhost.metal3.io
+  labels:
+    osp-director.openstack.org/controller: osp-baremetalset
+    osp-director.openstack.org/name: compute
+    osp-director.openstack.org/namespace: openstack
+    osp-director.openstack.org/osphostname: compute-1
+  namespace: openshift-machine-api
+spec:
+  bootMode: legacy
+  consumerRef:
+    kind: OpenStackBaremetalSet
+    name: compute
+    namespace: openstack
+  hardwareProfile: unknown
+  networkData:
+    namespace: openshift-machine-api
+  online: true
+  rootDeviceHints:
+    deviceName: /dev/sda
+  userData:
+    namespace: openshift-machine-api
+status:
+  errorCount: 0
+  errorMessage: ""
+  hardwareProfile: unknown
+  operationalStatus: OK
+  poweredOn: true
+  provisioning:
+    bootMode: legacy
+    rootDeviceHints:
+      deviceName: /dev/sda
+    state: provisioned

@@ -1,0 +1,151 @@
+#
+# Check for:
+#
+# - 2 OpenStackNets
+# - 1 OpenStackMACAddress
+#
+
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: ctlplane
+  namespace: openstack
+spec:
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.22.0.110
+        serviceVIP: false
+        vip: true
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 172.22.0.251
+        serviceVIP: false
+        vip: false
+status:
+  conditions:
+  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservations:
+    compute-0:
+      deleted: false
+      ip: 172.22.0.140
+    compute-1:
+      deleted: false
+      ip: 172.22.0.100
+    controlplane:
+      deleted: false
+      ip: 172.22.0.110
+    openstackclient-0:
+      deleted: false
+      ip: 172.22.0.251
+  reservedIpCount: 4
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: internalapi
+  namespace: openstack
+spec:
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: false
+        hostname: controlplane
+        ip: 172.17.0.10
+        serviceVIP: false
+        vip: true
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: false
+        hostname: openstackclient-0
+        ip: 172.17.0.251
+        serviceVIP: false
+        vip: false
+status:
+  conditions:
+  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservations:
+    compute-0:
+      deleted: false
+      ip: 172.17.0.40
+    compute-1:
+      deleted: false
+      ip: 172.17.0.11
+    controlplane:
+      deleted: false
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: false
+      ip: 172.17.0.251
+  reservedIpCount: 4
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackNet
+metadata:
+  finalizers:
+  - openstacknet.osp-director.openstack.org
+  name: tenant
+  namespace: openstack
+spec:
+  roleReservations: {}
+status:
+  conditions:
+  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
+    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
+    status: "True"
+    type: Configured
+  currentState: Configured
+  reservations:
+    compute-0:
+      deleted: false
+      ip: 172.20.0.40
+    compute-1:
+      deleted: false
+      ip: 172.20.0.10
+  reservedIpCount: 2
+---
+apiVersion: osp-director.openstack.org/v1beta1
+kind: OpenStackMACAddress
+metadata:
+  finalizers:
+  - openstackmacaddress.osp-director.openstack.org
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  physNetworks:
+  - macPrefix: fa:16:3a
+    name: datacentre
+  - macPrefix: fa:16:3b
+    name: datacentre2
+  roleReservations:
+    Controller:
+      reservations: {}
+status:
+  conditions:
+  - message: All MAC addresses created
+    reason: MACAddressesCreated
+    status: "True"
+    type: Created
+  currentState: Created
+  macReservations: {}
+  reservedMACCount: 0

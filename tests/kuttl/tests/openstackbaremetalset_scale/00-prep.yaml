@@ -1,1 +1,12 @@
-../../common/tests/00-prep.yaml
+#
+# Attempt to "clear the field" if necessary
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      # Add any missing BMH that might have been deleted by another failed run of this test
+      ../../common/scripts/add_bmh.sh
+  - script: ../../common/scripts/prep.sh
+    timeout: 600
