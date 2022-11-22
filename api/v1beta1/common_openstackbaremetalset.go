@@ -70,6 +70,48 @@ func getDeletionAnnotatedBmhHosts(
 	return annotatedBMHs
 }
 
+// VerifyBaremetalStatusHostRefs - Verify that BMHs haven't been improperly deleted
+// outside of our prescribed annotate-and-scale-count-down method.  If bad deletions
+// have occurred, we return an error to halt further reconciliation that could lead
+// to an inconsistent state for instance.Status.BaremetalHosts.
+func VerifyBaremetalStatusHostRefs(
+	ctx context.Context,
+	c client.Client,
+	instance *OpenStackBaremetalSet,
+) error {
+	// Get all BaremetalHosts
+	allBaremetalHosts, err := GetBmhHosts(
+		ctx,
+		c,
+		"openshift-machine-api",
+		map[string]string{},
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, bmhStatus := range instance.Status.BaremetalHosts {
+		found := false
+
+		for _, bmh := range allBaremetalHosts.Items {
+			if bmh.Name == bmhStatus.HostRef {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OsBaremetalSet %s.  "+
+				"Please check BaremetalHost resources and re-add \"%s\" to continue",
+				bmhStatus.HostRef, instance.Name, bmhStatus.HostRef)
+
+			return err
+		}
+	}
+
+	return nil
+}
+
 // VerifyBaremetalSetScaleUp -
 func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet, allBmhs *metal3v1alpha1.BareMetalHostList, existingBmhs *metal3v1alpha1.BareMetalHostList) ([]string, error) {
 	// How many new BaremetalHost allocations do we need (if any)?
