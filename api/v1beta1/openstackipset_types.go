@@ -59,9 +59,9 @@ type OpenStackIPSetSpec struct {
 
 // OpenStackIPSetStatus defines the observed state of OpenStackIPSet
 type OpenStackIPSetStatus struct {
-	Hosts    map[string]HostStatus `json:"hosts,omitempty"`
-	Reserved int                   `json:"reserved,omitempty"`
-	Networks int                   `json:"networks,omitempty"`
+	Hosts    map[string]IPStatus `json:"hosts,omitempty"`
+	Reserved int                 `json:"reserved,omitempty"`
+	Networks int                 `json:"networks,omitempty"`
 
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`

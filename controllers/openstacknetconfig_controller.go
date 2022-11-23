@@ -898,6 +898,14 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 	for _, ipSet := range ipSetCreateMACList {
 		roleMACReservation := map[string]ospdirectorv1beta1.OpenStackMACNodeReservation{}
 
+		// get current BMSet reservations corresbonding to the IPSet
+		bmSetReservations := map[string]ospdirectorv1beta1.HostStatus{}
+		for _, bmSet := range bmSetList.Items {
+			if ipSet.Labels[common.OwnerUIDLabelSelector] == string(bmSet.GetUID()) {
+				bmSetReservations = bmSet.Status.BaremetalHosts
+			}
+		}
+
 		for _, host := range ipSet.Status.Hosts {
 
 			roleMACReservation[host.Hostname], err = r.ensureMACReservation(
@@ -907,7 +915,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 				macAddress.Spec.RoleReservations,
 				ipSet.Spec.RoleName,
 				host.Hostname,
-				host.AnnotatedForDeletion,
+				bmSetReservations[host.Hostname].AnnotatedForDeletion,
 			)
 			if err != nil {
 				return macAddress, err

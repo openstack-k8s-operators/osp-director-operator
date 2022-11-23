@@ -22,7 +22,7 @@ func WaitOnIPsCreated(
 	osnetcfg *ospdirectorv1beta1.OpenStackNetConfig,
 	networks []string,
 	hostname string,
-	hostStatus *ospdirectorv1beta1.HostStatus,
+	hostStatus *ospdirectorv1beta1.IPStatus,
 ) error {
 	//
 	// verify that we have the host entry on the status of the osnetcfg object

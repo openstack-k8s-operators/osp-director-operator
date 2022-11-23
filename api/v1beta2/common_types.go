@@ -29,16 +29,25 @@ type Hash struct {
 	Hash string `json:"hash,omitempty"`
 }
 
-// HostStatus represents the hostname and IP info for a specific host
-type HostStatus struct {
-	Hostname          string                   `json:"hostname"`
-	ProvisioningState shared.ProvisioningState `json:"provisioningState"`
+// IPStatus represents the hostname and IP info for a specific host
+type IPStatus struct {
+	Hostname string `json:"hostname"`
 
 	// +kubebuilder:default=unassigned
 	HostRef string `json:"hostRef"`
 
 	// +kubebuilder:validation:Optional
 	IPAddresses map[string]string `json:"ipaddresses"`
+}
+
+// HostStatus represents the hostname and IP info for a specific host
+type HostStatus struct {
+
+	// +kubebuilder:validation:Required
+	// IPStatus -
+	IPStatus `json:",inline"`
+
+	ProvisioningState shared.ProvisioningState `json:"provisioningState"`
 
 	// +kubebuilder:default=false
 	// Host annotated for deletion
@@ -46,7 +55,6 @@ type HostStatus struct {
 
 	UserDataSecretName    string `json:"userDataSecretName"`
 	NetworkDataSecretName string `json:"networkDataSecretName"`
-	CtlplaneIP            string `json:"ctlplaneIP"`
 }
 
 //
@@ -55,11 +63,13 @@ type HostStatus struct {
 func SyncIPsetStatus(
 	cond *shared.Condition,
 	instanceStatus map[string]HostStatus,
-	ipsetHostStatus ospdirectorv1beta1.HostStatus,
+	ipsetHostStatus ospdirectorv1beta1.IPStatus,
 ) HostStatus {
 	var hostStatus HostStatus
 	if _, ok := instanceStatus[ipsetHostStatus.Hostname]; !ok {
-		hostStatus = HostStatus(ipsetHostStatus)
+		hostStatus.Hostname = ipsetHostStatus.Hostname
+		hostStatus.HostRef = ipsetHostStatus.HostRef
+		hostStatus.IPAddresses = ipsetHostStatus.IPAddresses
 	} else {
 		// Note:
 		// do not sync all information as other controllers are
@@ -67,11 +77,7 @@ func SyncIPsetStatus(
 		// - BMH <-> hostname mapping
 		// - create of networkDataSecretName and userDataSecretName
 		hostStatus = instanceStatus[ipsetHostStatus.Hostname]
-		hostStatus.AnnotatedForDeletion = ipsetHostStatus.AnnotatedForDeletion
-		// TODO: (mschuppert) remove CtlplaneIP where used (osbms) and replace with hostStatus.IPAddresses[<ctlplane>]
-		hostStatus.CtlplaneIP = ipsetHostStatus.CtlplaneIP
 		hostStatus.IPAddresses = ipsetHostStatus.IPAddresses
-		hostStatus.ProvisioningState = ipsetHostStatus.ProvisioningState
 
 		if ipsetHostStatus.HostRef != shared.HostRefInitState {
 			hostStatus.HostRef = ipsetHostStatus.HostRef
