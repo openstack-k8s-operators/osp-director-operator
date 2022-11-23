@@ -15,7 +15,7 @@ commands:
       oc patch openstackcontrolplane overcloud --type='json' -p='[{"op": "replace", "path": "/spec/virtualMachineRoles/controller/roleCount", "value":1}]'
     namespaced: true
   - command: |
-      sleep 20
+      sleep 40
   - script: |
       # Remove bindings of PV's in Released state
       for i in $(oc get pv | egrep "Failed|Released" | awk {'print $1'}); do
