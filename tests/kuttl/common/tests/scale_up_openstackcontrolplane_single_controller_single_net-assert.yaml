@@ -68,6 +68,10 @@ status:
   conditions:
   - status: "True"
     type: Ready
+  - status: "True"
+    type: LiveMigratable
+  - status: "True"
+    type: AgentConnected
   created: true
   ready: true
 ---
