@@ -1060,7 +1060,6 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	//
 	bmhStatus.UserDataSecretName = userDataSecretName
 	bmhStatus.NetworkDataSecretName = networkDataSecretName
-	bmhStatus.CtlplaneIP = ipCidr
 	bmhStatus.ProvisioningState = shared.ProvisioningState(foundBaremetalHost.Status.Provisioning.State)
 
 	actualBMHStatus := instance.Status.BaremetalHosts[bmhStatus.Hostname]
