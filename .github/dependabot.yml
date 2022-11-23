@@ -6,3 +6,10 @@ updates:
     interval: "daily"
   ignore:
     - dependency-name: "github.com/coreos/ignition"
+- package-ecosystem: "gomod"
+  directory: "/"
+  schedule:
+    interval: "daily"
+  target-branch: "v1.3.x"
+  ignore:
+    - dependency-name: "github.com/coreos/ignition"
