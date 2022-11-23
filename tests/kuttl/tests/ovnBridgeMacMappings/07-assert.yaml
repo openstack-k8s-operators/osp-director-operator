@@ -201,7 +201,6 @@ status:
   vmHosts:
     controller-2:
       annotatedForDeletion: false
-      ctlplaneIP: ""
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:
