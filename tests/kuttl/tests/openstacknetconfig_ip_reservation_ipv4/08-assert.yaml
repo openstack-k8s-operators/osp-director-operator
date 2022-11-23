@@ -117,7 +117,6 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
