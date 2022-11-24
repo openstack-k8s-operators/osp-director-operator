@@ -1,8 +1,17 @@
 #!/bin/bash
+set -eu -o pipefail
 
 #
 # Common script for use at the start of tests to clear pre-existing objects
 #
+
+for cmd in oc virtctl; do
+  if ! ${cmd} --help &> /dev/null
+  then
+    echo "${cmd} could not be found"
+    exit 1
+  fi
+done
 
 oc delete openstackbackuprequest --all -n openstack
 oc delete openstackbackup --all -n openstack

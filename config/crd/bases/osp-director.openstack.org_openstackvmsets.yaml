@@ -215,15 +215,13 @@ spec:
                 type: object
               vmHosts:
                 additionalProperties:
-                  description: HostStatus represents the hostname and IP info for
-                    a specific host
+                  description: HostStatus represents the IPStatus and provisioning
+                    state + deployment information
                   properties:
                     annotatedForDeletion:
                       default: false
                       description: Host annotated for deletion
                       type: boolean
-                    ctlplaneIP:
-                      type: string
                     hostRef:
                       default: unassigned
                       type: string
@@ -243,7 +241,6 @@ spec:
                       type: string
                   required:
                   - annotatedForDeletion
-                  - ctlplaneIP
                   - hostRef
                   - hostname
                   - networkDataSecretName
@@ -574,8 +571,6 @@ spec:
                       default: false
                       description: Host annotated for deletion
                       type: boolean
-                    ctlplaneIP:
-                      type: string
                     hostRef:
                       default: unassigned
                       type: string
@@ -595,7 +590,6 @@ spec:
                       type: string
                   required:
                   - annotatedForDeletion
-                  - ctlplaneIP
                   - hostRef
                   - hostname
                   - networkDataSecretName
