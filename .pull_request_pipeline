@@ -12,7 +12,7 @@ pipeline {
                         build job: 'DFG-ospk8s-osp-director-operator-distgit-pr',
                                   parameters: [
                                       string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
-                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'master')
+                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'v1.3.x')
                                   ]
                     }
                 }
@@ -22,7 +22,7 @@ pipeline {
                         build job: 'DFG-ospk8s-osp-director-operator-buildah',
                                   parameters: [
                                       string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID)),
-                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'master')
+                                      string(name: 'GIT_OPERATOR_BRANCH', value: 'v1.3.x')
                                   ]
                     }
                 }
