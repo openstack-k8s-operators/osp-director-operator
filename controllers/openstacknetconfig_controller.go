@@ -715,7 +715,6 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 
 	for _, roleNetStatus := range osNet.Spec.RoleReservations {
 		for _, roleReservation := range roleNetStatus.Reservations {
-
 			//
 			// Add net status to netcfg status if reservation exist in spec
 			// and host is not deleted
@@ -1002,23 +1001,23 @@ func (r *OpenStackNetConfigReconciler) getMACStatus(
 ) {
 
 	for hostname, reservation := range macAddress.Status.MACReservations {
-		hostStatus := ospdirectorv1beta1.OpenStackHostStatus{}
-		if _, ok := instance.Status.Hosts[hostname]; ok {
-			hostStatus = instance.Status.Hosts[hostname]
-		}
-
-		if hostStatus.IPAddresses == nil {
-			hostStatus.IPAddresses = map[string]string{}
-		}
-		if hostStatus.OVNBridgeMacAdresses == nil {
-			hostStatus.OVNBridgeMacAdresses = map[string]string{}
-		}
-
 		if !reservation.Deleted {
-			hostStatus.OVNBridgeMacAdresses = reservation.Reservations
-		}
+			hostStatus := ospdirectorv1beta1.OpenStackHostStatus{}
+			if _, ok := instance.Status.Hosts[hostname]; ok {
+				hostStatus = instance.Status.Hosts[hostname]
+			}
 
-		instance.Status.Hosts[hostname] = hostStatus
+			if hostStatus.IPAddresses == nil {
+				hostStatus.IPAddresses = map[string]string{}
+			}
+			if hostStatus.OVNBridgeMacAdresses == nil {
+				hostStatus.OVNBridgeMacAdresses = map[string]string{}
+			}
+
+			hostStatus.OVNBridgeMacAdresses = reservation.Reservations
+
+			instance.Status.Hosts[hostname] = hostStatus
+		}
 	}
 
 }
@@ -1252,11 +1251,22 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 	//
 	// cleanup reservations from osnet RoleReservations if
 	// * role is not in allRoles (ipset deleted)
-	// * and PreserveReservations is not set
+	// * and PreserveReservations is false
 	//
+	// if PreserveReservations is true, the reservations in the osnet just get flipped to deleted = true
 	for role := range osNet.Spec.RoleReservations {
-		if _, ok := allRoles[role]; !ok && !*instance.Spec.PreserveReservations {
-			delete(osNet.Spec.RoleReservations, role)
+		if _, ok := allRoles[role]; !ok {
+			if !*instance.Spec.PreserveReservations {
+				delete(osNet.Spec.RoleReservations, role)
+				continue
+			}
+
+			// if a role got fully deleted, mark all reservations in the osnet spec as deleted
+			for idx, reservation := range osNet.Spec.RoleReservations[role].Reservations {
+				reservation.Deleted = true
+				osNet.Spec.RoleReservations[role].Reservations[idx] = reservation
+			}
+
 		}
 	}
 
