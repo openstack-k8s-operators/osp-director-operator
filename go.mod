@@ -12,7 +12,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/golang/glog v1.0.0
 	github.com/google/uuid v1.3.0
-	github.com/gophercloud/gophercloud v1.0.0
+	github.com/gophercloud/gophercloud v1.1.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200626054723-37f83d1996bc
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20220105105621-0ee9ce37c7bc
 	github.com/nmstate/kubernetes-nmstate v0.60.0
@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
 	github.com/tidwall/gjson v1.14.4
-	golang.org/x/crypto v0.0.0-20220507011949-2cf3adece122
+	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v12.0.0+incompatible
