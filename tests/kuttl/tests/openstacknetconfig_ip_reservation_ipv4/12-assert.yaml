@@ -89,38 +89,9 @@ spec:
     - macPrefix: fa:16:3a
       name: datacentre
   preserveReservations: false
-  reservations:
-    controller-1:
-      ipReservations:
-        ctlplane: 172.22.0.121
-      macReservations: {}
-    controller-2:
-      ipReservations:
-        ctlplane: 172.22.0.122
-      macReservations: {}
-    controlplane:
-      ipReservations:
-        ctlplane: 172.22.0.110
-      macReservations: {}
-    openstackclient-0:
-      ipReservations:
-        ctlplane: 172.22.0.251
-      macReservations: {}
+  reservations: {}
 status:
-  hosts:
-    controller-2:
-      ipaddresses:
-        ctlplane: 172.22.0.122/24
-        internal_api: 172.17.0.11/24
-    controlplane:
-      ipaddresses:
-        ctlplane: 172.22.0.110/24
-        internal_api: 172.17.0.10/24
-      ovnBridgeMacAdresses: {}
-    openstackclient-0:
-      ipaddresses:
-        ctlplane: 172.22.0.251/24
-      ovnBridgeMacAdresses: {}
+  hosts: {}
   provisioningStatus:
     attachDesiredCount: 1
     attachReadyCount: 1
@@ -146,44 +117,14 @@ spec:
   mtu: 1500
   name: Control
   nameLower: ctlplane
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controlplane
-        ip: 172.22.0.110
-        vip: true
-    Controller:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controller-2
-        ip: 172.22.0.122
-        vip: false
-    OpenstackClientopenstackclient:
-      addToPredictableIPs: false
-      reservations:
-      - deleted: false
-        hostname: openstackclient-0
-        ip: 172.22.0.251
-        vip: false
+  roleReservations: {}
   routes: []
   vip: true
   vlan: 0
 status:
   currentState: Configured
-  reservations:
-    controller-2:
-      deleted: false
-      ip: 172.22.0.122
-    controlplane:
-      deleted: false
-      ip: 172.22.0.110
-    openstackclient-0:
-      deleted: false
-      ip: 172.22.0.251
-  reservedIpCount: 3
+  reservations: {}
+  reservedIpCount: 0
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -200,74 +141,11 @@ spec:
   mtu: 1500
   name: InternalApi
   nameLower: internal_api
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controlplane
-        ip: 172.17.0.10
-        vip: true
-    Controller:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controller-2
-        ip: 172.17.0.11
-        vip: false
+  roleReservations: {}
   routes: []
   vip: true
   vlan: 20
 status:
   currentState: Configured
-  reservations:
-    controller-2:
-      deleted: false
-      ip: 172.17.0.11
-    controlplane:
-      deleted: false
-      ip: 172.17.0.10
-  reservedIpCount: 2
----
-apiVersion: osp-director.openstack.org/v1beta2
-kind: OpenStackVMSet
-metadata:
-  name: controller
-  namespace: openstack
-spec:
-  cores: 6
-  ctlplaneInterface: enp2s0
-  deploymentSSHSecret: osp-controlplane-ssh-keys
-  isTripleoRole: true
-  memory: 20
-  networks:
-  - ctlplane
-  - internal_api
-  passwordSecret: userpassword
-  roleName: Controller
-  rootDisk:
-    baseImageVolumeName: controller-base-img
-    dedicatedIOThread: false
-    diskSize: 50
-    name: ""
-    storageAccessMode: ReadWriteMany
-    storageClass: host-nfs-storageclass
-    storageVolumeMode: Filesystem
-  vmCount: 1
-status:
-  baseImageDVReady: true
-  provisioningStatus:
-    readyCount: 1
-    reason: All requested VirtualMachines have been provisioned
-    state: Provisioned
-  vmHosts:
-    controller-2:
-      annotatedForDeletion: false
-      hostRef: controller-2
-      hostname: controller-2
-      ipaddresses:
-        ctlplane: 172.22.0.122/24
-        internal_api: 172.17.0.11/24
-      networkDataSecretName: controller-controller-2-networkdata
-      provisioningState: Provisioned
-      userDataSecretName: controller-cloudinit
+  reservations: {}
+  reservedIpCount: 0
