@@ -1,0 +1,11 @@
+#
+# Check for:
+#
+# - ControlPlane (should be removed)
+#
+
+apiVersion: osp-director.openstack.org/v1beta2
+kind: OpenStackControlPlane
+metadata:
+  name: overcloud
+  namespace: openstack

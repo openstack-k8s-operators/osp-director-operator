@@ -88,6 +88,7 @@ spec:
     physNetworks:
     - macPrefix: fa:16:3a
       name: datacentre
+  preserveReservations: false
   reservations:
     controller-1:
       ipReservations:
@@ -107,12 +108,6 @@ spec:
       macReservations: {}
 status:
   hosts:
-    controller-0:
-      ipaddresses: {}
-      ovnBridgeMacAdresses: {}
-    controller-1:
-      ipaddresses: {}
-      ovnBridgeMacAdresses: {}
     controller-2:
       ipaddresses:
         ctlplane: 172.22.0.122/24
