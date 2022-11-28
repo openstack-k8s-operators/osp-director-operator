@@ -13,11 +13,60 @@ metadata:
   name: ctlplane
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controlplane
+        ip: 172.22.0.110
+        serviceVIP: false
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 172.22.0.120
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 172.22.0.121
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 172.22.0.122
+        serviceVIP: false
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: true
+        hostname: openstackclient-0
+        ip: 172.22.0.251
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.22.0.120
+    controller-1:
+      deleted: true
+      ip: 172.22.0.121
+    controller-2:
+      deleted: true
+      ip: 172.22.0.122
+    controlplane:
+      deleted: true
+      ip: 172.22.0.110
+    openstackclient-0:
+      deleted: true
+      ip: 172.22.0.251
+  reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -27,11 +76,60 @@ metadata:
   name: external
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controlplane
+        ip: 10.0.0.10
+        serviceVIP: false
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 10.0.0.20
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 10.0.0.21
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 10.0.0.22
+        serviceVIP: false
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: true
+        hostname: openstackclient-0
+        ip: 10.0.0.251
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 10.0.0.20
+    controller-1:
+      deleted: true
+      ip: 10.0.0.21
+    controller-2:
+      deleted: true
+      ip: 10.0.0.22
+    controlplane:
+      deleted: true
+      ip: 10.0.0.10
+    openstackclient-0:
+      deleted: true
+      ip: 10.0.0.251
+  reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -41,11 +139,60 @@ metadata:
   name: internalapi
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controlplane
+        ip: 172.17.0.10
+        serviceVIP: false
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 172.17.0.20
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 172.17.0.21
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 172.17.0.22
+        serviceVIP: false
+        vip: false
+    OpenstackClientopenstackclient:
+      addToPredictableIPs: false
+      reservations:
+      - deleted: true
+        hostname: openstackclient-0
+        ip: 172.17.0.251
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.17.0.20
+    controller-1:
+      deleted: true
+      ip: 172.17.0.21
+    controller-2:
+      deleted: true
+      ip: 172.17.0.22
+    controlplane:
+      deleted: true
+      ip: 172.17.0.10
+    openstackclient-0:
+      deleted: true
+      ip: 172.17.0.251
+  reservedIpCount: 5
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -55,11 +202,49 @@ metadata:
   name: storage
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controlplane
+        ip: 172.18.0.10
+        serviceVIP: false
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 172.18.0.20
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 172.18.0.21
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 172.18.0.22
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.18.0.20
+    controller-1:
+      deleted: true
+      ip: 172.18.0.21
+    controller-2:
+      deleted: true
+      ip: 172.18.0.22
+    controlplane:
+      deleted: true
+      ip: 172.18.0.10
+  reservedIpCount: 4
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -69,11 +254,49 @@ metadata:
   name: storagemgmt
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    ControlPlane:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controlplane
+        ip: 172.19.0.10
+        serviceVIP: false
+        vip: true
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 172.19.0.20
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 172.19.0.21
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 172.19.0.22
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.19.0.20
+    controller-1:
+      deleted: true
+      ip: 172.19.0.21
+    controller-2:
+      deleted: true
+      ip: 172.19.0.22
+    controlplane:
+      deleted: true
+      ip: 172.19.0.10
+  reservedIpCount: 4
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
@@ -83,11 +306,38 @@ metadata:
   name: tenant
   namespace: openstack
 spec:
-  roleReservations: {}
+  roleReservations:
+    Controller:
+      addToPredictableIPs: true
+      reservations:
+      - deleted: true
+        hostname: controller-0
+        ip: 172.20.0.20
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-1
+        ip: 172.20.0.21
+        serviceVIP: false
+        vip: false
+      - deleted: true
+        hostname: controller-2
+        ip: 172.20.0.22
+        serviceVIP: false
+        vip: false
 status:
   currentState: Configured
-  reservations: {}
-  reservedIpCount: 0
+  reservations:
+    controller-0:
+      deleted: true
+      ip: 172.20.0.20
+    controller-1:
+      deleted: true
+      ip: 172.20.0.21
+    controller-2:
+      deleted: true
+      ip: 172.20.0.22
+  reservedIpCount: 3
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackMACAddress
