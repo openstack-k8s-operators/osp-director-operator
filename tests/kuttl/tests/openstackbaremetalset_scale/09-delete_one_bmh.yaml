@@ -1,0 +1,10 @@
+#
+# - Improperly delete a single BMH
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      ../../common/scripts/delete_bmh.sh
+    timeout: 420
