@@ -1,151 +1,52 @@
 #
 # Check for:
 #
-# - 2 OpenStackNets
-# - 1 OpenStackMACAddress
+# - 1 OpenStackBaremetalSet (should be in "BaremetalHostNotFound" error state)
 #
 
 apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
+kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: ctlplane
+  - baremetalset.osp-director.openstack.org-compute
+  labels:
+    ooo-subnetname/ctlplane: "true"
+    ooo-subnetname/internal_api: "true"
+    ooo-subnetname/tenant: "true"
+    osnetconfig-ref: openstacknetconfig
+  name: compute
   namespace: openstack
 spec:
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controlplane
-        ip: 172.22.0.110
-        serviceVIP: false
-        vip: true
-    OpenstackClientopenstackclient:
-      addToPredictableIPs: false
-      reservations:
-      - deleted: false
-        hostname: openstackclient-0
-        ip: 172.22.0.251
-        serviceVIP: false
-        vip: false
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  count: 2
+  ctlplaneInterface: enp1s0
+  roleName: Compute
 status:
-  conditions:
-  - message: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    reason: OpenStackNet ctlplane has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservations:
+  baremetalHosts:
     compute-0:
-      deleted: false
-      ip: 172.22.0.140
+      annotatedForDeletion: false
+      hostname: compute-0
     compute-1:
-      deleted: false
-      ip: 172.22.0.100
-    controlplane:
-      deleted: false
-      ip: 172.22.0.110
-    openstackclient-0:
-      deleted: false
-      ip: 172.22.0.251
-  reservedIpCount: 4
+      annotatedForDeletion: false
+      hostname: compute-1
+  provisioningStatus:
+    readyCount: 1
+    state: Error
 ---
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: internalapi
-  namespace: openstack
-spec:
-  roleReservations:
-    ControlPlane:
-      addToPredictableIPs: true
-      reservations:
-      - deleted: false
-        hostname: controlplane
-        ip: 172.17.0.10
-        serviceVIP: false
-        vip: true
-    OpenstackClientopenstackclient:
-      addToPredictableIPs: false
-      reservations:
-      - deleted: false
-        hostname: openstackclient-0
-        ip: 172.17.0.251
-        serviceVIP: false
-        vip: false
-status:
-  conditions:
-  - message: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    reason: OpenStackNet internalapi has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservations:
-    compute-0:
-      deleted: false
-      ip: 172.17.0.40
-    compute-1:
-      deleted: false
-      ip: 172.17.0.11
-    controlplane:
-      deleted: false
-      ip: 172.17.0.10
-    openstackclient-0:
-      deleted: false
-      ip: 172.17.0.251
-  reservedIpCount: 4
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackNet
-metadata:
-  finalizers:
-  - openstacknet.osp-director.openstack.org
-  name: tenant
-  namespace: openstack
-spec:
-  roleReservations: {}
-status:
-  conditions:
-  - message: OpenStackNet tenant has been successfully configured on targeted node(s)
-    reason: OpenStackNet tenant has been successfully configured on targeted node(s)
-    status: "True"
-    type: Configured
-  currentState: Configured
-  reservations:
-    compute-0:
-      deleted: false
-      ip: 172.20.0.40
-    compute-1:
-      deleted: false
-      ip: 172.20.0.10
-  reservedIpCount: 2
----
-apiVersion: osp-director.openstack.org/v1beta1
-kind: OpenStackMACAddress
-metadata:
-  finalizers:
-  - openstackmacaddress.osp-director.openstack.org
-  name: openstacknetconfig
-  namespace: openstack
-spec:
-  physNetworks:
-  - macPrefix: fa:16:3a
-    name: datacentre
-  - macPrefix: fa:16:3b
-    name: datacentre2
-  roleReservations:
-    Controller:
-      reservations: {}
-status:
-  conditions:
-  - message: All MAC addresses created
-    reason: MACAddressesCreated
-    status: "True"
-    type: Created
-  currentState: Created
-  macReservations: {}
-  reservedMACCount: 0
+# We don't know which BMH was chosen as compute-0 originally, so we use a script to
+# check for the "BaremetalHostNotFound" error (as the actual error message will vary
+# based on which BMH was actually deleted)
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+timeout: 600
+commands:
+  - script: |
+      set -x
+      sleep 5
+      osbmsstate=$(oc get osbms -n openstack compute -o json | jq -r '.status.provisioningStatus.reason')
+      if grep -q "Please check BaremetalHost resources and re-add" <<< "$osbmsstate"; then
+        exit 0
+      else
+        exit 1
+      fi

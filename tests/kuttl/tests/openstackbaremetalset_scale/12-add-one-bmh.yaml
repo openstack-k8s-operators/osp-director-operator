@@ -1,0 +1,10 @@
+#
+# - Recreate the BMH deleted in a previous step
+#
+
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+timeout: 420
+commands:
+  - script: |
+      ../../common/scripts/add_bmh.sh

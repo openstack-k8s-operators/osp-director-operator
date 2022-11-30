@@ -1,5 +1,7 @@
 #
-# Scale OpenStackBaremetalSet to 1 BaremetalHost
+# - Scale OpenStackBaremetalSet to 1 BaremetalHost
+# - Also try to then immediately scale down 0, which should fail due to webhook validation (because we only
+#   have 1 BMH annotated for deletion) and thus do nothing
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -10,3 +12,10 @@ commands:
   - command: |
       oc patch openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":1}]'
     namespaced: true
+  - script: |
+      RES=$(oc patch -n openstack openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":0}]' 2>&1)
+      if grep -q "Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down" <<< "$RES"; then
+        exit 0
+      else
+        exit 1
+      fi
