@@ -124,7 +124,6 @@ metadata:
   name: overcloud
   namespace: openstack
 spec:
-  enableFencing: false
   openStackClientImageURL: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
   openStackClientNetworks:
   - ctlplane
@@ -201,7 +200,6 @@ status:
   vmHosts:
     controller-0:
       annotatedForDeletion: false
-      ctlplaneIP: ""
       hostRef: controller-0
       hostname: controller-0
       ipaddresses:
@@ -211,7 +209,6 @@ status:
       userDataSecretName: controller-cloudinit
     controller-1:
       annotatedForDeletion: false
-      ctlplaneIP: ""
       hostRef: controller-1
       hostname: controller-1
       ipaddresses:
@@ -221,7 +218,6 @@ status:
       userDataSecretName: controller-cloudinit
     controller-2:
       annotatedForDeletion: false
-      ctlplaneIP: ""
       hostRef: controller-2
       hostname: controller-2
       ipaddresses:

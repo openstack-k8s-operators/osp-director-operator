@@ -33,9 +33,9 @@ func EnsureIPs(
 	serviceVIP bool,
 	deletedHosts []string,
 	addToPredictableIPs bool,
-) (map[string]ospdirectorv1beta1.HostStatus, reconcile.Result, error) {
+) (map[string]ospdirectorv1beta1.IPStatus, reconcile.Result, error) {
 
-	status := map[string]ospdirectorv1beta1.HostStatus{}
+	status := map[string]ospdirectorv1beta1.IPStatus{}
 
 	//
 	// create IPSet to request IPs for all networks

@@ -33,13 +33,15 @@ status:
   baremetalHosts:
     compute-0:
       annotatedForDeletion: false
-      ctlplaneIP: 172.22.0.140/24
       hostname: compute-0
+      ipaddresses:
+        ctlplane: 172.22.0.140/24
       provisioningState: provisioned
     compute-1:
       annotatedForDeletion: false
-      ctlplaneIP: 172.22.0.100/24
       hostname: compute-1
+      ipaddresses:
+        ctlplane: 172.22.0.100/24
       provisioningState: provisioned
   provisioningStatus:
     readyCount: 2

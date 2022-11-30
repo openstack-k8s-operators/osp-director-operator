@@ -99,7 +99,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// If IPSet status map is nil, create it
 	if instance.Status.Hosts == nil {
-		instance.Status.Hosts = map[string]ospdirectorv1beta1.HostStatus{}
+		instance.Status.Hosts = map[string]ospdirectorv1beta1.IPStatus{}
 	}
 	instance.Status.Reserved = 0
 	instance.Status.Networks = len(instance.Spec.Networks)
@@ -344,7 +344,7 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 	}
 
 	if instance.Status.Hosts == nil {
-		instance.Status.Hosts = map[string]ospdirectorv1beta1.HostStatus{}
+		instance.Status.Hosts = map[string]ospdirectorv1beta1.IPStatus{}
 	}
 
 	//
@@ -369,11 +369,10 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 
 		if hostnameDetails.Hostname != "" {
 			if _, ok := instance.Status.Hosts[hostnameDetails.Hostname]; !ok {
-				instance.Status.Hosts[hostnameDetails.Hostname] = ospdirectorv1beta1.HostStatus{
-					Hostname:             hostnameDetails.Hostname,
-					HostRef:              hostnameDetails.HostRef,
-					AnnotatedForDeletion: false,
-					IPAddresses:          map[string]string{},
+				instance.Status.Hosts[hostnameDetails.Hostname] = ospdirectorv1beta1.IPStatus{
+					Hostname:    hostnameDetails.Hostname,
+					HostRef:     hostnameDetails.HostRef,
+					IPAddresses: map[string]string{},
 				}
 				newHostnames = append(newHostnames, hostnameDetails.Hostname)
 			}
