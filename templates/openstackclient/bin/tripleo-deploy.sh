@@ -138,15 +138,15 @@ play() {
       register: deploy_exists
       ignore_unreachable: yes
     - set_fact:
-        deploy_exists: "{{ hostvars['localhost'].deploy_exists|default('0')|int + 1 }}"
+        deploy_exists: "{{ hostvars['undercloud'].deploy_exists|default('0')|int + 1 }}"
       when: deploy_exists.stat.exists|default(False)
-      delegate_to: localhost
+      delegate_to: undercloud
       delegate_facts: yes
     - copy:
         dest: stack_action_override.yaml
         content: |
-          stack_action: {{ 'UPDATE' if hostvars['localhost'].deploy_exists|default('0')|int > 0 else 'CREATE' }}
-      delegate_to: localhost
+          stack_action: {{ 'UPDATE' if hostvars['undercloud'].deploy_exists|default('0')|int > 0 else 'CREATE' }}
+      delegate_to: undercloud
       run_once: yes
 EOF`}}
 

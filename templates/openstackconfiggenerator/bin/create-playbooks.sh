@@ -156,7 +156,8 @@ out_dir = oooutils.download_ansible_playbooks(client, 'overcloud', output_dir='/
 inventory = TripleoInventory(
     hclient=client,
     plan_name='overcloud',
-    ansible_ssh_user='cloud-admin')
+    ansible_ssh_user='cloud-admin',
+    username='cloud-admin')
 
 extra_vars = {
     'Standalone': {
