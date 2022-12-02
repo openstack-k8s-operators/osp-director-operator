@@ -132,6 +132,7 @@ play() {
 - hosts: overcloud
   name: Determine the correct stack action for 16.2 deployments
   gather_facts: false
+  become: false
   tasks:
     - stat:
         path: /var/lib/tripleo-config
