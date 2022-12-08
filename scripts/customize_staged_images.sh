@@ -7,11 +7,11 @@ REPO=${2:-"quay.io/openstack-k8s-operators"}
 INDEX_IMG="$REPO/osp-director-operator-index:$VERSION"
 NEW_BUNDLE_IMG="$REPO/osp-director-operator-bundle:$VERSION"
 
-# example: docker://registry-proxy.engineering.redhat.com/rh-osbs/rhosp-rhel8-tech-preview-osp-director-operator-bundle:1.2.2-4
+# example: docker://registry-proxy.engineering.redhat.com/rh-osbs/rhosp-rhel8-osp-director-operator-bundle:1.3.0-4
 BUNDLE_IMG=${BUNDLE_IMG:?"Please set the BUNDLE_IMG"}
 
-REPLACE_URL=${REPLACE_URL:-"registry.redhat.io/rhosp-rhel8-tech-preview/"}
-WITH_URL=${WITH_URL:-"registry-proxy.engineering.redhat.com/rh-osbs/rhosp-rhel8-tech-preview-"}
+REPLACE_URL=${REPLACE_URL:-"registry.redhat.io/rhosp-rhel8"}
+WITH_URL=${WITH_URL:-"registry-proxy.engineering.redhat.com/rh-osbs/rhosp-rhel8"}
 
 WORK_DIR=$(mktemp -d)
 
@@ -19,9 +19,12 @@ WORK_DIR=$(mktemp -d)
 cat > $WORK_DIR/Dockerfile << EOF_CAT
 FROM $BUNDLE_IMG as bundle
 
-FROM golang:1.16 AS editor
+FROM golang:1.18 AS editor
 COPY --from=bundle /manifests/osp-director-operator.clusterserviceversion.yaml /osp-director-operator.clusterserviceversion.yaml
-RUN sed -e "s|$REPLACE_URL|$WITH_URL|" -i /osp-director-operator.clusterserviceversion.yaml
+
+RUN sed -e "s|$REPLACE_URL/osp-director-downloader|${WITH_URL}-osp-director-downloader|" -i /osp-director-operator.clusterserviceversion.yaml
+RUN sed -e "s|$REPLACE_URL/osp-director-agent|${WITH_URL}-osp-director-agent|" -i /osp-director-operator.clusterserviceversion.yaml
+RUN sed -e "s|$REPLACE_URL/osp-director-operator|${WITH_URL}-osp-director-operator|" -i /osp-director-operator.clusterserviceversion.yaml
 
 FROM $BUNDLE_IMG
 COPY --from=editor /osp-director-operator.clusterserviceversion.yaml /manifests/osp-director-operator.clusterserviceversion.yaml
