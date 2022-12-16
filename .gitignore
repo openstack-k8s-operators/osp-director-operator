@@ -26,6 +26,7 @@ kuttl-test.json
 !vendor/**/zz_generated.*
 /bundle/
 config/manager/kustomization.yaml
+config/default/manager_default_images.yaml
 
 # editor and IDE paraphernalia
 .idea
