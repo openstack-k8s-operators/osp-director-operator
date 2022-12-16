@@ -1,0 +1,31 @@
+# This patch inject custom ENV settings to the manager container
+# Used to set our default image locations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        env:
+        - name: OPENSTACKCLIENT_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-tripleoclient:16.2
+        - name: HEAT_API_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-heat-api:16.2
+        - name: HEAT_ENGINE_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-heat-engine:16.2
+        - name: MARIADB_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-mariadb:16.2
+        - name: RABBITMQ_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/openstack-rabbitmq:16.2
+        - name: DOWNLOADER_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhosp-rhel8/osp-director-downloader:1.3.0
+        - name: AGENT_IMAGE_URL_DEFAULT
+          value: registry.rehat.io/rhosp-rhel8/osp-director-agent:1.3.0
+        - name: APACHE_IMAGE_URL_DEFAULT
+          value: registry.redhat.io/rhel8/httpd-24:latest
+        - name: OPENSTACK_RELEASE_DEFAULT
+          value: "16.2"
