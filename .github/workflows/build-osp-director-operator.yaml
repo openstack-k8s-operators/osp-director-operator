@@ -146,11 +146,19 @@ jobs:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-  build-osp-director-operator-bundle:
+  build-osp-director-operator-bundles:
     needs: [ check-secrets, build-osp-director-operator, build-osp-director-downloader, build-osp-director-agent ]
-    name: osp-director-operator-bundle
+    name: osp-director-operator-bundles
     runs-on: ubuntu-latest
     if: needs.check-secrets.outputs.have-secrets == 'true'
+
+    strategy:
+      matrix:
+        osp_release:
+          - "16.2"
+          - "17.0"
+      # When set to true, GitHub cancels all in-progress jobs if any matrix job fails.
+      fail-fast: true
 
     steps:
     - name: Install Go
@@ -193,6 +201,7 @@ jobs:
         BASE_IMAGE: osp-director-operator
         AGENT_IMAGE: osp-director-agent
         DOWNLOADER_IMAGE: osp-director-downloader
+        OSP_RELEASE: "${{ matrix.osp_release }}"
 
     - name: Get branch name
       id: branch-name
@@ -208,11 +217,11 @@ jobs:
       uses: redhat-actions/buildah-build@v2
       with:
         image: osp-director-operator-bundle
-        tags: ${{ env.latesttag }} ${{ github.sha }}
+        tags: ${{ env.latesttag }}-${{ matrix.osp_release }} ${{ github.sha }}-${{ matrix.osp_release }}
         containerfiles: |
           ./bundle.Dockerfile
 
-    - name: Push osp-director-operator To ${{ env.imageregistry }}
+    - name: Push osp-director-operator-bundle To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-osp-director-operator-bundle.outputs.image }}
@@ -221,11 +230,21 @@ jobs:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-  build-osp-director-operator-index:
-    needs: [ check-secrets, build-osp-director-operator-bundle ]
-    name: osp-director-operator-index
+  build-osp-director-operator-indexes:
+    needs: [ check-secrets, build-osp-director-operator-bundles ]
+    name: osp-director-operator-indexes
     runs-on: ubuntu-latest
     if: needs.check-secrets.outputs.have-secrets == 'true'
+
+    strategy:
+      matrix:
+        osp_release:
+          - "16.2"
+          - "17.0"
+      # When set to true, GitHub cancels all in-progress jobs if any matrix job fails.
+      fail-fast: true
+      # The maximum number of jobs that can run simultaneously
+      #max-parallel: 1
 
     steps:
     - name: Checkout osp-director-operator repository
@@ -261,16 +280,16 @@ jobs:
         popd
       env:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
-        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_SHA_TAG: ${{ github.sha }}-${{ matrix.osp_release }}
         BUNDLE_IMAGE: osp-director-operator-bundle
-        INDEX_IMAGE_TAG: ${{ env.latesttag }}
+        INDEX_IMAGE_TAG: ${{ env.latesttag }}-${{ matrix.osp_release }}
         INDEX_IMAGE: osp-director-operator-index
 
     - name: Push osp-director-operator-index To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
         image: osp-director-operator-index
-        tags: ${{ env.latesttag }} ${{ github.sha }}
+        tags: ${{ env.latesttag }}-${{ matrix.osp_release }} ${{ github.sha }}-${{ matrix.osp_release }}
         registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
