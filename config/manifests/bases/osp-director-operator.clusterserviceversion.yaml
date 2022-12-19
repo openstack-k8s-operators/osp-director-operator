@@ -169,8 +169,6 @@ spec:
     name: openstackclient
   - image: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-downloader:1.0
     name: osp-director-operator-downloader
-  - image: registry.redhat.io/rhosp-rhel8-tech-preview/osp-director-provisioner:1.0
-    name: osp-director-operator-provisioner
   - image: quay.io/openstack-k8s-operators/osp-director-agent:0.0.1
     name: osp-director-agent
   - image: controller:latest
