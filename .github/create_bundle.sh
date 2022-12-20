@@ -9,6 +9,7 @@ echo "${GITHUB_SHA}"
 echo "${BASE_IMAGE}"
 echo "${AGENT_IMAGE}"
 echo "${DOWNLOADER_IMAGE}"
+echo "${OSP_RELEASE}"
 skopeo --version
 
 echo "Calculating image digest for docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA}"
@@ -18,14 +19,14 @@ DIGEST=$(skopeo inspect docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA} | jq '.
 # Digest: sha256:1d5b578fd212f8dbd03c0235f1913ef738721766f8c94236af5efecc6d8d8cb1
 echo "Digest: ${DIGEST}"
 
-RELEASE_VERSION=$(grep "^VERSION" Makefile | awk -F'?= ' '{ print $2 }')
+RELEASE_VERSION=$(grep "^VERSION" Makefile | awk -F'?= ' '{ print $2 }')-${OSP_RELEASE}
 OPERATOR_IMG_WITH_DIGEST="${REGISTRY}/${BASE_IMAGE}@${DIGEST}"
 
 echo "New Operator Image with Digest: $OPERATOR_IMG_WITH_DIGEST"
 echo "Release Version: $RELEASE_VERSION"
 
 echo "Creating bundle image..."
-VERSION=$RELEASE_VERSION IMG=$OPERATOR_IMG_WITH_DIGEST make bundle
+OSP_RELEASE=${OSP_RELEASE} VERSION=$RELEASE_VERSION IMG=$OPERATOR_IMG_WITH_DIGEST make bundle
 
 echo "Bundle file images:"
 cat "${CLUSTER_BUNDLE_FILE}" | grep "image:"
