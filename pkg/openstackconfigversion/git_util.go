@@ -33,8 +33,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 
-	crypto_ssh "golang.org/x/crypto/ssh"
-
 	"github.com/go-logr/logr"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -138,7 +136,6 @@ func SyncGit(
 	}
 
 	publicKeys, err := ssh.NewPublicKeys("git", pkey, "")
-	publicKeys.HostKeyCallback = crypto_ssh.InsecureIgnoreHostKey()
 	if err != nil {
 		log.Info(fmt.Sprintf("generate publickeys failed: %s\n", err.Error()))
 		return nil, err
