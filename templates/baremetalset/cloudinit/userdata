@@ -12,3 +12,6 @@ chpasswd:
     root:{{ .NodeRootPassword }}
   expire: False
 {{- end }}
+bootcmd:
+  # fix BLS entries
+  - set -x; if [ -e /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ]; then MACHINEID=$(cat /etc/machine-id) && rename "ffffffffffffffffffffffffffffffff" "$MACHINEID" /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ; fi
