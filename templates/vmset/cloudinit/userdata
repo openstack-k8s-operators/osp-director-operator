@@ -15,6 +15,8 @@ chpasswd:
 {{/* if the VM is _NOT_ part of a tripleo role, keep them as clean as possible and do _NOT_ run the following modifications */}}
 {{- if .IsTripleoRole }}
 bootcmd:
+  # fix BLS entries
+  - set -x; if [ -e /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ]; then MACHINEID=$(cat /etc/machine-id) && rename "ffffffffffffffffffffffffffffffff" "$MACHINEID" /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ; fi
   - "mkdir -p /mnt/kubeconfig"
   - "mkdir -p /root/kubeconfig"
   - "mount /dev/disk/by-id/virtio-fencingdisk /mnt/kubeconfig"
