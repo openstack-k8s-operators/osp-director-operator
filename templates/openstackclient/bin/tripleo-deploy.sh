@@ -173,6 +173,8 @@ EOF`}}
     sudo chown cloud-admin: ~/.config/openstack/clouds.yaml
   fi
 
+  sudo /usr/local/bin/tripleo-export-ceph "${WORKDIR}"
+
   popd > /dev/null
 
 }
