@@ -83,7 +83,7 @@ func init() {
 }
 
 // GetConfigMap for our exports Heat environment
-func GetConfigMap(namespace string, exports string, exportsFiltered string, deployName string) *corev1.ConfigMap {
+func GetConfigMap(namespace string, exports string, exportsFiltered string, cephExport string, deployName string) *corev1.ConfigMap {
 
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -97,6 +97,7 @@ func GetConfigMap(namespace string, exports string, exportsFiltered string, depl
 		Data: map[string]string{
 			"ctlplane-export.yaml":          exports,
 			"ctlplane-export-filtered.yaml": exportsFiltered,
+			"ceph-export.yaml":              cephExport,
 		},
 	}
 
@@ -251,6 +252,13 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 		return err
 	}
 
+	// get the ceph export yaml
+	// this is written by tripleo-deploy.sh after successful deployment
+	cephExportDataString, err := CopyFromPod(kclient, *pod, "openstackclient", "/home/cloud-admin/work/"+deployOpts.configVersion+"/playbooks/ceph-export.yaml")
+	if err != nil {
+		return err
+	}
+
 	// get the existing CtlplaneExports from the ConfigVersion CR
 	dClient := dynamic.NewForConfigOrDie(config)
 	ctlplaneExport, err := getCtlplaneExports(dClient)
@@ -285,7 +293,7 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 	}
 
 	// Create or Update the ConfigMap
-	configMap := GetConfigMap(deployOpts.namespace, buffer.String(), filterBuffer.String(), deployOpts.deployName)
+	configMap := GetConfigMap(deployOpts.namespace, buffer.String(), filterBuffer.String(), cephExportDataString, deployOpts.deployName)
 	foundConfigMap, err := kclient.CoreV1().ConfigMaps(deployOpts.namespace).Get(context.TODO(), openstackdeploy.ConfigMapBasename+deployOpts.deployName, metav1.GetOptions{})
 	if err != nil && k8s_errors.IsNotFound(err) {
 		_, err := kclient.CoreV1().ConfigMaps(deployOpts.namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
