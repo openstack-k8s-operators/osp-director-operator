@@ -58,6 +58,12 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volu
 		},
 		{
 			Name:      "openstackclient-scripts",
+			MountPath: "/usr/local/bin/tripleo-export-ceph",
+			SubPath:   "tripleo-export-ceph",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "openstackclient-scripts",
 			MountPath: "/home/cloud-admin/ctlplane-ansible-inventory",
 			SubPath:   "ansible-inventory",
 			ReadOnly:  true,
@@ -184,6 +190,10 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackClient) []corev1.Volume {
 						{
 							Key:  "tripleo-deploy-term.sh",
 							Path: "tripleo-deploy-term.sh",
+						},
+						{
+							Key:  "tripleo-export-ceph",
+							Path: "tripleo-export-ceph",
 						},
 						{
 							Key:  "init.sh",

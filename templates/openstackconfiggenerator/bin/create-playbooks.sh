@@ -242,6 +242,9 @@ tar -xvf $HOME/tht-tars/{{ $key }} -C tarball
 {{- end }}
 {{- end }}
 
+# Record the ceph user as we need this later to export the ceph backend config
+openstack stack environment show overcloud -f json | jq '.parameter_defaults.CephClientUserName // "openstack" | {ceph_client_user: .}' > ceph_client_user.json
+
 git add *
 git commit -a -m "Generated playbooks for $ConfigHash"
 git push -f origin $ConfigHash
