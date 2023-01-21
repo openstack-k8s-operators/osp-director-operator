@@ -1,19 +1,59 @@
 #! /usr/bin/env python3
 
+import logging
 import json
 import os
 import sys
 import tripleoclient.export
 import yaml
 
+logging.basicConfig(level=logging.INFO)
+LOG = logging.getLogger('tripleo-export-ceph')
+
+def export_cephadm(stack, cephx, playbook_dir):
+    # The path is currently hardcoded in tripleoclient to duplicate the logic here for now
+    file = os.path.join(playbook_dir, 'tripleo-ansible', 'cephadm', 'ceph_client.yml')
+
+    with open(file, 'r') as ff:
+        try:
+            ceph_data = yaml.safe_load(ff)
+        except yaml.MarkedYAMLError as e:
+            LOG.error(
+                _('Could not read file %s') % file)
+            LOG.error(e)
+    external_cluster_mon_ips = ceph_data['external_cluster_mon_ips']
+    cluster = ceph_data['tripleo_ceph_client_cluster']
+    fsid = ceph_data['tripleo_ceph_client_fsid']
+
+    # set cephx_keys
+    for key in ceph_data['keys']:
+        if key['name'] == 'client.' + str(cephx):
+            cephx_keys = [key]
+    # set ceph_conf_overrides
+    ceph_conf_overrides = {}
+    ceph_conf_overrides['client'] = {}
+    ceph_conf_overrides['client']['keyring'] = '/etc/ceph/' \
+                                               + cluster \
+                                               + '.client.' + cephx \
+                                               + '.keyring'
+    # Combine extracted data into one map to return
+    data = {}
+    data['external_cluster_mon_ips'] = external_cluster_mon_ips
+    data['keys'] = cephx_keys
+    data['ceph_conf_overrides'] = ceph_conf_overrides
+    data['cluster'] = cluster
+    data['fsid'] = fsid
+    data['dashboard_enabled'] = False
+
+    return data
+
 CEPH_USER_FN = 'ceph_client_user.json'
 CEPH_USER_KEY = 'ceph_client_user'
-CEPH_DEPLOY_DIRS = (
-    'ceph-ansible',
-    'cephadm'
-)
 DEFAULT_CEPH_USER = 'overcloud'
-
+CEPH_DEPLOY_DIRS = {
+    'ceph-ansible': tripleoclient.export.export_ceph,
+    'cephadm': export_cephadm
+}
 
 def get_cephx_name(playbooks_dir):
     ceph_user_file_path = os.path.join(playbooks_dir, CEPH_USER_FN)
@@ -34,16 +74,18 @@ def export_ceph_data(working_dir):
     data['parameter_defaults'] = {}
 
     ceph_deploy_found = False
-    for ceph_deploy_dir in CEPH_DEPLOY_DIRS:
+    ceph_export_func = None
+    for ceph_deploy_dir, funcref in CEPH_DEPLOY_DIRS.items():
         if os.path.exists(os.path.join(playbooks_dir, stackname, ceph_deploy_dir)):
             ceph_deploy_found = True
+            ceph_export_func = funcref
             break
 
     if ceph_deploy_found:
         cephx = get_cephx_name(playbooks_dir)
         if cephx is not None:
-            print("Using cephx name: {}".format(cephx))
-            ceph_data = tripleoclient.export.export_ceph(stackname, cephx, playbooks_dir)
+            LOG.info("Using cephx name: {}".format(cephx))
+            ceph_data = ceph_export_func(stackname, cephx, playbooks_dir)
             data['parameter_defaults']['CephExternalMultiConfig'] = [ceph_data]
             data['parameter_merge_strategies'] = {}
             data['parameter_merge_strategies']['CephExternalMultiConfig'] = 'merge'
