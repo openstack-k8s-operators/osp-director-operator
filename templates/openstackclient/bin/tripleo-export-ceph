@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger('tripleo-export-ceph')
 
 def export_cephadm(stack, cephx, playbook_dir):
-    # The path is currently hardcoded in tripleoclient to duplicate the logic here for now
+    # The path is currently hardcoded in tripleoclient so duplicate the logic here for now
     file = os.path.join(playbook_dir, 'tripleo-ansible', 'cephadm', 'ceph_client.yml')
 
     with open(file, 'r') as ff:
