@@ -40,7 +40,7 @@ if [ -d /mnt/ssh-config ]; then
   mkdir -p /home/cloud-admin/.ssh
   cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
   chmod 600 /home/cloud-admin/.ssh/id_rsa
-  chown -R cloud-admin: /home/cloud-admin/.ssh
+  sudo chown -R cloud-admin: /home/cloud-admin/.ssh
 fi
 
 if [ -d /mnt/ca-certs ]; then
