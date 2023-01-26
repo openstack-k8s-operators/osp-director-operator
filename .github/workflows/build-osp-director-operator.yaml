@@ -32,7 +32,7 @@ jobs:
       - name: Check secrets are set
         id: have-secrets
         if: "${{ env.imagenamespace != '' }}"
-        run: echo "::set-output name=ok::true"
+        run: echo "ok=true" >>$GITHUB_OUTPUT
     outputs:
       have-secrets: ${{ steps.have-secrets.outputs.ok }}
 
@@ -43,11 +43,11 @@ jobs:
     if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v5
+      uses: tj-actions/branch-names@v6
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -79,11 +79,11 @@ jobs:
     if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v5
+      uses: tj-actions/branch-names@v6
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -117,11 +117,11 @@ jobs:
     if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v5
+      uses: tj-actions/branch-names@v6
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -162,12 +162,12 @@ jobs:
 
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.18.x
 
     - name: Checkout osp-director-operator repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Install operator-sdk
       uses: redhat-actions/openshift-tools-installer@v1
@@ -205,7 +205,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v5
+      uses: tj-actions/branch-names@v6
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -248,11 +248,11 @@ jobs:
 
     steps:
     - name: Checkout osp-director-operator repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v5
+      uses: tj-actions/branch-names@v6
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
