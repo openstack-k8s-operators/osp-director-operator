@@ -70,10 +70,10 @@ func getDeletionAnnotatedBmhHosts(
 	return annotatedBMHs
 }
 
-// VerifyBaremetalStatusHostRefs - Verify that BMHs haven't been improperly deleted
-// outside of our prescribed annotate-and-scale-count-down method.  If bad deletions
-// have occurred, we return an error to halt further reconciliation that could lead
-// to an inconsistent state for instance.Status.BaremetalHosts.
+// VerifyBaremetalStatusHostRefs - Verify that assigned BMHs haven't been improperly
+// deleted outside of our prescribed annotate-and-scale-count-down method.
+// If bad deletions have occurred, we return an error to halt further reconciliation
+// that could lead to an inconsistent state for instance.Status.BaremetalHosts.
 func VerifyBaremetalStatusHostRefs(
 	ctx context.Context,
 	c client.Client,
@@ -91,21 +91,23 @@ func VerifyBaremetalStatusHostRefs(
 	}
 
 	for _, bmhStatus := range instance.Status.BaremetalHosts {
-		found := false
+		if bmhStatus.HostRef != shared.HostRefInitState {
+			found := false
 
-		for _, bmh := range allBaremetalHosts.Items {
-			if bmh.Name == bmhStatus.HostRef {
-				found = true
-				break
+			for _, bmh := range allBaremetalHosts.Items {
+				if bmh.Name == bmhStatus.HostRef {
+					found = true
+					break
+				}
 			}
-		}
 
-		if !found {
-			err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OsBaremetalSet %s.  "+
-				"Please check BaremetalHost resources and re-add \"%s\" to continue",
-				bmhStatus.HostRef, instance.Name, bmhStatus.HostRef)
+			if !found {
+				err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OsBaremetalSet %s.  "+
+					"Please check BaremetalHost resources and re-add \"%s\" to continue",
+					bmhStatus.HostRef, instance.Name, bmhStatus.HostRef)
 
-			return err
+				return err
+			}
 		}
 	}
 
