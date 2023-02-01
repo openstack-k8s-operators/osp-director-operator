@@ -24,9 +24,9 @@ export OS_ENDPOINT="http://{{ .HeatServiceName }}:8004/v1/admin"
 
 HEAT_COUNT=0
 until openstack stack list &> /dev/null || [ "$HEAT_COUNT" -gt 180 ]; do
-  HEAT_COUNT=$(($HEAT_COUNT + 1))
-  echo "waiting for Heat API to startup..."
-  sleep 2
+    HEAT_COUNT=$(($HEAT_COUNT + 1))
+    echo "waiting for Heat API to startup..."
+    sleep 2
 done
 
 # delete the stack if it exists (should only happen on retries)
@@ -66,20 +66,20 @@ python3 tools/process-templates.py -r $TEMPLATES_DIR/roles_data.yaml -n $TEMPLAT
 
 # NOTE: only applies to OSP 16, on OSP 17+ we set NetworkSafeDefaults: false in the Heat ENV
 if [ -e ./network/scripts/run-os-net-config.sh ]; then
-  # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
-  sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
+    # disable running dhcp on all interfaces, setting disable_configure_safe_defaults in the interface template does not work
+    sudo sed -i '/^set -eux/a disable_configure_safe_defaults=true' ./network/scripts/run-os-net-config.sh
 fi
 
 # only use env files that have ContainerImagePrepare in them, if more than 1 the last wins
 PREPARE_ENV_ARGS=""
 for ENV_FILE in $(grep -rl "ContainerImagePrepare:" *.yaml | grep -v overcloud-resource-registry-puppet); do
-  PREPARE_ENV_ARGS="-e $ENV_FILE"
+    PREPARE_ENV_ARGS="-e $ENV_FILE"
 done
 
 # if no container image prepare env files are provided generate the defaults
 if [ -z "$PREPARE_ENV_ARGS" ]; then
-  openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
-  PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
+    openstack tripleo container image prepare default --output-env-file container-image-prepare.yaml
+    PREPARE_ENV_ARGS="-e container-image-prepare.yaml"
 fi
 
 PREPARE_ENV_ARGS="$PREPARE_ENV_ARGS -e rendered-tripleo-config.yaml"
@@ -212,11 +212,11 @@ git config --global user.name "OSP Director Operator"
 # initialize master if it doesn't exist
 # Avoids (warning: remote HEAD refers to nonexistent ref, unable to checkout.)
 if ! git branch -la | grep origin\/master &>/dev/null; then
-  git checkout -b master
-  echo "This repo contains automatically generated playbooks for the OSP Director Operator" > README
-  git add README
-  git commit -a -m "Add README to master branch."
-  git push -f origin master
+    git checkout -b master
+    echo "This repo contains automatically generated playbooks for the OSP Director Operator" > README
+    git add README
+    git commit -a -m "Add README to master branch."
+    git push -f origin master
 fi
 
 git checkout -b $ConfigHash

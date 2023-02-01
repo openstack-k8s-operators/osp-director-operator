@@ -98,9 +98,7 @@ const (
 	CommonCondReasonServiceNotFound ConditionReason = "ServiceNotFound"
 )
 
-//
 // Client
-//
 const (
 	//
 	// condition reasones
@@ -128,9 +126,7 @@ const (
 	OsClientCondReasonPodMissing ConditionReason = "OpenStackClientPodMissing"
 )
 
-//
 // ConfigGenerator
-//
 const (
 	//
 	// condition types
@@ -195,9 +191,7 @@ const (
 	ConfigGeneratorCondReasonClusterServiceIPError ConditionReason = "ClusterServiceIPError"
 )
 
-//
 // BaremetalSet
-//
 const (
 	// BaremetalSetCondTypeEmpty - special state for 0 requested BaremetalHosts and 0 already provisioned
 	BaremetalSetCondTypeEmpty ConditionType = "Empty"
@@ -261,9 +255,7 @@ const (
 	BaremetalSetCondReasonVirtualMachineCountZero ConditionReason = "BaremetalHostCountZero"
 )
 
-//
 // ControlPlane
-//
 const (
 	// ControlPlaneEmpty - special state for 0 requested VMs and 0 already provisioned
 	ControlPlaneEmpty ConditionType = "Empty"
@@ -300,9 +292,7 @@ const (
 	ControlPlaneReasonDeploymentSSHKeysSecretCreateOrUpdateError ConditionReason = "DeploymentSSHKeysSecretCreateOrUpdateError"
 )
 
-//
 // Deploy
-//
 const (
 	//
 	// condition types
@@ -337,9 +327,7 @@ const (
 	DeployCondReasonConfigCreate ConditionReason = "ConfigCreate"
 )
 
-//
 // EphemeralHeat
-//
 const (
 	//
 	// condition reasons
@@ -365,9 +353,7 @@ const (
 	EphemeralHeatReady ConditionReason = "EphemeralHeatReady"
 )
 
-//
 // IPSet
-//
 const (
 	//
 	// condition reasones
@@ -383,9 +369,7 @@ const (
 	IPSetCondReasonCreated ConditionReason = "OpenStackIPSetCreated"
 )
 
-//
 // MACAddress
-//
 const (
 	//
 	// condition types
@@ -418,9 +402,7 @@ const (
 	MACCondReasonMACNotFound ConditionReason = "OpenStackMACNotFound"
 )
 
-//
 // Net
-//
 const (
 	//
 	// condition types
@@ -449,9 +431,7 @@ const (
 	NetCondReasonNetNotFound ConditionReason = "OpenStackNetNotFound"
 )
 
-//
 // NetAttach
-//
 const (
 	//
 	// condition types
@@ -478,9 +458,7 @@ const (
 	NetAttachCondReasonCreateError ConditionReason = "OpenStackNetAttachCreateError"
 )
 
-//
 // NetConfig
-//
 const (
 	// NetConfigWaiting - the network configuration is blocked by prerequisite objects
 	NetConfigWaiting ConditionType = "Waiting"
@@ -505,9 +483,7 @@ const (
 	NetConfigCondReasonIPReservation ConditionReason = "IPReservationCreated"
 )
 
-//
 // ProvisionServer
-//
 const (
 	// ProvisionServerCondTypeWaiting - something else is causing the OpenStackProvisionServer to wait
 	ProvisionServerCondTypeWaiting ConditionType = "Waiting"
@@ -548,9 +524,7 @@ const (
 	OpenStackProvisionServerCondReasonCreated ConditionReason = "OpenStackProvisionServerCreated"
 )
 
-//
 // VMSet
-//
 const (
 	//
 	// condition types

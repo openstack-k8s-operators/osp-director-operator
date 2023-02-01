@@ -220,9 +220,7 @@ func IPToBigInt(IPv6Addr net.IP) *big.Int {
 	return IPv6Int
 }
 
-//
 // GetCidrParts - returns addr and cidr suffix
-//
 func GetCidrParts(cidr string) (string, int, error) {
 	ipAddr, net, err := net.ParseCIDR(cidr)
 	if err != nil {

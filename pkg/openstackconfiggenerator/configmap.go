@@ -51,13 +51,14 @@ type roleNetworkType struct {
 }
 
 // information to build NodePortMap entry:
-//   IPaddr:          192.168.24.9
-//   IPAddrSubnet :   192.168.24.9/24
-//   IPAddrURI:       192.168.24.9
-//   IPv6addr:        2001:DB8:24::9
-//   IPv6AddrSubnet : 2001:DB8:24::9/64
-//   IPv6AddrURI:     [2001:DB8:24::9]
-//   Network:         flattened network details
+//
+//	IPaddr:          192.168.24.9
+//	IPAddrSubnet :   192.168.24.9/24
+//	IPAddrURI:       192.168.24.9
+//	IPv6addr:        2001:DB8:24::9
+//	IPv6AddrSubnet : 2001:DB8:24::9/64
+//	IPv6AddrURI:     [2001:DB8:24::9]
+//	Network:         flattened network details
 type roleIPType struct {
 	IPaddr         string
 	IPAddrURI      string
@@ -235,10 +236,9 @@ func CreateConfigMapParams(
 
 }
 
-//
 // createNetworksMap - create map with network details and map of subnet -> network_lower name used when creating the rolesMap
-//	               to get the network name from the subnet name
 //
+//	to get the network name from the subnet name
 func createNetworksMap(
 	ospVersion shared.OSPVersion,
 	netConfig *ospdirectorv1beta1.OpenStackNetConfig,
@@ -368,9 +368,7 @@ func IsRoleIncluded(roleName string, instance *ospdirectorv1beta1.OpenStackConfi
 
 }
 
-//
 // createRolesMap - create map with all roles
-//
 func createRolesMap(
 	ctx context.Context,
 	r common.ReconcilerCommon,
@@ -507,9 +505,7 @@ func createRolesMap(
 	return nil
 }
 
-//
 // isVMRole - check if role is VMset and tripleo role
-//
 func isVMRole(
 	ctx context.Context,
 	r common.ReconcilerCommon,

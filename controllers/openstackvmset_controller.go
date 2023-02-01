@@ -1145,9 +1145,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	return nil
 }
 
-//
 // check if specified password secret exists
-//
 func (r *OpenStackVMSetReconciler) getPasswordSecret(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1183,9 +1181,7 @@ func (r *OpenStackVMSetReconciler) getPasswordSecret(
 	return string(passwordSecret.Data["NodeRootPassword"]), ctrl.Result{}, nil
 }
 
-//
 // Create CloudInitSecret secret for the vmset
-//
 func (r *OpenStackVMSetReconciler) createCloudInitSecret(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1219,9 +1215,7 @@ func (r *OpenStackVMSetReconciler) createCloudInitSecret(
 	return nil
 }
 
-//
 // NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
-//
 func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1303,9 +1297,7 @@ func (r *OpenStackVMSetReconciler) verifyNetworkAttachments(
 	return nadMap, ctrl.Result{}, nil
 }
 
-//
-//   check/update instance status for annotated for deletion marked VMs
-//
+// check/update instance status for annotated for deletion marked VMs
 func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1412,9 +1404,7 @@ func (r *OpenStackVMSetReconciler) getDeletedVMOSPHostnames(
 	return annotatedVMs, nil
 }
 
-//
-//   Create BaseImage for the VMSet
-//
+// Create BaseImage for the VMSet
 func (r *OpenStackVMSetReconciler) createBaseImage(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1575,9 +1565,7 @@ func (r *OpenStackVMSetReconciler) virtualMachineDeprovision(
 	return virtualMachine.Name, nil
 }
 
-//
-//   Create/Update NetworkData
-//
+// Create/Update NetworkData
 func (r *OpenStackVMSetReconciler) createNetworkData(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
@@ -1662,9 +1650,7 @@ func (r *OpenStackVMSetReconciler) createNetworkData(
 	return vmDetails, nil
 }
 
-//
-//   Create the VM objects
-//
+// Create the VM objects
 func (r *OpenStackVMSetReconciler) createVMs(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,

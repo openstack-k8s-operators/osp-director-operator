@@ -92,7 +92,7 @@ type OpenStackVMSetDisk struct {
 	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
 	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
 	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
-	StorageAccessMode string `json:"storageAccessMode,omitempty"`
+	StorageAccessMode string `json:"storageAccessMode"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=Filesystem
 	// +kubebuilder:validation:Enum=Block;Filesystem

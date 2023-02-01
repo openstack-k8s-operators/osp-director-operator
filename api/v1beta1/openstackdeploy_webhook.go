@@ -111,10 +111,8 @@ func (r *OpenStackDeploy) ValidateDelete() error {
 	return nil
 }
 
-//
 // Validates all NNCPs created by the used osnetcfg to be in condition.Reason == nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured.
 // If not, stop deployment. User can overwrite this via parameter spec.SkipNNCPValidation: true
-//
 func (r *OpenStackDeploy) validateNNCP() error {
 
 	// 1) get the osctlplane of the namespace (right now there can only be one)

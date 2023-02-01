@@ -16,7 +16,6 @@ metadata:
   name: openstacknetconfig
   namespace: openstack
 spec:
-spec:
   attachConfigurations:
     br-osp:
       nodeNetworkConfigurationPolicy:

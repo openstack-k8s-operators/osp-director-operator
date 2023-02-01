@@ -651,9 +651,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	return nil
 }
 
-//
 // NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
-//
 func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,
@@ -711,9 +709,7 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 	return ctrl.Result{}, nil
 }
 
-//
 // PVCs
-//
 func (r *OpenStackClientReconciler) createPVCs(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,

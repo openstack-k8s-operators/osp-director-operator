@@ -2,7 +2,7 @@
 # Check for:
 #
 # - 1 OpenStackProvisionServer (we don't actually care about the OpenStackBaremetalSet resource) with an auto-assigned httpd port
-# 
+#
 
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackProvisionServer

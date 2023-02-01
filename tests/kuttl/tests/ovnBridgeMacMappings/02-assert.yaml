@@ -7,7 +7,7 @@
 # - 6 OpenStackNets
 # - 1 OpenStackMACAddress
 #
-
+---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNetConfig
 metadata:
@@ -15,7 +15,6 @@ metadata:
   - openstacknetconfig.osp-director.openstack.org
   name: openstacknetconfig
   namespace: openstack
-spec:
 spec:
   attachConfigurations:
     br-osp:

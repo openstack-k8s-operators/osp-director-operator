@@ -15,10 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//
 // AddOSNetNameLowerLabels - add osnetcfg CR label reference which is used in
 // the in the osnetcfg controller to watch this resource and reconcile
-//
 func AddOSNetNameLowerLabels(
 	log logr.Logger,
 	labels map[string]string,
@@ -85,10 +83,8 @@ func AddOSNetNameLowerLabels(
 	return labels
 }
 
-//
 // AddOSNetConfigRefLabel - add osnetcfg CR label reference which is used in
 // the in the osnetcfg controller to watch this resource and reconcile
-//
 func AddOSNetConfigRefLabel(
 	c client.Client,
 	namespace string,
@@ -201,9 +197,7 @@ func GetOpenStackNetsMapWithLabel(
 	return osNetMap, nil
 }
 
-//
 // GetOsNetCfg -
-//
 func GetOsNetCfg(
 	c client.Client,
 	namespace string,

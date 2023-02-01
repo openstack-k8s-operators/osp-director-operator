@@ -288,3 +288,14 @@ osp-director-operator-agent-image-build: test ## Build osp-director-operator-age
 .PHONY: osp-director-downloader-image-build
 osp-director-downloader-image-build: test ## Build osp-director-downloader image.
 	podman build -t ${IMG} -f containers/image_downloader/Dockerfile containers/image_downloader
+
+.PHONY: operator-lint
+operator-lint: $(LOCALBIN) gowork
+	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@2ffa25b7f1c13fb2bdae5444a3dd1b5bbad5
+	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...
+
+.PHONY: gowork
+gowork: ## Generate go.work file
+	test -f go.work || go work init
+	go work use .
+	go work use ./api

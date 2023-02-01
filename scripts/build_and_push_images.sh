@@ -8,8 +8,8 @@ set -ex
 #
 
 if ! podman login --get-login registry.redhat.io &> /dev/null; then
-  echo "Please run podman login registry.redhat.io before running this script."
-  exit 1
+    echo "Please run podman login registry.redhat.io before running this script."
+    exit 1
 fi
 
 VERSION=${1:-"17.0.1"}
@@ -43,59 +43,59 @@ make IMG=${AGENT_IMG} osp-director-operator-agent-image-build docker-push
 make IMG=${DOWNLOADER_IMG} osp-director-downloader-image-build docker-push
 
 for OSP_RELEASE in ${OSP_RELEASES}; do
-  VERSION_RELEASE="${VERSION}-${OSP_RELEASE}"
-  BUNDLE_IMG="$REPO/$OP_NAME-bundle:$VERSION_RELEASE"
-  INDEX_IMG="$REPO/$OP_NAME-index:$VERSION_RELEASE"
+    VERSION_RELEASE="${VERSION}-${OSP_RELEASE}"
+    BUNDLE_IMG="$REPO/$OP_NAME-bundle:$VERSION_RELEASE"
+    INDEX_IMG="$REPO/$OP_NAME-index:$VERSION_RELEASE"
 
-  rm -Rf bundle
-  rm -Rf bundle.Dockerfile
+    rm -Rf bundle
+    rm -Rf bundle.Dockerfile
 
-  # Generate bundle manifests
-  OSP_RELEASE=${OSP_RELEASE} VERSION=${VERSION_RELEASE} IMG=${IMG} make bundle
+    # Generate bundle manifests
+    OSP_RELEASE=${OSP_RELEASE} VERSION=${VERSION_RELEASE} IMG=${IMG} make bundle
 
-  # Replace AGENT_IMAGE_URL_DEFAULT in CSV
-  AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@"$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
-  sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+    # Replace AGENT_IMAGE_URL_DEFAULT in CSV
+    AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@"$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
+    sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
 
-  # Replace DOWNLOADER_IMAGE_URL_DEFAULT in CSV
-  DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@"$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
-  sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
+    # Replace DOWNLOADER_IMAGE_URL_DEFAULT in CSV
+    DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@"$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
+    sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
 
-  # HACKs for webhook deployment to work around: https://bugzilla.redhat.com/show_bug.cgi?id=1921000
-  # TODO: Figure out how to do this via Kustomize so that it's automatically rolled into the make
-  #       commands above
-  sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' ${CLUSTER_BUNDLE_FILE}
-  sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' ${CLUSTER_BUNDLE_FILE}
+    # HACKs for webhook deployment to work around: https://bugzilla.redhat.com/show_bug.cgi?id=1921000
+    # TODO: Figure out how to do this via Kustomize so that it's automatically rolled into the make
+    #       commands above
+    sed -i '/^    webhookPath:.*/a #added\n    containerPort: 4343\n    targetPort: 4343' ${CLUSTER_BUNDLE_FILE}
+    sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controller-manager/g' ${CLUSTER_BUNDLE_FILE}
 
-  # Convert any tags to digests within the CSV (for offline/air gapped environments)
-  for csv_image in $(cat ${CLUSTER_BUNDLE_FILE} | grep "image:" | sed -e "s|.*image:||" | sort -u); do
-    base_image=$(echo $csv_image | cut -f 1 -d':')
-    tag_image=$(echo $csv_image | cut -f 2 -d':')
-    if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
-      sed -e "s|$base_image:$tag_image|$IMG|g" -i ${CLUSTER_BUNDLE_FILE}
-    elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
-      sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
-    elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
-      sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
-    else
-      digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
-      if [[ "$digest_image" == "" ]]; then
-        echo "Failed to get image digest for docker://$base_image:$tag_image"
-      else
-          echo "$base_image:$tag_image becomes $base_image@$digest_image."
-          sed -e "s|$base_image:$tag_image|$base_image@$digest_image|g" -i ${CLUSTER_BUNDLE_FILE}
-      fi
-    fi
-  done
+    # Convert any tags to digests within the CSV (for offline/air gapped environments)
+    for csv_image in $(cat ${CLUSTER_BUNDLE_FILE} | grep "image:" | sed -e "s|.*image:||" | sort -u); do
+        base_image=$(echo $csv_image | cut -f 1 -d':')
+        tag_image=$(echo $csv_image | cut -f 2 -d':')
+        if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
+            sed -e "s|$base_image:$tag_image|$IMG|g" -i ${CLUSTER_BUNDLE_FILE}
+        elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
+            sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+        elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
+            sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+        else
+            digest_image=$(skopeo inspect docker://$base_image:$tag_image | jq '.Digest' -r)
+            if [[ "$digest_image" == "" ]]; then
+                echo "Failed to get image digest for docker://$base_image:$tag_image"
+            else
+                echo "$base_image:$tag_image becomes $base_image@$digest_image."
+                sed -e "s|$base_image:$tag_image|$base_image@$digest_image|g" -i ${CLUSTER_BUNDLE_FILE}
+            fi
+        fi
+    done
 
-  # Build bundle image
-  VERSION=${VERSION_RELEASE} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-build
+    # Build bundle image
+    VERSION=${VERSION_RELEASE} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-build
 
-  # Push bundle image
-  VERSION=${VERSION_RELEASE} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-push
-  #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
+    # Push bundle image
+    VERSION=${VERSION_RELEASE} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-push
+    #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
 
-  # Index image
-  opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman --pull-tool podman
-  podman push ${INDEX_IMG}
+    # Index image
+    opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman --pull-tool podman
+    podman push ${INDEX_IMG}
 done

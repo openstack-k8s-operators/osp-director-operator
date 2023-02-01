@@ -3,11 +3,11 @@ OSP Director Operator Baremetal Provisioning
 
 Overview
 --------
-OSP Director Operator utilizes OpenShift's (OCP) [Metal3 operator](https://github.com/metal3-io/baremetal-operator) to provide baremetal 
-compute provisioning functionality.  We rely on a PXE provisioning network to be configured 
-for Metal3, which is included by default with an IPI (Installer Provisioned Infrastructure) 
-OpenShift cluster deployment.  Another popular deployment approach, AI (Assisted Installer), 
-does not have this PXE network available by default, and must be manually added to the 
+OSP Director Operator utilizes OpenShift's (OCP) [Metal3 operator](https://github.com/metal3-io/baremetal-operator) to provide baremetal
+compute provisioning functionality.  We rely on a PXE provisioning network to be configured
+for Metal3, which is included by default with an IPI (Installer Provisioned Infrastructure)
+OpenShift cluster deployment.  Another popular deployment approach, AI (Assisted Installer),
+does not have this PXE network available by default, and must be manually added to the
 cluster after installation.
 
 Requirements
@@ -19,8 +19,8 @@ Please consult the table below for our current baremetal compute provisioning su
 | OCP 4.6 | No           | Yes           |
 | OCP 4.7 | Yes*         | Yes           |
 
-__*NOTE:__ As mentioned above in the overview, AI clusters do not come with a PXE provisioning 
-network by default.  Therefore, for proper baremetal compute provisioning support for AI 
+__*NOTE:__ As mentioned above in the overview, AI clusters do not come with a PXE provisioning
+network by default.  Therefore, for proper baremetal compute provisioning support for AI
 clusters, there are the following further prerequisites:
 
 - A layer-2 network must be available to all OCP masters and workers, as well as to the baremetal compute hosts you intend to provision for your OSP cloud (the same network for all hosts)

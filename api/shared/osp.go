@@ -37,8 +37,8 @@ const (
 )
 
 // GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
-//  - TemplateVersion16_2 for eitner 16.2 or upstream train
-//  - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
+//   - TemplateVersion16_2 for eitner 16.2 or upstream train
+//   - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
 func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
 	switch parsedVersion {
 	case string(TemplateVersionTrain):

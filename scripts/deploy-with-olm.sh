@@ -5,8 +5,8 @@ TARGET_NAMESPACE=${TARGET_NAMESPACE:-"openstack"}
 INDEX_IMAGE=${INDEX_IMAGE:-"quay.io/openstack-k8s-operators/osp-director-operator-index:0.0.1"}
 CSV_VERSION=${CSV_VERSION:-"0.0.1"}
 
-if [ `oc get catalogsource -n "${TARGET_NAMESPACE}" --no-headers 2> /dev/null | grep osp-director | wc -l` -eq 0 ]; then
-echo "Creating CatalogSource"
+if [[ `oc get catalogsource -n "${TARGET_NAMESPACE}" --no-headers 2> /dev/null | grep osp-director | wc -l` -eq 0 ]]; then
+        echo "Creating CatalogSource"
         cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
@@ -29,14 +29,14 @@ for i in $(seq 1 $RETRIES); do
     oc get packagemanifest -n "${TARGET_NAMESPACE}" "osp-director-operator" && break
     sleep $i
     if [ "$i" -eq "${RETRIES}" ]; then
-      echo "packagemanifest 'osp-director-operator' was never created in namespace '${TARGET_NAMESPACE}'"
-      exit 1
+        echo "packagemanifest 'osp-director-operator' was never created in namespace '${TARGET_NAMESPACE}'"
+        exit 1
     fi
 done
 
-if [ `oc get operatorgroup -n "${TARGET_NAMESPACE}" --no-headers 2> /dev/null | wc -l` -eq 0 ]; then
-echo "Creating OperatorGroup"
-cat <<EOF | oc create -f -
+if [[ `oc get operatorgroup -n "${TARGET_NAMESPACE}" --no-headers 2> /dev/null | wc -l` -eq 0 ]]; then
+    echo "Creating OperatorGroup"
+    cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
@@ -48,8 +48,8 @@ spec:
 EOF
 fi
 
-echo "Creating Subscription"
-cat <<EOF | oc create -f -
+    echo "Creating Subscription"
+    cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:

@@ -426,9 +426,7 @@ func (r *OpenStackControlPlaneReconciler) getNormalizedStatus(status *ospdirecto
 	return s
 }
 
-//
 // create or get hash of "tripleo-passwords" controlplane.TripleoPasswordSecret secret
-//
 func (r *OpenStackControlPlaneReconciler) createOrGetTripleoPasswords(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackControlPlane,
@@ -592,10 +590,9 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdatePasswordSecret(
 	return nil
 }
 
-//
 // Secret - used for deployment to ssh into the overcloud nodes,
-//          gets added to the controller VMs cloud-admin user using cloud-init
 //
+//	gets added to the controller VMs cloud-admin user using cloud-init
 func (r *OpenStackControlPlaneReconciler) createOrGetDeploymentSecret(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackControlPlane,
@@ -735,9 +732,7 @@ func (r *OpenStackControlPlaneReconciler) verifyConfigMapExist(
 	return ctrl.Result{}, nil
 }
 
-//
 // Create VMSets
-//
 func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackControlPlane,
@@ -1008,9 +1003,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	return ctrl.Result{}, nil
 }
 
-//
 // verify if API storageversionmigration is required
-//
 func (r *OpenStackControlPlaneReconciler) ensureStorageVersionMigration(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackControlPlane,

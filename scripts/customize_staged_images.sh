@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Script to modify the image references in the staged image bundle so they can be
 # installed easily tested from the registry-proxy.engineering.redhat.com staging repo internally.
 set -xe
