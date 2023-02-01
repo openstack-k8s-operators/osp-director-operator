@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -642,34 +643,46 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 		templateParameters["CtlplaneDnsSearch"] = osNetCfg.Spec.DNSSearchDomains
 	}
 
-	netNameLower := "ctlplane"
-	// get network with name_lower label
 	labelSelector := map[string]string{
-		shared.SubNetNameLabelSelector: netNameLower,
+		shared.ControlPlaneNetworkLabelSelector: strconv.FormatBool(true),
 	}
 
-	// get ctlplane network
-	network, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+	ctlplaneNets, err := ospdirectorv1beta1.GetOpenStackNetsMapWithLabel(
 		r.Client,
 		instance.Namespace,
 		labelSelector,
 	)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
-			cond.Reason = shared.CommonCondReasonOSNetNotFound
-		} else {
-			// Error reading the object - requeue the request.
-			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
-			cond.Reason = shared.CommonCondReasonOSNetError
-		}
+		cond.Message = fmt.Sprintf("Error getting ctlplane OSNets with labelSelector %v", labelSelector)
+		cond.Reason = shared.CommonCondReasonOSNetError
 		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
-
 		return err
 	}
 
-	gateway := network.Spec.Gateway
+	var netNameLower string
+	var ctlPlaneNetwork ospdirectorv1beta1.OpenStackNet
+
+outer:
+	for netName, osNet := range ctlplaneNets {
+		for _, myNet := range instance.Spec.Networks {
+			if myNet == netName {
+				netNameLower = netName
+				ctlPlaneNetwork = osNet
+				break outer
+			}
+		}
+	}
+
+	if netNameLower == "" {
+		cond.Message = "Ctlplane network not found"
+		cond.Reason = shared.CommonCondReasonOSNetError
+		cond.Type = shared.CommonCondTypeError
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+		return err
+	}
+
+	gateway := ctlPlaneNetwork.Spec.Gateway
 
 	if gateway != "" {
 		if strings.Contains(gateway, ":") {
@@ -678,6 +691,13 @@ func (r *OpenStackVMSetReconciler) generateVirtualMachineNetworkData(
 			templateParameters["Gateway"] = fmt.Sprintf("gateway4: %s", gateway)
 		}
 	}
+
+	routes := []map[string]string{}
+	for _, route := range ctlPlaneNetwork.Spec.Routes {
+		routes = append(routes, map[string]string{"to": route.Destination, "via": route.Nexthop})
+	}
+	templateParameters["CtlplaneRoutes"] = routes
+
 	networkdata := []common.Template{
 		{
 			Name:               host.NetworkDataSecret,

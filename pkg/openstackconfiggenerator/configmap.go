@@ -35,8 +35,9 @@ import (
 )
 
 type roleNetworkType struct {
-	Name            string
-	NameLower       string
+	ID              string // e.g. ctlplane_leaf1
+	Name            string // e.g. Control
+	NameLower       string // e.g. ctlplane
 	Cidr            string // e.g. 192.168.24.0/24
 	NetAddr         string // e.g. 192.168.24.0
 	CidrSuffix      int    // e.g. 24
@@ -85,7 +86,7 @@ type RoleType struct {
 	Nodes          map[string]*roleNodeType
 	IsVMType       bool
 	IsTripleoRole  bool
-	IsControlPlane bool
+	IsControlPlane bool // is vip or serviceVIP
 }
 
 type netDetailsType struct {
@@ -436,6 +437,7 @@ func createRolesMap(
 				nameLower := networkMappingList[osnet.Spec.NameLower]
 
 				rolesMap[roleName].Networks[osnet.Spec.NameLower] = &roleNetworkType{
+					ID:              osnet.Spec.NameLower,
 					Name:            osnet.Spec.Name,
 					NameLower:       nameLower,
 					Cidr:            osnet.Spec.Cidr,
@@ -488,8 +490,9 @@ func createRolesMap(
 							// IP address with brackets in case of IPv6, e.g. [2001:DB8:24::15]
 							uri = fmt.Sprintf("[%s]", uri)
 						}
-						if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] == nil {
-							rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[osnet.Spec.NameLower] = &roleIPType{
+
+						if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[nameLower] == nil {
+							rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[nameLower] = &roleIPType{
 								IPaddr:       reservation.IP,
 								IPAddrURI:    uri,
 								IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, cidrSuffix),
