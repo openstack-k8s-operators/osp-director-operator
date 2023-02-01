@@ -22,6 +22,7 @@ import (
 	"net"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -927,45 +928,64 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	}
 
 	sts = append(sts, userDataSt)
-	// TODO mschuppert: get ctlplane network name using ooo-ctlplane-network label
-	ipCidr := instance.Status.BaremetalHosts[bmhStatus.Hostname].IPAddresses["ctlplane"]
 
-	ip, network, _ := net.ParseCIDR(ipCidr)
-	netMask := network.Mask
-
-	netNameLower := "ctlplane"
-	// get network with name_lower label
 	labelSelector := map[string]string{
-		shared.SubNetNameLabelSelector: netNameLower,
+		shared.ControlPlaneNetworkLabelSelector: strconv.FormatBool(true),
 	}
 
-	// get ctlplane network
-	ctlPlaneNetwork, err := ospdirectorv1beta1.GetOpenStackNetWithLabel(
+	ctlplaneNets, err := ospdirectorv1beta1.GetOpenStackNetsMapWithLabel(
 		r.Client,
 		instance.Namespace,
 		labelSelector,
 	)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("OpenStackNet with NameLower %s not found!", netNameLower)
-			cond.Reason = shared.CommonCondReasonOSNetNotFound
-		} else {
-			// Error reading the object - requeue the request.
-			cond.Message = fmt.Sprintf("Error getting OSNet with labelSelector %v", labelSelector)
-			cond.Reason = shared.CommonCondReasonOSNetError
-		}
+		cond.Message = fmt.Sprintf("Error getting ctlplane OSNets with labelSelector %v", labelSelector)
+		cond.Reason = shared.CommonCondReasonOSNetError
 		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
-
 		return err
 	}
+
+	var netNameLower string
+	var ctlPlaneNetwork ospdirectorv1beta1.OpenStackNet
+
+outer:
+	for netName, osNet := range ctlplaneNets {
+		for _, myNet := range instance.Spec.Networks {
+			if myNet == netName {
+				netNameLower = netName
+				ctlPlaneNetwork = osNet
+				break outer
+			}
+		}
+	}
+
+	if netNameLower == "" {
+		cond.Message = "Ctlplane network not found"
+		cond.Reason = shared.CommonCondReasonOSNetError
+		cond.Type = shared.CommonCondTypeError
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+		return err
+	}
+
+	ipCidr := instance.Status.BaremetalHosts[bmhStatus.Hostname].IPAddresses[netNameLower]
+	ip, network, err := net.ParseCIDR(ipCidr)
+	if err != nil {
+		cond.Message = fmt.Sprintf("Error parsing IP CIDR %v for network %v", ipCidr, netNameLower)
+		cond.Reason = shared.CommonCondReasonOSNetError
+		cond.Type = shared.CommonCondTypeError
+		err = common.WrapErrorForObject(cond.Message, instance, err)
+		return err
+	}
+
+	netMask := network.Mask
 
 	// Network data cloud-init secret
 	templateParameters = make(map[string]interface{})
 	templateParameters["CtlplaneIp"] = ip.String()
 	templateParameters["CtlplaneInterface"] = instance.Spec.CtlplaneInterface
 	templateParameters["CtlplaneGateway"] = ctlPlaneNetwork.Spec.Gateway
-	templateParameters["CtlplaneNetmask"] = fmt.Sprintf("%d.%d.%d.%d", netMask[0], netMask[1], netMask[2], netMask[3])
+	templateParameters["CtlplaneNetmask"] = net.IP(netMask).String()
 	if len(instance.Spec.BootstrapDNS) > 0 {
 		templateParameters["CtlplaneDns"] = instance.Spec.BootstrapDNS
 	} else {
@@ -977,6 +997,21 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	} else {
 		templateParameters["CtlplaneDnsSearch"] = osNetCfg.Spec.DNSSearchDomains
 	}
+
+	routes := []map[string]string{}
+	for _, route := range ctlPlaneNetwork.Spec.Routes {
+		_, routeNetwork, err := net.ParseCIDR(route.Destination)
+		if err != nil {
+			cond.Message = fmt.Sprintf("Error parsing route CIDR %v for network %v", route.Destination, netNameLower)
+			cond.Reason = shared.CommonCondReasonOSNetError
+			cond.Type = shared.CommonCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+			return err
+		}
+		routes = append(routes, map[string]string{"network": routeNetwork.IP.String(), "netmask": net.IP(routeNetwork.Mask).String(), "gateway": route.Nexthop})
+	}
+
+	templateParameters["CtlplaneRoutes"] = routes
 
 	networkDataSecretName := fmt.Sprintf(baremetalset.CloudInitNetworkDataSecretName, instance.Name, bmh)
 
