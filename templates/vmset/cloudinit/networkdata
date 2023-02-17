@@ -11,9 +11,16 @@ ethernets:
         {{- end }}
       {{- end }}
       addresses:
-         {{- range $value := .CtlplaneDns }}
-         - {{ $value }}
-         {{- end }}
+        {{- range $value := .CtlplaneDns }}
+        - {{ $value }}
+        {{- end }}
+    {{- end }}
+    {{- if not (eq (len .CtlplaneRoutes) 0) }}
+    routes:
+      {{- range $value := .CtlplaneRoutes }}
+      - to: {{ $value.to }}
+        via: {{ $value.via }}
+      {{- end }}
     {{- end }}
 {{- if .Gateway }}
     {{ .Gateway }}

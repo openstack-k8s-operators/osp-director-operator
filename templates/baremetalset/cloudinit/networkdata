@@ -9,6 +9,14 @@ networks:
   ip_address: {{ .CtlplaneIp }}
   type: ipv4
   gateway: {{ .CtlplaneGateway }}
+  {{- if not (eq (len .CtlplaneRoutes) 0) }}
+  routes:
+    {{- range $value := .CtlplaneRoutes }}
+    - network: {{ $value.network }}
+      netmask: {{ $value.netmask }}
+      gateway: {{ $value.gateway }}
+    {{- end }}
+  {{- end }}
 {{- if not (eq (len .CtlplaneDns) 0) }}
 services:
 - type: dns-nameserver

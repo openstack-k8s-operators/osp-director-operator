@@ -641,11 +641,12 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 		osNet.Spec.NameLower = subnet.Name
 		if net.IsControlPlane {
 			osNet.Spec.DomainName = fmt.Sprintf("%s.%s", ospdirectorv1beta1.ControlPlaneNameLower, instance.Spec.DomainName)
+			// TripleO does not support VLAN on ctlplane
 		} else {
 			osNet.Spec.DomainName = fmt.Sprintf("%s.%s", strings.ToLower(net.Name), instance.Spec.DomainName)
+			osNet.Spec.Vlan = subnet.Vlan
 		}
 		osNet.Spec.VIP = net.VIP
-		osNet.Spec.Vlan = subnet.Vlan
 
 		if subnet.IPv4.Cidr != "" {
 			osNet.Spec.AllocationEnd = subnet.IPv4.AllocationEnd

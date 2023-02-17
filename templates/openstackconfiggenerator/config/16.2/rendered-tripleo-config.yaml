@@ -54,20 +54,23 @@ parameter_defaults:
         - ip_address: {{ $ip.IPaddr }}
       subnets:
         - cidr: {{ $ip.Network.Cidr }}
+          {{- range $_, $net := $.NetworksMap }}
+          {{- range $subnetname, $subnet := $net.Subnets }}
+          {{- if eq $subnetname $ip.Network.ID }}
+          gateway_ip: {{ $subnet.IPv4.Gateway }}
+          host_routes: {{ if eq (len $subnet.IPv4.Routes) 0 }}[]{{ else }}
+          {{- range $_, $route := $subnet.IPv4.Routes }}
+            - destination: '{{ $route.Destination }}'
+              nexthop: '{{ $route.Nexthop }}'
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
       network:
         tags:
           - {{ $ip.Network.Cidr }}
 {{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-  #
-  # Per ctlplane details
-{{- range $netid, $net := .NetworksMap }}
-{{- if $net.IsControlPlane }}
-{{- if ne $net.DefaultSubnet.IPv4.Cidr "" }}
-  ControlPlaneDefaultRoute: {{ $net.DefaultSubnet.IPv4.Gateway }}
-  ControlPlaneSubnetCidr: {{ $net.DefaultSubnet.IPv4.CidrSuffix }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -124,36 +127,3 @@ parameter_defaults:
 {{- end }}
 {{- end }}
 {{- end }}
-  #
-  # CtlplaneNetworkAttributes
-  CtlplaneNetworkAttributes:
-    {{- range $netname, $net := .NetworksMap }}
-    {{- if $net.IsControlPlane }}
-    {{- $subnetname := $net.DefaultSubnet.Name }}
-    {{- $subnet := $net.DefaultSubnet }}
-    network:
-      dns_domain: {{ $net.DomainName }}.
-      mtu: {{ $net.MTU }}
-      name: {{ $net.NameLower }}
-      tags:
-      - {{ $subnet.IPv4.Cidr }}
-    {{- /* subnets start */}}
-    subnets:
-      {{ $subnetname }}-subnet:
-        cidr: {{ $subnet.IPv4.Cidr }}
-        dns_nameservers: {{ if eq (len $net.DNSServers) 0 }}[]{{ else }}
-          {{- range $idx, $dnsServer := $net.DNSServers }}
-          - {{ $dnsServer }}
-          {{- end }}
-          {{- end }}
-        gateway_ip: {{ $subnet.IPv4.Gateway }}
-        host_routes: {{ if eq (len $subnet.IPv4.Routes) 0 }}[]{{ else }}
-          {{- range $netname, $route := $subnet.IPv4.Routes }}
-          - destination: '{{ $route.Destination }}'
-            nexthop: '{{ $route.Nexthop }}'
-          {{- end }}
-          {{- end }}
-        ip_version: 4
-        name: {{ $subnetname }}-subnet
-    {{- end }}
-    {{- end }}

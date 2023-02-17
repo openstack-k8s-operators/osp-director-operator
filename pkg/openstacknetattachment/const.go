@@ -35,26 +35,30 @@ const (
 	// CniConfigTemplate -
 	CniConfigTemplate = `
 {
-    "cniVersion": "0.3.1",
-    "name": "{{ .Name }}",
-    "plugins": [
-	{
-	    "type": "bridge",
-	    "bridge": "{{ .BridgeName }}",
-	    "mtu": {{ .MTU }},
+	"cniVersion": "0.3.1",
+	"name": "{{ .Name }}",
+	"plugins": [
+		{
+			"type": "bridge",
+			"bridge": "{{ .BridgeName }}",
+			"mtu": {{ .MTU }},
 {{- if ne .Vlan "0"}}
-	    "vlan": {{ .Vlan }},
+			"vlan": {{ .Vlan }},
 {{- end }}
-	    "ipam": {
+			"ipam": {
 {{- if .Static }}
-                "type": "static"
+				"type": "static"
 {{- end }}
-	    }
-	},
-	{
-	    "type": "tuning"
-	}
-    ]
+			}
+		},
+		{
+			"type": "tuning"
+		},
+		{
+			"type": "route-override",
+			"addroutes": {{ .Routes }}
+		}
+	]
 }
 `
 )

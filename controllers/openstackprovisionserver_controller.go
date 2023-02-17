@@ -225,6 +225,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 			return ctrl.Result{}, err
 		}
 
+		// FIXME: changing the imageURL on the spec updates the pod, but doesn't update the LocalImageURL
 		// If the current LocalImageURL is empty, or its embedded IP does not equal the ProvisionIP, the update the LocalImageURL
 		if instance.Status.LocalImageURL == "" || curURL.Hostname() != instance.Status.ProvisionIP {
 			// Update status with LocalImageURL, given ProvisionIP status value
