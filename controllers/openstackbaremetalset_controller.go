@@ -153,23 +153,38 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 		common.LogForObject(r, cond.Message, instance)
 	}(cond)
 
+	// Ensure finalizer name length <= 63 characters (https://issues.redhat.com/browse/OSPK8-666)
+	oldFinalizerName := "baremetalset.osp-director.openstack.org-" + instance.Name
+	finalizerName := "baremetalset.osp-director.openstack.org"
+
+	if controllerutil.RemoveFinalizer(instance, oldFinalizerName) {
+		controllerutil.AddFinalizer(instance, finalizerName)
+		if err := r.Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+		common.LogForObject(
+			r,
+			fmt.Sprintf("Finalizer %s updated to %s on CR %s", oldFinalizerName, finalizerName, instance.Name),
+			instance,
+		)
+		return ctrl.Result{}, nil
+	}
+
 	// examine DeletionTimestamp to determine if object is under deletion
-	// FIXME: https://issues.redhat.com/browse/OSPK8-666
-	finalizerName := "baremetalset.osp-director.openstack.org-" + instance.Name
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(instance, finalizerName) {
-			controllerutil.AddFinalizer(instance, finalizerName)
+		if controllerutil.AddFinalizer(instance, finalizerName) {
 			if err := r.Update(ctx, instance); err != nil {
-				return reconcile.Result{}, err
+				return ctrl.Result{}, err
 			}
 			common.LogForObject(
 				r,
 				fmt.Sprintf("Finalizer %s added to CR %s", finalizerName, instance.Name),
 				instance,
 			)
+			return ctrl.Result{}, nil
 		}
 	} else {
 		// 1. check if finalizer is there
