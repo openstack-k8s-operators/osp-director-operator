@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -209,29 +208,10 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 	cond.Type = shared.ProvisionServerCondTypeProvisioning
 	cond.Reason = shared.OpenStackProvisionServerCondReasonProvisioning
 	cond.Message = "Provisioning of OpenStackProvisionServer in progress"
+	instance.Status.LocalImageURL = ""
 
 	// Provision IP Discovery Agent sets status' ProvisionIP
 	if instance.Status.ProvisionIP != "" {
-
-		// Get the current LocalImageURL IP (if any)
-		curURL, err := url.Parse(instance.Status.LocalImageURL)
-
-		if err != nil {
-			cond.Type = shared.ProvisionServerCondTypeError
-			cond.Reason = shared.OpenStackProvisionServerCondReasonLocalImageURLParseError
-			cond.Message = fmt.Sprintf("Failed to parse existing LocalImageURL: %s", instance.Status.LocalImageURL)
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return ctrl.Result{}, err
-		}
-
-		// FIXME: changing the imageURL on the spec updates the pod, but doesn't update the LocalImageURL
-		// If the current LocalImageURL is empty, or its embedded IP does not equal the ProvisionIP, the update the LocalImageURL
-		if instance.Status.LocalImageURL == "" || curURL.Hostname() != instance.Status.ProvisionIP {
-			// Update status with LocalImageURL, given ProvisionIP status value
-			instance.Status.LocalImageURL = r.getLocalImageURL(instance)
-			common.LogForObject(r, fmt.Sprintf("OpenStackProvisionServer LocalImageURL changed: %s", instance.Status.LocalImageURL), instance)
-		}
 
 		// Now check the associated pod's status
 		podList, err := r.Kclient.CoreV1().Pods(instance.Namespace).List(ctx, metav1.ListOptions{
@@ -255,9 +235,7 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 			cond.Type = shared.ProvisionServerCondTypeWaiting
 			cond.Reason = shared.OpenStackProvisionServerCondReasonListError
 			cond.Message = "Pod not yet available"
-			err = common.WrapErrorForObject(cond.Message, instance, err)
-
-			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, err
+			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 		}
 
 		// There should only be one pod.  If there is more than one, we have other problems...
@@ -266,6 +244,13 @@ func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req 
 				cond.Type = shared.ProvisionServerCondTypeProvisioned
 				cond.Reason = shared.OpenStackProvisionServerCondReasonProvisioned
 				cond.Message = "OpenStackProvisionServer has been provisioned"
+
+				// Only set the localImageURL if the pod has finished init
+				instance.Status.LocalImageURL = r.getLocalImageURL(instance)
+				if instance.Status.LocalImageURL != currentStatus.LocalImageURL {
+					common.LogForObject(r, fmt.Sprintf("OpenStackProvisionServer LocalImageURL changed: %s", instance.Status.LocalImageURL), instance)
+				}
+
 				break
 			}
 		}
@@ -380,6 +365,9 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 		replicas := int32(1)
 
 		deployment.Spec.Replicas = &replicas
+		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+			Type: appsv1.RecreateDeploymentStrategyType,
+		}
 		deployment.Spec.Template.Spec = corev1.PodSpec{
 			ServiceAccountName: provisionserver.ServiceAccount,
 			HostNetwork:        true,
