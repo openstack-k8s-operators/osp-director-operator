@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18.x
       - name: Checkout project code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Checkout openstack-k8s-operators-ci project
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: openstack-k8s-operators/openstack-k8s-operators-ci
           path: ./openstack-k8s-operators-ci
@@ -30,12 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18.x
       - name: Checkout project code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run golangci lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           args: --timeout 5m
