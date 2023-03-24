@@ -8,7 +8,7 @@ NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
 TOKEN=$(cat ${SERVICEACCOUNT}/token)
 CACERT=${SERVICEACCOUNT}/ca.crt
 
-ROLE_RESERVATIONS=$(curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/osp-director.openstack.org/v1beta1/namespaces/$NAMESPACE/openstacknets/ctlplane | jq .spec.roleReservations | jq -r "to_entries | map(select(.value.addToPredictableIPs == true and .value.reservations[].vip == false)) | del(.[] | .value.reservations[] | select(.deleted? == true))| unique[]")
+ROLE_RESERVATIONS=$(curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/osp-director.openstack.org/v1beta1/namespaces/$NAMESPACE/openstacknets?labelSelector=ooo-ctlplane-network=true | jq .items[].spec.roleReservations | jq -r "to_entries | map(select(.value.addToPredictableIPs == true and .value.reservations[].vip == false)) | del(.[] | .value.reservations[] | select(.deleted? == true))| unique[]")
 
 ROLES=$(echo $ROLE_RESERVATIONS | jq -re '.key')
 

@@ -9,7 +9,6 @@ parameter_defaults:
   DeployIdentifier: OSP_DIRECTOR_OPERATOR_DEPLOY_IDENTIFIER
   SoftwareConfigTransport: POLL_SERVER_HEAT
   RootStackName: overcloud
-  ManageNetworks: False
   NeutronPublicInterface: nic3
 {{- /* HostnameFormat and RoleCount */ -}}
 {{- range $roleid, $role := .RolesMap }}
@@ -108,6 +107,19 @@ parameter_defaults:
 {{- end }}
 {{- end }}
   #
+  # ControlPlaneSubnet
+{{- range $roleid, $role := .RolesMap }}
+{{- if $role.IsControlPlane }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if and ($node.VIP) ($ip.Network.IsControlPlane) }}
+  ControlPlaneSubnet: {{ $ip.Network.ID }}-subnet
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  #
   # Set VIP's for redis and OVN
 {{- range $roleid, $role := .RolesMap }}
 {{- range $nodeid, $node := $role.Nodes }}
@@ -150,7 +162,7 @@ parameter_defaults:
     subnets:
     {{- range $subnetname, $subnet := $net.Subnets }}
       {{ $subnetname }}-subnet:
-        cidr: {{ $subnet.IPv4.Cidr }}
+        cidr: '{{ $subnet.IPv4.Cidr }}'
         dns_nameservers: {{ if eq (len $net.DNSServers) 0 }}[]{{ else }}
           {{- range $idx, $dnsServer := $net.DNSServers }}
           - {{ $dnsServer }}
@@ -168,3 +180,18 @@ parameter_defaults:
     {{- end }}
     {{- end }}
     {{- end }}
+  #
+  # <role>ControlPlaneSubnet
+{{- range $roleid, $role := .RolesMap }}
+{{- if not $role.IsControlPlane }}
+{{- $done := 0 }}
+{{- range $nodeid, $node := $role.Nodes }}
+{{- range $netname, $ip := $node.IPaddr }}
+{{- if and (eq $done 0) $ip.Network.IsControlPlane }}
+  {{ $role.Name }}ControlPlaneSubnet: {{ $ip.Network.ID }}-subnet
+  {{- $done = 1 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
