@@ -12,9 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//
 // WaitOnIPsCreated - Wait for IPs created on all configured networks
-//
 func WaitOnIPsCreated(
 	r common.ReconcilerCommon,
 	obj client.Object,

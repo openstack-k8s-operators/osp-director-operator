@@ -56,12 +56,12 @@ func CreateOrUpdatePvc(ctx context.Context, r ReconcilerCommon, obj metav1.Objec
 
 		err := controllerutil.SetOwnerReference(obj, pvc, r.GetScheme())
 		if err != nil {
-			return fmt.Errorf("error set controller reverence for PVC: %v", err)
+			return fmt.Errorf("error set controller reverence for PVC: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, op, fmt.Errorf("error create/updating pvc: %v", err)
+		return nil, op, fmt.Errorf("error create/updating pvc: %w", err)
 	}
 
 	return pvc, op, nil

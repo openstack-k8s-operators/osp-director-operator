@@ -45,7 +45,7 @@ func DeleteServicesWithLabel(
 	}
 
 	if err := r.GetClient().List(ctx, serviceList, listOpts...); err != nil {
-		err = fmt.Errorf("Error listing services for %s: %v", obj.GetName(), err)
+		err = fmt.Errorf("Error listing services for %s: %w", obj.GetName(), err)
 		return err
 	}
 
@@ -53,7 +53,7 @@ func DeleteServicesWithLabel(
 	for _, pod := range serviceList.Items {
 		err := r.GetClient().Delete(ctx, &pod)
 		if err != nil && !k8s_errors.IsNotFound(err) {
-			err = fmt.Errorf("Error deleting service %s: %v", pod.Name, err)
+			err = fmt.Errorf("Error deleting service %s: %w", pod.Name, err)
 			return err
 		}
 	}
@@ -75,7 +75,7 @@ func GetServicesListWithLabel(
 	// otherwise we hit "Error listing services for labels: map[ ... ] - unable to get: default because of unknown namespace for the cache"
 	serviceList, err := r.GetKClient().CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelectorString})
 	if err != nil {
-		err = fmt.Errorf("Error listing services for labels: %v - %v", labelSelectorMap, err)
+		err = fmt.Errorf("Error listing services for labels: %v - %w", labelSelectorMap, err)
 		return nil, err
 	}
 

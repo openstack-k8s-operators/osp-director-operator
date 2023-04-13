@@ -327,9 +327,7 @@ func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-//
 // create hostnames for the requested number of systems
-//
 func (r *OpenStackIPSetReconciler) createNewHostnames(
 	instance *ospdirectorv1beta1.OpenStackIPSet,
 	cond *shared.Condition,
