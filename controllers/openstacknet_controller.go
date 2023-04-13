@@ -266,9 +266,7 @@ func (r *OpenStackNetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-//
 // createOrUpdateNetworkAttachmentDefinition - create or update NetworkAttachmentDefinition
-//
 func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackNet,

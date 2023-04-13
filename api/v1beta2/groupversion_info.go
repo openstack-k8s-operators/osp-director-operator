@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1beta2 contains API Schema definitions for the osp-director v1beta2 API group
-//+kubebuilder:object:generate=true
-//+groupName=osp-director.openstack.org
+// +kubebuilder:object:generate=true
+// +groupName=osp-director.openstack.org
 package v1beta2
 
 import (

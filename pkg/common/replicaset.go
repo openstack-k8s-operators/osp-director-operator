@@ -40,7 +40,7 @@ func DeleteReplicasetsWithLabel(
 		client.MatchingLabels(labelSelectorMap),
 	)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		err = fmt.Errorf("Error DeleteAllOf ReplicaSet: %v", err)
+		err = fmt.Errorf("Error DeleteAllOf ReplicaSet: %w", err)
 		return err
 	}
 
