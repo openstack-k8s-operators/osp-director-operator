@@ -3862,6 +3862,7 @@ spec:
                                   - wallaby
                                   - "16.2"
                                   - "17.0"
+                                  - "17.1"
                                   type: string
                                 passwordSecret:
                                   description: PasswordSecret used to e.g specify

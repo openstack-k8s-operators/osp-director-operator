@@ -973,7 +973,8 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 	//
 	// create Service VIPs starting OSP17/wallaby for RedisVirtualFixedIPs and OVNDBsVirtualFixedIPs
 	//
-	if instance.Status.OSPVersion == shared.OSPVersion(shared.TemplateVersion17_0) {
+	if instance.Status.OSPVersion == shared.OSPVersion(shared.TemplateVersion17_0) ||
+		instance.Status.OSPVersion == shared.OSPVersion(shared.TemplateVersion17_1) {
 		for service, network := range instance.Spec.AdditionalServiceVIPs {
 			ipsetStatus, ctrlResult, err := openstackipset.EnsureIPs(
 				ctx,

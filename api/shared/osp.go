@@ -34,11 +34,14 @@ const (
 	TemplateVersionWallaby OSPVersion = "wallaby"
 	// TemplateVersion17_0 - OSP 17.0 template version
 	TemplateVersion17_0 OSPVersion = "17.0"
+	// TemplateVersion17_1 - OSP 17.1 template version
+	TemplateVersion17_1 OSPVersion = "17.1"
 )
 
 // GetOSPVersion - returns unified ospdirectorv1beta1.OSPVersion for upstream/downstream version
 //   - TemplateVersion16_2 for eitner 16.2 or upstream train
-//   - TemplateVersion17_0 for eitner 17.0 or upstream wallaby
+//   - TemplateVersion17_0 for 17.0
+//   - TemplateVersion17_1 for eitner 17.1 or upstream wallaby
 func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
 	switch parsedVersion {
 	case string(TemplateVersionTrain):
@@ -48,10 +51,14 @@ func GetOSPVersion(parsedVersion string) (OSPVersion, error) {
 		return TemplateVersion16_2, nil
 
 	case string(TemplateVersionWallaby):
-		return TemplateVersion17_0, nil
+		return TemplateVersion17_1, nil
 
 	case string(TemplateVersion17_0):
 		return TemplateVersion17_0, nil
+
+	case string(TemplateVersion17_1):
+		return TemplateVersion17_1, nil
+
 	default:
 		err := fmt.Errorf("not a supported OSP version: %v", parsedVersion)
 		return "", err
