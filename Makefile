@@ -157,8 +157,14 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
+run: export METRICS_PORT?=8080
+run: export HEALTH_PORT?=8081
+run: export OPERATOR_TEMPLATES=./templates
+run: export WATCH_NAMESPACE=openstack,openshift-machine-api,openshift-sriov-network-operator
+run: export ENABLE_WEBHOOKS=false
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go -metrics-bind-address ${METRICS_BIND_ADDRESS}
+	go run ./main.go -metrics-bind-address ":$(METRICS_PORT)" -health-probe-bind-address ":$(HEALTH_PORT)"
+
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
