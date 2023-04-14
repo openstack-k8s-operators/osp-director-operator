@@ -157,6 +157,7 @@ jobs:
         osp_release:
           - "16.2"
           - "17.0"
+          - "17.1"
       # When set to true, GitHub cancels all in-progress jobs if any matrix job fails.
       fail-fast: true
 
@@ -242,6 +243,7 @@ jobs:
         osp_release:
           - "16.2"
           - "17.0"
+          - "17.1"
       # When set to true, GitHub cancels all in-progress jobs if any matrix job fails.
       fail-fast: true
       # The maximum number of jobs that can run simultaneously
