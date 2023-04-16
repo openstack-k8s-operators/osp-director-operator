@@ -80,12 +80,12 @@ func createOrUpdateConfigMap(
 		return nil
 	})
 	if err != nil {
-		return "", op, fmt.Errorf("error create/updating configmap: %v", err)
+		return "", op, fmt.Errorf("error create/updating configmap: %w", err)
 	}
 
 	configMapHash, err := ObjectHash(configMap)
 	if err != nil {
-		return "", op, fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", op, fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return configMapHash, op, nil
@@ -128,7 +128,7 @@ func createOrGetCustomConfigMap(
 
 	configMapHash, err := ObjectHash(configMap)
 	if err != nil {
-		return "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return configMapHash, nil
@@ -215,7 +215,7 @@ func CreateOrGetCustomConfigMap(
 
 	configMapHash, err := ObjectHash(configMap)
 	if err != nil {
-		return "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return configMapHash, nil
@@ -237,12 +237,11 @@ func GetConfigMapAndHashWithName(
 	}
 	configMapHash, err := ObjectHash(configMap)
 	if err != nil {
-		return configMap, "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return configMap, "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 	return configMap, configMapHash, nil
 }
 
-//
 // GetConfigMap - Get config map
 //
 // if the config map is not found, requeue after requeueTimeout in seconds
@@ -260,7 +259,7 @@ func GetConfigMap(
 	err := r.GetClient().Get(ctx, types.NamespacedName{Name: configMapName, Namespace: object.GetNamespace()}, configMap)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("%s config map does not exist: %v", configMapName, err)
+			cond.Message = fmt.Sprintf("%s config map does not exist: %v", configMapName, err.Error())
 			cond.Reason = conditionDetails.ConditionNotFoundReason
 			cond.Type = conditionDetails.ConditionNotFoundType
 
@@ -268,7 +267,7 @@ func GetConfigMap(
 
 			return configMap, ctrl.Result{RequeueAfter: time.Duration(requeueTimeout) * time.Second}, nil
 		}
-		cond.Message = fmt.Sprintf("Error getting %s config map: %v", configMapName, err)
+		cond.Message = fmt.Sprintf("Error getting %s config map: %v", configMapName, err.Error())
 		cond.Reason = conditionDetails.ConditionErrordReason
 		cond.Type = conditionDetails.ConditionErrorType
 		err = WrapErrorForObject(cond.Message, object, err)

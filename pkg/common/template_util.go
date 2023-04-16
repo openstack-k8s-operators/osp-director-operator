@@ -141,7 +141,8 @@ func ExecuteTemplateData(templateData string, data interface{}) (string, error) 
 // ExecuteTemplateFile creates a template from the file and
 // execute it with the specified data
 // Note: mschuppert - can be removed when all operators switched
-//       to the above ones.
+//
+//	to the above ones.
 func ExecuteTemplateFile(filename string, data interface{}) (string, error) {
 
 	templates := os.Getenv("OPERATOR_TEMPLATES")

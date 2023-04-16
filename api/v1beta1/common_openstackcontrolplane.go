@@ -14,11 +14,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-//
 // GetControlPlane - Get OSP ControlPlane CR where e.g. the status information has the
 // OSP version: controlPlane.Status.OSPVersion
 // FIXME: We assume there is only one ControlPlane CR for now (enforced by webhook), but this might need to change
-//
 func GetControlPlane(
 	c client.Client,
 	obj metav1.Object,

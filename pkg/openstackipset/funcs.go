@@ -18,9 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-//
 // EnsureIPs - Creates IPSet and verify/wait for IPs created
-//
 func EnsureIPs(
 	ctx context.Context,
 	r common.ReconcilerCommon,
@@ -130,9 +128,7 @@ func EnsureIPs(
 	return status, reconcile.Result{}, nil
 }
 
-//
 // createOrUpdateIPSet - Creates or updates IPSet
-//
 func createOrUpdateIPSet(
 	ctx context.Context,
 	r common.ReconcilerCommon,

@@ -58,7 +58,7 @@ func GetSecret(
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {
-		return nil, "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return nil, "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 	return secret, secretHash, nil
 }
@@ -101,12 +101,12 @@ func CreateOrUpdateSecret(
 		return nil
 	})
 	if err != nil {
-		return "", op, fmt.Errorf("error create/updating secret: %v", err)
+		return "", op, fmt.Errorf("error create/updating secret: %w", err)
 	}
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {
-		return "", "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return secretHash, op, err
@@ -217,7 +217,7 @@ func createOrUpdateSecret(
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {
-		return "", op, fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", op, fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return secretHash, op, nil
@@ -265,7 +265,7 @@ func createOrGetCustomSecret(
 
 	secretHash, err := ObjectHash(secret)
 	if err != nil {
-		return "", fmt.Errorf("error calculating configuration hash: %v", err)
+		return "", fmt.Errorf("error calculating configuration hash: %w", err)
 	}
 
 	return secretHash, nil
@@ -321,16 +321,14 @@ func DeleteSecretsWithLabel(
 		client.MatchingLabels(labelSelectorMap),
 	)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		err = fmt.Errorf("Error DeleteAllOf Secret: %v", err)
+		err = fmt.Errorf("Error DeleteAllOf Secret: %w", err)
 		return err
 	}
 
 	return nil
 }
 
-//
 // DeleteSecretsWithName - Delete names secret object in namespace
-//
 func DeleteSecretsWithName(
 	ctx context.Context,
 	r ReconcilerCommon,
@@ -363,7 +361,6 @@ func DeleteSecretsWithName(
 	return nil
 }
 
-//
 // GetDataFromSecret - Get data from Secret
 //
 // if the secret or data is not found, requeue after requeueTimeout in seconds
@@ -383,7 +380,7 @@ func GetDataFromSecret(
 	secret, _, err := GetSecret(ctx, r, secretName, object.GetNamespace())
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("%s secret does not exist: %v", secretName, err)
+			cond.Message = fmt.Sprintf("%s secret does not exist: %v", secretName, err.Error())
 			cond.Reason = conditionDetails.ConditionNotFoundReason
 			cond.Type = conditionDetails.ConditionNotFoundType
 
@@ -391,7 +388,7 @@ func GetDataFromSecret(
 
 			return data, ctrl.Result{RequeueAfter: time.Duration(requeueTimeout) * time.Second}, nil
 		}
-		cond.Message = fmt.Sprintf("Error getting %s Secret: %v", secretName, err)
+		cond.Message = fmt.Sprintf("Error getting %s Secret: %v", secretName, err.Error())
 		cond.Reason = conditionDetails.ConditionErrordReason
 		cond.Type = conditionDetails.ConditionErrorType
 		err = WrapErrorForObject(cond.Message, object, err)

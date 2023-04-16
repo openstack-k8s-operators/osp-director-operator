@@ -99,7 +99,7 @@ func RenderTemplate(path string, d *RenderData) ([]*unstructured.Unstructured, e
 	for {
 		u := unstructured.Unstructured{}
 		if err := decoder.Decode(&u); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, errors.Wrapf(err, "failed to unmarshal manifest %s", path)

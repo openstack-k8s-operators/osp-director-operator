@@ -13,9 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//
 // GetOpenStackNetAttachmentWithLabel - Return OpenStackNet with labels
-//
 func GetOpenStackNetAttachmentWithLabel(
 	ctx context.Context,
 	r common.ReconcilerCommon,

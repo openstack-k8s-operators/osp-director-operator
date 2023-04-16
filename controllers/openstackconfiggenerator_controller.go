@@ -701,9 +701,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 	return msg, true, nil
 }
 
-//
 // Fencing considerations
-//
 func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
@@ -797,9 +795,7 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 	return renderedFencingTemplate, nil
 }
 
-//
 // generate TripleoDeploy configmap with environment file containing predictible IPs
-//
 func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
@@ -949,9 +945,7 @@ func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 	return "", k8s_errors.NewNotFound(appsv1.Resource("service"), fmt.Sprint(labelSelector))
 }
 
-//
 // Render VM role nic templates, but only for tripleo roles
-//
 func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
 	ospVersion shared.OSPVersion,
@@ -1008,10 +1002,8 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 	return roleNicTemplates, nil
 }
 
-//
 // Verify if ConfigGeneratorInputLabel label is set on the CM which is used to limit
 // the CMs to watch
-//
 func (r *OpenStackConfigGeneratorReconciler) addConfigGeneratorInputLabel(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,

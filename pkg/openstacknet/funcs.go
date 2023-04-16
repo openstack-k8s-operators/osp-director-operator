@@ -49,9 +49,7 @@ func GetOpenStackNetsBindingMap(
 	return osNetBindings, nil
 }
 
-//
 // GetAllIPReservations - get all reservations from the osnet (already synamic created, static configured + just now new created)
-//
 func GetAllIPReservations(
 	osNet *ospdirectorv1beta1.OpenStackNet,
 	newReservations []ospdirectorv1beta1.IPReservation,
