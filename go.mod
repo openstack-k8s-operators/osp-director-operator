@@ -160,8 +160,8 @@ replace (
 
 	// dependabot (NULL Pointer Dereference in Kubernetes CSI snapshot-controller)
 	github.com/kubernetes-csi/external-snapshotter/v2 => github.com/kubernetes-csi/external-snapshotter/v2 v2.1.3
-
-	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220105105621-0ee9ce37c7bc
+	github.com/metal3-io/baremetal-operator/apis => github.com/openshift/baremetal-operator/apis v0.0.0-20220127144325-36eec3619228 // release-4.10
+	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20220124032151-aa596d5a5bdd // release-4.10
 
 	// required by client-go, prometheus-operator..
 	// Bump to avoid CVE detection with v1.1.22. https://bugzilla.redhat.com/show_bug.cgi?id=1786761
