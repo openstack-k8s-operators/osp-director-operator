@@ -63,7 +63,7 @@ func DeletePodsWithLabel(
 		client.MatchingLabels(labelSelectorMap),
 	)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		err = fmt.Errorf("Error DeleteAllOf Pod %v", err)
+		err = fmt.Errorf("Error DeleteAllOf Pod %w", err)
 		return err
 	}
 

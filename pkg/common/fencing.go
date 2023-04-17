@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 
@@ -49,7 +50,7 @@ func GetCustomFencingRoles(customBinaryData map[string][]byte) ([]string, error)
 			header, err := tarReader.Next()
 
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 

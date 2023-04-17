@@ -56,9 +56,7 @@ type HostStatus struct {
 	NetworkDataSecretName string `json:"networkDataSecretName"`
 }
 
-//
 // SyncIPsetStatus - sync relevant information from IPSet to CR status
-//
 func SyncIPsetStatus(
 	cond *shared.Condition,
 	instanceStatus map[string]HostStatus,

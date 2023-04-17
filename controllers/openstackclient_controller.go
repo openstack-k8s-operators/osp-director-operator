@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -586,8 +588,12 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		}
 
 		if imageUpdate && isPodUpdate {
-			// init container image is mutable but does nothing so force a delete
-			return &common.ForbiddenPodSpecChangeError{Field: "Spec.InitContainers[0].Image"}
+			// init container image is mutable but does nothing so force a delete by triggering NewForbidden
+			return k8s_errors.NewForbidden(
+				schema.GroupResource{Group: "", Resource: "pods"}, // Specify the group and resource type
+				pod.Name,
+				errors.New("Cannot update Pod spec field - Spec.InitContainers[0].Image"), // Specify the error message
+			)
 		}
 
 		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
@@ -603,7 +609,16 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		return nil
 	})
 	if err != nil {
-		if common.IsForbiddenPodSpecChangeError(err) || k8s_errors.IsInvalid(err) {
+		var forbiddenPodSpecChangeErr *k8s_errors.StatusError
+
+		forbiddenPodSpec := false
+		if errors.As(err, &forbiddenPodSpecChangeErr) {
+			if forbiddenPodSpecChangeErr.ErrStatus.Reason == metav1.StatusReasonForbidden {
+				forbiddenPodSpec = true
+			}
+		}
+
+		if forbiddenPodSpec || k8s_errors.IsInvalid(err) {
 			// Delete pod when an unsupported change was requested, like
 			// e.g. additional controller VM got up. We just re-create the
 			// openstackclient pod
@@ -651,9 +666,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	return nil
 }
 
-//
 // NetworkAttachmentDefinition, SriovNetwork and SriovNetworkNodePolicy
-//
 func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,
@@ -711,9 +724,7 @@ func (r *OpenStackClientReconciler) verifyNetworkAttachments(
 	return ctrl.Result{}, nil
 }
 
-//
 // PVCs
-//
 func (r *OpenStackClientReconciler) createPVCs(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackClient,

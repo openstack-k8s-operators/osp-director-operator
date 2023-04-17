@@ -1235,10 +1235,12 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostCleanup(
 	return nil
 }
 
-/* deleteOwnerRefLabeledObjects - cleans up namespaced objects outside the default namespace
-   using the owner reference labels added.
-   List of objects which get cleaned:
-   - user-data secret, openshift-machine-api namespace
+/*
+deleteOwnerRefLabeledObjects - cleans up namespaced objects outside the default namespace
+
+	using the owner reference labels added.
+	List of objects which get cleaned:
+	- user-data secret, openshift-machine-api namespace
 */
 func (r *OpenStackBaremetalSetReconciler) deleteOwnerRefLabeledObjects(
 	ctx context.Context,
@@ -1305,9 +1307,7 @@ func (r *OpenStackBaremetalSetReconciler) getPasswordSecret(
 	return passwordSecret, ctrl.Result{}, nil
 }
 
-//
-//   check/update instance status for annotated for deletion marked BMs
-//
+// check/update instance status for annotated for deletion marked BMs
 func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
