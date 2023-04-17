@@ -1072,10 +1072,6 @@ github.com/maxbrunsfeld/counterfeiter v0.0.0-20181017030959-1aadac120687/go.mod 
 github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2/go.mod h1:eD9eIE7cdwcMi9rYluz88Jz2VyhSmden33/aXg4oVIY=
 github.com/maxbrunsfeld/counterfeiter/v6 v6.3.0/go.mod h1:fcEyUyXZXoV4Abw8DX0t7wyL8mCDxXyU4iAFZfT3IHw=
 github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1/go.mod h1:DK1Cjkc0E49ShgRVs5jy5ASrM15svSnem3K/hiSGD8o=
-github.com/metal3-io/baremetal-operator/apis v0.0.0-20220105105621-0ee9ce37c7bc h1:qbFtjijzJuFdlOvfZFthnNEoYwcUREz5EIUA44GdW1A=
-github.com/metal3-io/baremetal-operator/apis v0.0.0-20220105105621-0ee9ce37c7bc/go.mod h1:Kyik+ziiZLez6p4ZUwT0iO6T8F7YygaHVhCBx//KhLI=
-github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220105105621-0ee9ce37c7bc h1:vyW+8wgnqE0NrZlMfkfTTjtDtx6+aOjZ1vrOSrMwXww=
-github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220105105621-0ee9ce37c7bc/go.mod h1:/PSTQInIZmfuOmAp/pSgZAs4txs6T49woC0MYIa4QzE=
 github.com/mholt/archiver/v3 v3.5.0/go.mod h1:qqTTPUK/HZPFgFQ/TJ3BzvTpF/dPtFVJXdQbCmeMxwc=
 github.com/miekg/dns v1.1.43/go.mod h1:+evo5L0630/F6ca/Z9+GAqzhjGyn8/c+TBaOyfEl0V4=
 github.com/miekg/pkcs11 v1.0.3/go.mod h1:XsNlhZGX73bx86s2hdc/FuaLm2CPZJemRLMA+WTFxgs=
@@ -1219,6 +1215,10 @@ github.com/opencontainers/selinux v1.5.2/go.mod h1:yTcKuYAh6R95iDpefGLQaPaRwJFwy
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/openshift/api v0.0.0-20211209135129-c58d9f695577 h1:NUe82M8wMYXbd5s+WBAJ2QAZZivs+nhZ3zYgZFwKfqw=
 github.com/openshift/api v0.0.0-20211209135129-c58d9f695577/go.mod h1:DoslCwtqUpr3d/gsbq4ZlkaMEdYqKxuypsDjorcHhME=
+github.com/openshift/baremetal-operator/apis v0.0.0-20220127144325-36eec3619228 h1:lt+Kczb86f/FlNIed3xDEEeU50OoVMnHFSfpJgqa5vQ=
+github.com/openshift/baremetal-operator/apis v0.0.0-20220127144325-36eec3619228/go.mod h1:bTFE2qR9PJJQbLC6Gd74c3WXcgYnR1njVDgabCxXQNI=
+github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20220124032151-aa596d5a5bdd h1:iETBOxvDP8lFE/NezLWlgO2KsvE+AYbglCRemrg5iMM=
+github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20220124032151-aa596d5a5bdd/go.mod h1:/PSTQInIZmfuOmAp/pSgZAs4txs6T49woC0MYIa4QzE=
 github.com/openshift/build-machinery-go v0.0.0-20200211121458-5e3d6e570160/go.mod h1:1CkcsT3aVebzRBzVTSbiKSkJMsC/CASqxesfqEMfJEc=
 github.com/openshift/build-machinery-go v0.0.0-20200424080330-082bf86082cc/go.mod h1:1CkcsT3aVebzRBzVTSbiKSkJMsC/CASqxesfqEMfJEc=
 github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
