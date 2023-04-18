@@ -9,6 +9,8 @@ updates:
     - dependency-name: "kubevirt.io/api"
     - dependency-name: "kubevirt.io/client-go"
     - dependency-name: "kubevirt.io/containerized-data-importer-api"
+    - dependency-name: "sigs.k8s.io/controller-runtime"
+    - dependency-name: "github.com/metal3-io/baremetal-operator/apis"
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
@@ -19,6 +21,8 @@ updates:
     - dependency-name: "kubevirt.io/api"
     - dependency-name: "kubevirt.io/client-go"
     - dependency-name: "kubevirt.io/containerized-data-importer-api"
+    - dependency-name: "sigs.k8s.io/controller-runtime"
+    - dependency-name: "github.com/metal3-io/baremetal-operator/apis"
   commit-message:
     # Prefix all commit messages with "[v1.3.x]"
     prefix: "[v1.3.x]"
