@@ -39,7 +39,7 @@ type OpenStackControlPlaneSpec struct {
 	OpenStackClientNetworks []string `json:"openStackClientNetworks"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
+	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0","17.1"}
 	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image
 	OpenStackRelease string `json:"openStackRelease"`
 
