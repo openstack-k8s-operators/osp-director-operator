@@ -76,7 +76,7 @@ func (r *OpenStackControlPlane) Default() {
 	// set default for AdditionalServiceVIPs if non provided in ctlplane spec
 	// https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
 	//
-	if (r.Status.OSPVersion == shared.TemplateVersion17_0 || r.Status.OSPVersion == shared.TemplateVersionWallaby) && r.Spec.AdditionalServiceVIPs == nil {
+	if (r.Status.OSPVersion == shared.TemplateVersion17_0 || r.Status.OSPVersion == shared.TemplateVersion17_1 || r.Status.OSPVersion == shared.TemplateVersionWallaby) && r.Spec.AdditionalServiceVIPs == nil {
 		r.Spec.AdditionalServiceVIPs = map[string]string{
 			"Redis":  "internal_api",
 			"OVNDBs": "internal_api",
@@ -204,7 +204,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	}
 
 	//
-	// validate OSP version, right now only 16.2/train and 17.0/wallaby are supported
+	// validate OSP version, only 16.2/train and 17.0/17.1/wallaby are supported
 	//
 	if r.Spec.OpenStackRelease != "" {
 		var err error

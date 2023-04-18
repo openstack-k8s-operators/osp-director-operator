@@ -968,7 +968,7 @@ func (r *OpenStackConfigGeneratorReconciler) createVMRoleNicTemplates(
 				file = openstackconfiggenerator.RenderedNicFileTrain
 				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateTrain)
 			}
-			if ospVersion == shared.OSPVersion(shared.TemplateVersion17_0) {
+			if ospVersion == shared.OSPVersion(shared.TemplateVersion17_0) || ospVersion == shared.OSPVersion(shared.TemplateVersion17_1) {
 				file = fmt.Sprintf("%s-%s", role.NameLower, openstackconfiggenerator.RenderedNicFileWallaby)
 				nicTemplate = fmt.Sprintf("/openstackconfiggenerator/config/%s/nic/%s", ospVersion, openstackconfiggenerator.NicTemplateWallaby)
 			}
