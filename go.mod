@@ -60,7 +60,7 @@ require (
 	cloud.google.com/go v0.97.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Microsoft/go-winio v0.4.17 // indirect
+	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/ajeddeloh/go-json v0.0.0-20170920214419-6a2fe990e083 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -70,7 +70,7 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
-	github.com/coreos/ign-converter v0.0.0-20200629171308-e40a44f244c5 // indirect
+	github.com/coreos/ign-converter v0.0.0-20201123214124-8dac862888aa // indirect
 	github.com/coreos/ignition v0.35.0 // indirect
 	github.com/coreos/ignition/v2 v2.14.0 // indirect
 	github.com/coreos/prometheus-operator v0.38.0 // indirect
@@ -105,9 +105,9 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/openshift/api v0.0.0 // indirect
-	github.com/openshift/client-go v0.0.0 // indirect
+	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3 // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
-	github.com/openshift/machine-config-operator v0.0.1-0.20201023110058-6c8bd9b2915c // indirect
+	github.com/openshift/machine-config-operator v0.0.1-0.20230323140348-afb47c916680 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -160,16 +160,16 @@ replace (
 
 	// dependabot (NULL Pointer Dereference in Kubernetes CSI snapshot-controller)
 	github.com/kubernetes-csi/external-snapshotter/v2 => github.com/kubernetes-csi/external-snapshotter/v2 v2.1.3
-
-	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220105105621-0ee9ce37c7bc
+	github.com/metal3-io/baremetal-operator/apis => github.com/openshift/baremetal-operator/apis v0.0.0-20220127144325-36eec3619228 // release-4.10
+	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20220124032151-aa596d5a5bdd // release-4.10
 
 	// required by client-go, prometheus-operator..
 	// Bump to avoid CVE detection with v1.1.22. https://bugzilla.redhat.com/show_bug.cgi?id=1786761
 	github.com/miekg/dns => github.com/miekg/dns v1.1.43
 
 	// controller runtime
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20200331152225-585af27e34fd // release-4.5
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200326155132-2a6cd50aedd0 // release-4.5
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20211209135129-c58d9f695577 // release-4.10
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3 // release-4.10
 
 	// CDI
 	github.com/operator-framework/operator-lifecycle-manager => github.com/operator-framework/operator-lifecycle-manager v0.0.0-20190128024246-5eb7ae5bdb7a
@@ -179,36 +179,36 @@ replace (
 
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
-	// pin to v0.24.2
-	k8s.io/api => k8s.io/api v0.24.2
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.24.2
-	k8s.io/apiserver => k8s.io/apiserver v0.24.2
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.24.2
-	k8s.io/client-go => k8s.io/client-go v0.24.2
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.24.2
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.2
-	k8s.io/code-generator => k8s.io/code-generator v0.24.2
-	k8s.io/component-base => k8s.io/component-base v0.24.2
-	k8s.io/cri-api => k8s.io/cri-api v0.24.2
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.24.2
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.2
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.24.2
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.2
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.24.2
-	k8s.io/kubectl => k8s.io/kubectl v0.24.2
-	k8s.io/kubelet => k8s.io/kubelet v0.24.2
+	// pin to v0.24.13
+	k8s.io/api => k8s.io/api v0.24.13
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.13
+	k8s.io/apimachinery => k8s.io/apimachinery v0.24.13
+	k8s.io/apiserver => k8s.io/apiserver v0.24.13
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.24.13
+	k8s.io/client-go => k8s.io/client-go v0.24.13
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.24.13
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.13
+	k8s.io/code-generator => k8s.io/code-generator v0.24.13
+	k8s.io/component-base => k8s.io/component-base v0.24.13
+	k8s.io/cri-api => k8s.io/cri-api v0.24.13
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.24.13
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.13
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.24.13
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.13
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.24.13
+	k8s.io/kubectl => k8s.io/kubectl v0.24.13
+	k8s.io/kubelet => k8s.io/kubelet v0.24.13
 
 	// required by kubernetes-csi/external-snapshotter, kubevirt.io/client-go. Bump to avoid CVE detection with v1.14.0: https://bugzilla.redhat.com/show_bug.cgi?id=1757701
 	// Not used within this Operator.
 	k8s.io/kubernetes => k8s.io/kubernetes v1.14.8
 
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.24.2
-	k8s.io/metrics => k8s.io/metrics v0.24.2
-	k8s.io/node-api => k8s.io/node-api v0.24.2
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.24.2
-	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.24.2
-	k8s.io/sample-controller => k8s.io/sample-controller v0.24.2
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.24.13
+	k8s.io/metrics => k8s.io/metrics v0.24.13
+	k8s.io/node-api => k8s.io/node-api v0.24.13
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.24.13
+	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.24.13
+	k8s.io/sample-controller => k8s.io/sample-controller v0.24.13
 
 	// pinned because no tag supports 1.18 yet
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
