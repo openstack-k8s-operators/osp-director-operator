@@ -98,7 +98,7 @@ HEAT_ENVIRONMENT_FILES="
     -e $TEMPLATES_DIR/environments/network-isolation.yaml \
     -e $TEMPLATES_DIR/environments/network-environment.yaml \
 {{- end }}
-{{- if eq .OSPVersion "17.0" }}
+{{- if or (eq .OSPVersion "17.0") (eq .OSPVersion "17.1") }}
     -e $TEMPLATES_DIR/environments/deployed-network-environment.yaml \
 {{- end }}
 {{- range $i, $value := .TripleoEnvironmentFiles }}
