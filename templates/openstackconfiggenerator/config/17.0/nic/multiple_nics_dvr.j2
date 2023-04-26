@@ -24,8 +24,9 @@ network_config:
   use_dhcp: false
   addresses:
   - ip_netmask: {{ ctlplane_ip }}/{{ ctlplane_subnet_cidr }}
+{% set nics_used = [2] %}
 {% for network in networks_all if network not in networks_skip_config|default([]) %}
-{% if network == 'External' %}
+{% if network == 'External' and network in role_networks %}
 - type: ovs_bridge
   name: {{ neutron_physical_bridge_name }}
   mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
@@ -38,12 +39,14 @@ network_config:
 {% endif %}
   members:
   - type: interface
-    name:  nic{{ loop.index +2 }}
+    name:  nic{{ nics_used[-1] + 1 }}
+    {% set _ = nics_used.append(nics_used[-1] + 1) -%}
     mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
     primary: true
 {% elif network not in ["External", "Tenant"] and network in role_networks %}
 - type: interface
-  name: nic{{ loop.index +2 }}
+  name: nic{{ nics_used[-1] + 1 }}
+  {% set _ = nics_used.append(nics_used[-1] + 1) -%}
   mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
   use_dhcp: false
   addresses:
@@ -60,7 +63,8 @@ network_config:
   routes: {{ lookup('vars', networks_lower[network] ~ '_host_routes') }}
   members:
   - type: interface
-    name: nic{{loop.index + 2}}
+    name: nic{{ nics_used[-1] + 1 }}
+    {% set _ = nics_used.append(nics_used[-1] + 1) -%}
     mtu: {{ lookup('vars', networks_lower[network] ~ '_mtu') }}
     use_dhcp: false
     primary: true
