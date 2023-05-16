@@ -164,14 +164,22 @@ func (r *OpenStackDeployReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	advancedSettings := instance.Spec.AdvancedSettings.DeepCopy()
-	if advancedSettings.Playbook == "" {
+	if len(advancedSettings.Playbooks) == 0 {
 		switch instance.Spec.Mode {
 		case "update":
-			advancedSettings.Playbook = "update_steps_playbook.yaml"
+			advancedSettings.Playbooks = []string{"update_steps_playbook.yaml"}
+		case "upgrade":
+			advancedSettings.Playbooks = []string{
+				"upgrade_steps_playbook.yaml",
+				"deploy_steps_playbook.yaml",
+				"post_upgrade_steps_playbook.yaml",
+			}
 		case "externalUpdate":
-			advancedSettings.Playbook = "external_update_steps_playbook.yaml"
+			advancedSettings.Playbooks = []string{"external_update_steps_playbook.yaml"}
+		case "externalUpgrade":
+			advancedSettings.Playbooks = []string{"external_upgrade_steps_playbook.yaml"}
 		default:
-			advancedSettings.Playbook = "deploy_steps_playbook.yaml"
+			advancedSettings.Playbooks = []string{"deploy_steps_playbook.yaml"}
 		}
 	}
 
