@@ -1,7 +1,7 @@
 # At a minimum you need to set GIT_COMMIT, RELEASE_VERSION, and OPERATOR_IMG_WITH_DIGEST to run this script.
 
 #GIT_COMMIT=2b4fb608d3490be64c42fe073dd525a618fb4082
-#RELEASE_VERSION=1.3.0
+#RELEASE_VERSION=1.3.1
 #OPERATOR_IMG_WITH_DIGEST=registry.redhat.io/rhosp-rhel8/osp-director-operator:1.3.0
 
 OPERATOR_IMG_WITH_DIGEST=${OPERATOR_IMG_WITH_DIGEST:?"Please set the OPERATOR_IMG_WITH_DIGEST that you want to use for this rebase."}

@@ -13,7 +13,7 @@ RUN ${PKG_CMD} install -y qemu-img && \
 
 ARG IMAGE_COMPONENT="osp-director-downloader-container"
 ARG IMAGE_NAME="osp-director-downloader"
-ARG IMAGE_VERSION="1.3.0"
+ARG IMAGE_VERSION="1.3.1"
 ARG IMAGE_SUMMARY="OSP Director Image Downloader"
 ARG IMAGE_DESC="This image includes the osp-director-downloader"
 ARG IMAGE_TAGS="openstack director"
