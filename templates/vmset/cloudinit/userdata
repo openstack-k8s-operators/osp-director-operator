@@ -31,4 +31,6 @@ runcmd:
   - set -x; for if in $(/bin/nmcli -f device,state device status | egrep '[[:space:]]+connected' | awk '{print $1}'); do nmcli device modify $if ipv6.method link-local; done
   # Disable IPv6 autoconf per default, we only want the ooo static IP config
   - set -x; echo 'IPV6_AUTOCONF=no' >> /etc/sysconfig/network
+  # grow volumes on hardened image if command exists
+  - if [ -e /usr/local/sbin/growvols ]; then /usr/local/sbin/growvols --yes /=8GB /tmp=1GB /var/log=10GB /var/log/audit=2GB /home=1GB /var=100%; fi
 {{- end }}

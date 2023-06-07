@@ -15,3 +15,6 @@ chpasswd:
 bootcmd:
   # fix BLS entries
   - set -x; if [ -e /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ]; then MACHINEID=$(cat /etc/machine-id) && rename "ffffffffffffffffffffffffffffffff" "$MACHINEID" /boot/loader/entries/ffffffffffffffffffffffffffffffff-* ; fi
+runcmd:
+  # grow volumes on hardened image if command exists
+  - if [ -e /usr/local/sbin/growvols ]; then /usr/local/sbin/growvols --yes /=8GB /tmp=1GB /var/log=10GB /var/log/audit=2GB /home=1GB /var=100%; fi
