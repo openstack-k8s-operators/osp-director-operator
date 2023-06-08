@@ -849,6 +849,12 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 						Machine: &virtv1.Machine{
 							Type: "",
 						},
+						Features: &virtv1.Features{
+							SMM: &virtv1.FeatureState{Enabled: &trueValue},
+						},
+						Firmware: &virtv1.Firmware{
+							Bootloader: &virtv1.Bootloader{EFI: &virtv1.EFI{}},
+						},
 					},
 					Volumes: []virtv1.Volume{},
 					Networks: []virtv1.Network{
