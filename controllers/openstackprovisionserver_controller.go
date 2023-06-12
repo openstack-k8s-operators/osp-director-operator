@@ -91,8 +91,6 @@ func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=machine.openshift.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=metal3.io,resources="*",verbs="*"
-// +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="privileged",verbs="use"
-// +kubebuilder:rbac:groups=security.openshift.io,namespace=openstack,resources="securitycontextconstraints",resourceNames="anyuid",verbs="use"
 
 // Reconcile - provision image servers
 func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -332,8 +330,6 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 	cond *shared.Condition,
 	provInterfaceName string,
 ) error {
-	trueValue := true
-
 	// Get volumes
 	initVolumeMounts := provisionserver.GetInitVolumeMounts(instance.Name)
 	volumeMounts := provisionserver.GetVolumeMounts(instance.Name)
@@ -342,6 +338,9 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 	labels := common.GetLabels(instance, provisionserver.AppLabel, map[string]string{
 		"deployment": instance.Name + "-provisionserver-deployment",
 	})
+
+	args := []string{"-c"}
+	args = append(args, "cp -f /usr/local/apache2/conf/httpd.conf /etc/httpd/conf/httpd.conf && /usr/bin/run-httpd")
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -396,17 +395,11 @@ func (r *OpenStackProvisionServerReconciler) deploymentCreateOrUpdate(
 					Name:            "osp-httpd",
 					Image:           instance.Spec.ApacheImageURL,
 					ImagePullPolicy: corev1.PullAlways,
-					SecurityContext: &corev1.SecurityContext{
-						Privileged: &trueValue,
-					},
-					Env: []corev1.EnvVar{},
-					// FIXME: Everything else I've tried has failed to inject the desired httpd.conf,
-					//        so we're hacking it this way for now
+					Env:             []corev1.EnvVar{},
 					Command: []string{
 						"/bin/bash",
-						"-ec",
-						"cp -f /usr/local/apache2/conf/httpd.conf /etc/httpd/conf/httpd.conf && /usr/bin/run-httpd",
 					},
+					Args:         args,
 					VolumeMounts: volumeMounts,
 				},
 				{

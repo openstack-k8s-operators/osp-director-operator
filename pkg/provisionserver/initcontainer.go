@@ -18,21 +18,13 @@ type InitContainer struct {
 
 // GetInitContainers - init containers for ProvisionServers
 func GetInitContainers(inits []InitContainer) []corev1.Container {
-	trueVar := true
-
-	securityContext := &corev1.SecurityContext{}
 	initContainers := []corev1.Container{}
 
 	for index, init := range inits {
-		if init.Privileged {
-			securityContext.Privileged = &trueVar
-		}
-
 		container := corev1.Container{
 			Name:            fmt.Sprintf("init-%d", index),
 			Image:           init.ContainerImage,
 			ImagePullPolicy: corev1.PullAlways,
-			SecurityContext: securityContext,
 			VolumeMounts:    init.VolumeMounts,
 			Env:             init.Env,
 		}
