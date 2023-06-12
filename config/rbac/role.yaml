@@ -807,22 +807,6 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - security.openshift.io
-  resourceNames:
-  - anyuid
-  resources:
-  - securitycontextconstraints
-  verbs:
-  - use
-- apiGroups:
-  - security.openshift.io
-  resourceNames:
-  - privileged
-  resources:
-  - securitycontextconstraints
-  verbs:
-  - use
-- apiGroups:
   - subresources.kubevirt.io
   resources:
   - virtualmachines/start
