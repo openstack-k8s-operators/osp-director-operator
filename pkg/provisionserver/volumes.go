@@ -46,12 +46,6 @@ func GetInitVolumeMounts(name string) []corev1.VolumeMount {
 			Name:      name + "-image-data",
 			MountPath: "/usr/local/apache2/htdocs",
 		},
-		{
-			Name:      name + "-httpd-config",
-			MountPath: HttpdConfPath,
-			SubPath:   "httpd.conf",
-			ReadOnly:  false,
-		},
 	}
 }
 
