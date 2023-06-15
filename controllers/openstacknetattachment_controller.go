@@ -386,7 +386,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Status.BridgeName}, networkConfigurationPolicy)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name)
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", networkConfigurationPolicy.Kind, instance.Status.BridgeName)
 		cond.Reason = shared.CommonCondReasonNNCPError
 		cond.Type = shared.NetAttachError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
