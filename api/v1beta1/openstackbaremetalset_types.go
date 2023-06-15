@@ -54,6 +54,9 @@ type OpenStackBaremetalSetSpec struct {
 	// Note that subsequent TripleO deployment will overwrite these values
 	BootstrapDNS     []string `json:"bootstrapDns,omitempty"`
 	DNSSearchDomains []string `json:"dnsSearchDomains,omitempty"`
+	// GrowvolsArgs - arguments to the growvols command to expand logical volumes after provisioning
+	// Note requires the command to exist on the base image
+	GrowvolsArgs []string `json:"growvolsArgs,omitempty"`
 }
 
 // OpenStackBaremetalSetStatus defines the observed state of OpenStackBaremetalSet

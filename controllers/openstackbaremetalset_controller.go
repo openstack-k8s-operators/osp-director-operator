@@ -908,6 +908,14 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostProvision(
 	templateParameters["Hostname"] = bmhStatus.Hostname
 	templateParameters["DomainName"] = osNetCfg.Spec.DomainName
 
+	if instance.Spec.GrowvolsArgs != nil && len(instance.Spec.GrowvolsArgs) > 0 {
+		templateParameters["GrowvolsArgs"] = instance.Spec.GrowvolsArgs
+
+	} else {
+		// use default for the role name
+		templateParameters["GrowvolsArgs"] = common.GetRoleGrowvolsArgs(instance.Spec.RoleName)
+	}
+
 	//
 	// use same NodeRootPassword paremater as tripleo have
 	//

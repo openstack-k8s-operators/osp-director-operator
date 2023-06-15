@@ -126,6 +126,10 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes running this VMset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// GrowvolsArgs - arguments to the growvols command to expand logical volumes after provisioning
+	// Note requires the command to exist on the base image
+	GrowvolsArgs []string `json:"growvolsArgs,omitempty"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane

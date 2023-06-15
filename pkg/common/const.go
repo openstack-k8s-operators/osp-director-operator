@@ -51,3 +51,37 @@ const (
 	// TripleORolesDataFile -
 	TripleORolesDataFile = "roles_data.yaml"
 )
+
+// GetRoleGrowvolsArgs - return default growvols args for the given tripleo role name
+func GetRoleGrowvolsArgs(role string) []string {
+	if role == "Controller" {
+		return []string{
+			"/=8GB",
+			"/tmp=1GB",
+			"/var/log=10GB",
+			"/var/log/audit=2GB",
+			"/home=1GB",
+			"/var=90%",
+			"/srv=10%",
+		}
+	}
+	if role == "ObjectStorage" {
+		return []string{
+			"/=8GB",
+			"/tmp=1GB",
+			"/var/log=10GB",
+			"/var/log/audit=2GB",
+			"/home=1GB",
+			"/var=10%",
+			"/srv=90%",
+		}
+	}
+	return []string{
+		"/=8GB",
+		"/tmp=1GB",
+		"/var/log=10GB",
+		"/var/log/audit=2GB",
+		"/home=1GB",
+		"/var=100%",
+	}
+}
