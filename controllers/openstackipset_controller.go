@@ -246,7 +246,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Namespace: instance.Namespace},
 			osBms)
 		if err != nil && !k8s_errors.IsNotFound(err) {
-			cond.Message = fmt.Sprintf("Failed to get %s %s ", osBms.Kind, osBms.Name)
+			cond.Message = fmt.Sprintf("Failed to get %s %s ", osBms.Kind, instance.Labels[common.OwnerNameLabelSelector])
 			cond.Reason = shared.BaremetalSetCondReasonError
 			cond.Type = shared.CommonCondTypeError
 			err = common.WrapErrorForObject(cond.Message, instance, err)

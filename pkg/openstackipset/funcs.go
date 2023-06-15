@@ -64,7 +64,7 @@ func EnsureIPs(
 		Namespace: obj.GetNamespace()},
 		ipSet)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s ", ipSet.Kind, ipSet.Name)
+		cond.Message = fmt.Sprintf("Failed to get %s %s ", ipSet.Kind, strings.ToLower(name))
 		cond.Reason = shared.IPSetCondReasonError
 		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, obj, err)
