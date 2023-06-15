@@ -1048,7 +1048,7 @@ outer:
 	foundBaremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err = r.Get(ctx, types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, foundBaremetalHost)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s", foundBaremetalHost.Kind, foundBaremetalHost.Name)
+		cond.Message = fmt.Sprintf("Failed to get %s %s", foundBaremetalHost.Kind, bmh)
 		cond.Reason = shared.BaremetalHostCondReasonGetError
 		cond.Type = shared.CommonCondTypeError
 
@@ -1146,7 +1146,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 	baremetalHost := &metal3v1alpha1.BareMetalHost{}
 	err := r.Get(ctx, types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to get %s %s", baremetalHost.Kind, baremetalHost.Name)
+		cond.Message = fmt.Sprintf("Failed to get %s %s", baremetalHost.Kind, bmh.HostRef)
 		cond.Reason = shared.BaremetalHostCondReasonGetError
 		cond.Type = shared.CommonCondTypeError
 
