@@ -745,7 +745,7 @@ func (r *OpenStackClientReconciler) createPVCs(
 
 	pvc, op, err := common.CreateOrUpdatePvc(ctx, r, instance, &pvcDetails)
 	if err != nil {
-		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvc.Name)
+		cond.Message = fmt.Sprintf("Failed to create or update pvc %s ", pvcDetails.Name)
 		cond.Reason = shared.OsClientCondReasonPVCError
 		cond.Type = shared.CommonCondTypeError
 		err = common.WrapErrorForObject(cond.Message, instance, err)
