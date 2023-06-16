@@ -1235,7 +1235,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 			osClient)
 		if err != nil {
 			if !k8s_errors.IsNotFound(err) {
-				cond.Message = fmt.Sprintf("Failed to get %s %s ", osClient.Kind, osClient.Name)
+				cond.Message = fmt.Sprintf("Failed to get %s %s ", osClient.Kind, osIPset.Labels[common.OwnerNameLabelSelector])
 				cond.Reason = shared.OsClientCondReasonError
 				cond.Type = shared.CommonCondTypeError
 				err = common.WrapErrorForObject(cond.Message, instance, err)
