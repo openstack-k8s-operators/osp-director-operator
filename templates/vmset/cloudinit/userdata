@@ -28,7 +28,7 @@ runcmd:
   # On initial boot set NM ipv6 connection method to link local to remove all IPs which might have been configured via SLAAC.
   # This is especially required for interface where VIPs get created. The puppt module might otherwise pick a wrong interface
   # and fail, e.g external interface, where the VIP should create on br-ex. With the oo deployment we switch to network-scripts
-  - set -x; for if in $(/bin/nmcli -f device,state device status | egrep '[[:space:]]+connected' | awk '{print $1}'); do nmcli device modify $if ipv6.method link-local; done
+  - set -x; for if in $(/bin/nmcli -f device,state,type device status | grep -v 'loopback\s*$' | egrep '[[:space:]]+connected' | awk '{print $1}'); do nmcli device modify $if ipv6.method link-local; done
   # Disable IPv6 autoconf per default, we only want the ooo static IP config
   - set -x; echo 'IPV6_AUTOCONF=no' >> /etc/sysconfig/network
 {{- end }}
