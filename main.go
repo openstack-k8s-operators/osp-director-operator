@@ -37,7 +37,7 @@ import (
 
 	//cni "github.com/containernetworking/cni/pkg/types"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	virtv1 "kubevirt.io/api/core/v1"
 
 	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"

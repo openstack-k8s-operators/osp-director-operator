@@ -38,7 +38,7 @@ import (
 
 	"github.com/go-logr/logr"
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
