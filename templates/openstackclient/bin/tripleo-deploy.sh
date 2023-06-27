@@ -95,7 +95,15 @@ play() {
 
   cd tripleo-ansible
 
-  PLAYBOOK_ARG=$WORKDIR/playbooks/tripleo-ansible/${PLAYBOOK:-"deploy_steps_playbook.yaml"}
+
+  PLAYBOOKS_ARG=""
+  OLD_IFS=${IFS}
+  IFS=":"
+  for PLAY in ${PLAYBOOKS:-"deploy_steps_playbook.yaml"}; do
+   PLAYBOOKS_ARG="${PLAYBOOKS_ARG} ${WORKDIR}/playbooks/tripleo-ansible/${PLAY}"
+  done
+  IFS=${OLD_IFS}
+
   LIMIT_ARG=""
   if [ -n "${LIMIT:-}" ]; then
     LIMIT_ARG="--limit ${LIMIT}"
@@ -164,7 +172,7 @@ EOF`}}
     ${TAGS_ARG} \
     ${SKIP_TAGS_ARG} \
     ${STACK_ACTION_ARG} \
-    ${PLAYBOOK_ARG}
+    ${PLAYBOOKS_ARG}
 
   # Only created when keystone is deployed
   if [ -e /etc/openstack/clouds.yaml ]; then

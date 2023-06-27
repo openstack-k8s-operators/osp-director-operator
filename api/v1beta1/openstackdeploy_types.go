@@ -24,8 +24,8 @@ import (
 // OpenStackDeployAdvancedSettingsSpec defines advanced deployment settings
 type OpenStackDeployAdvancedSettingsSpec struct {
 	// +kubebuilder:validation:Optional
-	// Playbook to run from config-download
-	Playbook string `json:"playbook,omitempty"`
+	// Playbooks to run from config-download
+	Playbooks []string `json:"playbook,omitempty"`
 	// +kubebuilder:validation:Optional
 	// Ansible inventory limit
 	Limit string `json:"limit,omitempty"`
@@ -55,7 +55,7 @@ type OpenStackDeploySpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=deploy
-	// +kubebuilder:validation:Enum={"deploy","update","externalUpdate"}
+	// +kubebuilder:validation:Enum={"deploy","update","upgrade","externalUpdate","externalUpgrade"}
 	// Deployment mode
 	Mode string `json:"mode,omitempty"`
 

@@ -115,8 +115,8 @@ func DeployJob(
 						},
 					},
 					{
-						Name:  "PLAYBOOK",
-						Value: advancedSettings.Playbook,
+						Name:  "PLAYBOOKS",
+						Value: strings.Join(advancedSettings.Playbooks, ":"),
 					},
 					{
 						Name:  "LIMIT",
