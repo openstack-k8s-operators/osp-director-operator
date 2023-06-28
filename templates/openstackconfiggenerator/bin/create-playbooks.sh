@@ -7,16 +7,7 @@ cp /mnt/ssh-config/* $HOME/.ssh/
 chmod 600 $HOME/.ssh/git_id_rsa
 chown -R cloud-admin: $HOME/.ssh
 
-GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
-GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
-
-cat <<EOF > $HOME/.ssh/config
-Host $GIT_HOST
-    User $GIT_USER
-    IdentityFile $HOME/.ssh/git_id_rsa
-    StrictHostKeyChecking no
-EOF
-chmod 644 $HOME/.ssh/config
+export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/git_id_rsa -o StrictHostKeyChecking=no"
 
 unset OS_CLOUD
 export OS_AUTH_TYPE=none
