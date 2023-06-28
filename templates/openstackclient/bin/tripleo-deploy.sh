@@ -26,10 +26,7 @@ if [ ! -L /var/log/validations ]; then
   sudo ln -s ~/tripleo-deploy/validations /var/log/validations
 fi
 
-GIT_HOST=$(echo $GIT_URL | sed -e 's|^git@\(.*\):.*|\1|g')
-GIT_USER=$(echo $GIT_URL | sed -e 's|^git@.*:\(.*\)/.*|\1|g')
-
-export GIT_SSH_COMMAND="ssh -i $WORKDIR/git_id_rsa -l git -o StrictHostKeyChecking=no"
+export GIT_SSH_COMMAND="ssh -i $WORKDIR/git_id_rsa -o StrictHostKeyChecking=no"
 echo $GIT_ID_RSA | sed -e 's|- |-\n|' | sed -e 's| -|\n-|'  > $WORKDIR/git_id_rsa
 chmod 600 $WORKDIR/git_id_rsa
 
