@@ -30,6 +30,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	config "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 
@@ -132,12 +133,15 @@ func SyncGit(
 
 	log.Info("GitRepo foundSecret")
 	pkey := foundSecret.Data["git_ssh_identity"]
+
+	gitURL := string(foundSecret.Data["git_url"])
+	gitEndpoint, err := transport.NewEndpoint(gitURL)
 	if err != nil {
-		log.Info(fmt.Sprintf("parse private key failed: %s\n", err.Error()))
+		log.Info(fmt.Sprintf("parse git url failed: %s\n", err.Error()))
 		return nil, err
 	}
 
-	publicKeys, err := ssh.NewPublicKeys("git", pkey, "")
+	publicKeys, err := ssh.NewPublicKeys(gitEndpoint.User, pkey, "")
 	publicKeys.HostKeyCallback = crypto_ssh.InsecureIgnoreHostKey()
 	if err != nil {
 		log.Info(fmt.Sprintf("generate publickeys failed: %s\n", err.Error()))
@@ -145,7 +149,7 @@ func SyncGit(
 	}
 
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:  string(foundSecret.Data["git_url"]),
+		URL:  gitURL,
 		Auth: publicKeys,
 	})
 	// Failed to create Git repo: URL field is required
