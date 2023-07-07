@@ -44,7 +44,7 @@ var (
 		configVersion  string
 		gitURL         string
 		gitSSHIdentity string
-		playbook       string
+		playbooks      string
 		limit          string
 		tags           string
 		skipTags       string
@@ -75,10 +75,10 @@ func init() {
 	deployCmd.PersistentFlags().StringVar(&deployOpts.deployName, "deployName", "", "The name of the deployment being executed. Controls the name of the generated exports ConfigMap.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitURL, "gitURL", "", "Git URL to use when downloading playbooks.")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.gitSSHIdentity, "gitSSHIdentity", "", "Git SSH Identity to use when downloading playbooks.")
-	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "playbook", "", "Playbook to deploy")
-	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "limit", "", "Playbook inventory limit")
-	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "tags", "", "Playbook include tags")
-	deployCmd.PersistentFlags().StringVar(&deployOpts.playbook, "skipTags", "", "Playbook exclude tags")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.playbooks, "playbooks", "", "Playbooks to deploy")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.limit, "limit", "", "Playbook inventory limit")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.tags, "tags", "", "Playbook include tags")
+	deployCmd.PersistentFlags().StringVar(&deployOpts.skipTags, "skipTags", "", "Playbook exclude tags")
 	deployCmd.PersistentFlags().StringVar(&deployOpts.ospVersion, "ospVersion", "", "OSP release version")
 }
 
@@ -374,9 +374,9 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		deployOpts.gitSSHIdentity = gitSSHIdentity
 	}
 
-	if deployOpts.playbook == "" {
-		playbook, _ := os.LookupEnv("PLAYBOOK")
-		deployOpts.playbook = playbook
+	if deployOpts.playbooks == "" {
+		playbooks, _ := os.LookupEnv("PLAYBOOKS")
+		deployOpts.playbooks = playbooks
 	}
 
 	if deployOpts.limit == "" {
@@ -434,7 +434,7 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 				"CONFIG_VERSION='"+deployOpts.configVersion+"' "+
 					"GIT_ID_RSA='"+deployOpts.gitSSHIdentity+"' "+
 					"GIT_URL='"+deployOpts.gitURL+"' "+
-					"PLAYBOOK='"+deployOpts.playbook+"' "+
+					"PLAYBOOKS='"+deployOpts.playbooks+"' "+
 					"LIMIT='"+deployOpts.limit+"' "+
 					"TAGS='"+deployOpts.tags+"' "+
 					"SKIP_TAGS='"+deployOpts.skipTags+"' "+
@@ -453,7 +453,7 @@ func runDeployCmd(cmd *cobra.Command, args []string) {
 		"CONFIG_VERSION='"+deployOpts.configVersion+"' "+
 			"GIT_ID_RSA='"+deployOpts.gitSSHIdentity+"' "+
 			"GIT_URL='"+deployOpts.gitURL+"' "+
-			"PLAYBOOK='"+deployOpts.playbook+"' "+
+			"PLAYBOOKS='"+deployOpts.playbooks+"' "+
 			"LIMIT='"+deployOpts.limit+"' "+
 			"TAGS='"+deployOpts.tags+"' "+
 			"SKIP_TAGS='"+deployOpts.skipTags+"' "+
