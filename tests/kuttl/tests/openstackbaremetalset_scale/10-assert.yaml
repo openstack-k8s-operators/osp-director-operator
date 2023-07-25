@@ -33,7 +33,7 @@ status:
       hostname: compute-1
   provisioningStatus:
     readyCount: 1
-    reason: Existing BaremetalHost "openshift-worker-0" not found for OsBaremetalSet
+    reason: Existing BaremetalHost "openshift-worker-0" not found for OpenStackBaremetalSet
       compute.  Please check BaremetalHost resources and re-add "openshift-worker-0"
       to continue
     state: Error
