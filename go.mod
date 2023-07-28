@@ -22,7 +22,7 @@ require (
 	github.com/openshift/sriov-network-operator v0.0.0-20201204053545-49045c36efb9
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
-	github.com/tidwall/gjson v1.14.4
+	github.com/tidwall/gjson v1.15.0
 	golang.org/x/crypto v0.10.0
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
