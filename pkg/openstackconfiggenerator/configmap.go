@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 
 	"strings"
 
@@ -383,7 +384,13 @@ func createRolesMap(
 
 	for _, osnet := range osNetList.Items {
 		for roleName, roleReservation := range osnet.Spec.RoleReservations {
-			if IsRoleIncluded(roleName, instance) {
+			var roleOveride ospdirectorv1beta1.TripleoRoleOverrideSpec
+			roleOverrideFound := false
+			if instance.Spec.TripleoRoleOverride != nil {
+				roleOveride, roleOverrideFound = instance.Spec.TripleoRoleOverride[roleName]
+			}
+
+			if IsRoleIncluded(roleName, instance) || (roleOverrideFound && IsRoleIncluded(roleOveride.RoleName, instance)) {
 				//
 				// check if role is VM
 				//
@@ -411,6 +418,17 @@ func createRolesMap(
 					rolesMap[roleName] = &RoleType{
 						Name:           roleName,
 						NameLower:      strings.ToLower(roleName),
+						Networks:       map[string]*roleNetworkType{},
+						Nodes:          map[string]*roleNodeType{},
+						IsVMType:       isVMType,
+						IsTripleoRole:  isTripleoRole,
+						IsControlPlane: isControlPlane,
+					}
+				}
+				if roleOverrideFound && rolesMap[roleOveride.RoleName] == nil {
+					rolesMap[roleOveride.RoleName] = &RoleType{
+						Name:           roleOveride.RoleName,
+						NameLower:      strings.ToLower(roleOveride.RoleName),
 						Networks:       map[string]*roleNetworkType{},
 						Nodes:          map[string]*roleNodeType{},
 						IsVMType:       isVMType,
@@ -450,9 +468,22 @@ func createRolesMap(
 					IPv6:            isIPv6,
 					IsControlPlane:  networksMap[nameLower].IsControlPlane,
 				}
+				if roleOverrideFound {
+					rolesMap[roleOveride.RoleName].Networks[osnet.Spec.NameLower] = rolesMap[roleName].Networks[osnet.Spec.NameLower]
+				}
 
-				hostnameMapIndex := 0
+				effectiveHostnameMapIndex := 0
+				// For multi-rhel need to track the current index for the "normal" role and current index for the "override" role
+				roleHostnameMapIndex := 0
+				roleOverrideHostnameMapIndex := 0
 				for _, reservation := range roleReservation.Reservations {
+					// Use pointers to the active index and role, switch to the override for this iteration if it applies
+					hostnameMapIndex := &roleHostnameMapIndex
+					hostRole := rolesMap[roleName]
+					if roleOverrideFound && roleOveride.HostIndexMap[strconv.Itoa(effectiveHostnameMapIndex)] {
+						hostnameMapIndex = &roleOverrideHostnameMapIndex
+						hostRole = rolesMap[roleOveride.RoleName]
+					}
 
 					//
 					// get OVNStaticBridgeMacMappings information from overcloudMACList
@@ -472,9 +503,9 @@ func createRolesMap(
 					// update rolesMap with reservations
 					//
 					if !reservation.Deleted {
-						if rolesMap[roleName].Nodes[reservation.Hostname] == nil {
-							rolesMap[roleName].Nodes[reservation.Hostname] = &roleNodeType{
-								Index:                   hostnameMapIndex,
+						if hostRole.Nodes[reservation.Hostname] == nil {
+							hostRole.Nodes[reservation.Hostname] = &roleNodeType{
+								Index:                   *hostnameMapIndex,
 								IPaddr:                  map[string]*roleIPType{},
 								Hostname:                reservation.Hostname,
 								VIP:                     reservation.VIP,
@@ -489,16 +520,17 @@ func createRolesMap(
 							uri = fmt.Sprintf("[%s]", uri)
 						}
 
-						if rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[nameLower] == nil {
-							rolesMap[roleName].Nodes[reservation.Hostname].IPaddr[nameLower] = &roleIPType{
+						if hostRole.Nodes[reservation.Hostname].IPaddr[nameLower] == nil {
+							hostRole.Nodes[reservation.Hostname].IPaddr[nameLower] = &roleIPType{
 								IPaddr:       reservation.IP,
 								IPAddrURI:    uri,
 								IPAddrSubnet: fmt.Sprintf("%s/%d", reservation.IP, cidrSuffix),
-								Network:      rolesMap[roleName].Networks[osnet.Spec.NameLower],
+								Network:      hostRole.Networks[osnet.Spec.NameLower],
 							}
 						}
 
-						hostnameMapIndex++
+						*hostnameMapIndex++
+						effectiveHostnameMapIndex++
 					}
 				}
 			}
