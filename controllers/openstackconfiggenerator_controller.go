@@ -299,7 +299,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
-	templateParameters["HeatServiceName"] = "heat-" + instance.Name
+	templateParameters["HeatServiceName"] = "heat-" + instance.Name + "." + instance.Namespace + ".svc"
 
 	//
 	// openstackconfig-script CM
