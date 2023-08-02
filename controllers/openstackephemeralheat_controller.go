@@ -297,8 +297,9 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 	cmLabels := common.GetLabels(instance, openstackephemeralheat.AppLabel, map[string]string{})
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
-	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name
-	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name
+	svcDomain := "." + instance.Namespace + ".svc"
+	templateParameters["MariaDBHost"] = "mariadb-" + instance.Name + svcDomain
+	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name + svcDomain
 	templateParameters["MariaDBPassword"] = string(passwordSecret.Data["password"])
 
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
