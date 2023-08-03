@@ -298,8 +298,9 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		}
 	}
 
+	svcDomain := "." + instance.Namespace + ".svc"
 	templateParameters["TripleoDeployFiles"] = tripleoDeployFiles
-	templateParameters["HeatServiceName"] = "heat-" + instance.Name + "." + instance.Namespace + ".svc"
+	templateParameters["HeatServiceName"] = "heat-" + instance.Name + svcDomain
 
 	//
 	// openstackconfig-script CM
@@ -511,7 +512,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 		// obtain the cltplaneExports from Heat
-		exports, err = openstackconfiggenerator.CtlplaneExports("heat-"+instance.Name, r.Log)
+		exports, err = openstackconfiggenerator.CtlplaneExports("heat-"+instance.Name+svcDomain, r.Log)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			cond.Message = err.Error()
 			cond.Reason = shared.ConfigGeneratorCondReasonExportFailed
