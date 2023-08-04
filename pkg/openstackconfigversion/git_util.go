@@ -19,6 +19,7 @@ package openstackconfigversion
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	config "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
@@ -152,6 +154,21 @@ func SyncGit(
 		URL:  gitURL,
 		Auth: publicKeys,
 	})
+	// if Azure DevOps is used it can fail with as azure is not compatible to go-git, https://github.com/go-git/go-git/pull/613
+	// "2023-08-04T13:16:19.264Z        INFO    controllers.OpenStackConfigGenerator    Failed to create Git repo: empty git-upload-pack given"
+	// retry with workaround setting capability.ThinPack
+	if err != nil && errors.Is(err, transport.ErrEmptyUploadPackRequest) {
+		log.Info(fmt.Sprintf("Failed to create Git repo: %s\n", err.Error()))
+		log.Info("retrying with capability.ThinPack transport capability, required for Azure DevOps")
+		transport.UnsupportedCapabilities = []capability.Capability{
+			capability.ThinPack,
+		}
+
+		repo, err = git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL:  gitURL,
+			Auth: publicKeys,
+		})
+	}
 	// Failed to create Git repo: URL field is required
 	if err != nil {
 		log.Info(fmt.Sprintf("Failed to create Git repo: %s\n", err.Error()))
