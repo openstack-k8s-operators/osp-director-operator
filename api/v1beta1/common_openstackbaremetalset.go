@@ -102,7 +102,7 @@ func VerifyBaremetalStatusHostRefs(
 			}
 
 			if !found {
-				err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OsBaremetalSet %s.  "+
+				err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OpenStackBaremetalSet %s.  "+
 					"Please check BaremetalHost resources and re-add \"%s\" to continue",
 					bmhStatus.HostRef, instance.Name, bmhStatus.HostRef)
 
@@ -123,17 +123,35 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 	if newBmhsNeededCount > 0 {
 		// We have new replicas requested, so search for baremetalhosts that don't have consumerRef or Online set
 
+		labelStr := ""
+
+		if len(instance.Spec.BmhLabelSelector) > 0 {
+			labelStr = fmt.Sprintf(" with labels %v", instance.Spec.BmhLabelSelector)
+			labelStr = strings.Replace(labelStr, "map[", "[", 1)
+		}
+
+		log.Info(fmt.Sprintf("Attempting to find %d BaremetalHost(s)%s for scale-up of OpenStackBaremetalSet %s", newBmhsNeededCount, labelStr, instance.Name))
+
 		for _, baremetalHost := range allBmhs.Items {
-			if baremetalHost.Spec.Online || baremetalHost.Spec.ConsumerRef != nil {
-				continue
+			mismatch := false
+
+			if baremetalHost.Spec.Online {
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it is already online", baremetalHost.ObjectMeta.Name))
+				mismatch = true
+			}
+
+			if baremetalHost.Spec.ConsumerRef != nil {
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it already has a consumerRef", baremetalHost.ObjectMeta.Name))
+				mismatch = true
 			}
 
 			if !verifyBaremetalSetHardwareMatch(log, instance, &baremetalHost) {
-				log.Info(fmt.Sprintf("BaremetalHost %s does not match hardware requirements for %s %s",
-					baremetalHost.ObjectMeta.Name,
-					instance.Kind,
-					instance.Name))
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it does not match hardware requirements", baremetalHost.ObjectMeta.Name))
+				mismatch = true
+			}
 
+			// If for any reason we can't use this BMH, do not add to the list of available BMHs
+			if mismatch {
 				continue
 			}
 
@@ -144,12 +162,15 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 
 		// If we can't satisfy the new requested replica count, explicitly state so
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
-			return nil, fmt.Errorf("Unable to find %d requested BaremetalHost count (%d in use, %d available)",
+			return nil, fmt.Errorf("Unable to find %d requested BaremetalHost count (%d in use, %d available)%s for OpenStackBaremetalSet %s",
 				instance.Spec.Count,
 				len(existingBmhs.Items),
-				len(availableBaremetalHosts))
+				len(availableBaremetalHosts),
+				labelStr,
+				instance.Name)
 		}
 
+		log.Info(fmt.Sprintf("Found sufficient quantity of BaremetalHosts (%v)%s for scale-up of OpenStackBaremetalSet %s", availableBaremetalHosts, labelStr, instance.Name))
 	}
 
 	return availableBaremetalHosts, nil
