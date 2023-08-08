@@ -1,11 +1,15 @@
 #!/bin/bash
 set -eux
 
+umask 0022
+CHOWN_UID=$(id -u)
+CHOWN_GID=$(id -g)
+
 # add cloud-admin ssh keys to $HOME/.ssh
 mkdir -p $HOME/.ssh
-cp /mnt/ssh-config/* $HOME/.ssh/
-chmod 600 $HOME/.ssh/git_id_rsa
-chown -R cloud-admin: $HOME/.ssh
+sudo cp /mnt/ssh-config/* $HOME/.ssh/
+sudo chmod 600 $HOME/.ssh/git_id_rsa
+sudo chown -R $CHOWN_UID:$CHOWN_GID $HOME/.ssh
 
 export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/git_id_rsa -o StrictHostKeyChecking=no"
 

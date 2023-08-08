@@ -556,7 +556,6 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 		pod.Spec.SecurityContext.RunAsUser = &runAsUser
 		pod.Spec.SecurityContext.RunAsGroup = &runAsGroup
-		pod.Spec.SecurityContext.FSGroup = &runAsGroup
 		pod.Spec.ServiceAccountName = openstackclient.ServiceAccount
 		pod.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 		pod.Spec.Volumes = common.MergeVolumes(pod.Spec.Volumes, volumes)
