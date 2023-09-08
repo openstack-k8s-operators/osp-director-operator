@@ -58,7 +58,6 @@ func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash strin
 		SecurityContext: &corev1.PodSecurityContext{
 			RunAsUser:  &runAsUser,
 			RunAsGroup: &runAsGroup,
-			FSGroup:    &runAsGroup,
 		},
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Volumes:                       volumes,

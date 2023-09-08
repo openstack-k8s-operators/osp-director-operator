@@ -61,7 +61,6 @@ func DeployJob(
 		SecurityContext: &corev1.PodSecurityContext{
 			RunAsUser:  &runAsUser,
 			RunAsGroup: &runAsGroup,
-			FSGroup:    &runAsGroup,
 		},
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Containers: []corev1.Container{
