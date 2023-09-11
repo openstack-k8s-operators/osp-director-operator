@@ -15,15 +15,21 @@
 # under the License.
 set -ex
 
+umask 0022
+CHOWN_UID=$(id -u)
+CHOWN_GID=$(id -g)
+
+sudo chown $CHOWN_UID:$CHOWN_GID /home/cloud-admin
+sudo chmod 00755 /home/cloud-admin
+
+sudo cp -a /etc/hostname /mnt/etc/hostname
 if [ -v FQDN ]; then
-  echo "$FQDN" > /mnt/etc/hostname
-else
-  cp /etc/hostname /mnt/etc/hostname
+  sudo tee /mnt/etc/hostname >/dev/null <<<"$FQDN"
 fi
 
 # if the pvc is an empty volume, copy the existing hosts file to it
 if [ ! -f /mnt/etc/hosts ]; then
-  cp /etc/hosts /mnt/etc/
+  sudo cp -a /etc/hosts /mnt/etc/
 fi
 
 mkdir -p /home/cloud-admin/tripleo-deploy/validations
@@ -38,9 +44,9 @@ if [ -d /mnt/ssh-config ]; then
 
   # add cloud-admin ssh keys to /home/cloud-admin/.ssh in openstackclient
   mkdir -p /home/cloud-admin/.ssh
-  cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
-  chmod 600 /home/cloud-admin/.ssh/id_rsa
-  sudo chown -R cloud-admin: /home/cloud-admin/.ssh
+  sudo cp /mnt/ssh-config/* /home/cloud-admin/.ssh/
+  sudo chmod 600 /home/cloud-admin/.ssh/id_rsa
+  sudo chown -R $CHOWN_UID:$CHOWN_GID /home/cloud-admin/.ssh
 fi
 
 if [ -d /mnt/ca-certs ]; then
@@ -61,11 +67,15 @@ if [ "$IPA_SERVER" != "" ]; then
     SHORT_HOSTNAME=$(hostname -s)
     LONG_HOSTNAME=$(hostname -f)
     if [ "$LONG_HOSTNAME" != "$FQDN" ]; then
-      sed -i -e "s/^\([0-9.]\+\)\s\+\(.*\)${SHORT_HOSTNAME}\$/\1\t\2${FQDN} ${SHORT_HOSTNAME}/" /mnt/etc/hosts
+      sudo sed -i -e "s/^\([0-9.]\+\)\s\+\(.*\)${SHORT_HOSTNAME}\$/\1\t\2${FQDN} ${SHORT_HOSTNAME}/" /mnt/etc/hosts
       sudo bash -c "cat /mnt/etc/hosts > /etc/hosts"
     fi
 
-    cat <<EOF > /home/cloud-admin/openstackclient_ipa_install.yaml
+    sudo truncate -s 0 /run/openstackclient_ipa_install.yaml
+    sudo chmod 600 /run/openstackclient_ipa_install.yaml
+    sudo chown $CHOWN_UID:$CHOWN_GID /run/openstackclient_ipa_install.yaml
+
+    cat <<EOF >> /run/openstackclient_ipa_install.yaml
 {{`---
 - hosts: localhost
   become: true
@@ -97,7 +107,7 @@ if [ "$IPA_SERVER" != "" ]; then
         name: tripleo_ipa_setup
 EOF`}}
 
-    ansible-playbook -e ipa_server_user=${IPA_SERVER_USER} -e ipa_realm=${IPA_REALM} -e ipa_server_hostname=${IPA_SERVER} -e ipa_domain=${IPA_DOMAIN} /home/cloud-admin/openstackclient_ipa_install.yaml
+    ansible-playbook -e ipa_server_user=${IPA_SERVER_USER} -e ipa_realm=${IPA_REALM} -e ipa_server_hostname=${IPA_SERVER} -e ipa_domain=${IPA_DOMAIN} /run/openstackclient_ipa_install.yaml
   fi
 
   # Fetch the latest IPA CA cert
