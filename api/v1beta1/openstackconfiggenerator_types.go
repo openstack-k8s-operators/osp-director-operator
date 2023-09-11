@@ -58,7 +58,7 @@ type OpenStackConfigGeneratorSpec struct {
 	// - Production OSP environments MUST have fencing enabled.
 	// - Requires the fence-agents-kubevirt package to be installed in the virtual machines for the roles running pacemaker.
 	EnableFencing bool `json:"enableFencing"`
-	// TripleoRoleOverride - map of TripleO role name to temporary role override to support a multi-rhel environment
+	// TripleoRoleOverride - map of TripleO role name to temporary role override to support a multi-rhel environment (valid for 17.1 only)
 	TripleoRoleOverride map[string]TripleoRoleOverrideSpec `json:"tripleoRoleOverride,omitempty"`
 }
 

@@ -221,6 +221,7 @@ func CreateConfigMapParams(
 		ctx,
 		r,
 		instance,
+		OSPVersion,
 		osNetList,
 		osMACList,
 		networksMap,
@@ -375,6 +376,7 @@ func createRolesMap(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	ospVersion shared.OSPVersion,
 	osNetList *ospdirectorv1beta1.OpenStackNetList,
 	osMACList *ospdirectorv1beta1.OpenStackMACAddressList,
 	networksMap map[string]*networkType,
@@ -382,11 +384,16 @@ func createRolesMap(
 	rolesMap map[string]*RoleType,
 ) error {
 
+	roleOverridePermitted := ospVersion == shared.OSPVersion(shared.TemplateVersion17_1)
+	if instance.Spec.TripleoRoleOverride != nil && !roleOverridePermitted {
+		r.GetLogger().Info("TripleoRoleOverride is only valid for 17.1, ignoring", "OSPVersion", ospVersion)
+	}
+
 	for _, osnet := range osNetList.Items {
 		for roleName, roleReservation := range osnet.Spec.RoleReservations {
 			var roleOveride ospdirectorv1beta1.TripleoRoleOverrideSpec
 			roleOverrideFound := false
-			if instance.Spec.TripleoRoleOverride != nil {
+			if instance.Spec.TripleoRoleOverride != nil && roleOverridePermitted {
 				roleOveride, roleOverrideFound = instance.Spec.TripleoRoleOverride[roleName]
 			}
 

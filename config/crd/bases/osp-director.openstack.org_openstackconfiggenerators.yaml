@@ -125,6 +125,28 @@ spec:
                 description: Optional. the name of the config map containing custom
                   Heat template tarball which will be extracted prior to config generation
                 type: string
+              tripleoRoleOverride:
+                additionalProperties:
+                  description: TripleoRoleOverrideSpec overrides the Tripleo role
+                    for specific hosts (multi-rhel suppport)
+                  properties:
+                    hostIndexMap:
+                      additionalProperties:
+                        type: boolean
+                      description: HostIndexMap - host indices from current role to
+                        override (defaults to false)
+                      type: object
+                    roleName:
+                      description: RoleOverride - TripleO role name to apply
+                      type: string
+                  required:
+                  - hostIndexMap
+                  - roleName
+                  type: object
+                description: TripleoRoleOverride - map of TripleO role name to temporary
+                  role override to support a multi-rhel environment (valid for 17.1
+                  only)
+                type: object
             required:
             - enableFencing
             - gitSecret
