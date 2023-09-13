@@ -52,8 +52,10 @@ spec:
                     description: Ansible inventory limit
                     type: string
                   playbook:
-                    description: Playbook to run from config-download
-                    type: string
+                    description: Playbooks to run from config-download
+                    items:
+                      type: string
+                    type: array
                   skipDeployIdentifier:
                     default: false
                     description: Skip setting a unique deploy identifier
@@ -85,7 +87,9 @@ spec:
                 enum:
                 - deploy
                 - update
+                - upgrade
                 - externalUpdate
+                - externalUpgrade
                 type: string
               skipNNCPValidation:
                 default: false
