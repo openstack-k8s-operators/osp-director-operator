@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
 	github.com/tidwall/gjson v1.16.0
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.14.0
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v12.0.0+incompatible
@@ -129,8 +129,8 @@ require (
 	go4.org v0.0.0-20200104003542-c7e774b10ea0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
@@ -151,6 +151,7 @@ require (
 )
 
 replace (
+
 	// required by Microsoft/hcsshim, containers/storage, sriov-network-operator
 	// Not used within this Operator.
 	// Bump to avoid CVE detection with earlier versions (v1.5.4).
@@ -180,6 +181,8 @@ replace (
 
 	// CDI. Bump to avoid CVE with v0.5.7
 	github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.10
+	// Bump golang.org/x/net to avoid Rapid Reset CVE
+	golang.org/x/net => golang.org/x/net v0.17.0
 
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
