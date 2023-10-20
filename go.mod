@@ -151,7 +151,6 @@ require (
 )
 
 replace (
-
 	// required by Microsoft/hcsshim, containers/storage, sriov-network-operator
 	// Not used within this Operator.
 	// Bump to avoid CVE detection with earlier versions (v1.5.4).
