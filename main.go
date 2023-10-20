@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"os"
@@ -129,6 +130,13 @@ func main() {
 		setupLog.Error(err, "failed to get WatchNamespace")
 		os.Exit(1)
 
+	}
+
+	disableHTTP2 := func(c *tls.Config) {
+		if enableHTTP2 {
+			return
+		}
+		c.NextProtos = []string{"http/1.1"}
 	}
 
 	options := ctrl.Options{
