@@ -22,7 +22,7 @@ require (
 	github.com/openshift/sriov-network-operator v0.0.0-20201204053545-49045c36efb9
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
-	github.com/tidwall/gjson v1.16.0
+	github.com/tidwall/gjson v1.17.0
 	golang.org/x/crypto v0.14.0
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
@@ -151,7 +151,6 @@ require (
 )
 
 replace (
-
 	// required by Microsoft/hcsshim, containers/storage, sriov-network-operator
 	// Not used within this Operator.
 	// Bump to avoid CVE detection with earlier versions (v1.5.4).
