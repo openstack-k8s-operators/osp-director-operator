@@ -118,13 +118,6 @@ func main() {
 
 	}
 
-	disableHTTP2 := func(c *tls.Config) {
-		if enableHTTP2 {
-			return
-		}
-		c.NextProtos = []string{"http/1.1"}
-	}
-
 	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -132,7 +125,6 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "576d6738.openstack.org",
-		TLSOpts:                []func(config *tls.Config){disableHTTP2},
 	}
 
 	// create multi namespace cache if list of namespaces
@@ -165,6 +157,13 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
+	}
+
+	disableHTTP2 := func(c *tls.Config) {
+		if enableHTTP2 {
+			return
+		}
+		c.NextProtos = []string{"http/1.1"}
 	}
 
 	checker := healthz.Ping
