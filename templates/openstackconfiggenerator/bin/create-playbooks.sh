@@ -38,14 +38,14 @@ cp -a /usr/share/openstack-tripleo-heat-templates/* $TEMPLATES_DIR
 rm -Rf $HOME/config-tmp
 mkdir -p $HOME/config-tmp
 pushd $HOME/config-tmp
+cp $HOME/config/* $HOME/config-tmp
+cp $HOME/config-custom/* $HOME/config-tmp
 # extract any tar files into $HOME/config-tmp
 {{- if .TripleoTarballFiles }}
 {{- range $key, $value := .TripleoTarballFiles }}
 tar -xvf $HOME/tht-tars/{{ $key }}
 {{- end }}
 {{- end }}
-cp $HOME/config/* $HOME/config-tmp
-cp $HOME/config-custom/* $HOME/config-tmp
 # remove all references to the default tht dir
 sed -e "s|/usr/share/openstack\-tripleo\-heat\-templates|\.|" -i $HOME/config-tmp/*.yaml
 # copy to our temp t-h-t dir
