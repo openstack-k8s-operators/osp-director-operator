@@ -15,12 +15,7 @@ def export_cephadm(stack, cephx, playbook_dir):
     file = os.path.join(playbook_dir, 'tripleo-ansible', 'cephadm', 'ceph_client.yml')
 
     with open(file, 'r') as ff:
-        try:
-            ceph_data = yaml.safe_load(ff)
-        except yaml.MarkedYAMLError as e:
-            LOG.error(
-                _('Could not read file %s') % file)
-            LOG.error(e)
+        ceph_data = yaml.safe_load(ff)
     external_cluster_mon_ips = ceph_data['external_cluster_mon_ips']
     cluster = ceph_data['tripleo_ceph_client_cluster']
     fsid = ceph_data['tripleo_ceph_client_fsid']
@@ -57,11 +52,8 @@ CEPH_DEPLOY_DIRS = {
 
 def get_cephx_name(playbooks_dir):
     ceph_user_file_path = os.path.join(playbooks_dir, CEPH_USER_FN)
-    try:
-        with open(ceph_user_file_path) as ceph_user_file:
-            data = json.loads(ceph_user_file.read())
-    except Exception:
-        return None
+    with open(ceph_user_file_path) as ceph_user_file:
+        data = json.loads(ceph_user_file.read())
     return data.get(CEPH_USER_KEY, DEFAULT_CEPH_USER)
 
 
@@ -82,15 +74,15 @@ def export_ceph_data(working_dir):
             break
 
     if ceph_deploy_found:
-        cephx = get_cephx_name(playbooks_dir)
-        if cephx is not None:
+        try:
+            cephx = get_cephx_name(playbooks_dir)
             LOG.info("Using cephx name: {}".format(cephx))
             ceph_data = ceph_export_func(stackname, cephx, playbooks_dir)
             data['parameter_defaults']['CephExternalMultiConfig'] = [ceph_data]
             data['parameter_merge_strategies'] = {}
             data['parameter_merge_strategies']['CephExternalMultiConfig'] = 'merge'
-        else:
-            print("Error reading ceph user file {}, skipping ceph data export".format(CEPH_USER_FN))
+        except Exception:
+            LOG.exception("Error exporting ceph data, skipping ceph data export")
 
     with open(output_file, 'w') as f:
         yaml.safe_dump(data, f, default_flow_style=False)
