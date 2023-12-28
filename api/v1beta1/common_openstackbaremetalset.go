@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,9 +17,9 @@ func GetBmhHosts(
 	c client.Client,
 	namespace string,
 	labelSelector map[string]string,
-) (*metal3v1alpha1.BareMetalHostList, error) {
+) (*metal3v1.BareMetalHostList, error) {
 
-	bmhHostsList := &metal3v1alpha1.BareMetalHostList{}
+	bmhHostsList := &metal3v1.BareMetalHostList{}
 
 	listOpts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -54,7 +54,7 @@ func GetDeletionAnnotatedBmhHosts(
 }
 
 func getDeletionAnnotatedBmhHosts(
-	baremetalHostList *metal3v1alpha1.BareMetalHostList,
+	baremetalHostList *metal3v1.BareMetalHostList,
 ) []string {
 	annotatedBMHs := []string{}
 
@@ -115,7 +115,7 @@ func VerifyBaremetalStatusHostRefs(
 }
 
 // VerifyBaremetalSetScaleUp -
-func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet, allBmhs *metal3v1alpha1.BareMetalHostList, existingBmhs *metal3v1alpha1.BareMetalHostList) ([]string, error) {
+func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet, allBmhs *metal3v1.BareMetalHostList, existingBmhs *metal3v1.BareMetalHostList) ([]string, error) {
 	// How many new BaremetalHost allocations do we need (if any)?
 	newBmhsNeededCount := instance.Spec.Count - len(existingBmhs.Items)
 	availableBaremetalHosts := []string{}
@@ -150,6 +150,11 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 				mismatch = true
 			}
 
+			if baremetalHost.Status.Provisioning.State != metal3v1.StateAvailable {
+				log.Info("BaremetalHost ProvisioningState is not 'Available'")
+				mismatch = true
+			}
+
 			// If for any reason we can't use this BMH, do not add to the list of available BMHs
 			if mismatch {
 				continue
@@ -162,7 +167,7 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 
 		// If we can't satisfy the new requested replica count, explicitly state so
 		if newBmhsNeededCount > len(availableBaremetalHosts) {
-			return nil, fmt.Errorf("Unable to find %d requested BaremetalHost count (%d in use, %d available)%s for OpenStackBaremetalSet %s",
+			return nil, fmt.Errorf("unable to find %d requested BaremetalHost count (%d in use, %d available)%s for OpenStackBaremetalSet %s",
 				instance.Spec.Count,
 				len(existingBmhs.Items),
 				len(availableBaremetalHosts),
@@ -177,7 +182,7 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 }
 
 // VerifyBaremetalSetScaleDown -
-func VerifyBaremetalSetScaleDown(log logr.Logger, instance *OpenStackBaremetalSet, existingBmhs *metal3v1alpha1.BareMetalHostList, removalAnnotatedBmhCount int) error {
+func VerifyBaremetalSetScaleDown(log logr.Logger, instance *OpenStackBaremetalSet, existingBmhs *metal3v1.BareMetalHostList, removalAnnotatedBmhCount int) error {
 	// How many new BaremetalHost de-allocations do we need (if any)?
 	bmhsToRemoveCount := len(existingBmhs.Items) - instance.Spec.Count
 
@@ -191,7 +196,7 @@ func VerifyBaremetalSetScaleDown(log logr.Logger, instance *OpenStackBaremetalSe
 func verifyBaremetalSetHardwareMatch(
 	log logr.Logger,
 	instance *OpenStackBaremetalSet,
-	bmh *metal3v1alpha1.BareMetalHost,
+	bmh *metal3v1.BareMetalHost,
 ) bool {
 	// If no requested hardware requirements, we're all set
 	if instance.Spec.HardwareReqs == (HardwareReqs{}) {
@@ -278,7 +283,7 @@ func verifyBaremetalSetHardwareMatch(
 
 	diskReqs := instance.Spec.HardwareReqs.DiskReqs
 
-	var foundDisk *metal3v1alpha1.Storage
+	var foundDisk *metal3v1.Storage
 
 	if diskReqs.GbReq.Gb != 0 {
 		diskGbBms := float64(diskReqs.GbReq.Gb)

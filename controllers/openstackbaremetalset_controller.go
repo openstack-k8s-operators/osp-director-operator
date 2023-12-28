@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/baremetalset"
@@ -529,7 +529,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
 		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
-		Watches(&source.Kind{Type: &metal3v1alpha1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
+		Watches(&source.Kind{Type: &metal3v1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
 
@@ -1045,7 +1045,7 @@ outer:
 	//
 	// Provision the BaremetalHost
 	//
-	foundBaremetalHost := &metal3v1alpha1.BareMetalHost{}
+	foundBaremetalHost := &metal3v1.BareMetalHost{}
 	err = r.Get(ctx, types.NamespacedName{Name: bmh, Namespace: "openshift-machine-api"}, foundBaremetalHost)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s", foundBaremetalHost.Kind, bmh)
@@ -1070,8 +1070,8 @@ outer:
 		//
 		// Ensure the image url is up to date unless already provisioned
 		//
-		if string(foundBaremetalHost.Status.Provisioning.State) != "provisioned" {
-			foundBaremetalHost.Spec.Image = &metal3v1alpha1.Image{
+		if foundBaremetalHost.Status.Provisioning.State != metal3v1.StateProvisioned {
+			foundBaremetalHost.Spec.Image = &metal3v1.Image{
 				URL:      localImageURL,
 				Checksum: fmt.Sprintf("%s.md5sum", localImageURL),
 			}
@@ -1143,7 +1143,7 @@ func (r *OpenStackBaremetalSetReconciler) baremetalHostDeprovision(
 	cond *shared.Condition,
 	bmh ospdirectorv1beta1.HostStatus,
 ) (string, error) {
-	baremetalHost := &metal3v1alpha1.BareMetalHost{}
+	baremetalHost := &metal3v1.BareMetalHost{}
 	err := r.Get(ctx, types.NamespacedName{Name: bmh.HostRef, Namespace: "openshift-machine-api"}, baremetalHost)
 	if err != nil {
 		cond.Message = fmt.Sprintf("Failed to get %s %s", baremetalHost.Kind, bmh.HostRef)
@@ -1384,7 +1384,7 @@ func (r *OpenStackBaremetalSetReconciler) getExistingBaremetalHosts(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackBaremetalSet,
 	cond *shared.Condition,
-) (*metal3v1alpha1.BareMetalHostList, error) {
+) (*metal3v1.BareMetalHostList, error) {
 	baremetalHostsList, err := ospdirectorv1beta1.GetBmhHosts(
 		ctx,
 		r.GetClient(),
