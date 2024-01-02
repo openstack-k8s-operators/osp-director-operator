@@ -40,7 +40,7 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	virtv1 "kubevirt.io/api/core/v1"
 
-	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 
@@ -82,7 +82,7 @@ func init() {
 	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(networkv1.AddToScheme(scheme))
 	//utilruntime.Must(cdiv1.AddToScheme(scheme))
-	utilruntime.Must(metal3v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(metal3v1.AddToScheme(scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme))
 	utilruntime.Must(sriovnetworkv1.AddToScheme(scheme))
 	utilruntime.Must(storageversionmigrations.AddToScheme(scheme))

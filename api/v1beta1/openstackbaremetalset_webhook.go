@@ -25,7 +25,7 @@ import (
 	"context"
 	"fmt"
 
-	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,7 +91,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 		return err
 	}
 
-	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, &metal3v1alpha1.BareMetalHostList{}); err != nil {
+	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, &metal3v1.BareMetalHostList{}); err != nil {
 		return err
 	}
 

@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
-	metal3v1alpha1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -261,7 +261,7 @@ func (r *OpenStackIPSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		} else {
 
 			// Get openshift-machine-api BaremetalHosts with
-			baremetalHostsList := &metal3v1alpha1.BareMetalHostList{}
+			baremetalHostsList := &metal3v1.BareMetalHostList{}
 
 			labelSelector := map[string]string{
 				common.OSPHostnameLabelSelector: hostname,
