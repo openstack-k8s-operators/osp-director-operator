@@ -357,9 +357,16 @@ func createNetworksMap(
 }
 
 // IsRoleIncluded - checks if the role exists in the ConfigGenerator Roles set
-func IsRoleIncluded(roleName string, instance *ospdirectorv1beta1.OpenStackConfigGenerator) bool {
+func IsRoleIncluded(roleName string, instance *ospdirectorv1beta1.OpenStackConfigGenerator, ospVersion shared.OSPVersion) bool {
 
-	if len(instance.Spec.Roles) == 0 || roleName == controlplane.Role {
+	// return for special conditions:
+	// - if there is no specific role specified in the spec
+	// - the roleName is one of the special roles for allocated VIPs in ipam for
+	//   - ControlPlane
+	//   - Redis (OSP17.1)
+	//   - OVNDPs (OSP17.1)
+	if len(instance.Spec.Roles) == 0 || roleName == controlplane.Role ||
+		(ospVersion == shared.OSPVersion(shared.TemplateVersion17_1) && (roleName == "Redis" || roleName == "OVNDBs")) {
 		return true
 	}
 	for _, r := range instance.Spec.Roles {
@@ -397,7 +404,7 @@ func createRolesMap(
 				roleOveride, roleOverrideFound = instance.Spec.TripleoRoleOverride[roleName]
 			}
 
-			if IsRoleIncluded(roleName, instance) || (roleOverrideFound && IsRoleIncluded(roleOveride.RoleName, instance)) {
+			if IsRoleIncluded(roleName, instance, ospVersion) || (roleOverrideFound && IsRoleIncluded(roleOveride.RoleName, instance, ospVersion)) {
 				//
 				// check if role is VM
 				//
