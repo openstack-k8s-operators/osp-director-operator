@@ -423,7 +423,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 		}
 
 		// check if osvmset and osbms is in status provisioned
-		msg, deployed, err := r.verifyNodeResourceStatus(ctx, instance)
+		msg, deployed, err := r.verifyNodeResourceStatus(ctx, instance, OSPVersion)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -655,6 +655,7 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 	ctx context.Context,
 	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	ospVersion shared.OSPVersion,
 ) (string, bool, error) {
 
 	msg := ""
@@ -669,7 +670,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 	}
 
 	for _, vmset := range vmsetList.Items {
-		if openstackconfiggenerator.IsRoleIncluded(vmset.Spec.RoleName, instance) {
+		if openstackconfiggenerator.IsRoleIncluded(vmset.Spec.RoleName, instance, ospVersion) {
 			if vmset.Status.ProvisioningStatus.State != shared.ProvisioningState(shared.VMSetCondTypeProvisioned) {
 				msg := fmt.Sprintf("Waiting on OpenStackVMset %s to be provisioned...", vmset.Name)
 				return msg, false, nil
@@ -690,7 +691,7 @@ func (r *OpenStackConfigGeneratorReconciler) verifyNodeResourceStatus(
 		//
 		// wait for all BMS be provisioned if baremetalhosts for the bms are requested
 		//
-		if openstackconfiggenerator.IsRoleIncluded(bmset.Spec.RoleName, instance) {
+		if openstackconfiggenerator.IsRoleIncluded(bmset.Spec.RoleName, instance, ospVersion) {
 			if bmset.Status.ProvisioningStatus.State != shared.ProvisioningState(shared.BaremetalSetCondTypeProvisioned) &&
 				bmset.Status.ProvisioningStatus.State != shared.ProvisioningState(shared.BaremetalSetCondTypeEmpty) {
 				msg := fmt.Sprintf("Waiting on OpenStackBaremetalSet %s to be provisioned...", bmset.Name)
