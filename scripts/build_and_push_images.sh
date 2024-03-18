@@ -20,7 +20,7 @@ IMG="$REPO/$OP_NAME":$VERSION
 IMAGE_TAG_BASE="$REPO/$OP_NAME"
 
 
-AGENT_IMAGE="$OP_NAME-agent"
+AGENT_IMAGE="osp-director-agent"
 AGENT_IMG_BASE="$REPO/$AGENT_IMAGE"
 AGENT_IMG="$AGENT_IMG_BASE:$VERSION"
 
@@ -94,6 +94,11 @@ for OSP_RELEASE in ${OSP_RELEASES}; do
   # Push bundle image
   VERSION=${VERSION_RELEASE} IMAGE_TAG_BASE=${IMAGE_TAG_BASE} make bundle-push
   #opm alpha bundle validate --tag ${BUNDLE_IMG} -b podman
+
+  # Get bundle digest and update BUNDLE_IMG to use that instead of a tag, so that
+  # offline/air gapped environments will work properly
+  bundle_digest_image=$(skopeo inspect docker://$BUNDLE_IMG | jq '.Digest' -r)
+  BUNDLE_IMG="$REPO/$OP_NAME-bundle@$bundle_digest_image"
 
   # Index image
   opm index add --bundles ${BUNDLE_IMG} --tag ${INDEX_IMG} -u podman --pull-tool podman
