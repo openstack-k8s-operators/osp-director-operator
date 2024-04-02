@@ -15,4 +15,6 @@ parameter_defaults:
           power_timeout: 30
           kubeconfig: /root/kubeconfig/kubeconfig
 {{- end }}
+parameter_merge_strategies:
+  FencingConfig: deep_merge
 {{- end }}
