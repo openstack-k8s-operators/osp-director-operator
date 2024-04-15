@@ -179,8 +179,6 @@ replace (
 
 	// CDI. Bump to avoid CVE with v0.5.7
 	github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.10
-	// Bump golang.org/x/net to avoid Rapid Reset CVE
-	golang.org/x/net => golang.org/x/net v0.17.0
 
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
