@@ -3,7 +3,12 @@
 fqdn: {{ .Hostname }}{{ if .DomainName }}.{{ .DomainName }}{{ end }}
 users:
   - name: cloud-admin
-    ssh-authorized-keys: {{ .AuthorizedKeys }}
+    ssh_authorized_keys:
+{{ range $ssh_key := .AuthorizedKeys }}
+{{ if not (eq $ssh_key "") }}
+      - {{ $ssh_key }}
+{{ end }}
+{{ end }}
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     shell: /bin/bash
 {{- if .NodeRootPassword }}
