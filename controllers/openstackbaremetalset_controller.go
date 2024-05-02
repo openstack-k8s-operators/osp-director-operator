@@ -1101,7 +1101,14 @@ func (r *OpenStackBaremetalSetReconciler) cloudInitProvision(ctx context.Context
 		// Automatically generate user data cloud-init secret (i.e. user did not
 		// already manually create it for the BMH)
 		templateParameters := make(map[string]interface{})
-		templateParameters["AuthorizedKeys"] = sshSecret
+
+		// Split the keys into a list of separate strings, as cloud-init wants a list
+		// (a single-key string also works, but if there multiple keys in that string
+		// then passing the keys as a string results in *none* of them working, so it
+		// is better to create a list always)
+		splitKeys := strings.Split(strings.TrimSuffix(string(sshSecret), "\n"), "\n")
+		templateParameters["AuthorizedKeys"] = splitKeys
+
 		templateParameters["Hostname"] = hostName
 		templateParameters["DomainName"] = osNetCfg.Spec.DomainName
 
