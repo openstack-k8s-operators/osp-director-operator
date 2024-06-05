@@ -162,48 +162,65 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	envVars := make(map[string]common.EnvSetter)
 	templateParameters := make(map[string]interface{})
 	cmLabels := common.GetLabels(instance, openstackconfiggenerator.AppLabel, map[string]string{})
+	var controlPlane ospdirectorv1beta2.OpenStackControlPlane
+	var OSPVersion shared.OSPVersion
 
-	//
-	// Get OSPVersion from OSControlPlane status
-	//
-	// unified OSPVersion from ControlPlane CR
-	// which means also get either 16.2 or 17.0 for upstream versions
-	controlPlane, ctrlResult, err := ospdirectorv1beta2.GetControlPlane(r.Client, instance)
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = shared.ControlPlaneReasonNetNotFound
-		cond.Type = shared.ConfigGeneratorCondTypeError
-		err = common.WrapErrorForObject(cond.Message, instance, err)
+	if instance.Spec.Debug.SkipWaiting == nil ||
+		(instance.Spec.Debug.SkipWaiting != nil && !*instance.Spec.Debug.SkipWaiting) {
+		var ctrlResult reconcile.Result
+		//
+		// Get OSPVersion from OSControlPlane status
+		//
+		// unified OSPVersion from ControlPlane CR
+		// which means also get either 16.2 or 17.0 for upstream versions
+		controlPlane, ctrlResult, err = ospdirectorv1beta2.GetControlPlane(r.Client, instance)
+		if err != nil {
+			cond.Message = err.Error()
+			cond.Reason = shared.ControlPlaneReasonNetNotFound
+			cond.Type = shared.ConfigGeneratorCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
 
-		return ctrlResult, err
+			return ctrlResult, err
+		}
+		OSPVersion, err = shared.GetOSPVersion(string(controlPlane.Status.OSPVersion))
+		if err != nil {
+			cond.Message = err.Error()
+			cond.Reason = shared.ControlPlaneReasonNotSupportedVersion
+			cond.Type = shared.ConfigGeneratorCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrlResult, err
+		}
+
+		//
+		//  wait for the controlplane VMs to be provisioned
+		//
+		if controlPlane.Status.ProvisioningStatus.State != shared.ProvisioningState(shared.ControlPlaneProvisioned) {
+			cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
+			cond.Reason = shared.ConfigGeneratorCondReasonCMNotFound
+			cond.Type = shared.ConfigGeneratorCondTypeWaiting
+			common.LogForObject(
+				r,
+				cond.Message,
+				instance,
+			)
+
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 	}
-	OSPVersion, err := shared.GetOSPVersion(string(controlPlane.Status.OSPVersion))
-	if err != nil {
-		cond.Message = err.Error()
-		cond.Reason = shared.ControlPlaneReasonNotSupportedVersion
-		cond.Type = shared.ConfigGeneratorCondTypeError
-		err = common.WrapErrorForObject(cond.Message, instance, err)
 
-		return ctrlResult, err
+	if instance.Spec.Debug.OpenStackRelease != "" {
+		OSPVersion, err = shared.GetOSPVersion(instance.Spec.Debug.OpenStackRelease)
+		if err != nil {
+			cond.Message = err.Error()
+			cond.Reason = shared.ControlPlaneReasonNotSupportedVersion
+			cond.Type = shared.ConfigGeneratorCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return ctrl.Result{}, err
+		}
 	}
-
 	templateParameters["OSPVersion"] = OSPVersion
-
-	//
-	//  wait for the controlplane VMs to be provisioned
-	//
-	if controlPlane.Status.ProvisioningStatus.State != shared.ProvisioningState(shared.ControlPlaneProvisioned) {
-		cond.Message = fmt.Sprintf("Control plane %s VMs are not yet provisioned. Requeing...", controlPlane.Name)
-		cond.Reason = shared.ConfigGeneratorCondReasonCMNotFound
-		cond.Type = shared.ConfigGeneratorCondTypeWaiting
-		common.LogForObject(
-			r,
-			cond.Message,
-			instance,
-		)
-
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
 
 	//
 	// check if heat-env-config (customizations provided by administrator) exist if it does not exist, requeue
@@ -272,18 +289,36 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	//
 	// render OOO environment, create TripleoDeployCM and read the tripleo-deploy-config CM
 	//
-	tripleoDeployCM, err := r.createTripleoDeployCM(
-		ctx,
-		instance,
-		cond,
-		&envVars,
-		cmLabels,
-		OSPVersion,
-		&controlPlane,
-		tripleoTarballCM,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
+	var tripleoDeployCM *corev1.ConfigMap
+	if instance.Spec.Debug.TripleoDeployConfigOverride == nil ||
+		(instance.Spec.Debug.TripleoDeployConfigOverride != nil && *instance.Spec.Debug.TripleoDeployConfigOverride == "") {
+		tripleoDeployCM, err = r.createTripleoDeployCM(
+			ctx,
+			instance,
+			cond,
+			&envVars,
+			cmLabels,
+			OSPVersion,
+			&controlPlane,
+			tripleoTarballCM,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		tripleoDeployCM, _, err = common.GetConfigMapAndHashWithName(ctx, r, *instance.Spec.Debug.TripleoDeployConfigOverride, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				cond.Message = "TripleoDeployConfigOverride config map not found, requeuing and waiting. Requeing..."
+				cond.Reason = shared.ConfigGeneratorCondReasonCMNotFound
+				cond.Type = shared.ConfigGeneratorCondTypeWaiting
+				err = common.WrapErrorForObject(cond.Message, instance, err)
+
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			}
+			// Error reading the object - requeue the request.
+			return ctrl.Result{}, err
+		}
 	}
 	tripleoDeployFiles := tripleoDeployCM.Data
 
