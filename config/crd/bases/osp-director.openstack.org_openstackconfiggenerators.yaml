@@ -46,6 +46,28 @@ spec:
             description: OpenStackConfigGeneratorSpec defines the desired state of
               OpenStackConfigGenerator
             properties:
+              debug:
+                description: OpenStackConfigGeneratorAdvancedSettings - The main intention
+                  of these parameters are for debugging purposes to generate playbooks
+                  without the need of a full deployed environment.
+                properties:
+                  openStackRelease:
+                    description: 'OpenStackRelease to overwrite OSPrelease auto detection
+                      from the OpenStackControlPlane CR Note: needs to be set when
+                      SkipWaiting is used'
+                    type: string
+                  skipWaiting:
+                    description: SkipWaiting enables the user to control if the OpenStackConfigGenerator
+                      should wait for all openstackbaremetalsets and openstackvmsets
+                      to be Ready before start to generate the playbooks.
+                    type: boolean
+                  tripleoDeployConfigOverride:
+                    description: 'TripleoDeployConfigOverride allows to point to an
+                      existing configmap which has the files which are usually generated
+                      by the operator. Note: the configmap must provide a tripleo
+                      parameter file named `rendered-tripleo-config.yaml`'
+                    type: string
+                type: object
               enableFencing:
                 description: 'EnableFencing allows the automatic creation of required
                   heat environment files to enable fencing. Note: - Production OSP
