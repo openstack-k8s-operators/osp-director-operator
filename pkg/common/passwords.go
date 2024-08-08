@@ -169,8 +169,6 @@ func GeneratePasswords() map[string]interface{} {
 }
 
 func generateCephKey() string {
-	math_rand.Seed(time.Now().UnixNano())
-
 	// https://github.com/ceph/ceph-deploy/blob/master/ceph_deploy/new.py#L21
 	key := make([]byte, 16)
 	for i := 0; i < 16; i++ {
@@ -197,7 +195,6 @@ func generateDesignateHMAC() string {
 }
 
 func generateFernetKey() string {
-	math_rand.Seed(time.Now().UnixNano())
 	data := make([]byte, 32)
 	for i := 0; i < 32; i++ {
 		data[i] = byte(math_rand.Intn(10))
