@@ -100,9 +100,9 @@ func AddOSNetConfigRefLabel(
 	}
 	osnet, err := GetOpenStackNetWithLabel(c, namespace, labelSelector)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		return labels, fmt.Errorf(fmt.Sprintf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName))
+		return labels, fmt.Errorf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName)
 	} else if err != nil {
-		return labels, fmt.Errorf(fmt.Sprintf("Failed to get OpenStackNet %s ", subnetName))
+		return labels, fmt.Errorf("Failed to get OpenStackNet %s ", subnetName)
 	}
 
 	//
@@ -215,7 +215,7 @@ func GetOsNetCfg(
 
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			return nil, fmt.Errorf(fmt.Sprintf("%s with name %s not found", osNetCfg.DeepCopy().GroupVersionKind().Kind, osNetCfg.Name))
+			return nil, fmt.Errorf("%s with name %s not found", osNetCfg.DeepCopy().GroupVersionKind().Kind, osNetCfg.Name)
 		}
 		return nil, err
 	}
@@ -234,9 +234,9 @@ func ValidateNetworks(namespace string, networks []string) error {
 		}
 		osnet, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {
-			return fmt.Errorf(fmt.Sprintf("%s %s not found, validate the object network list!", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName))
+			return fmt.Errorf("%s %s not found, validate the object network list", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName)
 		} else if err != nil {
-			return fmt.Errorf(fmt.Sprintf("Failed to get %s %s", osnet.Kind, subnetName))
+			return fmt.Errorf("Failed to get %s %s", osnet.Kind, subnetName)
 		}
 	}
 

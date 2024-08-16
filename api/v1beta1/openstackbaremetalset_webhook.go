@@ -65,10 +65,10 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	//
 	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("error getting OpenStackNetConfig %s - %s: %s",
+		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
-			err))
+			err)
 	}
 
 	//

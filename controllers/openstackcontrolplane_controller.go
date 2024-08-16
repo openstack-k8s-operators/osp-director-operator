@@ -1088,7 +1088,7 @@ func (r *OpenStackControlPlaneReconciler) ensureStorageVersionMigration(
 								)
 								cond.Reason = shared.ConditionReason(currentCond.Reason)
 								cond.Type = shared.ConditionType(currentCond.Type)
-								err := common.WrapErrorForObject(cond.Message, instance, fmt.Errorf(cond.Message))
+								err := common.WrapErrorForObject(cond.Message, instance, fmt.Errorf("%s", cond.Message))
 
 								return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, err
 							}
