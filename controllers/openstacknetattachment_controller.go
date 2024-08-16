@@ -399,7 +399,7 @@ func (r *OpenStackNetAttachmentReconciler) getNodeNetworkConfigurationPolicyStat
 	//
 	// sync latest status of the nncp object to the osnetattach
 	//
-	if networkConfigurationPolicy.Status.Conditions != nil && len(networkConfigurationPolicy.Status.Conditions) > 0 {
+	if len(networkConfigurationPolicy.Status.Conditions) > 0 {
 		condition := nmstate.GetCurrentCondition(networkConfigurationPolicy.Status.Conditions)
 		if condition != nil {
 			cond.Message = fmt.Sprintf("%s %s: %s", networkConfigurationPolicy.Kind, networkConfigurationPolicy.Name, condition.Message)

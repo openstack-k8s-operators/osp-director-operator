@@ -516,7 +516,7 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 	//
 	// sync latest status of the osnetattach object to the osnetconfig
 	//
-	if netAttachment.Status.Conditions != nil && len(netAttachment.Status.Conditions) > 0 {
+	if len(netAttachment.Status.Conditions) > 0 {
 		condition := netAttachment.Status.Conditions.GetCurrentCondition()
 
 		if condition != nil {
@@ -531,7 +531,7 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 				cond.Message = fmt.Sprintf("OpenStackNetAttachment error: %s", condition.Message)
 				cond.Type = shared.NetConfigError
 
-				return fmt.Errorf(cond.Message)
+				return fmt.Errorf("%s", cond.Message)
 			}
 		}
 	}
@@ -708,7 +708,7 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 	//
 	// sync latest status of the osnet object to the osnetconfig
 	//
-	if osNet.Status.Conditions != nil && len(osNet.Status.Conditions) > 0 {
+	if len(osNet.Status.Conditions) > 0 {
 		condition := osNet.Status.Conditions.GetCurrentCondition()
 
 		if condition != nil {
@@ -722,7 +722,7 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 				cond.Type = shared.NetConfigError
 				common.LogForObject(r, cond.Message, instance)
 
-				return ctrl.Result{}, fmt.Errorf(cond.Message)
+				return ctrl.Result{}, fmt.Errorf("%s", cond.Message)
 			}
 		}
 	}

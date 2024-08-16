@@ -125,7 +125,7 @@ func validateAdditionalDisks(newDisks []OpenStackVMSetDisk, currentDisks []OpenS
 		// validate Disk Name is not 'rootdisk' as this is reserved for the boot disk
 		//
 		if disk.Name == "rootdisk" {
-			return fmt.Errorf(fmt.Sprintf("disk names must not be 'rootdisk' - %v", disk))
+			return fmt.Errorf("disk names must not be 'rootdisk' - %v", disk)
 		}
 
 		//
@@ -133,7 +133,7 @@ func validateAdditionalDisks(newDisks []OpenStackVMSetDisk, currentDisks []OpenS
 		//
 		var validDiskName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 		if !validDiskName.MatchString(disk.Name) {
-			return fmt.Errorf(fmt.Sprintf("disk names must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character - %s", disk.Name))
+			return fmt.Errorf("disk names must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character - %s", disk.Name)
 		}
 
 		//
@@ -142,7 +142,7 @@ func validateAdditionalDisks(newDisks []OpenStackVMSetDisk, currentDisks []OpenS
 		if _, ok := disks[disk.Name]; !ok {
 			disks[disk.Name] = disk
 		} else {
-			return fmt.Errorf(fmt.Sprintf("disk names must be uniq within a VM role - %v : %v", disks[disk.Name], disk))
+			return fmt.Errorf("disk names must be uniq within a VM role - %v : %v", disks[disk.Name], disk)
 		}
 
 		//
@@ -189,7 +189,7 @@ func diskSizeChanged(diskName string, diskSize uint32, curDiskSize uint32) error
 	// validate DiskSize don't change
 	//
 	if diskSize != curDiskSize {
-		return fmt.Errorf(fmt.Sprintf("disk size must not change %s - new %v / current %v", diskName, diskSize, curDiskSize))
+		return fmt.Errorf("disk size must not change %s - new %v / current %v", diskName, diskSize, curDiskSize)
 	}
 
 	return nil
@@ -201,7 +201,7 @@ func storageAccessModeChanged(diskName string, accessMode string, curAccessMode 
 	// validate StorageAccessMode don't change
 	//
 	if accessMode != curAccessMode {
-		return fmt.Errorf(fmt.Sprintf("StorageAccessMode must not change %s - new %v / current %v", diskName, accessMode, curAccessMode))
+		return fmt.Errorf("StorageAccessMode must not change %s - new %v / current %v", diskName, accessMode, curAccessMode)
 	}
 
 	return nil
@@ -213,7 +213,7 @@ func storageClassChanged(diskName string, storageClass string, curStorageClass s
 	// validate StorageClass don't change
 	//
 	if storageClass != curStorageClass {
-		return fmt.Errorf(fmt.Sprintf("StorageClass must not change %s - new %v / current %v", diskName, storageClass, curStorageClass))
+		return fmt.Errorf("StorageClass must not change %s - new %v / current %v", diskName, storageClass, curStorageClass)
 	}
 
 	return nil
@@ -225,7 +225,7 @@ func storageVolumeModeChanged(diskName string, volumeMode string, curVolumeMode 
 	// validate StorageVolumeMode don't change
 	//
 	if volumeMode != curVolumeMode {
-		return fmt.Errorf(fmt.Sprintf("StorageVolumeMode must not change %s - new %v / current %v", diskName, volumeMode, curVolumeMode))
+		return fmt.Errorf("StorageVolumeMode must not change %s - new %v / current %v", diskName, volumeMode, curVolumeMode)
 	}
 
 	return nil
@@ -237,7 +237,7 @@ func baseImageVolumeNameChanged(diskName string, volumeName string, curVolumeNam
 	// validate BaseImageVolumeName don't change
 	//
 	if volumeName != curVolumeName {
-		return fmt.Errorf(fmt.Sprintf("BaseImageVolumeName must not change %s - new %v / current %v", diskName, volumeName, curVolumeName))
+		return fmt.Errorf("BaseImageVolumeName must not change %s - new %v / current %v", diskName, volumeName, curVolumeName)
 	}
 
 	return nil

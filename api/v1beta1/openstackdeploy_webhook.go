@@ -144,7 +144,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 
 	nncpReadyCount := 0
 	for _, nncp := range nncpList.Items {
-		if nncp.Status.Conditions != nil && len(nncp.Status.Conditions) > 0 {
+		if len(nncp.Status.Conditions) > 0 {
 			condition := nmstate.GetCurrentCondition(nncp.Status.Conditions)
 			if condition != nil {
 				if condition.Type == nmstateshared.NodeNetworkConfigurationPolicyConditionAvailable &&
@@ -171,7 +171,7 @@ func (r *OpenStackDeploy) validateNNCP() error {
 					var nnceError string
 					var nnce nmstatev1.NodeNetworkConfigurationEnactment
 					for _, nnce = range nnceList.Items {
-						if nnce.Status.Conditions != nil && len(nnce.Status.Conditions) > 0 {
+						if len(nnce.Status.Conditions) > 0 {
 							condition := nmstate.GetCurrentCondition(nnce.Status.Conditions)
 
 							// if the first nnce has condition.Reason == nmstateshared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure
@@ -199,11 +199,11 @@ func (r *OpenStackDeploy) validateNNCP() error {
 					} else {
 						info := "It's recommended to resolve the failures before proceeding with the deployment. If this validation should be skipped add spec.SkipNNCPValidation: true"
 						openstackdeploylog.Error(
-							fmt.Errorf(msg),
+							fmt.Errorf("%s", msg),
 							info,
 							"name",
 							r.Name)
-						return fmt.Errorf(fmt.Sprintf("%s, %s", msg, info))
+						return fmt.Errorf("%s, %s", msg, info)
 					}
 				}
 			}

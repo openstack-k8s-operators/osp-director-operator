@@ -405,7 +405,7 @@ func GetDataFromSecret(
 			cond.Reason = conditionDetails.ConditionNotFoundReason
 			cond.Type = conditionDetails.ConditionErrorType
 
-			return data, ctrl.Result{}, fmt.Errorf(cond.Message)
+			return data, ctrl.Result{}, fmt.Errorf("%s", cond.Message)
 		}
 		data = strings.TrimSuffix(string(val), "\n")
 	}
