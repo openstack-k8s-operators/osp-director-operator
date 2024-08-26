@@ -131,10 +131,10 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	//
 	if instance.Spec.RootDisk.DiskSize == 0 {
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second},
-			fmt.Errorf(fmt.Sprintf("waiting for runtime object %s %s to be migrated to new API version",
+			fmt.Errorf("waiting for runtime object %s %s to be migrated to new API version",
 				instance.Kind,
 				instance.Name,
-			))
+			)
 	}
 
 	//
@@ -975,7 +975,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				cond.Reason = shared.CommonCondReasonOSNetError
 				cond.Type = shared.CommonCondTypeError
 
-				return fmt.Errorf(cond.Message)
+				return fmt.Errorf("%s", cond.Message)
 			}
 
 			vm.Spec.Template.Spec.Domain.Devices.Interfaces = vmset.MergeVMInterfaces(
