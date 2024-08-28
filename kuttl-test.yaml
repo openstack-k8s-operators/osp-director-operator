@@ -17,6 +17,7 @@
 # 4. There are preferrably NO existing OSP Director Operator CRs deployed
 #    - dev-tools probably installed them, so remove via:
 #        oc delete openstackbaremetalset --all
+#        oc delete openstackprovisionserver --all
 #        oc delete openstackcontrolplane --all
 #        oc delete openstackvmset --all
 #        oc delete openstacknet --all

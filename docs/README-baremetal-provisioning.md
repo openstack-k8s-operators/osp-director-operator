@@ -49,7 +49,7 @@ clusters, there are the following further prerequisites:
       name: openstack
       namespace: openstack
     spec:
-      port: 8080
+      port: 6190
       baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-1168.x86_64.qcow2
       interface: enp3s0
     ```
