@@ -6,4 +6,4 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
-      sed 's/name: openstack/name: goodprov/g' ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml | sed 's/port: 8080/port: 8081/g' | oc apply -f -
+      sed 's/name: openstack/name: goodprov/g' ../../../../config/samples/osp-director_v1beta1_openstackprovisionserver.yaml | sed 's/port: 6190/port: 6191/g' | oc apply -f -

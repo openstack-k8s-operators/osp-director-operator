@@ -11,7 +11,7 @@ metadata:
   namespace: openstack
 spec:
   baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
-  port: 8081
+  port: 6191
 status:
   conditions:
   - message: Provisioning of OpenStackProvisionServer in progress
