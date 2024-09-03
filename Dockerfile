@@ -1,4 +1,4 @@
-ARG GOLANG_BUILDER=golang:1.19
+ARG GOLANG_BUILDER=golang:1.21
 ARG OPERATOR_BASE_IMAGE=gcr.io/distroless/static:nonroot
 
 # Build the manager binary
