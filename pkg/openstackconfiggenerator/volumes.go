@@ -23,7 +23,7 @@ import (
 )
 
 // GetVolumeMounts -
-func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.VolumeMount {
+func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator, caConfigMap string) []corev1.VolumeMount {
 	retVolMounts := []corev1.VolumeMount{
 		{
 			Name:      "tripleo-deploy-config-" + instance.Name,
@@ -75,11 +75,20 @@ func GetVolumeMounts(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []co
 			},
 		)
 	}
+
+	if caConfigMap != "" {
+		retVolMounts = append(retVolMounts, corev1.VolumeMount{
+			Name:      "ca-certs",
+			MountPath: "/mnt/ca-certs",
+			ReadOnly:  true,
+		})
+	}
+
 	return retVolMounts
 }
 
 // GetVolumes -
-func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.Volume {
+func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator, caConfigMap string) []corev1.Volume {
 	var config0600AccessMode int32 = 0600
 	var config0644AccessMode int32 = 0644
 	var config0755AccessMode int32 = 0755
@@ -174,5 +183,20 @@ func GetVolumes(instance *ospdirectorv1beta1.OpenStackConfigGenerator) []corev1.
 			},
 		)
 	}
+
+	if caConfigMap != "" {
+		retVolumes = append(retVolumes, corev1.Volume{
+			Name: "ca-certs",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: caConfigMap,
+					},
+				},
+			},
+		})
+	}
+
 	return retVolumes
 }

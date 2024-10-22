@@ -26,7 +26,7 @@ import (
 )
 
 // ConfigJob -
-func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash string, ospVersion shared.OSPVersion) *batchv1.Job {
+func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash string, ospVersion shared.OSPVersion, caConfigMap string) *batchv1.Job {
 
 	runAsUser := int64(openstackclient.CloudAdminUID)
 	runAsGroup := int64(openstackclient.CloudAdminGID)
@@ -42,8 +42,8 @@ func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash strin
 	var backoffLimit int32 = 2
 
 	// Get volumes
-	volumeMounts := GetVolumeMounts(cr)
-	volumes := GetVolumes(cr)
+	volumeMounts := GetVolumeMounts(cr, caConfigMap)
+	volumes := GetVolumes(cr, caConfigMap)
 
 	cmd := []string{"/bin/bash", "/home/cloud-admin/create-playbooks.sh"}
 	if cr.Spec.Interactive {
