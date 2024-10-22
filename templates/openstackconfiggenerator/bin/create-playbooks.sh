@@ -5,6 +5,12 @@ umask 0022
 CHOWN_UID=$(id -u)
 CHOWN_GID=$(id -g)
 
+# Add any additional CA certs
+if [ -d /mnt/ca-certs ]; then
+  sudo cp -v /mnt/ca-certs/* /etc/pki/ca-trust/source/anchors/
+  sudo update-ca-trust
+fi
+
 # add cloud-admin ssh keys to $HOME/.ssh
 mkdir -p $HOME/.ssh
 sudo cp /mnt/ssh-config/* $HOME/.ssh/
