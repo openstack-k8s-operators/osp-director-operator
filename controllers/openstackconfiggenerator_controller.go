@@ -223,6 +223,29 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	templateParameters["OSPVersion"] = OSPVersion
 
 	//
+	// check CAConfigMap is there
+	//
+	if controlPlane.Spec.CAConfigMap != "" {
+		_, ctrlResult, err := common.GetConfigMap(
+			ctx,
+			r,
+			instance,
+			cond,
+			shared.ConditionDetails{
+				ConditionNotFoundType:   shared.CommonCondTypeWaiting,
+				ConditionNotFoundReason: shared.CommonCondReasonCAConfigMapMissing,
+				ConditionErrorType:      shared.CommonCondTypeError,
+				ConditionErrordReason:   shared.CommonCondReasonCAConfigMapError,
+			},
+			controlPlane.Spec.CAConfigMap,
+			20,
+		)
+		if (err != nil) || (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, err
+		}
+	}
+
+	//
 	// check if heat-env-config (customizations provided by administrator) exist if it does not exist, requeue
 	//
 	tripleoCustomDeployCM, _, err := common.GetConfigMapAndHashWithName(ctx, r, instance.Spec.HeatEnvConfigMap, instance.Namespace)
@@ -403,7 +426,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 	}
 
 	// Define a new Job object
-	job := openstackconfiggenerator.ConfigJob(instance, configMapHash, OSPVersion)
+	job := openstackconfiggenerator.ConfigJob(instance, configMapHash, OSPVersion, controlPlane.Spec.CAConfigMap)
 
 	var exports string
 	if instance.Status.ConfigHash != configMapHash {
