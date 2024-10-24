@@ -124,6 +124,10 @@ func AddOSNetConfigRefLabel(
 		}
 	}
 
+	if _, ok := labels[shared.OpenStackNetConfigReconcileLabel]; !ok {
+		return labels, fmt.Errorf("OpenStackNet %s misses OpenStackNetConfig owner reference", subnetName)
+	}
+
 	return labels, nil
 }
 
