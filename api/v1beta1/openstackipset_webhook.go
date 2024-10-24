@@ -76,7 +76,17 @@ var _ webhook.Validator = &OpenStackIPSet{}
 func (r *OpenStackIPSet) ValidateCreate() error {
 	openstackipsetlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
+	//
+	// Fail early on create if osnetcfg ist not found
+	//
+	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
+	if err != nil {
+		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
+			r.Name,
+			err)
+	}
+
 	return nil
 }
 
