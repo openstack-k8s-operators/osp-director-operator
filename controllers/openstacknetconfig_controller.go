@@ -1228,22 +1228,11 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 		//
 		// For backward compatability check if owning object is osClient and set Role to <openstackclient.Role><instance.Name>
 		//
-		osClient := &ospdirectorv1beta1.OpenStackClient{}
-		err := r.Get(ctx, types.NamespacedName{
-			Name:      osIPset.Labels[common.OwnerNameLabelSelector],
-			Namespace: osIPset.Namespace},
-			osClient)
-		if err != nil {
-			if !k8s_errors.IsNotFound(err) {
-				cond.Message = fmt.Sprintf("Failed to get %s %s ", osClient.Kind, osIPset.Labels[common.OwnerNameLabelSelector])
-				cond.Reason = shared.OsClientCondReasonError
-				cond.Type = shared.CommonCondTypeError
-				err = common.WrapErrorForObject(cond.Message, instance, err)
-
-				return nil, err
+		for _, ref := range osIPset.GetOwnerReferences() {
+			if ref.Controller != nil &&
+				*ref.Controller && ref.Kind == "OpenStackClient" {
+				roleName = fmt.Sprintf("%s%s", openstackclient.Role, osIPset.Spec.RoleName)
 			}
-		} else {
-			roleName = fmt.Sprintf("%s%s", openstackclient.Role, osIPset.Spec.RoleName)
 		}
 
 		allRoles[roleName] = true
@@ -1251,7 +1240,7 @@ func (r *OpenStackNetConfigReconciler) ensureIPReservation(
 		//
 		// are there new networks added to the CR?
 		//
-		err = r.ensureIPs(
+		err := r.ensureIPs(
 			instance,
 			cond,
 			osNet,
