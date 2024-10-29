@@ -38,4 +38,8 @@ const (
 	OwnerControllerNameLabelSelector string = "osp-director.openstack.org/controller"
 	// OwnerUIDLabelSelector -
 	OwnerUIDLabelSelector string = "osp-director.openstack.org/uid"
+	// OwnerNameLabelSelector -
+	OwnerNameLabelSelector = "osp-director.openstack.org/name"
+	// RequireBMHDeprovision - placed on a BMH to indicate that it must fully deprovision before we are done with it
+	RequireBMHDeprovision = "osp-director.openstack.org/require-deprovision"
 )
