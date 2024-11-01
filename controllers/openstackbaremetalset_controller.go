@@ -1683,7 +1683,7 @@ func (r *OpenStackBaremetalSetReconciler) getExistingBaremetalHosts(
 		"openshift-machine-api",
 		map[string]string{
 			common.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
-			common.OwnerUIDLabelSelector:            string(instance.GetUID()),
+			common.OwnerNameLabelSelector:           instance.Name,
 		},
 	)
 	if err != nil {

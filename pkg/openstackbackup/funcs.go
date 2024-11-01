@@ -8,6 +8,8 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
+	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	ospdirectorv1beta2 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta2"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -605,8 +607,91 @@ func CleanNamespace(
 	// OSP-D CRs can be mass-deleted
 	if len(crLists.OpenStackBaremetalSets.Items) > 0 {
 		foundRemaining = true
+		waitingOnBmhDeprovisionLabelAdded := false
+
+		// Special case: since OpenStackBaremetalSets might have associated BMHs currently provisioned,
+		// we need to check for those BMHs and wait until they are finished deprovisioning before continuing
+		// with deleting other resources.  If we don't, we can remove resources (such as networking CRs)
+		// that BMH deprovisioning currently depends upon and sabotage the deprovisioning by doing so (which
+		// will leave the BMHs stuck in the deprovisioning state).
+
+		for _, osBms := range crLists.OpenStackBaremetalSets.Items {
+			baremetalHostsList, err := ospdirectorv1beta1.GetBmhHosts(
+				ctx,
+				r.GetClient(),
+				"openshift-machine-api",
+				map[string]string{
+					common.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
+					common.OwnerNameLabelSelector:           osBms.Name,
+				},
+			)
+			if err != nil {
+				return false, err
+			}
+
+			// Annotate all the OpenStackBaremetalSet's BMHs with a special annotation to indicate to us
+			// that they must fully deprovision before we are done with them here
+			for _, bmh := range baremetalHostsList.Items {
+				labels := bmh.GetObjectMeta().GetLabels()
+				if _, ok := labels[shared.RequireBMHDeprovision]; !ok {
+					labels[shared.RequireBMHDeprovision] = ""
+					bmh.GetObjectMeta().SetLabels(labels)
+
+					waitingOnBmhDeprovisionLabelAdded = true
+
+					if err = r.GetClient().Update(ctx, &bmh); err != nil {
+						return false, err
+					}
+				}
+			}
+		}
+
+		// If we added our "RequireBMHDeprovision" label to any BMH, we need to return from the reconcile
+		// and then check back again later
+		if waitingOnBmhDeprovisionLabelAdded {
+			return false, nil
+		}
+
+		// Delete the OpenStackBaremetalSets, which will trigger deprovisioning of any associated BMHs
 		if err := r.GetClient().DeleteAllOf(ctx, &ospdirectorv1beta1.OpenStackBaremetalSet{}, client.InNamespace(namespace)); err != nil {
 			return false, err
+		}
+	}
+
+	// At this point, all OpenStackBaremetalSets have been deleted, so any associated BMHs will be deprovisioning.
+	// So we need to get all BMHs that we might be waiting on (waiting on to deprovision and reach the available state)
+	// that are flagged as such by our special label
+	baremetalHostsList, err := ospdirectorv1beta1.GetBmhHosts(
+		ctx,
+		r.GetClient(),
+		"openshift-machine-api",
+		map[string]string{
+			shared.RequireBMHDeprovision: "",
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	for _, bmh := range baremetalHostsList.Items {
+		// If the BMH is not available (i.e. not done deprovisioning), we need to return from
+		// this reconcile and check back again later
+		if bmh.Status.Provisioning.State != metal3v1.StateAvailable {
+			return false, nil
+		}
+	}
+
+	// If we get here, all BMHs that were associated with our OpenStackBaremetalSets have been fully deprovisioned,
+	// so we can proceed to remove our special label
+	for _, bmh := range baremetalHostsList.Items {
+		labels := bmh.GetObjectMeta().GetLabels()
+		if _, ok := labels[shared.RequireBMHDeprovision]; ok {
+			delete(labels, shared.RequireBMHDeprovision)
+			bmh.GetObjectMeta().SetLabels(labels)
+
+			if err = r.GetClient().Update(ctx, &bmh); err != nil {
+				return false, err
+			}
 		}
 	}
 
