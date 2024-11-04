@@ -261,7 +261,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 			r.Client,
 			instance.Namespace,
 			instance.Spec.Networks[0],
-			currentLabels,
+			instance.Labels,
 		)
 		if err != nil {
 			return ctrlResult, err

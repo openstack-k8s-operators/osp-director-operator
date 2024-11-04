@@ -913,7 +913,7 @@ func (r *OpenStackControlPlaneReconciler) ensureVIPs(
 			r.Client,
 			instance.Namespace,
 			vipNetworksList[0],
-			currentLabels,
+			instance.Labels,
 		)
 		if err != nil {
 			return ctrlResult, err
