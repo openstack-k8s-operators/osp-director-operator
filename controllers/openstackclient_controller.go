@@ -159,7 +159,7 @@ func (r *OpenStackClientReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			r.Client,
 			instance.Namespace,
 			instance.Spec.Networks[0],
-			currentLabels,
+			instance.Labels,
 		)
 		if err != nil {
 			return ctrlResult, err
