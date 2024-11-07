@@ -120,6 +120,8 @@ status:
   - status: "True"
     type: Ready
   - status: "True"
+    type: DataVolumesReady
+  - status: "True"
     type: LiveMigratable
   - status: "True"
     type: AgentConnected
@@ -136,6 +138,8 @@ status:
   - status: "True"
     type: Ready
   - status: "True"
+    type: DataVolumesReady
+  - status: "True"
     type: LiveMigratable
   - status: "True"
     type: AgentConnected
@@ -151,6 +155,8 @@ status:
   conditions:
   - status: "True"
     type: Ready
+  - status: "True"
+    type: DataVolumesReady
   - status: "True"
     type: LiveMigratable
   - status: "True"

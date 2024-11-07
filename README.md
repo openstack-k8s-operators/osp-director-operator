@@ -239,7 +239,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
                   port:
                   - name: enp6s0
                 description: Linux bridge with enp6s0 as a port
-                name: br-ex
+                name: br-ex-osp
                 state: up
                 type: linux-bridge
                 mtu: 1500
@@ -972,7 +972,7 @@ spec:
               port:
               - name: enp6s0
             description: Linux bridge with enp6s0 as a port
-            name: br-ex
+            name: br-ex-osp
             state: up
             type: linux-bridge
             mtu: 1500

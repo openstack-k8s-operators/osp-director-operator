@@ -167,6 +167,9 @@ status:
   - reason: SuccessfullyConfigured
     status: "False"
     type: Degraded
+  - reason: ConfigurationProgressing
+    status: "False"
+    type: Progressing
 ---
 apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackNet
