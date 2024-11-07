@@ -46,7 +46,7 @@ metadata:
   labels:
     osp-director.openstack.org/controller: osp-openstacknet
     osp-director.openstack.org/namespace: openstack
-  name: br-ex
+  name: br-ex-osp
 ---
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy

@@ -101,6 +101,8 @@ status:
   - status: "True"
     type: Ready
   - status: "True"
+    type: DataVolumesReady
+  - status: "True"
     type: LiveMigratable
   - status: "True"
     type: AgentConnected
