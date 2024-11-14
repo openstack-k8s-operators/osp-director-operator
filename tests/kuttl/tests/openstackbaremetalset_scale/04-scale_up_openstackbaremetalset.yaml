@@ -1,7 +1,7 @@
 #
 # - Scale OpenStackBaremetalSet to 2 BaremetalHosts
 # - Also try to then immediately scale to 3, which should fail due to webhook validation (because we only
-#   have 2 BMHs available) and thus do nothing
+#   have 2 BMHs available in a standard osp-director-dev-tools cluster) and thus do nothing
 #
 
 apiVersion: kuttl.dev/v1beta1
@@ -12,7 +12,7 @@ commands:
     namespaced: true
   - script: |
       RES=$(oc patch -n openstack openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":3}]' 2>&1)
-      if grep -q "Unable to find 3 requested BaremetalHost count" <<< "$RES"; then
+      if grep -qi "unable to find 3 requested BaremetalHost count" <<< "$RES"; then
         exit 0
       else
         exit 1

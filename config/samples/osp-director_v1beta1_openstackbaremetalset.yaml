@@ -7,7 +7,7 @@ spec:
   # How many nodes to provision
   count: 1
   # The image to install on the provisioned nodes
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-9.2-20230414.17.x86_64.qcow2
   # use this provisionServerName instead of creating a new one use baseImageUrl
   provisionServerName: openstack
   # The secret containing the SSH pub key to place on the provisioned nodes

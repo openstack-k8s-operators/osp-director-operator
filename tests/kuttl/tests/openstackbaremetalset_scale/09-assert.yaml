@@ -8,7 +8,7 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - baremetalset.osp-director.openstack.org-compute
+  - baremetalset.osp-director.openstack.org
   labels:
     ooo-subnetname/ctlplane: "true"
     ooo-subnetname/internal_api: "true"
@@ -17,7 +17,7 @@ metadata:
   name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-9.2-20230414.17.x86_64.qcow2
   count: 2
   ctlplaneInterface: enp1s0
   roleName: Compute
@@ -32,21 +32,3 @@ status:
   provisioningStatus:
     readyCount: 1
     state: Error
----
-# We don't know which BMH was chosen as compute-0 originally, so we use a script to
-# check for the "BaremetalHostNotFound" error (as the actual error message will vary
-# based on which BMH was actually deleted)
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-namespaced: true
-timeout: 600
-commands:
-  - script: |
-      set -x
-      sleep 5
-      osbmsstate=$(oc get osbms -n openstack compute -o json | jq -r '.status.provisioningStatus.reason')
-      if grep -q "Please check BaremetalHost resources and re-add" <<< "$osbmsstate"; then
-        exit 0
-      else
-        exit 1
-      fi

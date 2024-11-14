@@ -38,7 +38,7 @@ status:
   provisioning:
     bootMode: legacy
     rootDeviceHints:
-      deviceName: /dev/sda
+      hctl: "0:0:0:0"
     state: provisioned
 ---
 apiVersion: metal3.io/v1alpha1
@@ -61,5 +61,5 @@ status:
   provisioning:
     bootMode: legacy
     rootDeviceHints:
-      deviceName: /dev/sda
+      hctl: "0:0:0:0"
     state: provisioned

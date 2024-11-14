@@ -7,7 +7,7 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  - command: oc annotate bmh openshift-worker-1 osp-director.openstack.org/delete-host- -n openshift-machine-api --overwrite
+  - command: oc annotate bmh -l osp-director.openstack.org/name=compute -l osp-director.openstack.org/namespace=openstack osp-director.openstack.org/delete-host- -n openshift-machine-api
     namespaced: true
   - script: |
       RES=$(oc patch -n openstack openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":3}]' 2>&1)

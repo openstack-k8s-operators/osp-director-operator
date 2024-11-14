@@ -8,8 +8,8 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - baremetalset.osp-director.openstack.org-compute
+  - baremetalset.osp-director.openstack.org
   name: compute
   namespace: openstack
 spec:
-  coubt: 1
+  count: 3

@@ -61,7 +61,7 @@ spec:
         kind: OpenStackBaremetalSet
         metadata:
           finalizers:
-          - baremetalset.osp-director.openstack.org-compute
+          - baremetalset.osp-director.openstack.org
           name: compute
           namespace: openstack
     openStackClients:
