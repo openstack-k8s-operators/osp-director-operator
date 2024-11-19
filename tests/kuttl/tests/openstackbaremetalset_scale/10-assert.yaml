@@ -11,11 +11,11 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - baremetalset.osp-director.openstack.org-compute
+  - baremetalset.osp-director.openstack.org
   name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-9.2-20230414.17.x86_64.qcow2
   count: 2
   ctlplaneInterface: enp1s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
@@ -33,7 +33,4 @@ status:
       hostname: compute-1
   provisioningStatus:
     readyCount: 1
-    reason: Existing BaremetalHost "openshift-worker-0" not found for OpenStackBaremetalSet
-      compute.  Please check BaremetalHost resources and re-add "openshift-worker-0"
-      to continue
     state: Error

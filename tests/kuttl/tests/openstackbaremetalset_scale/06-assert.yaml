@@ -11,11 +11,11 @@ apiVersion: osp-director.openstack.org/v1beta1
 kind: OpenStackBaremetalSet
 metadata:
   finalizers:
-  - baremetalset.osp-director.openstack.org-compute
+  - baremetalset.osp-director.openstack.org
   name: compute
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-9.2-20230414.17.x86_64.qcow2
   count: 1
   ctlplaneInterface: enp1s0
   deploymentSSHSecret: osp-controlplane-ssh-keys
@@ -76,7 +76,7 @@ spec:
     namespace: openshift-machine-api
   online: true
   rootDeviceHints:
-    deviceName: /dev/sda
+    hctl: "0:0:0:0"
   userData:
     namespace: openshift-machine-api
 status:
@@ -88,7 +88,7 @@ status:
   provisioning:
     bootMode: legacy
     rootDeviceHints:
-      deviceName: /dev/sda
+      hctl: "0:0:0:0"
     state: provisioned
 ---
 apiVersion: osp-director.openstack.org/v1beta1

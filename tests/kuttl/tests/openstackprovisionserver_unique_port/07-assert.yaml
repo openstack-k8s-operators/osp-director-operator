@@ -10,7 +10,7 @@ metadata:
   name: compute2-provisionserver
   namespace: openstack
 spec:
-  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-8.4-992.x86_64.qcow2
+  baseImageUrl: http://192.168.111.1/images/rhel-guest-image-9.2-20230414.17.x86_64.qcow2
   port: 6191
 status:
   conditions:

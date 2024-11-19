@@ -11,8 +11,14 @@ commands:
   - command: |
       oc patch provisioning provisioning-configuration --type='json' -p='[{"op": "replace", "path": "/spec/provisioningInterface", "value": "br-ctlplane"}]'
     namespaced: true
-  - command: oc delete pods -n openshift-machine-api -l baremetal.openshift.io/cluster-baremetal-operator=metal3-state
-    namespaced: true
+  # Delete the Metal3 pod so that it is recreated and works with the br-ctlplane bridge that was
+  # created in the previous step.  The scale command below will cause the existing Metal3 pod to
+  # terminate, but then the baremetal cluster operator will reset the replicas to 1 and create a
+  # new pod
+  - script: |
+      oc scale deployment metal3 -n openshift-machine-api --replicas=0
+      sleep 10
+      oc wait deployment metal3 -n openshift-machine-api --for condition=Available --timeout=300s
   # Create the required userpassword Secret
   - command: oc apply -f ../../common/manifests/userpassword.yaml
     namespaced: true

@@ -26,7 +26,7 @@ spec:
     namespace: openshift-machine-api
   online: true
   rootDeviceHints:
-    deviceName: /dev/sda
+    hctl: "0:0:0:0"
   userData:
     namespace: openshift-machine-api
 status:
@@ -38,7 +38,7 @@ status:
   provisioning:
     bootMode: legacy
     rootDeviceHints:
-      deviceName: /dev/sda
+      hctl: "0:0:0:0"
     state: provisioned
 ---
 # We don't know which BMH was chosen as compute-0 originally, so we just look
