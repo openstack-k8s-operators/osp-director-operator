@@ -549,7 +549,16 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 
 		isPodUpdate := !pod.ObjectMeta.CreationTimestamp.IsZero()
 
+		val, ok := pod.ObjectMeta.Annotations["k8s.v1.cni.cncf.io/networks"]
+		if ok && val != annotation {
+			return k8s_errors.NewForbidden(
+				schema.GroupResource{Group: "", Resource: "pods"}, // Specify the group and resource type
+				pod.Name,
+				errors.New("Restart Pod required to get new network attachment configured"),
+			)
+		}
 		pod.ObjectMeta.Annotations["k8s.v1.cni.cncf.io/networks"] = annotation
+
 		for k, v := range common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}) {
 			pod.Labels[k] = v
 		}
