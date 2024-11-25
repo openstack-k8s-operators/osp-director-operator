@@ -31,8 +31,10 @@ import (
 	"k8s.io/utils/diff"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
@@ -321,9 +323,47 @@ func (r *OpenStackIPSetReconciler) getNormalizedStatus(status *ospdirectorv1beta
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *OpenStackIPSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OpenStackIPSetReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	Log := r.GetLogger()
+	ipsetFN := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// For each NetConfig event get the list of all
+		// OpenStackIPSet to trigger reconcile for the one which has the label on it
+		// matching the NetConfig (there can only be one) in the same namespace
+		ipSetList := &ospdirectorv1beta1.OpenStackIPSetList{}
+
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+			client.MatchingLabels{
+				shared.OpenStackNetConfigReconcileLabel: o.GetName(),
+			},
+		}
+		if err := r.Client.List(ctx, ipSetList, listOpts...); err != nil {
+			Log.Error(err, "Unable to retrieve OpenStackIPSetList")
+			return nil
+		}
+
+		// For each OpenStackIPSet instance create a reconcile request
+		for _, i := range ipSetList.Items {
+			name := client.ObjectKey{
+				Namespace: i.Namespace,
+				Name:      i.Name,
+			}
+			result = append(result, reconcile.Request{NamespacedName: name})
+		}
+		if len(result) > 0 {
+			Log.Info("Reconcile request for:", "result", result)
+
+			return result
+		}
+		return nil
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackIPSet{}).
+		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackNetConfig{}},
+			ipsetFN).
 		Complete(r)
 }
 
