@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 
-	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,7 +90,24 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 		return err
 	}
 
-	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, &metal3v1.BareMetalHostList{}); err != nil {
+	//
+	// Even though this is a new OpenStackBaremetalSet resource, we need to get a list of
+	// existing BMHs in case this is being executed in the process of an OpenStackBackup restore
+	//
+	existingBaremetalHosts, err := GetBmhHosts(
+		context.TODO(),
+		webhookClient,
+		"openshift-machine-api",
+		map[string]string{
+			shared.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
+			shared.OwnerNameLabelSelector:           r.Name,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, existingBaremetalHosts); err != nil {
 		return err
 	}
 
@@ -157,7 +173,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 				"openshift-machine-api",
 				map[string]string{
 					shared.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
-					shared.OwnerUIDLabelSelector:            string(r.GetUID()),
+					shared.OwnerNameLabelSelector:           r.Name,
 				},
 			)
 			if err != nil {
@@ -174,7 +190,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 				"openshift-machine-api",
 				map[string]string{
 					shared.OwnerControllerNameLabelSelector: shared.OpenStackBaremetalSetAppLabel,
-					shared.OwnerUIDLabelSelector:            string(r.GetUID()),
+					shared.OwnerNameLabelSelector:           r.Name,
 				},
 			)
 			if err != nil {
