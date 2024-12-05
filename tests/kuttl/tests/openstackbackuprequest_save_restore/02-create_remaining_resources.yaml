@@ -31,11 +31,3 @@ commands:
   - command: |
       oc patch openstackbaremetalset compute --type='json' -p='[{"op": "replace", "path": "/spec/count", "value":0}]'
     namespaced: true
-  # Remove sample YAML's bmhLabelSelector from spec
-  - command: |
-      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "remove", "path": "/spec/bmhLabelSelector"}]'
-    namespaced: true
-  # Remove sample YAML's hardwareReqs from spec
-  - command: |
-      oc patch openstackbaremetalset compute --type='json' -p='[{"op": "remove", "path": "/spec/hardwareReqs"}]'
-    namespaced: true
