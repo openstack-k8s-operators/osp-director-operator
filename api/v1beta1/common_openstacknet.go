@@ -39,7 +39,7 @@ func AddOSNetNameLowerLabels(
 		//
 		// has label key SubNetNameLabelSelector string included?
 		//
-		if strings.HasSuffix(label.String(), shared.SubNetNameLabelSelector) {
+		if strings.HasPrefix(label.String(), shared.SubNetNameLabelSelector) {
 			l := label.String()
 			osNetLabels[l] = labels[l]
 
@@ -49,12 +49,11 @@ func AddOSNetNameLowerLabels(
 			if _, ok := networkNameLowerNamesMap[l]; !ok {
 				delete(labels, l)
 				removedOsNets[l] = true
-
 			}
 		}
 	}
 
-	if len(newOsNets) > 0 {
+	if len(removedOsNets) > 0 {
 		log.Info(fmt.Sprintf("removing network labels: %v",
 			removedOsNets,
 		))
