@@ -235,11 +235,11 @@ func ValidateNetworks(namespace string, networks []string) error {
 		labelSelector := map[string]string{
 			shared.SubNetNameLabelSelector: subnetName,
 		}
-		osnet, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
+		_, err := GetOpenStackNetWithLabel(webhookClient, namespace, labelSelector)
 		if err != nil && k8s_errors.IsNotFound(err) {
-			return fmt.Errorf("%s %s not found, validate the object network list", osnet.GetObjectKind().GroupVersionKind().Kind, subnetName)
+			return fmt.Errorf("OpenStackNet %s not found, validate the object network list", subnetName)
 		} else if err != nil {
-			return fmt.Errorf("Failed to get %s %s", osnet.Kind, subnetName)
+			return fmt.Errorf("Failed to get OpenStackNet %s", subnetName)
 		}
 	}
 
