@@ -59,7 +59,7 @@ func GetCustomFencingRoles(customBinaryData map[string][]byte) ([]string, error)
 
 			switch header.Typeflag {
 			case tar.TypeReg:
-				if header.Name == TripleORolesDataFile {
+				if header.Name == TripleORolesDataFile || header.Name == "./"+TripleORolesDataFile {
 					buf, err := io.ReadAll(tarReader)
 
 					if err != nil {
