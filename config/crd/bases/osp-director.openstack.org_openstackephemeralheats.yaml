@@ -61,6 +61,18 @@ spec:
                   to 3 if unset
                 format: int32
                 type: integer
+              heatOverride:
+                description: HeatOverride, provides the ability to customize ephemeral
+                  heat service configuration.
+                properties:
+                  customServiceConfig:
+                    description: CustomServiceConfig - customize the service config
+                      using this parameter to change service defaults, or overwrite
+                      rendered information using raw OpenStack config format. The
+                      content gets added to to /etc/<service>/<service>.conf.d directory
+                      as custom.conf file.
+                    type: string
+                type: object
               mariadbImageURL:
                 description: Container image URL for the MySQL container image used
                   as part of this ephemeral heat instance

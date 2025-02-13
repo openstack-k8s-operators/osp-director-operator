@@ -422,6 +422,7 @@ func (r *OpenStackConfigGeneratorReconciler) Reconcile(ctx context.Context, req 
 			MariadbImageURL:    instance.Spec.EphemeralHeatSettings.MariadbImageURL,
 			RabbitImageURL:     instance.Spec.EphemeralHeatSettings.RabbitImageURL,
 			HeatEngineReplicas: instance.Spec.EphemeralHeatSettings.HeatEngineReplicas,
+			HeatOverride:       instance.Spec.EphemeralHeatSettings.HeatOverride,
 		},
 	}
 

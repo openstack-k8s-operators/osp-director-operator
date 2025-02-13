@@ -225,8 +225,16 @@ func getHeatVolumes(name string) []corev1.Volume {
 					},
 					Items: []corev1.KeyToPath{
 						{
+							Key:  "heat_empty.conf",
+							Path: "heat_empty.conf",
+						},
+						{
 							Key:  "heat.conf",
 							Path: "heat.conf",
+						},
+						{
+							Key:  "custom.conf",
+							Path: "custom.conf",
 						},
 						{
 							Key:  "heat_paste.ini",

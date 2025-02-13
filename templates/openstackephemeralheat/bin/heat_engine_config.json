@@ -1,9 +1,21 @@
 {
-    "command": "/usr/bin/heat-engine --config-file /etc/heat/heat.conf",
+    "command": "/usr/bin/heat-engine --config-dir /etc/heat/heat.conf.d",
     "config_files": [
         {
-            "source": "/var/lib/config-data/heat.conf",
+            "source": "/var/lib/config-data/heat_empty.conf",
             "dest": "/etc/heat/heat.conf",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/heat.conf",
+            "dest": "/etc/heat/heat.conf.d/01_heat.conf",
+            "owner": "heat",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/custom.conf",
+            "dest": "/etc/heat/heat.conf.d/99_custom.conf",
             "owner": "heat",
             "perm": "0600"
         }
