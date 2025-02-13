@@ -36,6 +36,19 @@ type OpenStackEphemeralHeatSpec struct {
 	// Number of replicas for the Heat Engine service, defaults to 3 if unset
 	// +kubebuilder:default=3
 	HeatEngineReplicas int32 `json:"heatEngineReplicas,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// HeatOverride, provides the ability to customize ephemeral heat service configuration.
+	HeatOverride HeatConfig `json:"heatOverride,omitempty"`
+}
+
+// HeatConfig -
+type HeatConfig struct {
+	// +kubebuilder:validation:Optional
+	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
+	// or overwrite rendered information using raw OpenStack config format. The content gets added to
+	// to /etc/<service>/<service>.conf.d directory as custom.conf file.
+	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
 }
 
 // OpenStackEphemeralHeatStatus defines the observed state of OpenStackEphemeralHeat

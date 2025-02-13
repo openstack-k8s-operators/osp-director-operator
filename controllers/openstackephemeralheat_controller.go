@@ -302,6 +302,13 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 	templateParameters["RabbitMQHost"] = "rabbitmq-" + instance.Name + svcDomain
 	templateParameters["MariaDBPassword"] = string(passwordSecret.Data["password"])
 
+	// customData hold any customization for the service.
+	// custom.conf is going to /etc/<service>/<service>.conf.d
+	// all other files get placed into /etc/<service> to allow overwrite of e.g. policy.json
+	customData := map[string]string{
+		common.CustomServiceConfigFileName: instance.Spec.HeatOverride.CustomServiceConfig,
+	}
+
 	// ConfigMaps for all services (MariaDB/Rabbit/Heat)
 	cms := []common.Template{
 		// ScriptsConfigMap
@@ -312,6 +319,7 @@ func (r *OpenStackEphemeralHeatReconciler) generateServiceConfigMaps(
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{},
 			ConfigOptions:      templateParameters,
+			CustomData:         customData,
 			Labels:             cmLabels,
 		},
 	}
