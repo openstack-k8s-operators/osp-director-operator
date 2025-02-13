@@ -773,6 +773,8 @@ func (r *OpenStackControlPlaneReconciler) createOrUpdateVMSets(
 				vmSet.Spec.PasswordSecret = instance.Spec.PasswordSecret
 			}
 			vmSet.Spec.NodeSelector = vmRole.NodeSelector
+			vmSet.Spec.EvictionStrategy = vmRole.EvictionStrategy
+			vmSet.Spec.RunStrategy = vmRole.RunStrategy
 
 			err := controllerutil.SetControllerReference(instance, vmSet, r.Scheme)
 			if err != nil {
