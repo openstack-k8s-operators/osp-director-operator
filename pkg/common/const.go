@@ -50,4 +50,7 @@ const (
 
 	// TripleORolesDataFile -
 	TripleORolesDataFile = "roles_data.yaml"
+
+	// CustomServiceConfigFileName - file name used to add the service customizations
+	CustomServiceConfigFileName = "custom.conf"
 )
