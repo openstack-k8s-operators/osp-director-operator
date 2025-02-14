@@ -38,13 +38,13 @@ type OpenStackControlPlaneSpec struct {
 	// OpenStackClientNetworks the name(s) of the OpenStackClientNetworks used to attach the openstackclient to
 	OpenStackClientNetworks []string `json:"openStackClientNetworks"`
 
-	// +kubebuilder:default=false
+	// +kubebuilder:validation:Optional
 	// EnableFencing is provided so that users have the option to disable fencing if desired
 	// FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
 	EnableFencing bool `json:"enableFencing"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0"}
+	// +kubebuilder:validation:Enum={"train","wallaby","16.2","17.0","17.1"}
 	// OpenStackRelease to overwrite OSPrelease auto detection from tripleoclient container image
 	OpenStackRelease string `json:"openStackRelease"`
 
@@ -72,8 +72,11 @@ type OpenStackVirtualMachineRoleSpec struct {
 	Cores uint32 `json:"cores"`
 	// amount of Memory in GB used by the VM
 	Memory uint32 `json:"memory"`
+
+	// +kubebuilder:validation:Optional
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
+	// +kubebuilder:validation:Optional
 	// StorageClass to be used for the controller disks
 	StorageClass string `json:"storageClass,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -88,6 +91,7 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
 	// To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
 	StorageVolumeMode string `json:"storageVolumeMode"`
+	// +kubebuilder:validation:Optional
 	// BaseImageVolumeName used as the base volume for the VM
 	BaseImageVolumeName string `json:"baseImageVolumeName"`
 

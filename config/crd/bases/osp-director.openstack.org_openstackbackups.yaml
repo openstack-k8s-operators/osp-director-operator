@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: openstackbackups.osp-director.openstack.org
 spec:
@@ -812,7 +812,6 @@ spec:
                                     CA certificates to trust
                                   type: string
                                 enableFencing:
-                                  default: false
                                   description: 'EnableFencing is provided so that
                                     users have the option to disable fencing if desired
                                     FIXME: Defaulting to false until Kubevirt agent
@@ -849,6 +848,7 @@ spec:
                                   - wallaby
                                   - "16.2"
                                   - "17.0"
+                                  - "17.1"
                                   type: string
                                 passwordSecret:
                                   description: PasswordSecret used to e.g specify
@@ -940,10 +940,8 @@ spec:
                                         - Filesystem
                                         type: string
                                     required:
-                                    - baseImageVolumeName
                                     - cores
                                     - ctlplaneInterface
-                                    - diskSize
                                     - memory
                                     - networks
                                     - roleCount
@@ -952,7 +950,6 @@ spec:
                                   description: List of VirtualMachine roles
                                   type: object
                               required:
-                              - enableFencing
                               - virtualMachineRoles
                               type: object
                             status:
@@ -2748,11 +2745,9 @@ spec:
                                   description: Number of VMs to configure, 1 or 3
                                   type: integer
                               required:
-                              - baseImageVolumeName
                               - cores
                               - ctlplaneInterface
                               - deploymentSSHSecret
-                              - diskSize
                               - isTripleoRole
                               - memory
                               - networks
