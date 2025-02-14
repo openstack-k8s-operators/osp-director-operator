@@ -30,8 +30,10 @@ type OpenStackVMSetSpec struct {
 	Cores uint32 `json:"cores"`
 	// amount of Memory in GB used by the VMs
 	Memory uint32 `json:"memory"`
+	// +kubebuilder:validation:Optional
 	// root Disc size in GB
 	DiskSize uint32 `json:"diskSize"`
+	// +kubebuilder:validation:Optional
 	// StorageClass to be used for the disks
 	StorageClass string `json:"storageClass,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -48,6 +50,7 @@ type OpenStackVMSetSpec struct {
 	// RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
 	// To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
 	StorageVolumeMode string `json:"storageVolumeMode"`
+	// +kubebuilder:validation:Optional
 	// BaseImageVolumeName used as the base volume for the VM
 	BaseImageVolumeName string `json:"baseImageVolumeName"`
 	// name of secret holding the stack-admin ssh keys
