@@ -478,6 +478,14 @@ spec:
                         instead
                       format: int32
                       type: integer
+                    evictionStrategy:
+                      default: LiveMigrate
+                      description: EvictionStrategy defines if the VirtualMachineInstance
+                        should be migrated instead of shut-off.
+                      enum:
+                      - None
+                      - LiveMigrate
+                      type: string
                     ioThreadsPolicy:
                       description: IOThreadsPolicy - IO thread policy for the domain.
                         Currently valid policies are shared and auto. However, if
@@ -582,6 +590,16 @@ spec:
                       - diskSize
                       - name
                       type: object
+                    runStrategy:
+                      default: Manual
+                      description: Running state indicates the requested running state
+                        of the VirtualMachineInstance mutually exclusive with Running
+                      enum:
+                      - Always
+                      - Halted
+                      - Manual
+                      - RerunOnFailure
+                      type: string
                     storageAccessMode:
                       description: (deprecated) StorageAccessMode - use RootDisk.StorageAccessMode
                         instead Virtual machines must have a persistent volume claim

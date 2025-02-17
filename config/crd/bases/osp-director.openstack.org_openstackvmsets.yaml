@@ -394,6 +394,14 @@ spec:
                 items:
                   type: string
                 type: array
+              evictionStrategy:
+                default: LiveMigrate
+                description: EvictionStrategy defines if the VirtualMachineInstance
+                  should be migrated instead of shut-off.
+                enum:
+                - None
+                - LiveMigrate
+                type: string
               ioThreadsPolicy:
                 description: IOThreadsPolicy - IO thread policy for the domain. Currently
                   valid policies are shared and auto. However, if any disk requests
@@ -497,6 +505,16 @@ spec:
                 - diskSize
                 - name
                 type: object
+              runStrategy:
+                default: Manual
+                description: Running state indicates the requested running state of
+                  the VirtualMachineInstance mutually exclusive with Running
+                enum:
+                - Always
+                - Halted
+                - Manual
+                - RerunOnFailure
+                type: string
               vmCount:
                 description: Number of VMs to configure, 1 or 3
                 type: integer

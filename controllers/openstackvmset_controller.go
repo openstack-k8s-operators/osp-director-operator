@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/diff"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -783,7 +784,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	osNetBindings map[string]ospdirectorv1beta1.AttachType,
 ) error {
 
-	evictionStrategy := virtv1.EvictionStrategyLiveMigrate
 	trueValue := true
 	terminationGracePeriodSeconds := int64(0)
 
@@ -793,7 +793,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	// in kubevirt 0.49.0 api.
 	// https://docs.openshift.com/container-platform/4.10/virt/virtual_machines/virt-create-vms.html
 	// references https://kubevirt.io/api-reference/v0.49.0/definitions.html#_v1_virtualmachinespec
-	runStrategy := virtv1.RunStrategyManual
+	runStrategy := virtv1.VirtualMachineRunStrategy(instance.Spec.RunStrategy)
 
 	// get deployment userdata from secret
 	userdataSecret := fmt.Sprintf("%s-cloudinit", instance.Name)
@@ -829,7 +829,6 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 				},
 				Spec: virtv1.VirtualMachineInstanceSpec{
 					Hostname:                      ctl.DomainName,
-					EvictionStrategy:              &evictionStrategy,
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					Domain: virtv1.DomainSpec{
 						Devices: virtv1.Devices{
@@ -1021,6 +1020,16 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 			instance.Namespace,
 		)
 
+		if instance.Spec.EvictionStrategy != nil {
+			vm.Spec.Template.Spec.EvictionStrategy = instance.Spec.EvictionStrategy
+		} else {
+			vm.Spec.Template.Spec.EvictionStrategy = ptr.To(virtv1.EvictionStrategyLiveMigrate)
+		}
+		if instance.Spec.RootDisk.StorageAccessMode == "ReadWriteOnce" {
+			common.LogForObject(r, fmt.Sprintf("root disk has StorageAccessMode: %s, setting EvictionStrategy None", instance.Spec.RootDisk.StorageAccessMode), vm)
+			vm.Spec.Template.Spec.EvictionStrategy = ptr.To(virtv1.EvictionStrategyNone)
+		}
+
 		bootDevice := uint(1)
 		vm.Spec.Template.Spec.Domain.Devices.Disks = vmset.MergeVMDisks(
 			vm.Spec.Template.Spec.Domain.Devices.Disks,
@@ -1110,6 +1119,11 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 					),
 				},
 			)
+
+			if disk.StorageAccessMode == "ReadWriteOnce" {
+				common.LogForObject(r, fmt.Sprintf("disk %s has StorageAccessMode: %s, setting EvictionStrategy None", disk.Name, disk.StorageAccessMode), vm)
+				vm.Spec.Template.Spec.EvictionStrategy = ptr.To(virtv1.EvictionStrategyNone)
+			}
 		}
 
 		err := controllerutil.SetControllerReference(instance, vm, r.Scheme)

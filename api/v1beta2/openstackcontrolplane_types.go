@@ -19,6 +19,7 @@ package v1beta2
 import (
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	virtv1 "kubevirt.io/api/core/v1"
 )
 
 // OpenStackControlPlaneSpec defines the desired state of OpenStackControlPlane
@@ -126,6 +127,18 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes running this VMset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=Manual
+	// +kubebuilder:validation:Enum=Always;Halted;Manual;RerunOnFailure
+	// Running state indicates the requested running state of the VirtualMachineInstance
+	// mutually exclusive with Running
+	RunStrategy virtv1.VirtualMachineRunStrategy `json:"runStrategy,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=None;LiveMigrate
+	// EvictionStrategy defines if the VirtualMachineInstance should be
+	// migrated instead of shut-off.
+	EvictionStrategy *virtv1.EvictionStrategy `json:"evictionStrategy,omitempty"`
 }
 
 // OpenStackControlPlaneStatus defines the observed state of OpenStackControlPlane
