@@ -479,7 +479,6 @@ spec:
                       format: int32
                       type: integer
                     evictionStrategy:
-                      default: LiveMigrate
                       description: EvictionStrategy defines if the VirtualMachineInstance
                         should be migrated instead of shut-off.
                       enum:
