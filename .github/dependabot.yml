@@ -20,6 +20,9 @@ updates:
     - dependency-name: "github.com/gophercloud/gophercloud"
       # pin due to golang 1.22
       versions: '>= 2.0.0'
+    - dependency-name: "golang.org/x/crypto"
+      # pin due to golang 1.23
+      versions: '>= 0.34.0'
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
@@ -41,6 +44,9 @@ updates:
     - dependency-name: "github.com/gophercloud/gophercloud"
       # pin due to golang 1.22
       versions: '>= 2.0.0'
+    - dependency-name: "golang.org/x/crypto"
+      # pin due to golang 1.23
+      versions: '>= 0.34.0'
   commit-message:
     # Prefix all commit messages with "[v1.3.x]"
     prefix: "[v1.3.x]"
