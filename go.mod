@@ -1,6 +1,7 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
 go 1.21
+toolchain go1.23.6
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
@@ -23,7 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.1
 	github.com/tidwall/gjson v1.18.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v12.0.0+incompatible
