@@ -33,3 +33,7 @@ config/default/manager_default_images.yaml
 *.swp
 *.swo
 *~
+
+# generated workspace file
+go.work
+go.work.sum

@@ -19,7 +19,7 @@ WORK_DIR=$(mktemp -d)
 cat > $WORK_DIR/Dockerfile << EOF_CAT
 FROM $BUNDLE_IMG as bundle
 
-FROM golang:1.21 AS editor
+FROM golang:1.23 AS editor
 COPY --from=bundle /manifests/osp-director-operator.clusterserviceversion.yaml /osp-director-operator.clusterserviceversion.yaml
 
 # (mschuppert) with new build process (konflux) and proper config of ImageContentSourcePolicy we no longer need those replaces,
