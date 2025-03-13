@@ -405,7 +405,7 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
         parameter_defaults:
           NeutronEnableDVR: false
         ```
-      
+
         Support for "distributed vlan traffic in ovn" is being tracked in [manage MAC addresses for "Add support in tripleo for distributed vlan traffic in ovn" ( https://bugs.launchpad.net/tripleo/+bug/1881593 )](https://github.com/openstack-k8s-operators/osp-director-operator/issues/254)
 
     - [Git repo config map] This ConfigMap contains the SSH key and URL for the Git repo used to store generated playbooks (below)
@@ -572,8 +572,8 @@ Create a base RHEL data volume prior to deploying OpenStack.  This will be used 
     Use the procedure as described in [5.9. Running Ansible-based registration manually](https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.2/html-single/advanced_overcloud_customization/index#running-ansible-based-registration-manually-portal) do do so.
 
     NOTE: We recommend using manual registration as it works regardless of base image choice. If you are using
-    overcloud-full as your base deployment image then automatic RHSM registration could be used via the 
-    t-h-t rhsm.yaml environment role/file as an alternative to this approach. 
+    overcloud-full as your base deployment image then automatic RHSM registration could be used via the
+    t-h-t rhsm.yaml environment role/file as an alternative to this approach.
 
     ```bash
     oc rsh openstackclient
@@ -1466,8 +1466,8 @@ spec:
 
 Spec fields are as follows:
 * The `mode: save` indicates that this is a request to create a backup.
-* The `additionalConfigMaps` and `additionalSecrets` lists may be used to include supplemental ConfigMaps and Secrets of which the operator is otherwise unaware (i.e. ConfigMaps and Secrets manually created for certain purposes).  
-  As noted above, however, the operator will still attempt to include all ConfigMaps and Secrets associated with the various CRs (`OpenStackControlPlane`, `OpenStackBaremetalSet`, etc) in the namespace, without requiring the user 
+* The `additionalConfigMaps` and `additionalSecrets` lists may be used to include supplemental ConfigMaps and Secrets of which the operator is otherwise unaware (i.e. ConfigMaps and Secrets manually created for certain purposes).
+  As noted above, however, the operator will still attempt to include all ConfigMaps and Secrets associated with the various CRs (`OpenStackControlPlane`, `OpenStackBaremetalSet`, etc) in the namespace, without requiring the user
   to include them in these additional lists.
 
 2. Once the `OpenStackBackupRequest` has been created, monitor its status:
@@ -1480,11 +1480,11 @@ Something like this should appear:
 
 ```bash
 NAME                     OPERATION   SOURCE   STATUS      COMPLETION TIMESTAMP
-openstackbackupsave      save                 Quiescing         
+openstackbackupsave      save                 Quiescing
 ```
 
-The `Quiescing` state indicates that the operator is waiting for provisioning state of all OSP-D operator CRs to reach their "finished" equivalent.  The time required for this will vary based on the quantity 
-of OSP-D operator CRs and the happenstance of their current provisioning state.  NOTE: It is possible that the operator will never fully quiesce due to errors and/or "waiting" states in existing CRs.  To see 
+The `Quiescing` state indicates that the operator is waiting for provisioning state of all OSP-D operator CRs to reach their "finished" equivalent.  The time required for this will vary based on the quantity
+of OSP-D operator CRs and the happenstance of their current provisioning state.  NOTE: It is possible that the operator will never fully quiesce due to errors and/or "waiting" states in existing CRs.  To see
 which CRDs/CRs are preventing quiesence, investigate the operator logs.  For example:
 
 ```bash
@@ -1531,12 +1531,12 @@ spec:
 ```
 
 Spec fields are as follows:
-* The `mode: restore` indicates that this is a request to restore an existing `OpenStackBackup`.  
+* The `mode: restore` indicates that this is a request to restore an existing `OpenStackBackup`.
 * The `restoreSource` indicates which `OpenStackBackup` should be restored.
 
 With `mode` set to `restore`, the OSP-D operator will take the contents of the `restoreSource` `OpenStackBackup` and attempt to apply them against the _existing_ CRs, ConfigMaps and Secrets currently
 present within the namespace.  Thus it will overwrite any existing OSP-D operator resources in the namespace with the same names as those in the `OpenStackBackup`, and will create new resources for
-those not currently found in the namespace.  If desired, `mode` can be set to `cleanRestore` to completely wipe the existing OSP-D operator resources within the namespace before attempting a 
+those not currently found in the namespace.  If desired, `mode` can be set to `cleanRestore` to completely wipe the existing OSP-D operator resources within the namespace before attempting a
 restoration, such that all resources within the `OpenStackBackup` are created completely anew.
 
 2. Once the `OpenStackBackupRequest` has been created, monitor its status:
@@ -1549,14 +1549,14 @@ Something like this should appear to indicate that all resources from the `OpenS
 
 ```bash
 NAME                     OPERATION  SOURCE                           STATUS     COMPLETION TIMESTAMP
-openstackbackuprestore   restore    openstackbackupsave-1641928378   Loading   
+openstackbackuprestore   restore    openstackbackupsave-1641928378   Loading
 ```
 
 Then, once all resources have been loaded, the operator will begin reconciling to attempt to provision all resources:
 
 ```bash
 NAME                     OPERATION  SOURCE                           STATUS       COMPLETION TIMESTAMP
-openstackbackuprestore   restore    openstackbackupsave-1641928378   Reconciling   
+openstackbackuprestore   restore    openstackbackupsave-1641928378   Reconciling
 ```
 
 If the `OpenStackBackupRequest` enters the `Error` state, look at its full contents to see the error that was encountered (`oc get -n openstack openstackbackuprequest <name> -o yaml`).

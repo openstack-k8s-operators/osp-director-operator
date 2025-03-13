@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: openstackephemeralheats.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
@@ -29,14 +28,19 @@ spec:
           used internally by the OSConfigGenerator to generate Ansible playbooks
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -66,11 +70,10 @@ spec:
                   heat service configuration.
                 properties:
                   customServiceConfig:
-                    description: CustomServiceConfig - customize the service config
-                      using this parameter to change service defaults, or overwrite
-                      rendered information using raw OpenStack config format. The
-                      content gets added to to /etc/<service>/<service>.conf.d directory
-                      as custom.conf file.
+                    description: |-
+                      CustomServiceConfig - customize the service config using this parameter to change service defaults,
+                      or overwrite rendered information using raw OpenStack config format. The content gets added to
+                      to /etc/<service>/<service>.conf.d directory as custom.conf file.
                     type: string
                 type: object
               mariadbImageURL:

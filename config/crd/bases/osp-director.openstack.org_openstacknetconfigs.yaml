@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: openstacknetconfigs.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
@@ -60,14 +59,19 @@ spec:
           and openstacknets to describe the full network configuration
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -80,14 +84,16 @@ spec:
                     NodeNetworkConfigurationPolicy or NodeSriovConfigurationPolicy
                   properties:
                     nodeNetworkConfigurationPolicy:
+                      default: {}
                       description: NodeNetworkConfigurationPolicySpec defines the
                         desired state of NodeNetworkConfigurationPolicy
                       properties:
                         capture:
                           additionalProperties:
                             type: string
-                          description: Capture contains expressions with an associated
-                            name than can be referenced at the DesiredState.
+                          description: |-
+                            Capture contains expressions with an associated name than can be referenced
+                            at the DesiredState.
                           type: object
                         desiredState:
                           description: The desired configuration of the policy
@@ -97,20 +103,21 @@ spec:
                           anyOf:
                           - type: integer
                           - type: string
-                          description: MaxUnavailable specifies percentage or number
-                            of machines that can be updating at a time. Default is
-                            "50%".
+                          description: |-
+                            MaxUnavailable specifies percentage or number
+                            of machines that can be updating at a time. Default is "50%".
                           x-kubernetes-int-or-string: true
                         nodeSelector:
                           additionalProperties:
                             type: string
-                          description: 'NodeSelector is a selector which must be true
-                            for the policy to be applied to the node. Selector which
-                            must match a node''s labels for the policy to be scheduled
-                            on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                          description: |-
+                            NodeSelector is a selector which must be true for the policy to be applied to the node.
+                            Selector which must match a node's labels for the policy to be scheduled on that node.
+                            More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                           type: object
                       type: object
                     nodeSriovConfigurationPolicy:
+                      default: {}
                       description: NodeSriovConfigurationPolicy - Node selector and
                         desired state for SRIOV network
                       properties:
@@ -304,15 +311,13 @@ spec:
                   type: object
                 type: array
               ovnBridgeMacMappings:
-                description: OVNBridgeMacMappings - configuration of the physical
-                  networks used to create to create static OVN Bridge MAC address
-                  mappings. Unique OVN bridge mac address is dynamically allocated
-                  by creating OpenStackMACAddress resource and create a MAC per physnet
-                  per OpenStack node. This information is used to create the OVNStaticBridgeMacMappings.
-                  - If PhysNetworks is not provided, the tripleo default physnet datacentre
-                  gets created. - If the macPrefix is not specified for a physnet,
-                  the default macPrefix "fa:16:3a" is used. - If PreserveReservations
-                  is not specified, the default is true.
+                description: |-
+                  OVNBridgeMacMappings - configuration of the physical networks used to create to create static OVN Bridge MAC address mappings.
+                  Unique OVN bridge mac address is dynamically allocated by creating OpenStackMACAddress resource and create a MAC per physnet per OpenStack node.
+                  This information is used to create the OVNStaticBridgeMacMappings.
+                  - If PhysNetworks is not provided, the tripleo default physnet datacentre gets created.
+                  - If the macPrefix is not specified for a physnet, the default macPrefix "fa:16:3a" is used.
+                  - If PreserveReservations is not specified, the default is true.
                 properties:
                   physNetworks:
                     description: PhysNetworks - physical networks list to create MAC
@@ -322,11 +327,11 @@ spec:
                       properties:
                         macPrefix:
                           default: fa:16:3a
-                          description: MACPrefix - the MAC address prefix to use Locally
-                            administered addresses are distinguished from universally
-                            administered addresses by setting (assigning the value
-                            of 1 to) the second-least-significant bit of the first
-                            octet of the address. https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
+                          description: |-
+                            MACPrefix - the MAC address prefix to use
+                            Locally administered addresses are distinguished from universally administered addresses by setting
+                            (assigning the value of 1 to) the second-least-significant bit of the first octet of the address.
+                            https://en.wikipedia.org/wiki/MAC_address#Universal_vs._local_(U/L_bit)
                           type: string
                         name:
                           default: datacentre
@@ -342,11 +347,10 @@ spec:
                 type: object
               preserveReservations:
                 default: true
-                description: 'PreserveReservations - preserve the MAC/IP reservation
-                  of the host within a node role when the node got deleted but the
-                  role itself is not deleted. The reservations of all nodes in the
-                  role get deleted when the full node role is being deleted. (default:
-                  true)'
+                description: |-
+                  PreserveReservations - preserve the MAC/IP reservation of the host within a node role when the node got deleted
+                  but the role itself is not deleted. The reservations of all nodes in the role get deleted when the full node
+                  role is being deleted. (default: true)
                 type: boolean
               reservations:
                 additionalProperties:
@@ -424,9 +428,9 @@ spec:
                   type: object
                 type: object
               provisioningStatus:
-                description: OpenStackNetConfigProvisioningStatus represents the overall
-                  provisioning state of the OpenStackNetConfig (with an optional explanatory
-                  message)
+                description: |-
+                  OpenStackNetConfigProvisioningStatus represents the overall provisioning state of
+                  the OpenStackNetConfig (with an optional explanatory message)
                 properties:
                   attachDesiredCount:
                     type: integer
