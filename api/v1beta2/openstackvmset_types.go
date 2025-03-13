@@ -83,7 +83,7 @@ type OpenStackVMSetSpec struct {
 	// +kubebuilder:validation:Enum=Always;Halted;Manual;RerunOnFailure
 	// Running state indicates the requested running state of the VirtualMachineInstance
 	// mutually exclusive with Running
-	RunStrategy virtv1.VirtualMachineRunStrategy `json:"runStrategy,omitempty"`
+	RunStrategy virtv1.VirtualMachineRunStrategy `json:"runStrategy"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=None;LiveMigrate
 	// EvictionStrategy defines if the VirtualMachineInstance should be
@@ -105,7 +105,7 @@ type OpenStackVMSetDisk struct {
 	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
 	// StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
 	// with a shared ReadWriteMany (RWX) access mode to be live migrated.
-	StorageAccessMode string `json:"storageAccessMode,omitempty"`
+	StorageAccessMode string `json:"storageAccessMode"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=Filesystem
 	// +kubebuilder:validation:Enum=Block;Filesystem

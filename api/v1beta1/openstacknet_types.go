@@ -28,7 +28,7 @@ type IPReservation struct {
 	VIP      bool   `json:"vip"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
-	ServiceVIP bool `json:"serviceVIP,omitempty"`
+	ServiceVIP bool `json:"serviceVIP"`
 	Deleted    bool `json:"deleted"`
 }
 
