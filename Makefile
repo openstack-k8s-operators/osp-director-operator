@@ -232,6 +232,7 @@ OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 OPERATOR_SDK_VERSION ?= v1.19.0
+GOTOOLCHAIN_VERSION ?= go1.24.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
