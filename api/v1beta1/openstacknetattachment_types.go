@@ -36,11 +36,11 @@ const (
 type NodeConfigurationPolicy struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
-	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
+	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
-	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy,omitempty"`
+	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy"`
 }
 
 // NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network

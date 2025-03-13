@@ -37,7 +37,7 @@ type OpenStackConfigGeneratorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
 	// Optional. List of heat environment files to include from tripleo-heat-templates/environments
-	HeatEnvs []string `json:"heatEnvs,omitempty"`
+	HeatEnvs []string `json:"heatEnvs"`
 	// Required. the name of the config map containing Heat env file customizations
 	HeatEnvConfigMap string `json:"heatEnvConfigMap"`
 	// Optional. the name of the config map containing custom Heat template tarball which will be extracted prior to config generation
@@ -52,7 +52,7 @@ type OpenStackConfigGeneratorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
 	// Optional. List of Roles used to limit which roles have network information injected during playbook generation. By default the list is empty and all Roles are included for Baremetal/Vmsets within the project.
-	Roles []string `json:"roles,omitempty"`
+	Roles []string `json:"roles"`
 	// EnableFencing allows the automatic creation of required heat environment files to enable fencing.
 	// Note:
 	// - Production OSP environments MUST have fencing enabled.
