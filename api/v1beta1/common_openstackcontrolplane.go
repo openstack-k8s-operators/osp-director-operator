@@ -73,7 +73,7 @@ func CreateVIPNetworkList(
 					return uniqNetworksList, fmt.Errorf("OpenStackNet with NameLower %s not found", netNameLower)
 				}
 				// Error reading the object - requeue the request.
-				return uniqNetworksList, fmt.Errorf("Error getting OSNet with labelSelector %v", labelSelector)
+				return uniqNetworksList, fmt.Errorf("error getting OSNet with labelSelector %v", labelSelector)
 			}
 
 			if _, value := networkList[netNameLower]; !value && network.Spec.VIP {

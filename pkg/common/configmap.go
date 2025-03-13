@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package common //revive:disable:var-naming
 
 import (
 	"context"
@@ -174,7 +174,7 @@ func EnsureConfigMaps(
 func GetConfigMaps(
 	ctx context.Context,
 	r ReconcilerCommon,
-	obj runtime.Object,
+	_ runtime.Object,
 	configMaps []string,
 	namespace string,
 	envVars *map[string]EnvSetter,

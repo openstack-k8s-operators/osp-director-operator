@@ -1028,7 +1028,7 @@ func (r *OpenStackControlPlaneReconciler) ensureStorageVersionMigration(
 			}
 
 			if err := r.List(ctx, smList, listOpts...); err != nil {
-				err = fmt.Errorf("Error listing services for %s: %w", smList.GroupVersionKind().Kind, err)
+				err = fmt.Errorf("error listing services for %s: %w", smList.GroupVersionKind().Kind, err)
 				return ctrl.Result{}, err
 			}
 

@@ -1,3 +1,4 @@
+// Package nmstate provides utilities for working with NMState network configuration.
 package nmstate
 
 import (

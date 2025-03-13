@@ -49,7 +49,7 @@ func DeployJob(
 	}
 
 	var terminationGracePeriodSeconds int64 = 60
-	var backoffLimit int32 = 0
+	var backoffLimit int32
 
 	cmd := []string{"/osp-director-agent", "deploy"}
 	restartPolicy := corev1.RestartPolicyNever

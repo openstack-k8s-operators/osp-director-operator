@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package openstackconfigversion provides utilities for OpenStack configuration version management.
 package openstackconfigversion
 
 import (

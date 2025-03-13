@@ -1,0 +1,77 @@
+repos:
+- repo: local
+  hooks:
+    - id: gotidy
+      name: gotidy
+      language: system
+      entry: make
+      args: ["tidy"]
+      pass_filenames: false
+    - id: make-manifests
+      name: make-manifests
+      language: system
+      entry: make
+      args: ['manifests']
+      pass_filenames: false
+    - id: make-generate
+      name: make-generate
+      language: system
+      entry: make
+      args: ['generate']
+      pass_filenames: false
+    - id: make-operator-lint
+      name: make-operator-lint
+      language: system
+      entry: make
+      args: ['operator-lint']
+      pass_filenames: false
+    - id: make-crd-schema-check
+      require_serial: true
+      name: make-crd-schema-check
+      language: system
+      entry: make
+      args: ['crd-schema-check']
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+    - id: check-added-large-files
+    - id: fix-byte-order-marker
+    - id: check-case-conflict
+    - id: check-executables-have-shebangs
+      exclude: ^vendor
+    - id: check-shebang-scripts-are-executable
+      exclude: ^vendor
+    - id: check-merge-conflict
+    - id: check-symlinks
+    - id: destroyed-symlinks
+    - id: check-yaml
+      args: [-m]
+      exclude: '^tests/kuttl|^templates'
+    - id: check-json
+    - id: detect-private-key
+    - id: end-of-file-fixer
+      exclude: ^vendor
+    - id: no-commit-to-branch
+    - id: trailing-whitespace
+      exclude: ^vendor
+
+- repo: https://github.com/openstack/bashate.git
+  rev: 2.1.1
+  hooks:
+    - id: bashate
+      entry: bashate --error . --ignore=E006,E040,E011,E020,E012
+
+- repo: https://github.com/golangci/golangci-lint
+  rev: v2.4.0
+  hooks:
+    - id: golangci-lint-full
+      args: ["-v"]
+
+- repo: https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci
+  # NOTE(gibi): we cannot automatically track main here
+  # see https://pre-commit.com/#using-the-latest-version-for-a-repository
+  rev: e30d72fcbced0ab8a7b6d23be1dee129e2a7b849
+  hooks:
+    - id: kuttl-single-test-assert
+      args: ["tests/kuttl"]

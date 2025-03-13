@@ -339,7 +339,7 @@ func (r *OpenStackIPSetReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				shared.OpenStackNetConfigReconcileLabel: o.GetName(),
 			},
 		}
-		if err := r.Client.List(ctx, ipSetList, listOpts...); err != nil {
+		if err := r.List(ctx, ipSetList, listOpts...); err != nil {
 			Log.Error(err, "Unable to retrieve OpenStackIPSetList")
 			return nil
 		}
@@ -376,10 +376,7 @@ func (r *OpenStackIPSetReconciler) createNewHostnames(
 	newHostnames := []string{}
 
 	// create hostnames with no index if it is a VIP or service VIP
-	vip := false
-	if instance.Spec.VIP || instance.Spec.ServiceVIP {
-		vip = true
-	}
+	vip := instance.Spec.VIP || instance.Spec.ServiceVIP
 
 	if instance.Status.Hosts == nil {
 		instance.Status.Hosts = map[string]ospdirectorv1beta1.IPStatus{}

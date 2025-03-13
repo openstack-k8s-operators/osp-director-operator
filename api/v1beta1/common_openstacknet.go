@@ -101,13 +101,13 @@ func AddOSNetConfigRefLabel(
 	if err != nil && k8s_errors.IsNotFound(err) {
 		return labels, fmt.Errorf("OpenStackNet %s not found reconcile again in 10 seconds", subnetName)
 	} else if err != nil {
-		return labels, fmt.Errorf("Failed to get OpenStackNet %s ", subnetName)
+		return labels, fmt.Errorf("failed to get OpenStackNet %s ", subnetName)
 	}
 
 	//
 	// get ownerReferences entry with Kind OpenStackNetConfig
 	//
-	for _, ownerRef := range osnet.ObjectMeta.OwnerReferences {
+	for _, ownerRef := range osnet.OwnerReferences {
 		if ownerRef.Kind == "OpenStackNetConfig" {
 			//
 			// merge with obj labels
@@ -239,7 +239,7 @@ func ValidateNetworks(namespace string, networks []string) error {
 		if err != nil && k8s_errors.IsNotFound(err) {
 			return fmt.Errorf("OpenStackNet %s not found, validate the object network list", subnetName)
 		} else if err != nil {
-			return fmt.Errorf("Failed to get OpenStackNet %s", subnetName)
+			return fmt.Errorf("failed to get OpenStackNet %s", subnetName)
 		}
 	}
 

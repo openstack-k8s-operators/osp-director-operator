@@ -39,7 +39,7 @@ func CtlplaneExports(heatServiceName string, log logr.Logger) (string, error) {
 		return "", err
 	}
 	// override the EndpointLocator as we are using noauth without a real Catalog
-	provider.EndpointLocator = func(opts gophercloud.EndpointOpts) (string, error) {
+	provider.EndpointLocator = func(_ gophercloud.EndpointOpts) (string, error) {
 		return "http://" + heatServiceName + ":8004/v1/admin/", nil
 	}
 	client, err := openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{Region: "regionOne"})

@@ -19,7 +19,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega" //revive:disable:dot-imports
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -218,7 +218,7 @@ func TestCreateFencingEnvironmentFiles_RoleKeyVsRoleName(t *testing.T) {
 
 // createTarballConfigMapWithCustomRole creates a ConfigMap with binary data containing a custom role
 // that includes the Pacemaker service (required for fencing)
-func createTarballConfigMapWithCustomRole(t *testing.T, roleName string) *corev1.ConfigMap {
+func createTarballConfigMapWithCustomRole(_ *testing.T, _ string) *corev1.ConfigMap {
 	// This is a simplified version - in reality this would be a proper tarball
 	// For the test, we just need to ensure GetCustomFencingRoles returns our role
 

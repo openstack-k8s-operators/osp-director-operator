@@ -103,7 +103,7 @@ func (r *OpenStackNetConfig) Default() {
 	}
 
 	if r.Spec.PreserveReservations == nil {
-		var trueVal bool = true
+		var trueVal = true
 		r.Spec.PreserveReservations = &trueVal
 	}
 

@@ -1,10 +1,10 @@
-package common
+package common //revive:disable:var-naming
 
 import (
 	"encoding/base64"
 	"testing"
 
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega" //revive:disable:dot-imports
 )
 
 func TestGetCustomFencingRoles(t *testing.T) {
@@ -44,12 +44,12 @@ func TestGetCustomFencingRoles(t *testing.T) {
 			customBinaryData := map[string][]byte{}
 			for key, dataBase64 := range tt.customBinaryDataBase64 {
 				data, err := base64.StdEncoding.DecodeString(string(dataBase64))
-				g.Expect(err).To(BeNil())
+				g.Expect(err).ToNot(HaveOccurred())
 				customBinaryData[key] = data
 			}
 
 			roles, err := GetCustomFencingRoles(customBinaryData)
-			g.Expect(err).To(BeNil())
+			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(roles).NotTo(BeNil())
 			g.Expect(roles).To(HaveLen(len(tt.want)))
 			g.Expect(roles).To(BeEquivalentTo(tt.want))

@@ -146,7 +146,7 @@ func (r *OpenStackNetConfigReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. ThnodeConfPolicy.Nameis is equivalent
 		// registering our finalizer.
@@ -520,14 +520,15 @@ func (r *OpenStackNetConfigReconciler) getNetAttachmentStatus(
 		condition := netAttachment.Status.Conditions.GetCurrentCondition()
 
 		if condition != nil {
-			if condition.Type == shared.NetAttachConfigured {
+			switch condition.Type {
+			case shared.NetAttachConfigured:
 				cond.Message = fmt.Sprintf("OpenStackNetConfig %s has successfully configured OpenStackNetAttachment %s", instance.Name, netAttachment.Name)
 				cond.Type = shared.NetConfigConfigured
 				common.LogForObject(r, cond.Message, instance)
 
 				instance.Status.ProvisioningStatus.AttachReadyCount++
 
-			} else if condition.Type == shared.NetAttachError {
+			case shared.NetAttachError:
 				cond.Message = fmt.Sprintf("OpenStackNetAttachment error: %s", condition.Message)
 				cond.Type = shared.NetConfigError
 
@@ -584,7 +585,7 @@ func (r *OpenStackNetConfigReconciler) applyNetConfig(
 	osNet := &ospdirectorv1beta1.OpenStackNet{
 		ObjectMeta: metav1.ObjectMeta{
 			// _ is a not allowed char for an OCP object, lets remove it
-			Name:      strings.ToLower(strings.Replace(subnet.Name, "_", "", -1)),
+			Name:      strings.ToLower(strings.ReplaceAll(subnet.Name, "_", "")),
 			Namespace: instance.Namespace,
 		},
 	}
@@ -712,12 +713,13 @@ func (r *OpenStackNetConfigReconciler) getNetStatus(
 		condition := osNet.Status.Conditions.GetCurrentCondition()
 
 		if condition != nil {
-			if condition.Type == shared.NetAttachConfigured {
+			switch condition.Type {
+			case shared.NetAttachConfigured:
 				cond.Message = fmt.Sprintf("OpenStackNetConfig %s has successfully configured OpenStackNet %s", instance.Name, osNet.Spec.NameLower)
 				cond.Type = shared.NetConfigConfigured
 
 				ctrlResult = ctrl.Result{}
-			} else if condition.Type == shared.NetAttachError {
+			case shared.NetAttachError:
 				cond.Message = fmt.Sprintf("OpenStackNet error: %s", condition.Message)
 				cond.Type = shared.NetConfigError
 				common.LogForObject(r, cond.Message, instance)
@@ -779,7 +781,7 @@ func (r *OpenStackNetConfigReconciler) osnetCleanup(
 ) error {
 	osNet := &ospdirectorv1beta1.OpenStackNet{}
 
-	osNet.Name = strings.ToLower(strings.Replace(subnet.Name, "_", "", -1))
+	osNet.Name = strings.ToLower(strings.ReplaceAll(subnet.Name, "_", ""))
 	osNet.Namespace = instance.Namespace
 
 	cond.Message = fmt.Sprintf("OpenStackNet %s delete started", osNet.Name)
@@ -1022,7 +1024,7 @@ func (r *OpenStackNetConfigReconciler) createOrUpdateOpenStackMACAddress(
 
 func (r *OpenStackNetConfigReconciler) getMACStatus(
 	instance *ospdirectorv1beta1.OpenStackNetConfig,
-	cond *shared.Condition,
+	_ *shared.Condition,
 	macAddress *ospdirectorv1beta1.OpenStackMACAddress,
 ) {
 

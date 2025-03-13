@@ -140,7 +140,7 @@ func (r *OpenStackNetReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}(cond)
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -383,7 +383,7 @@ func (r *OpenStackNetReconciler) createOrUpdateNetworkAttachmentDefinition(
 		cond.Type = shared.NetConfigured
 	}
 
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(networkAttachmentDefinition, openstacknet.FinalizerName) {
 			controllerutil.AddFinalizer(networkAttachmentDefinition, openstacknet.FinalizerName)
 			if err := r.Update(ctx, networkAttachmentDefinition); err != nil {

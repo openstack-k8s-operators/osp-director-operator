@@ -38,7 +38,7 @@ func ConfigJob(cr *ospdirectorv1beta1.OpenStackConfigGenerator, configHash strin
 		},
 	}
 
-	var terminationGracePeriodSeconds int64 = 0
+	var terminationGracePeriodSeconds int64
 	var backoffLimit int32 = 2
 
 	// Get volumes

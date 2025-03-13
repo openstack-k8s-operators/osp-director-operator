@@ -2,7 +2,7 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   # Restart Metal3 pod to reset static provisioning IP that was lost during 00-prep cleanup.
-  # Deleting the OsNetConfig and associated NNCPs during prep's cleaning will remove the 
+  # Deleting the OsNetConfig and associated NNCPs during prep's cleaning will remove the
   # br-ctlplane bridges, which Metal3 uses as the provisioning interface, and thus removes
   # the 172.22.0.3 static provisioning IP that is needed for DHCP to work.  Now that the
   # OsNetConfig and NNCPs have been restored, restarting the Metal3 pod will ensure that the

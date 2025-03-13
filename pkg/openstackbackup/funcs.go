@@ -1,3 +1,4 @@
+// Package openstackbackup provides utilities for OpenStack backup and restore functionality.
 package openstackbackup
 
 import (
@@ -154,7 +155,7 @@ func GetConfigMapList(
 	ctx context.Context,
 	r common.ReconcilerCommon,
 	request *ospdirectorv1beta1.OpenStackBackupRequest,
-	desiredCrs *ospdirectorv1beta2.CrsForBackup,
+	_ *ospdirectorv1beta2.CrsForBackup,
 ) (corev1.ConfigMapList, error) {
 	configMapList := &corev1.ConfigMapList{}
 
@@ -354,7 +355,7 @@ func addSecretToList(
 
 // GetAreControllersQuiesced - returns true if all desired CRs for backup are in their respective "finished" state, or false with a list of "bad" CRs if otherwise
 func GetAreControllersQuiesced(
-	instance *ospdirectorv1beta1.OpenStackBackupRequest,
+	_ *ospdirectorv1beta1.OpenStackBackupRequest,
 	crLists ospdirectorv1beta2.CrsForBackup,
 ) (bool, []client.Object) {
 	badCrs := []client.Object{}
@@ -362,72 +363,72 @@ func GetAreControllersQuiesced(
 	// Check provisioning status of all OpenStackBaremetalSets
 	for _, cr := range crLists.OpenStackBaremetalSets.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check provisioning status of all OpenStackClients
 	for _, cr := range crLists.OpenStackClients.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check provisioning status of all OpenStackControlPlanes
 	for _, cr := range crLists.OpenStackControlPlanes.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the creation status of all OpenStackMACAddresses
 	for _, cr := range crLists.OpenStackMACAddresses.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the creation status of all OpenStackNets
 	for _, cr := range crLists.OpenStackNets.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the creation status of all OpenStackNetAttachments
 	for _, cr := range crLists.OpenStackNetAttachments.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the creation status of all OpenStackNetConfigs
 	for _, cr := range crLists.OpenStackNetConfigs.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the provisioning status of all OpenStackProvisionServers
 	for _, cr := range crLists.OpenStackProvisionServers.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 
 	// Check the provisioning status of all OpenStackVMSets
 	for _, cr := range crLists.OpenStackVMSets.Items {
 		if !cr.IsReady() {
-			copy := cr.DeepCopy()
-			badCrs = append(badCrs, copy)
+			crCopy := cr.DeepCopy()
+			badCrs = append(badCrs, crCopy)
 		}
 	}
 

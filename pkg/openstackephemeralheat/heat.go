@@ -106,7 +106,7 @@ func HeatAPIPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 }
 
 // HeatAPIService func
-func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
+func HeatAPIService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, _ *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
