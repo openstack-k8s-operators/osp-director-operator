@@ -5,9 +5,38 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - apps
+  - ""
   resources:
-  - daemonsets
+  - configmaps
+  - pods
+  - secrets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/finalizers
+  - volumes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - persistentvolumeclaims
+  - secrets/finalizers
   verbs:
   - create
   - delete
@@ -17,8 +46,29 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - apps
   resources:
+  - daemonsets
   - deployments
   verbs:
   - create
@@ -52,115 +102,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - events
-  - persistentvolumeclaims
-  - pods
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - volumes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
   - k8s.cni.cncf.io
   resources:
   - network-attachment-definitions
@@ -177,13 +118,6 @@ rules:
   - kubevirt.io
   resources:
   - virtualmachineinstances
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - kubevirt.io
-  resources:
   - virtualmachines
   verbs:
   - get
@@ -191,11 +125,6 @@ rules:
   - watch
 - apiGroups:
   - machine.openshift.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
   - metal3.io
   resources:
   - '*'
@@ -257,6 +186,14 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstackbackuprequests
+  - openstackbackups
+  - openstackbaremetalsets/finalizers
+  - openstackconfigversions
+  - openstackdeploys
+  - openstackephemeralheats
+  - openstackipsets
+  - openstacknetconfigs/finalizers
+  - openstackprovisionservers/finalizers
   verbs:
   - create
   - delete
@@ -269,33 +206,41 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstackbackuprequests/finalizers
+  - openstackbackups/finalizers
+  - openstackclients/finalizers
+  - openstackconfiggenerators/finalizers
+  - openstackconfigversions/finalizers
+  - openstackcontrolplanes/finalizers
+  - openstackdeploys/finalizers
+  - openstackephemeralheats/finalizers
+  - openstackipsets/finalizers
+  - openstackmacaddresses/finalizers
+  - openstacknetattachments/finalizers
+  - openstacknets/finalizers
+  - openstackvmsets/finalizers
   verbs:
   - update
 - apiGroups:
   - osp-director.openstack.org
   resources:
   - openstackbackuprequests/status
+  - openstackbaremetalsets/status
+  - openstackclients/status
+  - openstackconfiggenerators/status
+  - openstackconfigversions/status
+  - openstackcontrolplanes/status
+  - openstackdeploys/status
+  - openstackephemeralheats/status
+  - openstackipsets/status
+  - openstackmacaddresses/status
+  - openstacknetattachments/status
+  - openstacknetconfigs/status
+  - openstacknets/status
+  - openstackprovisionservers/status
+  - openstackvmsets/status
   verbs:
   - get
   - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackbackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackbackups/finalizers
-  verbs:
   - update
 - apiGroups:
   - osp-director.openstack.org
@@ -310,377 +255,14 @@ rules:
   - osp-director.openstack.org
   resources:
   - openstackbaremetalsets
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackbaremetalsets/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackbaremetalsets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackclients
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackclients/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackclients/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackconfiggenerators
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackconfiggenerators/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackconfiggenerators/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackconfigversions
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackconfigversions/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackconfigversions/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackcontrolplanes
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackcontrolplanes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackcontrolplanes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackdeploys
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackdeploys/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackdeploys/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackephemeralheats
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackephemeralheats/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackephemeralheats/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackipsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackipsets/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackipsets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackmacaddresses
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackmacaddresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackmacaddresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstacknetattachments
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknetattachments/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknetattachments/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstacknetconfigs
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknetconfigs/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknetconfigs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstacknets
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknets/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstacknets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackplaybookgenerators
-  verbs:
-  - delete
-  - deletecollection
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackprovisionservers
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackprovisionservers/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackprovisionservers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
   - openstackvmsets
   verbs:
   - create
@@ -694,45 +276,14 @@ rules:
 - apiGroups:
   - osp-director.openstack.org
   resources:
-  - openstackvmsets/finalizers
+  - openstackplaybookgenerators
   verbs:
-  - update
-- apiGroups:
-  - osp-director.openstack.org
-  resources:
-  - openstackvmsets/status
-  verbs:
-  - get
-  - patch
-  - update
+  - delete
+  - deletecollection
 - apiGroups:
   - sriovnetwork.openshift.io
   resources:
   - sriovnetworknodepolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - sriovnetwork.openshift.io
-  resources:
-  - sriovnetworknodepolicies
-  - sriovnetworks
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - sriovnetwork.openshift.io
-  resources:
   - sriovnetworks
   verbs:
   - create
@@ -749,18 +300,6 @@ metadata:
   name: manager-role
   namespace: openstack
 rules:
-- apiGroups:
-  - cdi.kubevirt.io
-  resources:
-  - datavolumes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -780,6 +319,18 @@ rules:
   - serviceaccounts
   verbs:
   - get
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datavolumes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - hco.kubevirt.io
   resources:
