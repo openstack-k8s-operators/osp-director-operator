@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controlplane provides utilities for OpenStack control plane configuration.
 package controlplane
 
 import (

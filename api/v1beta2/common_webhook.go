@@ -29,7 +29,7 @@ func checkRoleNameExists(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta,
 	for resourceName, roleName := range existing {
 		// If the role name is already in use by another resource, this resource is invalid
 		if resourceName != fmt.Sprintf("%s/%s", typeMeta.Kind, objectMeta.Name) && roleName == role {
-			return fmt.Errorf("Role \"%s\" is already in use by %s", roleName, resourceName)
+			return fmt.Errorf("role \"%s\" is already in use by %s", roleName, resourceName)
 		}
 	}
 

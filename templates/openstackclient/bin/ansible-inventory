@@ -14,17 +14,17 @@ ROLES=$(echo $ROLE_RESERVATIONS | jq -re '.key')
 
 # function prints out host IPs
 function printHostIPs {
-  local ROLE=$1
-  local ROLE_IPS=$2
-  local LAST_IP=$(echo $ROLE_IPS | sed -e "s|^.* ||")
+    local ROLE=$1
+    local ROLE_IPS=$2
+    LAST_IP=$(echo $ROLE_IPS | sed -e "s|^.* ||")
 
-  for IP in $ROLE_IPS; do
-    if [[ "$IP" == "$LAST_IP" ]]; then
-      echo "        \"$IP\""
-    else
-      echo "        \"$IP\","
-    fi
-  done
+    for IP in $ROLE_IPS; do
+        if [[ "$IP" == "$LAST_IP" ]]; then
+            echo "        \"$IP\""
+        else
+            echo "        \"$IP\","
+        fi
+    done
 }
 
 
@@ -39,9 +39,9 @@ EOF
 LAST_ROLE=$(echo $ROLES | sed -e "s|^.* ||")
 for ROLE in $ROLES; do
     if [[ "$ROLE" == "$LAST_ROLE" ]]; then
-      echo "        \"$ROLE\""
+        echo "        \"$ROLE\""
     else
-      echo "        \"$ROLE\","
+        echo "        \"$ROLE\","
     fi
 done
 echo '         ]'
@@ -61,9 +61,9 @@ echo '         ],'
 echo '        "vars": {"ansible_ssh_user": "cloud-admin"}'
 
 if [[ "$ROLE" == "$LAST_ROLE" ]]; then
-  echo '  }'
+    echo '  }'
 else
-  echo '  },'
+    echo '  },'
 fi
 done
 
@@ -72,7 +72,7 @@ cat<<EOF
 EOF
 
 elif [ "$1" == "--host" ]; then
-  echo '{"_meta": {"hostvars": {}}}'
+    echo '{"_meta": {"hostvars": {}}}'
 else
-  echo '{ }'
+    echo '{ }'
 fi

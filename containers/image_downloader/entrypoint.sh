@@ -48,31 +48,31 @@ else
     COMPRESSED_FLAG=""
 
     if [ -n "$IMAGE_FILENAME_EXTENSION" ]; then
-      COMPRESSED_FLAG=" --compressed"
+        COMPRESSED_FLAG=" --compressed"
     fi
 
     # Download the actual remote file to our local temporary directory
     for i in $(seq ${MAX_ATTEMPTS}); do
         if ! curl -g --insecure${COMPRESSED_FLAG} -L --connect-timeout ${CONNECT_TIMEOUT} -o "${RHEL_IMAGE_FILENAME_RAW}" "${IMAGE_URL}/${RHEL_IMAGE_FILENAME_RAW}"; then
-          SLEEP_TIME=$((i*i))
-          echo "Download failed, retrying after ${SLEEP_TIME} seconds..."; 
-          sleep ${SLEEP_TIME}
+            SLEEP_TIME=$((i*i))
+            echo "Download failed, retrying after ${SLEEP_TIME} seconds...";
+            sleep ${SLEEP_TIME}
         else
-          DOWNLOADED=1
-          break
+            DOWNLOADED=1
+            break
         fi
     done
 
     if [ $DOWNLOADED -ne 1 ]; then
-      echo "Download failed for ${IMAGE_URL}/${RHEL_IMAGE_FILENAME_RAW}"
-      exit 1
+        echo "Download failed for ${IMAGE_URL}/${RHEL_IMAGE_FILENAME_RAW}"
+        exit 1
     fi
 
     # If the source file is compressed, unzip it
     if [[ $IMAGE_FILENAME_EXTENSION == .gz ]]; then
-      gzip -d "$RHEL_IMAGE_FILENAME_RAW"
+        gzip -d "$RHEL_IMAGE_FILENAME_RAW"
     elif [[ $IMAGE_FILENAME_EXTENSION == .xz ]]; then
-      unxz "$RHEL_IMAGE_FILENAME_RAW"
+        unxz "$RHEL_IMAGE_FILENAME_RAW"
     fi
 
     # Turn source file image into local qcow2 file image, compressed, with name "RHEL_IMAGE_FILENAME_COMPRESSED",
@@ -88,7 +88,7 @@ if [ -s "${RHEL_IMAGE_FILENAME_COMPRESSED}.md5sum" ] ; then
     chmod 755 $TMPDIR
     mv $TMPDIR $RHEL_IMAGE_FILENAME_OPENSTACK
     # TODO: If we change this container from an init to a side-car, we will need to get rid
-    # of this linking or otherwise somehow change it, as the side-car version will want to 
+    # of this linking or otherwise somehow change it, as the side-car version will want to
     # store multiple images in the same Apache server
     ln -sf "$RHEL_IMAGE_FILENAME_OPENSTACK/$RHEL_IMAGE_FILENAME_COMPRESSED" $FFILENAME
     ln -sf "$RHEL_IMAGE_FILENAME_OPENSTACK/$RHEL_IMAGE_FILENAME_COMPRESSED.md5sum" "$FFILENAME.md5sum"

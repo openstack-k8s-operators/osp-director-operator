@@ -85,7 +85,7 @@ func MariadbPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Pod
 }
 
 // MariadbService func
-func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
+func MariadbService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, _ *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

@@ -46,8 +46,8 @@ func Disk(
 		if serial != "" {
 			disk.Serial = serial
 		}
-		disk.DiskDevice.Disk = &virtv1.DiskTarget{}
-		disk.DiskDevice.Disk.Bus = bus
+		disk.Disk = &virtv1.DiskTarget{}
+		disk.Disk.Bus = bus
 		disk.DedicatedIOThread = &dedicatedIOThread
 		if bootOrder != nil {
 			disk.BootOrder = bootOrder
@@ -89,8 +89,8 @@ func VolumeSourceDataVolume(
 ) VolumeSetter {
 	return func(volume *virtv1.Volume) {
 		volume.Name = volumeName
-		volume.VolumeSource.DataVolume = &virtv1.DataVolumeSource{}
-		volume.VolumeSource.DataVolume.Name = dataVolumeName
+		volume.DataVolume = &virtv1.DataVolumeSource{}
+		volume.DataVolume.Name = dataVolumeName
 	}
 }
 
@@ -102,11 +102,11 @@ func VolumeSourceCloudInitNoCloud(
 ) VolumeSetter {
 	return func(volume *virtv1.Volume) {
 		volume.Name = volumeName
-		volume.VolumeSource.CloudInitNoCloud = &virtv1.CloudInitNoCloudSource{}
-		volume.VolumeSource.CloudInitNoCloud.UserDataSecretRef = &corev1.LocalObjectReference{
+		volume.CloudInitNoCloud = &virtv1.CloudInitNoCloudSource{}
+		volume.CloudInitNoCloud.UserDataSecretRef = &corev1.LocalObjectReference{
 			Name: userDataSecretRefName,
 		}
-		volume.VolumeSource.CloudInitNoCloud.NetworkDataSecretRef = &corev1.LocalObjectReference{
+		volume.CloudInitNoCloud.NetworkDataSecretRef = &corev1.LocalObjectReference{
 			Name: networkDataSecretRefName,
 		}
 	}
@@ -119,8 +119,8 @@ func VolumeSourceSecret(
 ) VolumeSetter {
 	return func(volume *virtv1.Volume) {
 		volume.Name = volumeName
-		volume.VolumeSource.Secret = &virtv1.SecretVolumeSource{}
-		volume.VolumeSource.Secret.SecretName = secretName
+		volume.Secret = &virtv1.SecretVolumeSource{}
+		volume.Secret.SecretName = secretName
 	}
 }
 
@@ -164,8 +164,8 @@ func DataVolume(
 	volMode := corev1.PersistentVolumeMode(volumeMode)
 
 	return func(dataVolume *virtv1.DataVolumeTemplateSpec) {
-		dataVolume.ObjectMeta.Name = dataVolumeName
-		dataVolume.ObjectMeta.Namespace = namespace
+		dataVolume.Name = dataVolumeName
+		dataVolume.Namespace = namespace
 
 		dataVolume.Spec.PVC = &corev1.PersistentVolumeClaimSpec{}
 		dataVolume.Spec.PVC.AccessModes = []corev1.PersistentVolumeAccessMode{
@@ -241,7 +241,7 @@ func Network(networkName string, attachType ospdirectorv1beta1.AttachType) NetSe
 			actualNetworkName = fmt.Sprintf("%s-sriov-network", networkName)
 		}
 
-		net.NetworkSource.Multus = &virtv1.MultusNetwork{
+		net.Multus = &virtv1.MultusNetwork{
 			NetworkName: actualNetworkName,
 		}
 	}

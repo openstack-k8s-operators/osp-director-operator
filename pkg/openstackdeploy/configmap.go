@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package openstackdeploy provides utilities for OpenStack deployment configuration.
 package openstackdeploy
 
 import (
