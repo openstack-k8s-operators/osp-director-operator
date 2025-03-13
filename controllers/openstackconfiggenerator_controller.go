@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers contains the Kubernetes controllers for the OSP Director Operator.
 package controllers
 
 import (
@@ -658,7 +659,7 @@ func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(
 		// Check if this ConfigVersion already exists
 		foundVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
 		err := r.Get(ctx, types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
-		if err == nil {
+		if err == nil { //revive:disable:empty-block
 			//FIXME(dprince): update existing?
 		} else if err != nil && k8s_errors.IsNotFound(err) {
 			// we only add the most recent export to new ConfigVersions (just created...)
@@ -979,7 +980,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 
 func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	_ *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *shared.Condition,
 	namespace string,
 	labelSelector map[string]string,

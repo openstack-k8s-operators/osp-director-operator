@@ -171,7 +171,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -545,8 +545,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 		// Next deploy the provisioning image (Apache) server
 		provisionServer = &ospdirectorv1beta1.OpenStackProvisionServer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      instance.ObjectMeta.Name + "-provisionserver",
-				Namespace: instance.ObjectMeta.Namespace,
+				Name:      instance.Name + "-provisionserver",
+				Namespace: instance.Namespace,
 			},
 		}
 

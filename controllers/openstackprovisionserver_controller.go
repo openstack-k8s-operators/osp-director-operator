@@ -481,7 +481,7 @@ func (r *OpenStackProvisionServerReconciler) getLocalImageURL(instance *ospdirec
 
 func (r *OpenStackProvisionServerReconciler) getProvisioningInterface(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackProvisionServer,
+	_ *ospdirectorv1beta1.OpenStackProvisionServer,
 ) (string, error) {
 	cfg, err := config.GetConfig()
 

@@ -390,7 +390,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 	hostname string,
 	envVars *map[string]common.EnvSetter,
 ) error {
-	var terminationGracePeriodSeconds int64 = 0
+	var terminationGracePeriodSeconds int64
 
 	runAsUser := int64(instance.Spec.RunUID)
 	runAsGroup := int64(instance.Spec.RunGID)
@@ -547,17 +547,17 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 		// Can not add/replace new structs in the pod here as that will drop the defaults that
 		// are set/added when the pod is created.
 
-		isPodUpdate := !pod.ObjectMeta.CreationTimestamp.IsZero()
+		isPodUpdate := !pod.CreationTimestamp.IsZero()
 
-		val, ok := pod.ObjectMeta.Annotations["k8s.v1.cni.cncf.io/networks"]
+		val, ok := pod.Annotations["k8s.v1.cni.cncf.io/networks"]
 		if ok && val != annotation {
 			return k8s_errors.NewForbidden(
 				schema.GroupResource{Group: "", Resource: "pods"}, // Specify the group and resource type
 				pod.Name,
-				errors.New("Restart Pod required to get new network attachment configured"),
+				errors.New("restart Pod required to get new network attachment configured"),
 			)
 		}
-		pod.ObjectMeta.Annotations["k8s.v1.cni.cncf.io/networks"] = annotation
+		pod.Annotations["k8s.v1.cni.cncf.io/networks"] = annotation
 
 		for k, v := range common.GetLabels(instance, openstackclient.AppLabel, map[string]string{}) {
 			pod.Labels[k] = v
@@ -600,7 +600,7 @@ func (r *OpenStackClientReconciler) podCreateOrUpdate(
 			return k8s_errors.NewForbidden(
 				schema.GroupResource{Group: "", Resource: "pods"}, // Specify the group and resource type
 				pod.Name,
-				errors.New("Cannot update Pod spec field - Spec.InitContainers[0].Image"), // Specify the error message
+				errors.New("cannot update Pod spec field - Spec.InitContainers[0].Image"), // Specify the error message
 			)
 		}
 

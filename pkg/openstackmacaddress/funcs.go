@@ -1,3 +1,4 @@
+// Package openstackmacaddress provides utilities for OpenStack MAC address management.
 package openstackmacaddress
 
 import (

@@ -191,7 +191,7 @@ func (r *OpenStackVMSetReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -779,7 +779,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	ctx context.Context,
 	instance *ospdirectorv1beta2.OpenStackVMSet,
 	cond *shared.Condition,
-	envVars map[string]common.EnvSetter,
+	_ map[string]common.EnvSetter,
 	ctl *ospdirectorv1beta1.Host,
 	osNetBindings map[string]ospdirectorv1beta1.AttachType,
 ) error {
@@ -1503,7 +1503,7 @@ func (r *OpenStackVMSetReconciler) doVMDelete(
 
 	// Generate a map of existing VMs and also store those annotated for potential removal
 	for _, virtualMachine := range virtualMachineList.Items {
-		existingVirtualMachines[virtualMachine.ObjectMeta.Name] = virtualMachine.ObjectMeta.Name
+		existingVirtualMachines[virtualMachine.Name] = virtualMachine.Name
 
 		if val, ok := virtualMachine.Annotations[shared.HostRemovalAnnotation]; ok && (strings.ToLower(val) == "yes" || strings.ToLower(val) == "true") {
 			removalAnnotatedVirtualMachines = append(removalAnnotatedVirtualMachines, virtualMachine)

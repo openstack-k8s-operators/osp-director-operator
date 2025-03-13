@@ -320,3 +320,26 @@ osp-director-operator-agent-image-build: test ## Build osp-director-operator-age
 .PHONY: osp-director-downloader-image-build
 osp-director-downloader-image-build: test ## Build osp-director-downloader image.
 	podman build -t ${IMG} -f containers/image_downloader/Dockerfile containers/image_downloader
+
+.PHONY: gowork
+gowork: ## Generate go.work file to support our multi module repository
+	test -f go.work || GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) go work init
+	go work use .
+	go work sync
+
+.PHONY: operator-lint
+operator-lint: gowork ## Runs operator-lint
+	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.3.0
+	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...
+
+BRANCH ?= master
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.18
+
+PHONY: crd-schema-check
+crd-schema-check: manifests
+	INSTALL_DIR=$(LOCALBIN) CRD_SCHEMA_CHECKER_VERSION=$(CRD_SCHEMA_CHECKER_VERSION) hack/build-crd-schema-checker.sh
+	INSTALL_DIR=$(LOCALBIN) BASE_REF="$${PULL_BASE_SHA:-$(BRANCH)}" hack/crd-schema-checker.sh
+
+.PHONY: tidy
+tidy: ## Run go mod tidy on every mod file in the repo
+	go mod tidy

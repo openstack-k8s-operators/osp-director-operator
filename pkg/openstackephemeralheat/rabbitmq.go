@@ -86,7 +86,7 @@ func RabbitmqPod(instance *ospdirectorv1beta1.OpenStackEphemeralHeat) *corev1.Po
 }
 
 // RabbitmqService func
-func RabbitmqService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, scheme *runtime.Scheme) *corev1.Service {
+func RabbitmqService(instance *ospdirectorv1beta1.OpenStackEphemeralHeat, _ *runtime.Scheme) *corev1.Service {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

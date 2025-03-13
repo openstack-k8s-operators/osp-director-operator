@@ -73,7 +73,7 @@ func (r *OpenStackProvisionServer) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackProvisionServer) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackProvisionServer) ValidateUpdate(_ runtime.Object) error {
 	openstackprovisionserverlog.Info("validate update", "name", r.Name)
 
 	return r.validateCr()

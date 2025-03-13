@@ -14,14 +14,14 @@ GOARCH=$(go env GOARCH)
 cdup="$(git rev-parse --show-cdup)" && test -n "$cdup" && cd "$cdup"
 
 if [ -z ${VERSION_OVERRIDE+a} ]; then
-	echo "Using version from git..."
-	VERSION_OVERRIDE=$(git describe --abbrev=8 --dirty --always)
+    echo "Using version from git..."
+    VERSION_OVERRIDE=$(git describe --abbrev=8 --dirty --always)
 fi
 
 GLDFLAGS+="-X ${REPO}/pkg/version.Raw=${VERSION_OVERRIDE}"
 
 if [ -z ${BIN_PATH+a} ]; then
-	export BIN_PATH=build/_output/${GOOS}/${GOARCH}
+    export BIN_PATH=build/_output/${GOOS}/${GOARCH}
 fi
 
 mkdir -p ${BIN_PATH}
