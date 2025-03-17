@@ -1,6 +1,6 @@
 Q: WHAT IS TESTED HERE?
 
-A: 
+A:
 
 - Create 1 OpenStackNet
 - Try to change the bridge name of the OpenStackNet after it is created

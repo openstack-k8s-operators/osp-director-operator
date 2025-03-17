@@ -14,7 +14,7 @@ skopeo --version
 
 echo "Calculating image digest for docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA}"
 DIGEST=$(skopeo inspect docker://${REGISTRY}/${BASE_IMAGE}:${GITHUB_SHA} | jq '.Digest' -r)
-# Output: 
+# Output:
 # Calculating image digest for docker://quay.io/openstack-k8s-operators/osp-director-operator:d03f2c1c362c04fc5ef819f92a218f9ea59bbd0c
 # Digest: sha256:1d5b578fd212f8dbd03c0235f1913ef738721766f8c94236af5efecc6d8d8cb1
 echo "Digest: ${DIGEST}"
@@ -38,8 +38,8 @@ AGENT_IMG_BASE="${REGISTRY}/${AGENT_IMAGE}"
 AGENT_IMG="${AGENT_IMG_BASE}:${GITHUB_SHA}"
 AGENT_DIGEST=$(skopeo inspect docker://${AGENT_IMG} | jq '.Digest' -r)
 if [[ -z "$AGENT_DIGEST" ]]; then
-  echo "ERROR: skopeo inspect failed for ${AGENT_IMG}"
-  exit 1
+    echo "ERROR: skopeo inspect failed for ${AGENT_IMG}"
+    exit 1
 fi
 AGENT_IMG_WITH_DIGEST="${AGENT_IMG_BASE}@${AGENT_DIGEST}"
 sed -z -e 's!\(AGENT_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${AGENT_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
@@ -50,8 +50,8 @@ DOWNLOADER_IMG_BASE="${REGISTRY}/${DOWNLOADER_IMAGE}"
 DOWNLOADER_IMG="${DOWNLOADER_IMG_BASE}:${GITHUB_SHA}"
 DOWNLOADER_DIGEST=$(skopeo inspect docker://${DOWNLOADER_IMG} | jq '.Digest' -r)
 if [[ -z "$DOWNLOADER_DIGEST" ]]; then
-  echo "ERROR: skopeo inspect failed for ${DOWNLOADER_IMG}"
-  exit 1
+    echo "ERROR: skopeo inspect failed for ${DOWNLOADER_IMG}"
+    exit 1
 fi
 DOWNLOADER_IMG_WITH_DIGEST="${DOWNLOADER_IMG_BASE}@${DOWNLOADER_DIGEST}"
 sed -z -e 's!\(DOWNLOADER_IMAGE_URL_DEFAULT\n\s\+value: \)\S\+!\1'${DOWNLOADER_IMG_WITH_DIGEST}'!' -i "${CLUSTER_BUNDLE_FILE}"
@@ -64,38 +64,38 @@ sed -i 's/deploymentName: webhook/deploymentName: osp-director-operator-controll
 # error will be reported to the console.
 set +e
 for csv_image in $(cat "${CLUSTER_BUNDLE_FILE}" | grep "image:" | sed -e "s|.*image:||" | sort -u); do
-  digest_image=""
-  echo "CSV line: ${csv_image}"
+    digest_image=""
+    echo "CSV line: ${csv_image}"
 
-  # case where @ is in the csv_image image
-  if [[ "$csv_image" =~ .*"@".* ]]; then
-    delimeter='@'
-  else
-    delimeter=':'
-  fi
-
-  base_image=$(echo $csv_image | cut -f 1 -d${delimeter})
-  tag_image=$(echo $csv_image | cut -f 2 -d${delimeter})
-
-  if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
-    echo "$base_image:$tag_image becomes $OPERATOR_IMG_WITH_DIGEST"
-    sed -e "s|$base_image:$tag_image|$OPERATOR_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
-  elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
-    echo "$base_image:$tag_image becomes $AGENT_IMG_WITH_DIGEST"
-    sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
-  elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
-    echo "$base_image:$tag_image becomes $DOWNLOADER_IMG_WITH_DIGEST"
-    sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
-  else
-    digest_image=$(skopeo inspect docker://${base_image}${delimeter}${tag_image} | jq '.Digest' -r)
-    echo "Base image: $base_image"
-    if [ -n "$digest_image" ]; then
-      echo "$base_image${delimeter}$tag_image becomes $base_image@$digest_image"
-      sed -i "s|$base_image$delimeter$tag_image|$base_image@$digest_image|g" "${CLUSTER_BUNDLE_FILE}"
+    # case where @ is in the csv_image image
+    if [[ "$csv_image" =~ .*"@".* ]]; then
+        delimeter='@'
     else
-      echo "$base_image${delimeter}$tag_image not changed"
+        delimeter=':'
     fi
-  fi
+
+    base_image=$(echo $csv_image | cut -f 1 -d${delimeter})
+    tag_image=$(echo $csv_image | cut -f 2 -d${delimeter})
+
+    if [[ "$base_image:$tag_image" == "controller:latest" ]]; then
+        echo "$base_image:$tag_image becomes $OPERATOR_IMG_WITH_DIGEST"
+        sed -e "s|$base_image:$tag_image|$OPERATOR_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+    elif [[ "$base_image" == */"${AGENT_IMAGE}" ]]; then
+        echo "$base_image:$tag_image becomes $AGENT_IMG_WITH_DIGEST"
+        sed -e "s|$base_image:$tag_image|$AGENT_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+    elif [[ "$base_image" == */"${DOWNLOADER_IMAGE}" ]]; then
+        echo "$base_image:$tag_image becomes $DOWNLOADER_IMG_WITH_DIGEST"
+        sed -e "s|$base_image:$tag_image|$DOWNLOADER_IMG_WITH_DIGEST|g" -i "${CLUSTER_BUNDLE_FILE}"
+    else
+        digest_image=$(skopeo inspect docker://${base_image}${delimeter}${tag_image} | jq '.Digest' -r)
+        echo "Base image: $base_image"
+        if [ -n "$digest_image" ]; then
+            echo "$base_image${delimeter}$tag_image becomes $base_image@$digest_image"
+            sed -i "s|$base_image$delimeter$tag_image|$base_image@$digest_image|g" "${CLUSTER_BUNDLE_FILE}"
+        else
+            echo "$base_image${delimeter}$tag_image not changed"
+        fi
+    fi
 done
 
 echo "Resulting bundle file images:"

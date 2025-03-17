@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: openstackcontrolplanes.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
@@ -46,14 +45,19 @@ spec:
           plane configuration
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -63,21 +67,22 @@ spec:
               additionalServiceVIPs:
                 additionalProperties:
                   type: string
-                description: 'AdditionalServiceVIPs - Map of service name <-> subnet
-                  nameLower for which a IP should get reserved on These are used to
-                  create the <Service>VirtualFixedIPs environment parameters starting
-                  wallaby/OSP17.0. Default "Redis":  "internal_api", "OVNDBs": "internal_api",
+                description: |-
+                  AdditionalServiceVIPs - Map of service name <-> subnet nameLower for which a IP should get reserved on
+                  These are used to create the <Service>VirtualFixedIPs environment parameters starting wallaby/OSP17.0.
+                  Default "Redis":  "internal_api",
+                          "OVNDBs": "internal_api",
                   https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
-                  Note: OSP17 networkv2 only'
+                  Note: OSP17 networkv2 only
                 type: object
               caConfigMap:
                 description: Name of the config map containing custom CA certificates
                   to trust
                 type: string
               enableFencing:
-                description: 'EnableFencing is provided so that users have the option
-                  to disable fencing if desired FIXME: Defaulting to false until Kubevirt
-                  agent merged into RHEL overcloud image'
+                description: |-
+                  EnableFencing is provided so that users have the option to disable fencing if desired
+                  FIXME: Defaulting to false until Kubevirt agent merged into RHEL overcloud image
                 type: boolean
               idmSecret:
                 description: Idm secret used to register openstack client in IPA
@@ -165,9 +170,9 @@ spec:
                         match.
                       type: string
                     storageAccessMode:
-                      description: StorageAccessMode - Virtual machines must have
-                        a persistent volume claim (PVC) with a shared ReadWriteMany
-                        (RWX) access mode to be live migrated.
+                      description: |-
+                        StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
+                        with a shared ReadWriteMany (RWX) access mode to be live migrated.
                       enum:
                       - ReadWriteOnce
                       - ReadWriteMany
@@ -176,14 +181,11 @@ spec:
                       description: StorageClass to be used for the controller disks
                       type: string
                     storageVolumeMode:
-                      description: 'StorageVolumeMode - When using OpenShift Virtualization
-                        with OpenShift Container Platform Container Storage, specify
-                        RBD block mode persistent volume claims (PVCs) when creating
-                        virtual machine disks. With virtual machine disks, RBD block
-                        mode volumes are more efficient and provide better performance
-                        than Ceph FS or RBD filesystem-mode PVCs. To specify RBD block
-                        mode PVCs, use the ''ocs-storagecluster-ceph-rbd'' storage
-                        class and VolumeMode: Block.'
+                      description: |-
+                        StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+                        specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+                        RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+                        To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
                       enum:
                       - Block
                       - Filesystem
@@ -239,9 +241,9 @@ spec:
                   files
                 type: string
               provisioningStatus:
-                description: OpenStackControlPlaneProvisioningStatus represents the
-                  overall provisioning state of the OpenStackControlPlane (with an
-                  optional explanatory message)
+                description: |-
+                  OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
+                  the OpenStackControlPlane (with an optional explanatory message)
                 properties:
                   clientReady:
                     type: boolean
@@ -327,14 +329,19 @@ spec:
           plane configuration
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -344,12 +351,13 @@ spec:
               additionalServiceVIPs:
                 additionalProperties:
                   type: string
-                description: 'AdditionalServiceVIPs - Map of service name <-> subnet
-                  nameLower for which a IP should get reserved on These are used to
-                  create the <Service>VirtualFixedIPs environment parameters starting
-                  wallaby/OSP17.0. Default "Redis":  "internal_api", "OVNDBs": "internal_api",
+                description: |-
+                  AdditionalServiceVIPs - Map of service name <-> subnet nameLower for which a IP should get reserved on
+                  These are used to create the <Service>VirtualFixedIPs environment parameters starting wallaby/OSP17.0.
+                  Default "Redis":  "internal_api",
+                          "OVNDBs": "internal_api",
                   https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/deployment/network_v2.html#service-virtual-ips
-                  Note: OSP17 networkv2 only'
+                  Note: OSP17 networkv2 only
                 type: object
               caConfigMap:
                 description: Name of the config map containing custom CA certificates
@@ -405,26 +413,24 @@ spec:
                             type: string
                           dedicatedIOThread:
                             default: false
-                            description: DedicatedIOThread - Disks with dedicatedIOThread
-                              set to true will be allocated an exclusive thread. This
-                              is generally useful if a specific Disk is expected to
-                              have heavy I/O traffic, e.g. a database spindle.
+                            description: |-
+                              DedicatedIOThread - Disks with dedicatedIOThread set to true will be allocated an exclusive thread.
+                              This is generally useful if a specific Disk is expected to have heavy I/O traffic, e.g. a database spindle.
                             type: boolean
                           diskSize:
                             description: Disc size in GB
                             format: int32
                             type: integer
                           name:
-                            description: Name of the disk, e.g. used to do the PVC
-                              request. Must consist of lower case alphanumeric characters
-                              or '-', and must start and end with an alphanumeric
-                              character
+                            description: |-
+                              Name of the disk, e.g. used to do the PVC request.
+                              Must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character
                             type: string
                           storageAccessMode:
                             default: ReadWriteMany
-                            description: StorageAccessMode - Virtual machines must
-                              have a persistent volume claim (PVC) with a shared ReadWriteMany
-                              (RWX) access mode to be live migrated.
+                            description: |-
+                              StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
+                              with a shared ReadWriteMany (RWX) access mode to be live migrated.
                             enum:
                             - ReadWriteOnce
                             - ReadWriteMany
@@ -434,14 +440,11 @@ spec:
                             type: string
                           storageVolumeMode:
                             default: Filesystem
-                            description: 'StorageVolumeMode - When using OpenShift
-                              Virtualization with OpenShift Container Platform Container
-                              Storage, specify RBD block mode persistent volume claims
-                              (PVCs) when creating virtual machine disks. With virtual
-                              machine disks, RBD block mode volumes are more efficient
-                              and provide better performance than Ceph FS or RBD filesystem-mode
-                              PVCs. To specify RBD block mode PVCs, use the ''ocs-storagecluster-ceph-rbd''
-                              storage class and VolumeMode: Block.'
+                            description: |-
+                              StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+                              specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+                              RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+                              To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
                             enum:
                             - Block
                             - Filesystem
@@ -458,12 +461,10 @@ spec:
                       type: string
                     blockMultiQueue:
                       default: false
-                      description: Block Multi-Queue is a framework for the Linux
-                        block layer that maps Device I/O queries to multiple queues.
-                        This splits I/O processing up across multiple threads, and
-                        therefor multiple CPUs. libvirt recommends that the number
-                        of queues used should match the number of CPUs allocated for
-                        optimal performance.
+                      description: |-
+                        Block Multi-Queue is a framework for the Linux block layer that maps Device I/O queries to multiple queues.
+                        This splits I/O processing up across multiple threads, and therefor multiple CPUs. libvirt recommends that the
+                        number of queues used should match the number of CPUs allocated for optimal performance.
                       type: boolean
                     cores:
                       description: number of Cores assigned to the VM
@@ -479,21 +480,19 @@ spec:
                       format: int32
                       type: integer
                     evictionStrategy:
-                      description: EvictionStrategy defines if the VirtualMachineInstance
-                        should be migrated instead of shut-off.
+                      description: |-
+                        EvictionStrategy defines if the VirtualMachineInstance should be
+                        migrated instead of shut-off.
                       enum:
                       - None
                       - LiveMigrate
                       type: string
                     ioThreadsPolicy:
-                      description: IOThreadsPolicy - IO thread policy for the domain.
-                        Currently valid policies are shared and auto. However, if
-                        any disk requests a dedicated IOThread, ioThreadsPolicy will
-                        be enabled and default to shared. When ioThreadsPolicy is
-                        set to auto IOThreads will also be "isolated" from the vCPUs
-                        and placed on the same physical CPU as the QEMU emulator thread.
-                        An ioThreadsPolicy of shared indicates that KubeVirt should
-                        use one thread that will be shared by all disk devices.
+                      description: |-
+                        IOThreadsPolicy - IO thread policy for the domain. Currently valid policies are shared and auto.
+                        However, if any disk requests a dedicated IOThread, ioThreadsPolicy will be enabled and default to shared.
+                        When ioThreadsPolicy is set to auto IOThreads will also be "isolated" from the vCPUs and placed on the same physical CPU as the QEMU emulator thread.
+                        An ioThreadsPolicy of shared indicates that KubeVirt should use one thread that will be shared by all disk devices.
                       enum:
                       - auto
                       - shared
@@ -544,25 +543,24 @@ spec:
                           type: string
                         dedicatedIOThread:
                           default: false
-                          description: DedicatedIOThread - Disks with dedicatedIOThread
-                            set to true will be allocated an exclusive thread. This
-                            is generally useful if a specific Disk is expected to
-                            have heavy I/O traffic, e.g. a database spindle.
+                          description: |-
+                            DedicatedIOThread - Disks with dedicatedIOThread set to true will be allocated an exclusive thread.
+                            This is generally useful if a specific Disk is expected to have heavy I/O traffic, e.g. a database spindle.
                           type: boolean
                         diskSize:
                           description: Disc size in GB
                           format: int32
                           type: integer
                         name:
-                          description: Name of the disk, e.g. used to do the PVC request.
-                            Must consist of lower case alphanumeric characters or
-                            '-', and must start and end with an alphanumeric character
+                          description: |-
+                            Name of the disk, e.g. used to do the PVC request.
+                            Must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character
                           type: string
                         storageAccessMode:
                           default: ReadWriteMany
-                          description: StorageAccessMode - Virtual machines must have
-                            a persistent volume claim (PVC) with a shared ReadWriteMany
-                            (RWX) access mode to be live migrated.
+                          description: |-
+                            StorageAccessMode - Virtual machines must have a persistent volume claim (PVC)
+                            with a shared ReadWriteMany (RWX) access mode to be live migrated.
                           enum:
                           - ReadWriteOnce
                           - ReadWriteMany
@@ -572,14 +570,11 @@ spec:
                           type: string
                         storageVolumeMode:
                           default: Filesystem
-                          description: 'StorageVolumeMode - When using OpenShift Virtualization
-                            with OpenShift Container Platform Container Storage, specify
-                            RBD block mode persistent volume claims (PVCs) when creating
-                            virtual machine disks. With virtual machine disks, RBD
-                            block mode volumes are more efficient and provide better
-                            performance than Ceph FS or RBD filesystem-mode PVCs.
-                            To specify RBD block mode PVCs, use the ''ocs-storagecluster-ceph-rbd''
-                            storage class and VolumeMode: Block.'
+                          description: |-
+                            StorageVolumeMode - When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+                            specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+                            RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+                            To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
                           enum:
                           - Block
                           - Filesystem
@@ -591,8 +586,9 @@ spec:
                       type: object
                     runStrategy:
                       default: Manual
-                      description: Running state indicates the requested running state
-                        of the VirtualMachineInstance mutually exclusive with Running
+                      description: |-
+                        Running state indicates the requested running state of the VirtualMachineInstance
+                        mutually exclusive with Running
                       enum:
                       - Always
                       - Halted
@@ -600,10 +596,9 @@ spec:
                       - RerunOnFailure
                       type: string
                     storageAccessMode:
-                      description: (deprecated) StorageAccessMode - use RootDisk.StorageAccessMode
-                        instead Virtual machines must have a persistent volume claim
-                        (PVC) with a shared ReadWriteMany (RWX) access mode to be
-                        live migrated.
+                      description: |-
+                        (deprecated) StorageAccessMode - use RootDisk.StorageAccessMode instead
+                        Virtual machines must have a persistent volume claim (PVC) with a shared ReadWriteMany (RWX) access mode to be live migrated.
                       enum:
                       - ReadWriteOnce
                       - ReadWriteMany
@@ -613,15 +608,12 @@ spec:
                         disks - use RootDisk.
                       type: string
                     storageVolumeMode:
-                      description: '(deprecated) StorageVolumeMode - use RootDisk.StorageVolumeMode
-                        instead When using OpenShift Virtualization with OpenShift
-                        Container Platform Container Storage, specify RBD block mode
-                        persistent volume claims (PVCs) when creating virtual machine
-                        disks. With virtual machine disks, RBD block mode volumes
-                        are more efficient and provide better performance than Ceph
-                        FS or RBD filesystem-mode PVCs. To specify RBD block mode
-                        PVCs, use the ''ocs-storagecluster-ceph-rbd'' storage class
-                        and VolumeMode: Block.'
+                      description: |-
+                        (deprecated) StorageVolumeMode - use RootDisk.StorageVolumeMode instead
+                        When using OpenShift Virtualization with OpenShift Container Platform Container Storage,
+                        specify RBD block mode persistent volume claims (PVCs) when creating virtual machine disks. With virtual machine disks,
+                        RBD block mode volumes are more efficient and provide better performance than Ceph FS or RBD filesystem-mode PVCs.
+                        To specify RBD block mode PVCs, use the 'ocs-storagecluster-ceph-rbd' storage class and VolumeMode: Block.
                       enum:
                       - Block
                       - Filesystem
@@ -678,9 +670,9 @@ spec:
                   files
                 type: string
               provisioningStatus:
-                description: OpenStackControlPlaneProvisioningStatus represents the
-                  overall provisioning state of the OpenStackControlPlane (with an
-                  optional explanatory message)
+                description: |-
+                  OpenStackControlPlaneProvisioningStatus represents the overall provisioning state of
+                  the OpenStackControlPlane (with an optional explanatory message)
                 properties:
                   clientReady:
                     type: boolean

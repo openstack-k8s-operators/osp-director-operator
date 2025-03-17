@@ -1,3 +1,4 @@
+#!/bin/bash
 # Script to modify the image references in the staged image bundle so they can be
 # installed easily tested from the registry-proxy.engineering.redhat.com staging repo internally.
 set -xe
@@ -19,7 +20,7 @@ WORK_DIR=$(mktemp -d)
 cat > $WORK_DIR/Dockerfile << EOF_CAT
 FROM $BUNDLE_IMG as bundle
 
-FROM golang:1.21 AS editor
+FROM golang:1.23 AS editor
 COPY --from=bundle /manifests/osp-director-operator.clusterserviceversion.yaml /osp-director-operator.clusterserviceversion.yaml
 
 RUN sed -e "s|$REPLACE_URL/osp-director-downloader|${WITH_URL}-osp-director-downloader|" -i /osp-director-operator.clusterserviceversion.yaml

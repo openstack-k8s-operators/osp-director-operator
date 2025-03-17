@@ -1,3 +1,4 @@
+#!/bin/bash
 # At a minimum you need to set GIT_COMMIT, RELEASE_VERSION, and OPERATOR_IMG_WITH_DIGEST to run this script.
 
 #GIT_COMMIT=2b4fb608d3490be64c42fe073dd525a618fb4082
@@ -12,8 +13,8 @@ UPSTREAM_BRANCH=${UPSTREAM_BRANCH:-"v1.3.x"}
 DOWNSTREAM_BRANCH=${DOWNSTREAM_BRANCH:-"rhos-16.2-rhel-8"}
 
 if ! podman login --get-login registry.redhat.io &> /dev/null; then
-  echo "Please run podman login registry.redhat.io before running this script."
-  exit 1
+    echo "Please run podman login registry.redhat.io before running this script."
+    exit 1
 fi
 
 set -ex
@@ -32,7 +33,7 @@ cd "$TMP_DIR/upstream"
 git checkout -b build remotes/origin/$UPSTREAM_BRANCH
 
 #FIXME: ideally this would occur after the source is imported downstream via automation
-VERSION=$RELEASE_VERSION IMG=$OPERATOR_IMG_WITH_DIGEST make bundle 
+VERSION=$RELEASE_VERSION IMG=$OPERATOR_IMG_WITH_DIGEST make bundle
 
 cd "$TMP_DIR"
 

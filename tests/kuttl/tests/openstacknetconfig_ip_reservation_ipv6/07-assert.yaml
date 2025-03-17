@@ -78,7 +78,7 @@ spec:
         ctlplane: 2001:db8:fd00:2000::41
       macReservations: {}
     controller-2:
-      ipReservations: 
+      ipReservations:
         ctlplane:  2001:db8:fd00:2000::42
       macReservations: {}
     controlplane:
