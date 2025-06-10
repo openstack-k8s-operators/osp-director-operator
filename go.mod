@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.21
+go 1.22.0
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
@@ -40,7 +40,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
@@ -217,5 +217,4 @@ replace (
 
 	// pinned because no tag supports 1.18 yet
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-
 )
