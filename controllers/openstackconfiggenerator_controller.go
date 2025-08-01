@@ -800,11 +800,11 @@ func (r *OpenStackConfigGeneratorReconciler) createFencingEnvironmentFiles(
 		// TODO: This will likely need refactoring sooner or later
 		var virtualMachineInstanceLists []*virtv1.VirtualMachineInstanceList
 
-		for roleName, roleParams := range controlPlane.Spec.VirtualMachineRoles {
+		for _, roleParams := range controlPlane.Spec.VirtualMachineRoles {
 			if common.StringInSlice(roleParams.RoleName, fencingRoles) && roleParams.RoleCount == 3 {
 				// Get the associated VM instances
 				virtualMachineInstanceList, err := common.GetVirtualMachineInstances(ctx, r, instance.Namespace, map[string]string{
-					common.OwnerNameLabelSelector: strings.ToLower(roleName),
+					common.OwnerNameLabelSelector: strings.ToLower(roleParams.RoleName),
 				})
 				if err != nil {
 					cond.Message = err.Error()
