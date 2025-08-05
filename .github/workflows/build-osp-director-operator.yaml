@@ -47,7 +47,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v7.0.7
+      uses: tj-actions/branch-names@v9.0.0
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -83,7 +83,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v7.0.7
+      uses: tj-actions/branch-names@v9.0.0
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -121,7 +121,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v7.0.7
+      uses: tj-actions/branch-names@v9.0.0
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -207,7 +207,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v7.0.7
+      uses: tj-actions/branch-names@v9.0.0
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
@@ -255,7 +255,7 @@ jobs:
 
     - name: Get branch name
       id: branch-name
-      uses: tj-actions/branch-names@v7.0.7
+      uses: tj-actions/branch-names@v9.0.0
 
     - name: Set latest tag for non master branch
       if: "${{ steps.branch-name.outputs.current_branch != 'master' }}"
