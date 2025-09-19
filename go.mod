@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.21
+go 1.22
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
@@ -32,7 +32,7 @@ require (
 	kubevirt.io/client-go v0.53.2
 	kubevirt.io/containerized-data-importer-api v1.47.0
 	sigs.k8s.io/controller-runtime v0.13.1
-	sigs.k8s.io/yaml v1.4.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -57,6 +57,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
