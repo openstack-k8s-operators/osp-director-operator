@@ -22,9 +22,11 @@ FROM $BUNDLE_IMG as bundle
 FROM golang:1.21 AS editor
 COPY --from=bundle /manifests/osp-director-operator.clusterserviceversion.yaml /osp-director-operator.clusterserviceversion.yaml
 
-RUN sed -e "s|$REPLACE_URL/osp-director-downloader|${WITH_URL}-osp-director-downloader|" -i /osp-director-operator.clusterserviceversion.yaml
-RUN sed -e "s|$REPLACE_URL/osp-director-agent|${WITH_URL}-osp-director-agent|" -i /osp-director-operator.clusterserviceversion.yaml
-RUN sed -e "s|$REPLACE_URL/osp-director-operator|${WITH_URL}-osp-director-operator|" -i /osp-director-operator.clusterserviceversion.yaml
+# (mschuppert) with new build process (konflux) and proper config of ImageContentSourcePolicy we no longer need those replaces,
+# just keeping them for now as reference
+#RUN sed -e "s|$REPLACE_URL/osp-director-downloader|${WITH_URL}-osp-director-downloader|" -i /osp-director-operator.clusterserviceversion.yaml
+#RUN sed -e "s|$REPLACE_URL/osp-director-agent|${WITH_URL}-osp-director-agent|" -i /osp-director-operator.clusterserviceversion.yaml
+#RUN sed -e "s|$REPLACE_URL/osp-director-operator|${WITH_URL}-osp-director-operator|" -i /osp-director-operator.clusterserviceversion.yaml
 
 FROM $BUNDLE_IMG
 COPY --from=editor /osp-director-operator.clusterserviceversion.yaml /manifests/osp-director-operator.clusterserviceversion.yaml
