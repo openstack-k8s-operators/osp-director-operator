@@ -42,7 +42,6 @@ type IPStatus struct {
 // HostStatus represents the IPStatus and provisioning state + deployment information
 type HostStatus struct {
 
-	// +kubebuilder:validation:Required
 	// IPStatus -
 	IPStatus `json:",inline"`
 
