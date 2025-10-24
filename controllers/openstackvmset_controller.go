@@ -1368,7 +1368,7 @@ func (r *OpenStackVMSetReconciler) checkVMsAnnotatedForDeletion(
 			}
 		}
 		actualStatus := instance.Status.VMHosts[hostname]
-		if !reflect.DeepEqual(&actualStatus, vmStatus) {
+		if !reflect.DeepEqual(actualStatus, vmStatus) {
 			instance.Status.VMHosts[hostname] = vmStatus
 		}
 	}
