@@ -1645,7 +1645,7 @@ func (r *OpenStackBaremetalSetReconciler) checkBMHsAnnotatedForDeletion(
 			}
 		}
 		actualBMHStatus := instance.Status.BaremetalHosts[hostname]
-		if !reflect.DeepEqual(&actualBMHStatus, bmhStatus) {
+		if !reflect.DeepEqual(actualBMHStatus, bmhStatus) {
 			instance.Status.BaremetalHosts[hostname] = bmhStatus
 		}
 	}
