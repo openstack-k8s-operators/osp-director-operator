@@ -43,7 +43,6 @@ type IPStatus struct {
 // HostStatus represents the hostname and IP info for a specific host
 type HostStatus struct {
 
-	// +kubebuilder:validation:Required
 	// IPStatus -
 	IPStatus `json:",inline"`
 
