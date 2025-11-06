@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
@@ -323,9 +322,9 @@ func (r *OpenStackIPSetReconciler) getNormalizedStatus(status *ospdirectorv1beta
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *OpenStackIPSetReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *OpenStackIPSetReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	Log := r.GetLogger()
-	ipsetFN := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	ipsetFN := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// For each NetConfig event get the list of all
@@ -362,7 +361,7 @@ func (r *OpenStackIPSetReconciler) SetupWithManager(ctx context.Context, mgr ctr
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackIPSet{}).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackNetConfig{}},
+		Watches(&ospdirectorv1beta1.OpenStackNetConfig{},
 			ipsetFN).
 		Complete(r)
 }

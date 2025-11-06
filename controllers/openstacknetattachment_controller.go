@@ -34,12 +34,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
+	sriovnetworkv1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
@@ -281,7 +280,7 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 	// Schedule reconcile on openstacknetattachment if any of the global cluster objects
 	// (nncp/sriov) change
 	//
-	ownerLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	ownerLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []reconcile.Request {
 		labels := o.GetLabels()
 		//
 		// verify object has OwnerNameLabelSelector
@@ -301,9 +300,9 @@ func (r *OpenStackNetAttachmentReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackNetAttachment{}).
-		Watches(&source.Kind{Type: &nmstatev1.NodeNetworkConfigurationPolicy{}}, ownerLabelWatcher).
-		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetwork{}}, ownerLabelWatcher).
-		Watches(&source.Kind{Type: &sriovnetworkv1.SriovNetworkNodePolicy{}}, ownerLabelWatcher).
+		Watches(&nmstatev1.NodeNetworkConfigurationPolicy{}, ownerLabelWatcher).
+		Watches(&sriovnetworkv1.SriovNetwork{}, ownerLabelWatcher).
+		Watches(&sriovnetworkv1.SriovNetworkNodePolicy{}, ownerLabelWatcher).
 		Complete(r)
 }
 

@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -52,38 +53,38 @@ func (r *OpenStackBackupRequest) SetupWebhookWithManager(mgr ctrl.Manager) error
 var _ webhook.Validator = &OpenStackBackupRequest{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackupRequest) ValidateCreate() error {
+func (r *OpenStackBackupRequest) ValidateCreate() (admission.Warnings, error) {
 	openstackbackuprequestlog.Info("validate create", "name", r.Name)
 
 	if err := r.validateCr(); err != nil {
-		return err
+		return nil, err
 	}
 
 	currentBackupOperation, err := GetOpenStackBackupOperationInProgress(webhookClient, r.Namespace)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if currentBackupOperation != "" {
-		return fmt.Errorf("cannot create a new backup request while an existing backup request is %s", currentBackupOperation)
+		return nil, fmt.Errorf("cannot create a new backup request while an existing backup request is %s", currentBackupOperation)
 	}
 
-	return r.validateCr()
+	return nil, r.validateCr()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackupRequest) ValidateUpdate(_ runtime.Object) error {
+func (r *OpenStackBackupRequest) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	openstackbackuprequestlog.Info("validate update", "name", r.Name)
 
-	return r.validateCr()
+	return nil, r.validateCr()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackupRequest) ValidateDelete() error {
+func (r *OpenStackBackupRequest) ValidateDelete() (admission.Warnings, error) {
 	openstackbackuprequestlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 func (r *OpenStackBackupRequest) validateCr() error {

@@ -138,7 +138,7 @@ func CopyFromPod(kclient kubernetes.Clientset, pod corev1.Pod, containerName str
 		defer func() {
 			_ = writer.Close()
 		}()
-		err := exec.Stream(remotecommand.StreamOptions{
+		err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 			Stdin:  argReader,
 			Stdout: writer,
 			Stderr: os.Stderr,
@@ -188,7 +188,7 @@ func ExecPodCommand(kclient kubernetes.Clientset, pod corev1.Pod, containerName 
 	argString := fmt.Sprintf("%s\n", command)
 	reader := strings.NewReader(argString)
 
-	return exec.Stream(remotecommand.StreamOptions{
+	return exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 		Stdin:  io.Reader(reader),
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
