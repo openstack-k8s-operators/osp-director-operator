@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -77,14 +78,14 @@ func (r *OpenStackNet) Default() {
 var _ webhook.Validator = &OpenStackNet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNet) ValidateCreate() error {
+func (r *OpenStackNet) ValidateCreate() (admission.Warnings, error) {
 	openstacknetlog.Info("validate create", "name", r.Name)
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackNet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	openstacknetlog.Info("validate update", "name", r.Name)
 
 	// Get the old bridge name, if any
@@ -92,7 +93,7 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 	var oldInstance *OpenStackNet
 
 	if oldInstance, ok = old.(*OpenStackNet); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackNet")
+		return nil, fmt.Errorf("runtime object is not an OpenStackNet")
 	}
 
 	//
@@ -112,7 +113,7 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 		for _, res := range role.Reservations {
 			if hostname, ok := netReservations[res.IP]; ok &&
 				res.Hostname != hostname {
-				return fmt.Errorf("duplicate ip reservation for %s (%s,%s) on %s %s",
+				return nil, fmt.Errorf("duplicate ip reservation for %s (%s,%s) on %s %s",
 					res.IP,
 					res.Hostname,
 					hostname,
@@ -123,12 +124,12 @@ func (r *OpenStackNet) ValidateUpdate(old runtime.Object) error {
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNet) ValidateDelete() error {
+func (r *OpenStackNet) ValidateDelete() (admission.Warnings, error) {
 	openstacknetlog.Info("validate delete", "name", r.Name)
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }

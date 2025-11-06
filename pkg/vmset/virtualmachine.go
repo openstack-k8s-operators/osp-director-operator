@@ -173,7 +173,7 @@ func DataVolume(
 		}
 		dataVolume.Spec.PVC.StorageClassName = &storageClass
 
-		dataVolume.Spec.PVC.Resources = corev1.ResourceRequirements{
+		dataVolume.Spec.PVC.Resources = corev1.VolumeResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceStorage: resource.MustParse(fmt.Sprintf("%dGi", diskSize)),
 			},
