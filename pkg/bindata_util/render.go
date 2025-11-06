@@ -10,7 +10,7 @@ import (
 
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
