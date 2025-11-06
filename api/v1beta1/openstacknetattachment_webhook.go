@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -64,24 +65,24 @@ func (r *OpenStackNetAttachment) Default() {
 var _ webhook.Validator = &OpenStackNetAttachment{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetAttachment) ValidateCreate() error {
+func (r *OpenStackNetAttachment) ValidateCreate() (admission.Warnings, error) {
 	openstacknetattachmentlog.Info("validate create", "name", r.Name)
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetAttachment) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackNetAttachment) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	openstacknetattachmentlog.Info("validate update", "name", r.Name)
 
-	return r.checkBridgeName(old)
+	return nil, r.checkBridgeName(old)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetAttachment) ValidateDelete() error {
+func (r *OpenStackNetAttachment) ValidateDelete() (admission.Warnings, error) {
 	openstacknetattachmentlog.Info("validate delete", "name", r.Name)
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 func (r *OpenStackNetAttachment) checkBridgeName(old runtime.Object) error {

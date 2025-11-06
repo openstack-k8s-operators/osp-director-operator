@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
@@ -411,7 +410,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	// Schedule reconcile on OpenStackNetConfig if any of the objects change where
 	// reconcile label openstacknetconfig.OpenStackNetConfigReconcileLabel
 	//
-	LabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	LabelWatcher := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []reconcile.Request {
 		labels := o.GetLabels()
 		//
 		// verify object has OpenStackNetConfigReconcileLabel
@@ -434,7 +433,7 @@ func (r *OpenStackNetConfigReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Owns(&ospdirectorv1beta1.OpenStackNetAttachment{}).
 		Owns(&ospdirectorv1beta1.OpenStackNet{}).
 		Owns(&ospdirectorv1beta1.OpenStackMACAddress{}).
-		Watches(&source.Kind{Type: &ospdirectorv1beta1.OpenStackIPSet{}}, LabelWatcher).
+		Watches(&ospdirectorv1beta1.OpenStackIPSet{}, LabelWatcher).
 		Complete(r)
 }
 

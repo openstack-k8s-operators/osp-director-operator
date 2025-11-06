@@ -818,7 +818,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 
 	var vm *virtv1.VirtualMachine
 	var vmTemplate *virtv1.VirtualMachineInstanceTemplateSpec
-	if vm, err = r.KubevirtClient.VirtualMachine(instance.Namespace).Get(ctl.DomainName, &metav1.GetOptions{}); err != nil {
+	if vm, err = r.KubevirtClient.VirtualMachine(instance.Namespace).Get(ctx, ctl.DomainName, metav1.GetOptions{}); err != nil {
 		// of not found, prepare the VirtualMachineInstanceTemplateSpec
 		if k8s_errors.IsNotFound(err) {
 			vmTemplate = &virtv1.VirtualMachineInstanceTemplateSpec{
@@ -1151,7 +1151,7 @@ func (r *OpenStackVMSetReconciler) vmCreateInstance(
 	if op != controllerutil.OperationResultNone {
 		if op == controllerutil.OperationResultCreated {
 			// start VM once when it gets created
-			if err := r.KubevirtClient.VirtualMachine(instance.Namespace).Start(vm.Name, &virtv1.StartOptions{}); err != nil {
+			if err := r.KubevirtClient.VirtualMachine(instance.Namespace).Start(ctx, vm.Name, &virtv1.StartOptions{}); err != nil {
 				return common.WrapErrorForObject(
 					fmt.Sprintf("VirtualMachine %s ERROR start after initial create: %s", vm.Name, err.Error()),
 					instance,

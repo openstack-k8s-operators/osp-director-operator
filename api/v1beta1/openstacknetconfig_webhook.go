@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -135,7 +136,7 @@ func (r *OpenStackNetConfig) Default() {
 var _ webhook.Validator = &OpenStackNetConfig{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetConfig) ValidateCreate() error {
+func (r *OpenStackNetConfig) ValidateCreate() (admission.Warnings, error) {
 	openstacknetconfiglog.Info("validate create", "name", r.Name)
 
 	//
@@ -143,7 +144,7 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 	//
 	err := r.validateNetworks()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -151,7 +152,7 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 	//
 	err = r.validateControlPlaneNetworkNames()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -159,7 +160,7 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 	//
 	err = r.validateStaticIPReservations()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -167,21 +168,21 @@ func (r *OpenStackNetConfig) ValidateCreate() error {
 	//
 	err = r.validateStaticMacReservations(nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
 	// Validate domainName, must include a top-level domain and at least one subdomain
 	//
 	if err := checkDomainName(r.Spec.DomainName); err != nil {
-		return err
+		return nil, err
 	}
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	openstacknetconfiglog.Info("validate update", "name", r.Name)
 
 	// Get the OpenStackNetConfig object
@@ -189,7 +190,7 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	var oldInstance *OpenStackNetConfig
 
 	if oldInstance, ok = old.(*OpenStackNetConfig); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackNetConfig")
+		return nil, fmt.Errorf("runtime object is not an OpenStackNetConfig")
 	}
 
 	//
@@ -197,7 +198,7 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	//
 	err := r.validateBridgeNameChanged(oldInstance)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -205,7 +206,7 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	//
 	err = r.validateStaticIPReservations()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -213,22 +214,22 @@ func (r *OpenStackNetConfig) ValidateUpdate(old runtime.Object) error {
 	//
 	err = r.validateStaticMacReservations(oldInstance)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if r.Spec.DomainName != oldInstance.Spec.DomainName {
-		return fmt.Errorf("domainName cannot be modified")
+		return nil, fmt.Errorf("domainName cannot be modified")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackNetConfig) ValidateDelete() error {
+func (r *OpenStackNetConfig) ValidateDelete() (admission.Warnings, error) {
 	openstacknetconfiglog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 // validateControlPlaneNetworkNames - validate that the specified control plane network name and name_lower match the expected ooo names

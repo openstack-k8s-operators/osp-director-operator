@@ -385,7 +385,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.NetWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -402,7 +402,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.NetAttachWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -420,7 +420,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.NetConfigWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -437,7 +437,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.MACCondTypeWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -455,7 +455,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ProvisionServerCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -473,7 +473,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.BaremetalSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -489,7 +489,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		// Now try to update the status
 		item.Status = *status
 		item.Status.Conditions.UpdateCurrentCondition(shared.CommonCondTypeWaiting, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -507,7 +507,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.VMSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -525,7 +525,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ControlPlaneWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}

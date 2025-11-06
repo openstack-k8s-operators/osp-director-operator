@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -48,22 +49,22 @@ func (r *OpenStackBackup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &OpenStackBackup{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackup) ValidateCreate() error {
+func (r *OpenStackBackup) ValidateCreate() (admission.Warnings, error) {
 	openstackbackuplog.Info("validate create", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackup) ValidateUpdate(_ runtime.Object) error {
+func (r *OpenStackBackup) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	openstackbackuplog.Info("validate update", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBackup) ValidateDelete() error {
+func (r *OpenStackBackup) ValidateDelete() (admission.Warnings, error) {
 	openstackbackuplog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return nil, nil
 }

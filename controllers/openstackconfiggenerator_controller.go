@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -684,7 +683,7 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 	// Schedule reconcile on openstackconfiggenerator if any of the objects change where
 	// owner label openstackconfiggenerator.ConfigGeneratorInputLabel
 	//
-	ConfigGeneratorInputLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	ConfigGeneratorInputLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []reconcile.Request {
 		labels := o.GetLabels()
 		//
 		// verify object has ConfigGeneratorInputLabel
@@ -705,7 +704,7 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackConfigGenerator{}).
 		// TODO: watch ctlplane, osbms for Count change
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, ConfigGeneratorInputLabelWatcher).
+		Watches(&corev1.ConfigMap{}, ConfigGeneratorInputLabelWatcher).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
 		Owns(&batchv1.Job{}).
