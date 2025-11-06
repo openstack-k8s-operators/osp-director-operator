@@ -6,7 +6,7 @@ exclude k8s.io/cluster-bootstrap v0.0.0
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/blang/semver v3.5.1+incompatible
+	github.com/blang/semver/v4 v4.0.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-git/v5 v5.16.3
 	github.com/go-logr/logr v1.4.3
@@ -40,7 +40,6 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/aws/aws-sdk-go v1.44.204 // indirect
-	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
