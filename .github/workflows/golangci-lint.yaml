@@ -13,29 +13,20 @@ jobs:
           go-version: 1.24.x
       - name: Checkout project code
         uses: actions/checkout@v3
-      - name: Checkout openstack-k8s-operators-ci project
-        uses: actions/checkout@v3
-        with:
-          repository: openstack-k8s-operators/openstack-k8s-operators-ci
-          path: ./openstack-k8s-operators-ci
       - name: Run govet.sh
-        run: ./openstack-k8s-operators-ci/test-runner/govet.sh
+        run: make govet
       - name: Run golint.sh
-        run: ./openstack-k8s-operators-ci/test-runner/golint.sh
+        run: make golint
       - name: Run gotest.sh
-        run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
+        run: make gotest
 
-  golangci:
-    name: github (golangci)
+  pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.24.x
-      - name: Checkout project code
-        uses: actions/checkout@v3
-      - name: Run golangci lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          args: --timeout 5m
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - name: skip branch check
+      run: echo "SKIP=no-commit-to-branch" >> "$GITHUB_ENV"
+    - uses: pre-commit/action@v3.0.0
+      with:
+        extra_args: --all-files --show-diff-on-failure --verbose
