@@ -104,8 +104,9 @@ gotest: get-ci-tools
 	$(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
 
 # Run golangci-lint test against code
+GOLANGCI_LINT_VERSION ?= v2.4.0
 golangci: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
+	GOLANGCI_TAG=$(GOLANGCI_LINT_VERSION) $(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
 
 # Run go lint against code
 golint: get-ci-tools
