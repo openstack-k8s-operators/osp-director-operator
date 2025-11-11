@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package main provides the entry point for the OSP Director Operator.
 package main
 
 import (
@@ -22,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"go.uber.org/zap/zapcore"
 
@@ -42,9 +46,9 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	virtv1 "kubevirt.io/api/core/v1"
 
+	sriovnetworkv1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
 	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"kubevirt.io/client-go/kubecli"
 	storageversionmigrations "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
@@ -96,15 +100,24 @@ func main() {
 	var enableLeaderElection bool
 	var enableWebhooks bool
 	var probeAddr string
+	var pprofAddr string
+	var webhookPort int
 	var enableHTTP2 bool
 	flag.BoolVar(&enableHTTP2, "enable-http2", enableHTTP2, "If HTTP/2 should be enabled for the metrics and webhook servers.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&pprofAddr, "pprof-bind-address", "", "The address the pprof endpoint binds to. Set to empty to disable pprof")
+	flag.IntVar(&webhookPort, "webhook-bind-address", 4343, "The port the webhook server binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	devMode, err := strconv.ParseBool(os.Getenv("DEV_MODE"))
+	if err != nil {
+		devMode = true
+	}
+
 	opts := zap.Options{
-		Development: true,
+		Development: devMode,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
@@ -119,23 +132,60 @@ func main() {
 
 	}
 
+	disableHTTP2 := func(c *tls.Config) {
+		if enableHTTP2 {
+			return
+		}
+		c.NextProtos = []string{"http/1.1"}
+	}
+
 	options := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		PprofBindAddress:       pprofAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "576d6738.openstack.org",
+		WebhookServer: webhook.NewServer(
+			webhook.Options{
+				Port:     webhookPort,
+				CertDir:  WebhookCertDir,
+				CertName: WebhookCertName,
+				KeyName:  WebhookKeyName,
+				TLSOpts:  []func(config *tls.Config){disableHTTP2},
+			}),
+		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
+		// when the Manager ends. This requires the binary to immediately end when the
+		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
+		// speeds up voluntary leader transitions as the new leader don't have to wait
+		// LeaseDuration time first.
+		//
+		// In the default scaffold provided, the program ends immediately after
+		// the manager stops, so would be fine to enable this option. However,
+		// if you are doing or is intended to do any operation such as perform cleanups
+		// after the manager stops then its usage might be unsafe.
+		// LeaderElectionReleaseOnCancel: true,
 	}
 
 	// create multi namespace cache if list of namespaces
 	if strings.Contains(namespace, ",") {
-		options.Namespace = ""
-		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(namespace, ","))
+		// Watch multiple namespaces
+		namespaces := strings.Split(namespace, ",")
+		defaultNamespaces := make(map[string]cache.Config)
+		for _, ns := range namespaces {
+			defaultNamespaces[ns] = cache.Config{}
+		}
+		options.Cache.DefaultNamespaces = defaultNamespaces
 		setupLog.Info(fmt.Sprintf("Namespaces added to the cache: %s", namespace))
-	} else {
-		options.Namespace = namespace
+	} else if namespace != "" {
+		// Watch single namespace
+		options.Cache.DefaultNamespaces = map[string]cache.Config{
+			namespace: {},
+		}
 	}
+	// If namespace is empty, watch all namespaces (default behavior)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
@@ -160,24 +210,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	disableHTTP2 := func(c *tls.Config) {
-		if enableHTTP2 {
-			return
-		}
-		c.NextProtos = []string{"http/1.1"}
-	}
-
 	checker := healthz.Ping
 	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
 		enableWebhooks = true
-
-		// We're just getting a pointer here and overriding the default values
-		srv := mgr.GetWebhookServer()
-		srv.CertDir = WebhookCertDir
-		srv.CertName = WebhookCertName
-		srv.KeyName = WebhookKeyName
-		srv.Port = WebhookPort
-		srv.TLSOpts = []func(config *tls.Config){disableHTTP2}
 	}
 
 	if err = (&controllers.OpenStackControlPlaneReconciler{

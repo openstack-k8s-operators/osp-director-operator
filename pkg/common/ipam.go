@@ -1,4 +1,4 @@
-package common
+package common //revive:disable:var-naming
 
 // NOTE: Most of the code here was forklifted from whereabouts-cni's allocation code.
 // There is potential to refactor into a library perhaps useful to both projects?
@@ -194,7 +194,7 @@ func GetIPRange(ip net.IP, ipnet net.IPNet) (net.IP, net.IP, error) {
 }
 
 func isIntIPv4(checkipint *big.Int) bool {
-	return !(len(checkipint.Bytes()) == net.IPv6len)
+	return len(checkipint.Bytes()) != net.IPv6len
 }
 
 // BigIntToIP converts a big.Int to a net.IP

@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -360,7 +359,7 @@ func (r *OpenStackControlPlaneReconciler) Reconcile(ctx context.Context, req ctr
 func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch for objects in the same namespace as the controller CR
-	podWatcher := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+	podWatcher := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// verify if pods label match any of:
@@ -407,7 +406,7 @@ func (r *OpenStackControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) err
 
 		// watch vmset and openstackclient pods in the same namespace
 		// as we want to reconcile if VMs or openstack client pods change
-		Watches(&source.Kind{Type: &corev1.Pod{}}, podWatcher).
+		Watches(&corev1.Pod{}, podWatcher).
 		Complete(r)
 }
 
@@ -1028,7 +1027,7 @@ func (r *OpenStackControlPlaneReconciler) ensureStorageVersionMigration(
 			}
 
 			if err := r.List(ctx, smList, listOpts...); err != nil {
-				err = fmt.Errorf("Error listing services for %s: %w", smList.GroupVersionKind().Kind, err)
+				err = fmt.Errorf("error listing services for %s: %w", smList.GroupVersionKind().Kind, err)
 				return ctrl.Result{}, err
 			}
 

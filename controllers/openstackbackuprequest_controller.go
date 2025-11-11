@@ -188,7 +188,8 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 		return err
 	}
 
-	if instance.Status.CurrentState == "" {
+	switch instance.Status.CurrentState {
+	case "":
 		// If no state is set yet, then we are just beginning.
 		// Set the state to quiescing to indicate to other controllers that they should finish
 		// provisioning any CRs that haven't already completed.  This will also prevent their
@@ -198,7 +199,7 @@ func (r *OpenStackBackupRequestReconciler) saveBackup(
 		if err := r.setStatus(ctx, instance, oldStatus, "OpenStackBackupRequest is waiting for other controllers to quiesce"); err != nil {
 			return err
 		}
-	} else if instance.Status.CurrentState == shared.BackupQuiescing {
+	case shared.BackupQuiescing:
 		// If we aren't saving yet, then we are trying to quiesce all other controllers.
 		// Get all OSP-D operator CRs for all CRDs in the namespace and check all of their
 		// statuses.  If all CRs have all reached their respective "finished" states, then
@@ -282,15 +283,17 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 		return err
 	}
 
-	if instance.Status.CurrentState == "" {
+	switch instance.Status.CurrentState {
+	case "":
 		// If no state is set yet, then we are just beginning
 		action := "loading"
 
-		if instance.Spec.Mode == shared.BackupRestore {
+		switch instance.Spec.Mode {
+		case shared.BackupRestore:
 			// If mode is "restore", set the state to loading to indicate to other controllers that they should pause all
 			// reconcile activity
 			instance.Status.CurrentState = shared.BackupLoading
-		} else if instance.Spec.Mode == shared.BackupCleanRestore {
+		case shared.BackupCleanRestore:
 			// If mode is "cleanRestore", set the state to cleaning to indicate to other controllers' webhooks that they should
 			// not allow any new resources to be created (we allow reconciles to continue so that deletes of CRs issued by this
 			// controller will be processed)
@@ -301,7 +304,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 		if err := r.setStatus(ctx, instance, oldStatus, fmt.Sprintf("OpenStackBackupRequest %s is %s OpenStackBackup %s", instance.Name, action, backup.Name)); err != nil {
 			return err
 		}
-	} else if instance.Status.CurrentState == shared.BackupCleaning {
+	case shared.BackupCleaning:
 		// Delete all OSP-D-operator-generated resources in the namespace
 
 		// Get CRs, config maps and secrets we want to delete
@@ -338,7 +341,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 				return err
 			}
 		}
-	} else if instance.Status.CurrentState == shared.BackupLoading {
+	case shared.BackupLoading:
 		// Attempt to restore the backup (apply CRs, ConfigMaps and Secrets)
 		if err := r.ensureLoadBackup(ctx, instance, oldStatus, backup); err != nil {
 			// Ignore "object has been modified errors"
@@ -346,7 +349,7 @@ func (r *OpenStackBackupRequestReconciler) restoreBackup(
 				return err
 			}
 		}
-	} else if instance.Status.CurrentState == shared.BackupReconciling {
+	case shared.BackupReconciling:
 		// Check status of all the backup's resources that are now reconciling
 		if err := r.ensureReconcileBackup(ctx, instance, oldStatus, backup); err != nil {
 			return err
@@ -382,7 +385,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.NetWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -399,7 +402,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.NetAttachWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -417,7 +420,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.NetConfigWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -434,7 +437,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status = *status
 		item.Status.CurrentState = shared.MACCondTypeWaiting
 		item.Status.Conditions.UpdateCurrentCondition(item.Status.CurrentState, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -452,7 +455,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ProvisionServerCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -470,7 +473,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.BaremetalSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -486,7 +489,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		// Now try to update the status
 		item.Status = *status
 		item.Status.Conditions.UpdateCurrentCondition(shared.CommonCondTypeWaiting, shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -504,7 +507,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.VMSetCondTypeWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}
@@ -522,7 +525,7 @@ func (r *OpenStackBackupRequestReconciler) ensureLoadBackup(
 		item.Status.ProvisioningStatus.State = shared.ProvisioningState(shared.ControlPlaneWaiting)
 		item.Status.ProvisioningStatus.Reason = msg
 		item.Status.Conditions.UpdateCurrentCondition(shared.ConditionType(item.Status.ProvisioningStatus.State), shared.CommonCondReasonInit, msg)
-		if err := r.Status().Update(ctx, &item, &client.UpdateOptions{}); err != nil {
+		if err := r.Status().Update(ctx, &item); err != nil {
 			return err
 		}
 	}

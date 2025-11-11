@@ -1,6 +1,6 @@
 Q: WHAT IS TESTED HERE?
 
-A: 
+A:
 - create osnetcfg with no static reservation
 - add static reservation for controller-0
 - Run webhook fail tests
