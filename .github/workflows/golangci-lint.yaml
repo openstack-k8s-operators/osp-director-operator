@@ -21,6 +21,7 @@ jobs:
         run: make gotest
 
   pre-commit:
+    name: github (pre-commit)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
