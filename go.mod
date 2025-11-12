@@ -141,7 +141,7 @@ require (
 	go.uber.org/zap v1.27.0
 	go4.org v0.0.0-20200104003542-c7e774b10ea0 // indirect
 	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
