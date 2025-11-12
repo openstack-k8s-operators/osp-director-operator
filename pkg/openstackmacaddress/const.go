@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package openstackmacaddress provides constants and utilities for OpenStack MAC address management.
 package openstackmacaddress
 
 const (

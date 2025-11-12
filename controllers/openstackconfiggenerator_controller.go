@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers contains the Kubernetes controllers for the OSP Director Operator.
 package controllers
 
 import (
@@ -40,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
@@ -658,7 +658,7 @@ func (r *OpenStackConfigGeneratorReconciler) syncConfigVersions(
 		// Check if this ConfigVersion already exists
 		foundVersion := &ospdirectorv1beta1.OpenStackConfigVersion{}
 		err := r.Get(ctx, types.NamespacedName{Name: version.Name, Namespace: instance.Namespace}, foundVersion)
-		if err == nil {
+		if err == nil { //revive:disable:empty-block
 			//FIXME(dprince): update existing?
 		} else if err != nil && k8s_errors.IsNotFound(err) {
 			// we only add the most recent export to new ConfigVersions (just created...)
@@ -683,7 +683,7 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 	// Schedule reconcile on openstackconfiggenerator if any of the objects change where
 	// owner label openstackconfiggenerator.ConfigGeneratorInputLabel
 	//
-	ConfigGeneratorInputLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	ConfigGeneratorInputLabelWatcher := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []reconcile.Request {
 		labels := o.GetLabels()
 		//
 		// verify object has ConfigGeneratorInputLabel
@@ -704,7 +704,7 @@ func (r *OpenStackConfigGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ospdirectorv1beta1.OpenStackConfigGenerator{}).
 		// TODO: watch ctlplane, osbms for Count change
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, ConfigGeneratorInputLabelWatcher).
+		Watches(&corev1.ConfigMap{}, ConfigGeneratorInputLabelWatcher).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&ospdirectorv1beta1.OpenStackEphemeralHeat{}).
 		Owns(&batchv1.Job{}).
@@ -979,7 +979,7 @@ func (r *OpenStackConfigGeneratorReconciler) createTripleoDeployCM(
 
 func (r *OpenStackConfigGeneratorReconciler) getClusterServiceEndpoint(
 	ctx context.Context,
-	instance *ospdirectorv1beta1.OpenStackConfigGenerator,
+	_ *ospdirectorv1beta1.OpenStackConfigGenerator,
 	cond *shared.Condition,
 	namespace string,
 	labelSelector map[string]string,

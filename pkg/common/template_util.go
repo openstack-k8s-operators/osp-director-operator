@@ -1,4 +1,4 @@
-package common
+package common //revive:disable:var-naming
 
 import (
 	"bytes"

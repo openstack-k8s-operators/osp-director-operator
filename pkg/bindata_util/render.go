@@ -10,7 +10,7 @@ import (
 
 	common "github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,7 +45,7 @@ func RenderDir(manifestDir string, d *RenderData) ([]*unstructured.Unstructured,
 		}
 
 		// Skip non-manifest files
-		if !(strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".json")) {
+		if !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".json") {
 			return nil
 		}
 

@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
@@ -120,11 +121,11 @@ func (r *OpenStackVMSet) Default() {
 var _ webhook.Validator = &OpenStackVMSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackVMSet) ValidateCreate() error {
+func (r *OpenStackVMSet) ValidateCreate() (admission.Warnings, error) {
 	vmsetlog.Info("validate create", "name", r.Name)
 
 	if err := ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -132,7 +133,7 @@ func (r *OpenStackVMSet) ValidateCreate() error {
 	//
 	_, err := ospdirectorv1beta1.GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+		return nil, fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err)
@@ -142,21 +143,21 @@ func (r *OpenStackVMSet) ValidateCreate() error {
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ospdirectorv1beta1.ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
 	// validate additional disks
 	//
 	if err := validateAdditionalDisks(r.Spec.AdditionalDisks, []OpenStackVMSetDisk{}); err != nil {
-		return err
+		return nil, err
 	}
 
-	return r.validateCr()
+	return nil, r.validateCr()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	vmsetlog.Info("validate update", "name", r.Name)
 
 	// Get the OpenStackVMSet object
@@ -164,14 +165,14 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 	var oldInstance *OpenStackVMSet
 
 	if oldInstance, ok = old.(*OpenStackVMSet); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackVMSet")
+		return nil, fmt.Errorf("runtime object is not an OpenStackVMSet")
 	}
 
 	//
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ospdirectorv1beta1.ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -179,7 +180,7 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 	//
 	if oldInstance.Spec.RootDisk.DiskSize > 0 {
 		if err := validateRootDisk(r.Spec.RootDisk, oldInstance.Spec.RootDisk); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -187,17 +188,17 @@ func (r *OpenStackVMSet) ValidateUpdate(old runtime.Object) error {
 	// validate additional disks
 	//
 	if err := validateAdditionalDisks(r.Spec.AdditionalDisks, oldInstance.Spec.AdditionalDisks); err != nil {
-		return err
+		return nil, err
 	}
 
-	return r.validateCr()
+	return nil, r.validateCr()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackVMSet) ValidateDelete() error {
+func (r *OpenStackVMSet) ValidateDelete() (admission.Warnings, error) {
 	vmsetlog.Info("validate delete", "name", r.Name)
 
-	return ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 func (r *OpenStackVMSet) validateCr() error {

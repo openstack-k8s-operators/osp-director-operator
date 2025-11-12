@@ -1,3 +1,4 @@
+// Package shared provides shared constants and utilities used across the OSP Director Operator API.
 package shared
 
 const (

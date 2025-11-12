@@ -1,3 +1,4 @@
+// Package bindatautil provides utilities for applying and managing Kubernetes objects from embedded data.
 package bindatautil
 
 import (

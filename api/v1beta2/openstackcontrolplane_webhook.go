@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	ospdirectorv1beta1 "github.com/openstack-k8s-operators/osp-director-operator/api/v1beta1"
 )
@@ -196,11 +197,11 @@ func (r *OpenStackControlPlane) Default() {
 var _ webhook.Validator = &OpenStackControlPlane{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackControlPlane) ValidateCreate() error {
+func (r *OpenStackControlPlane) ValidateCreate() (admission.Warnings, error) {
 	controlplanelog.Info("validate create", "name", r.Name)
 
 	if err := ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -209,7 +210,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	if r.Spec.OpenStackRelease != "" {
 		var err error
 		if r.Status.OSPVersion, err = shared.GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -220,11 +221,11 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	}
 
 	if err := webhookClient.List(context.TODO(), controlPlaneList, listOpts...); err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(controlPlaneList.Items) >= 1 {
-		return fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
+		return nil, fmt.Errorf("only one OpenStackControlPlane instance is supported at this time")
 	}
 
 	//
@@ -232,7 +233,7 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 	//
 	_, err := ospdirectorv1beta1.GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+		return nil, fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err)
@@ -246,23 +247,23 @@ func (r *OpenStackControlPlane) ValidateCreate() error {
 		// validate that for all configured subnets an osnet exists
 		//
 		if err := ospdirectorv1beta1.ValidateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
-			return err
+			return nil, err
 		}
 
 		//
 		// validate additional disks
 		//
 		if err := validateAdditionalDisks(vmspec.AdditionalDisks, []OpenStackVMSetDisk{}); err != nil {
-			return err
+			return nil, err
 		}
 
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	controlplanelog.Info("validate update", "name", r.Name)
 
 	// Get the OpenStackControlPlane object
@@ -270,7 +271,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	var oldInstance *OpenStackControlPlane
 
 	if oldInstance, ok = old.(*OpenStackControlPlane); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackControlPlane")
+		return nil, fmt.Errorf("runtime object is not an OpenStackControlPlane")
 	}
 
 	//
@@ -279,7 +280,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 	if r.Spec.OpenStackRelease != "" {
 		var err error
 		if r.Status.OSPVersion, err = shared.GetOSPVersion(r.Spec.OpenStackRelease); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -296,7 +297,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 		// validate that for all configured subnets an osnet exists
 		//
 		if err := ospdirectorv1beta1.ValidateNetworks(r.GetNamespace(), vmspec.Networks); err != nil {
-			return err
+			return nil, err
 		}
 
 		//
@@ -304,7 +305,7 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 		//
 		if _, ok := r.Annotations[shared.RootDiskConvertedAnnotation]; ok && oldVMSpec.RootDisk.DiskSize > 0 {
 			if err := validateRootDisk(vmspec.RootDisk, oldVMSpec.RootDisk); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -312,16 +313,16 @@ func (r *OpenStackControlPlane) ValidateUpdate(old runtime.Object) error {
 		// validate additional disks
 		//
 		if err := validateAdditionalDisks(vmspec.AdditionalDisks, oldVMSpec.AdditionalDisks); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackControlPlane) ValidateDelete() error {
+func (r *OpenStackControlPlane) ValidateDelete() (admission.Warnings, error) {
 	controlplanelog.Info("validate delete", "name", r.Name)
 
-	return ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, ospdirectorv1beta1.CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }

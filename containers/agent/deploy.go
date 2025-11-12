@@ -135,8 +135,10 @@ func CopyFromPod(kclient kubernetes.Clientset, pod corev1.Pod, containerName str
 	reader, writer := io.Pipe()
 
 	go func() {
-		defer writer.Close()
-		err := exec.Stream(remotecommand.StreamOptions{
+		defer func() {
+			_ = writer.Close()
+		}()
+		err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 			Stdin:  argReader,
 			Stdout: writer,
 			Stderr: os.Stderr,
@@ -186,7 +188,7 @@ func ExecPodCommand(kclient kubernetes.Clientset, pod corev1.Pod, containerName 
 	argString := fmt.Sprintf("%s\n", command)
 	reader := strings.NewReader(argString)
 
-	return exec.Stream(remotecommand.StreamOptions{
+	return exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 		Stdin:  io.Reader(reader),
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
@@ -311,7 +313,7 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 
 }
 
-func runDeployCmd(cmd *cobra.Command, args []string) {
+func runDeployCmd(_ *cobra.Command, _ []string) {
 	var err error
 	err = flag.Set("logtostderr", "true")
 	if err != nil {

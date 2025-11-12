@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Adds (or really, re-adds) a new BMH if YAML representing one is 
+# Adds (or really, re-adds) a new BMH if YAML representing one is
 # present in a designated location on the filesystem
 #
 

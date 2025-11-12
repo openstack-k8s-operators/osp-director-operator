@@ -57,7 +57,7 @@ type OpenStackDeploySpec struct {
 	// +kubebuilder:default=deploy
 	// +kubebuilder:validation:Enum={"deploy","update","upgrade","externalUpdate","externalUpgrade"}
 	// Deployment mode
-	Mode string `json:"mode,omitempty"`
+	Mode string `json:"mode"`
 
 	// +kubebuilder:validation:Optional
 	// Advanced deployment settings

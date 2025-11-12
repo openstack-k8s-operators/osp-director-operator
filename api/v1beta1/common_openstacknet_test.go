@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	. "github.com/onsi/gomega"
-	"k8s.io/klog/v2/klogr"
+	. "github.com/onsi/gomega" //revive:disable:dot-imports
+	"k8s.io/klog/v2/textlogger"
 )
 
 func TestAddOSNetNameLowerLabels(t *testing.T) {
@@ -19,14 +19,14 @@ func TestAddOSNetNameLowerLabels(t *testing.T) {
 	}{
 		{
 			name:                  "empty ip list",
-			log:                   klogr.New(),
+			log:                   textlogger.NewLogger(textlogger.NewConfig()),
 			labels:                map[string]string{},
 			networkNameLowerNames: []string{},
 			want:                  map[string]string{},
 		},
 		{
 			name:                  "empty add network label",
-			log:                   klogr.New(),
+			log:                   textlogger.NewLogger(textlogger.NewConfig()),
 			labels:                map[string]string{},
 			networkNameLowerNames: []string{"add"},
 			want: map[string]string{
@@ -35,7 +35,7 @@ func TestAddOSNetNameLowerLabels(t *testing.T) {
 		},
 		{
 			name:                  "add network to existing label",
-			log:                   klogr.New(),
+			log:                   textlogger.NewLogger(textlogger.NewConfig()),
 			labels:                map[string]string{"foo": "bar"},
 			networkNameLowerNames: []string{"add"},
 			want: map[string]string{
@@ -45,7 +45,7 @@ func TestAddOSNetNameLowerLabels(t *testing.T) {
 		},
 		{
 			name: "remove network label",
-			log:  klogr.New(),
+			log:  textlogger.NewLogger(textlogger.NewConfig()),
 			labels: map[string]string{
 				"foo":                   "bar",
 				"ooo-subnetname/remove": "true",

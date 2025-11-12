@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+// Package common provides shared utilities and constants used across the OSP Director Operator.
+package common //revive:disable:var-naming
 
 const (
 	// OwnerLabel -

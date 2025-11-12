@@ -1,4 +1,4 @@
-package common
+package common //revive:disable:var-naming
 
 import (
 	"archive/tar"
@@ -80,10 +80,10 @@ func GetCustomFencingRoles(customBinaryData map[string][]byte) ([]string, error)
 
 					res := gjson.Parse(jsonStr)
 
-					res.ForEach(func(key gjson.Result, value gjson.Result) bool {
+					res.ForEach(func(_ gjson.Result, value gjson.Result) bool {
 						if value.Get(TripleOServicesDefaultKeyName).Exists() {
 							res2 := value.Get(TripleOServicesDefaultKeyName)
-							res2.ForEach(func(key2 gjson.Result, value2 gjson.Result) bool {
+							res2.ForEach(func(_ gjson.Result, value2 gjson.Result) bool {
 								if value2.String() == TripleOPacemakerServiceName {
 									customFencingRoles = append(customFencingRoles, value.Get("name").String())
 									return false

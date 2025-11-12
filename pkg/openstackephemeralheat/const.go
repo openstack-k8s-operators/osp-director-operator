@@ -1,3 +1,4 @@
+// Package openstackephemeralheat provides constants and utilities for OpenStack ephemeral Heat configuration.
 package openstackephemeralheat
 
 const (

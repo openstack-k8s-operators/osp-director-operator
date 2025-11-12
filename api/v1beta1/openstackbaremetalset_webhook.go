@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -52,11 +53,11 @@ func (r *OpenStackBaremetalSet) SetupWebhookWithManager(mgr ctrl.Manager) error 
 var _ webhook.Validator = &OpenStackBaremetalSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBaremetalSet) ValidateCreate() error {
+func (r *OpenStackBaremetalSet) ValidateCreate() (admission.Warnings, error) {
 	baremetalsetlog.Info("validate create", "name", r.Name)
 
 	if err := CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionCreate); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -64,7 +65,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	//
 	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+		return nil, fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err)
@@ -74,7 +75,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -87,7 +88,7 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 		r.Spec.BmhLabelSelector,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//
@@ -104,32 +105,32 @@ func (r *OpenStackBaremetalSet) ValidateCreate() error {
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, existingBaremetalHosts); err != nil {
-		return err
+		return nil, err
 	}
 
-	return r.validateCr()
+	return nil, r.validateCr()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	baremetalsetlog.Info("validate update", "name", r.Name)
 
 	//
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
 	var ok bool
 	var oldInstance *OpenStackBaremetalSet
 
 	if oldInstance, ok = old.(*OpenStackBaremetalSet); !ok {
-		return fmt.Errorf("runtime object is not an OpenStackBaremetalSet")
+		return nil, fmt.Errorf("runtime object is not an OpenStackBaremetalSet")
 	}
 
 	//
@@ -139,7 +140,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 	if oldInstance.Spec.Count > 0 &&
 		(!equality.Semantic.DeepEqual(r.Spec.BmhLabelSelector, oldInstance.Spec.BmhLabelSelector) ||
 			!equality.Semantic.DeepEqual(r.Spec.HardwareReqs, oldInstance.Spec.HardwareReqs)) {
-		return fmt.Errorf("cannot change \"bmhLabelSelector\" nor \"hardwareReqs\" when previous \"count\" > 0")
+		return nil, fmt.Errorf("cannot change \"bmhLabelSelector\" nor \"hardwareReqs\" when previous \"count\" > 0")
 	}
 
 	if r.Spec.Count != oldInstance.Spec.Count {
@@ -150,7 +151,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 		// operations for scaling up or down.
 		//
 		if err := VerifyBaremetalStatusHostRefs(context.TODO(), webhookClient, r); err != nil {
-			return err
+			return nil, err
 		}
 
 		//
@@ -164,7 +165,7 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 				r.Spec.BmhLabelSelector,
 			)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			existingBaremetalHosts, err := GetBmhHosts(
@@ -177,11 +178,11 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 				},
 			)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			if _, err := VerifyBaremetalSetScaleUp(baremetalsetlog, r, baremetalHostsList, existingBaremetalHosts); err != nil {
-				return err
+				return nil, err
 			}
 		} else if r.Spec.Count < oldInstance.Spec.Count {
 			existingBaremetalHosts, err := GetBmhHosts(
@@ -194,26 +195,26 @@ func (r *OpenStackBaremetalSet) ValidateUpdate(old runtime.Object) error {
 				},
 			)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			annotatedBaremetalHosts := getDeletionAnnotatedBmhHosts(existingBaremetalHosts)
 
 			if err := VerifyBaremetalSetScaleDown(baremetalsetlog, r, existingBaremetalHosts, len(annotatedBaremetalHosts)); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return r.validateCr()
+	return nil, r.validateCr()
 
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackBaremetalSet) ValidateDelete() error {
+func (r *OpenStackBaremetalSet) ValidateDelete() (admission.Warnings, error) {
 	baremetalsetlog.Info("validate delete", "name", r.Name)
 
-	return CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
+	return nil, CheckBackupOperationBlocksAction(r.Namespace, shared.APIActionDelete)
 }
 
 //+kubebuilder:webhook:path=/mutate-osp-director-openstack-org-v1beta1-openstackbaremetalset,mutating=true,failurePolicy=fail,sideEffects=None,groups=osp-director.openstack.org,resources=openstackbaremetalsets,verbs=create;update,versions=v1beta1,name=mopenstackbaremetalset.kb.io,admissionReviewVersions=v1
@@ -294,6 +295,7 @@ func (r *OpenStackBaremetalSet) validateCr() error {
 
 	return nil
 }
+
 func (r *OpenStackBaremetalSet) checkBaseImageReqs() error {
 	if r.Spec.BaseImageURL == "" && r.Spec.ProvisionServerName == "" {
 		return fmt.Errorf("either \"baseImageUrl\" or \"provisionServerName\" must be provided")

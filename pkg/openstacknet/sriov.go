@@ -3,7 +3,7 @@ package openstacknet
 import (
 	"context"
 
-	sriovnetworkv1 "github.com/openshift/sriov-network-operator/api/v1"
+	sriovnetworkv1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
 	"github.com/openstack-k8s-operators/osp-director-operator/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

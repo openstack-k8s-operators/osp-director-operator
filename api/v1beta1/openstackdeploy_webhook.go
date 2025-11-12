@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	nmstateshared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
@@ -73,7 +74,7 @@ func (r *OpenStackDeploy) Default() {
 var _ webhook.Validator = &OpenStackDeploy{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackDeploy) ValidateCreate() error {
+func (r *OpenStackDeploy) ValidateCreate() (admission.Warnings, error) {
 	openstackdeploylog.Info("validate create", "name", r.Name)
 
 	//
@@ -81,14 +82,14 @@ func (r *OpenStackDeploy) ValidateCreate() error {
 	// If not, stop deployment. User can overwrite this via parameter spec.SkipNNCPValidation: true
 	//
 	if err := r.validateNNCP(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackDeploy) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackDeploy) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	openstackdeploylog.Info("validate update", "name", r.Name)
 
 	//
@@ -96,18 +97,18 @@ func (r *OpenStackDeploy) ValidateUpdate(old runtime.Object) error {
 	// If not, stop deployment. User can overwrite this via parameter spec.SkipNNCPValidation: true
 	//
 	if err := r.validateNNCP(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackDeploy) ValidateDelete() error {
+func (r *OpenStackDeploy) ValidateDelete() (admission.Warnings, error) {
 	openstackdeploylog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }
 
 // Validates all NNCPs created by the used osnetcfg to be in condition.Reason == nmstateshared.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured.

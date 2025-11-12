@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	metal3v1 "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 	"github.com/openstack-k8s-operators/osp-director-operator/api/shared"
@@ -171,7 +170,7 @@ func (r *OpenStackBaremetalSetReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+	if instance.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -501,7 +500,7 @@ func (r *OpenStackBaremetalSetReconciler) getNormalizedStatus(status *ospdirecto
 
 // SetupWithManager - prepare controller for use with operator manager
 func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	openshiftMachineAPIBareMetalHostsFn := handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	openshiftMachineAPIBareMetalHostsFn := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 		label := o.GetLabels()
 		// verify object has ownerUIDLabelSelector
@@ -529,7 +528,7 @@ func (r *OpenStackBaremetalSetReconciler) SetupWithManager(mgr ctrl.Manager) err
 		For(&ospdirectorv1beta1.OpenStackBaremetalSet{}).
 		Owns(&ospdirectorv1beta1.OpenStackProvisionServer{}).
 		Owns(&ospdirectorv1beta1.OpenStackIPSet{}).
-		Watches(&source.Kind{Type: &metal3v1.BareMetalHost{}}, openshiftMachineAPIBareMetalHostsFn).
+		Watches(&metal3v1.BareMetalHost{}, openshiftMachineAPIBareMetalHostsFn).
 		Complete(r)
 }
 
@@ -545,8 +544,8 @@ func (r *OpenStackBaremetalSetReconciler) provisionServerCreateOrUpdate(
 		// Next deploy the provisioning image (Apache) server
 		provisionServer = &ospdirectorv1beta1.OpenStackProvisionServer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      instance.ObjectMeta.Name + "-provisionserver",
-				Namespace: instance.ObjectMeta.Namespace,
+				Name:      instance.Name + "-provisionserver",
+				Namespace: instance.Namespace,
 			},
 		}
 

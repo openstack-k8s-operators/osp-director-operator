@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -73,7 +74,7 @@ func (r *OpenStackIPSet) Default() {
 var _ webhook.Validator = &OpenStackIPSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackIPSet) ValidateCreate() error {
+func (r *OpenStackIPSet) ValidateCreate() (admission.Warnings, error) {
 	openstackipsetlog.Info("validate create", "name", r.Name)
 
 	//
@@ -81,27 +82,27 @@ func (r *OpenStackIPSet) ValidateCreate() error {
 	//
 	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+		return nil, fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackIPSet) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackIPSet) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	openstackipsetlog.Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackIPSet) ValidateDelete() error {
+func (r *OpenStackIPSet) ValidateDelete() (admission.Warnings, error) {
 	openstackipsetlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }

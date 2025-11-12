@@ -17,11 +17,13 @@ limitations under the License.
 package openstackconfiggenerator
 
 import (
+	"context"
+
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack"
+	"github.com/gophercloud/gophercloud/v2/openstack/orchestration/v1/stacks"
 )
 
 var exportNames = map[string]string{
@@ -39,7 +41,7 @@ func CtlplaneExports(heatServiceName string, log logr.Logger) (string, error) {
 		return "", err
 	}
 	// override the EndpointLocator as we are using noauth without a real Catalog
-	provider.EndpointLocator = func(opts gophercloud.EndpointOpts) (string, error) {
+	provider.EndpointLocator = func(_ gophercloud.EndpointOpts) (string, error) {
 		return "http://" + heatServiceName + ":8004/v1/admin/", nil
 	}
 	client, err := openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{Region: "regionOne"})
@@ -48,7 +50,7 @@ func CtlplaneExports(heatServiceName string, log logr.Logger) (string, error) {
 		return "", err
 	}
 
-	overcloudStack, err := stacks.Find(client, "overcloud").Extract()
+	overcloudStack, err := stacks.Find(context.Background(), client, "overcloud").Extract()
 	if err != nil {
 		log.Error(err, "Failed to find overcloud stack.")
 		return "", err

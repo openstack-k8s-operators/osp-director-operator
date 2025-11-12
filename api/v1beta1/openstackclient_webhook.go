@@ -25,6 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // OpenStackClientDefaults -
@@ -100,7 +101,7 @@ func (r *OpenStackClient) Default() {
 var _ webhook.Validator = &OpenStackClient{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackClient) ValidateCreate() error {
+func (r *OpenStackClient) ValidateCreate() (admission.Warnings, error) {
 	openstackclientlog.Info("validate create", "name", r.Name)
 
 	//
@@ -108,7 +109,7 @@ func (r *OpenStackClient) ValidateCreate() error {
 	//
 	_, err := GetOsNetCfg(webhookClient, r.GetNamespace(), r.GetLabels()[shared.OpenStackNetConfigReconcileLabel])
 	if err != nil {
-		return fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
+		return nil, fmt.Errorf("error getting OpenStackNetConfig %s - %s: %w",
 			r.GetLabels()[shared.OpenStackNetConfigReconcileLabel],
 			r.Name,
 			err)
@@ -118,30 +119,30 @@ func (r *OpenStackClient) ValidateCreate() error {
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackClient) ValidateUpdate(old runtime.Object) error {
+func (r *OpenStackClient) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	openstackclientlog.Info("validate update", "name", r.Name)
 
 	//
 	// validate that for all configured subnets an osnet exists
 	//
 	if err := ValidateNetworks(r.GetNamespace(), r.Spec.Networks); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *OpenStackClient) ValidateDelete() error {
+func (r *OpenStackClient) ValidateDelete() (admission.Warnings, error) {
 	openstackclientlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }
