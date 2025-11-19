@@ -10,7 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
 	github.com/go-git/go-git/v5 v5.16.3
 	github.com/go-logr/logr v1.4.3
-	github.com/golang/glog v1.2.4
+	github.com/golang/glog v1.2.5
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
