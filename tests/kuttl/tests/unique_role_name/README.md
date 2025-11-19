@@ -1,6 +1,6 @@
 Q: WHAT IS TESTED HERE?
 
-A: 
+A:
 - Create 1 VMSet
 - Try to create a second VMSet with the same role name
 - Verify that the second set was not successfully created

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package openstackclient provides constants and utilities for OpenStack client configuration.
 package openstackclient
 
 const (

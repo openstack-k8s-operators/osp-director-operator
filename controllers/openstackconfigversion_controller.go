@@ -49,7 +49,7 @@ type OpenStackConfigVersionReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
-func (r *OpenStackConfigVersionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *OpenStackConfigVersionReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("openstackconfigversion", req.NamespacedName)
 
 	// your logic here

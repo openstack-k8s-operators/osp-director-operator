@@ -133,7 +133,7 @@ type OpenStackVirtualMachineRoleSpec struct {
 	// +kubebuilder:validation:Enum=Always;Halted;Manual;RerunOnFailure
 	// Running state indicates the requested running state of the VirtualMachineInstance
 	// mutually exclusive with Running
-	RunStrategy virtv1.VirtualMachineRunStrategy `json:"runStrategy,omitempty"`
+	RunStrategy virtv1.VirtualMachineRunStrategy `json:"runStrategy"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=None;LiveMigrate
 	// EvictionStrategy defines if the VirtualMachineInstance should be

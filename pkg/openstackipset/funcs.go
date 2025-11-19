@@ -1,3 +1,4 @@
+// Package openstackipset provides utilities for OpenStack IP set management.
 package openstackipset
 
 import (

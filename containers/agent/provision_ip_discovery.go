@@ -46,7 +46,7 @@ func init() {
 	startCmd.PersistentFlags().StringVar(&startOpts.provServerNamespace, "prov-server-namespace", "", "Provisioning server resource namespace")
 }
 
-func runStartCmd(cmd *cobra.Command, args []string) {
+func runStartCmd(_ *cobra.Command, _ []string) {
 	var err error
 	err = flag.Set("logtostderr", "true")
 	if err != nil {
@@ -142,9 +142,8 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 					if ipObj = ipObj.To4(); ipObj != nil {
 						curIP = ipObj.String()
 						break
-					} else {
-						glog.V(0).Infof("INFO: Ignoring IPv6 address (%s) for OpenStackProvisionServer %s (namespace %s) on interface %s!\n", addr, startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
 					}
+					glog.V(0).Infof("INFO: Ignoring IPv6 address (%s) for OpenStackProvisionServer %s (namespace %s) on interface %s!\n", addr, startOpts.provServerName, startOpts.provServerName, startOpts.provIntf)
 				}
 				break
 			}

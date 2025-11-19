@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package openstacknetconfig provides constants and utilities for OpenStack network configuration.
 package openstacknetconfig
 
 const (

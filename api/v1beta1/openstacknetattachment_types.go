@@ -36,11 +36,11 @@ const (
 type NodeConfigurationPolicy struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
-	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy,omitempty"`
+	NodeNetworkConfigurationPolicy nmstateapi.NodeNetworkConfigurationPolicySpec `json:"nodeNetworkConfigurationPolicy"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={}
-	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy,omitempty"`
+	NodeSriovConfigurationPolicy NodeSriovConfigurationPolicy `json:"nodeSriovConfigurationPolicy"`
 }
 
 // NodeSriovConfigurationPolicy - Node selector and desired state for SRIOV network
@@ -81,6 +81,7 @@ type OpenStackNetAttachmentStatus struct {
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
+
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 

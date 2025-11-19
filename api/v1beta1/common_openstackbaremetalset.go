@@ -102,8 +102,8 @@ func VerifyBaremetalStatusHostRefs(
 			}
 
 			if !found {
-				err := fmt.Errorf("Existing BaremetalHost \"%s\" not found for OpenStackBaremetalSet %s.  "+
-					"Please check BaremetalHost resources and re-add \"%s\" to continue",
+				err := fmt.Errorf("existing BaremetalHost \"%s\" not found for OpenStackBaremetalSet %s.  "+
+					"please check BaremetalHost resources and re-add \"%s\" to continue",
 					bmhStatus.HostRef, instance.Name, bmhStatus.HostRef)
 
 				return err
@@ -136,17 +136,17 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 			mismatch := false
 
 			if baremetalHost.Spec.Online {
-				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it is already online", baremetalHost.ObjectMeta.Name))
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it is already online", baremetalHost.Name))
 				mismatch = true
 			}
 
 			if baremetalHost.Spec.ConsumerRef != nil {
-				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it already has a consumerRef", baremetalHost.ObjectMeta.Name))
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it already has a consumerRef", baremetalHost.Name))
 				mismatch = true
 			}
 
 			if !verifyBaremetalSetHardwareMatch(log, instance, &baremetalHost) {
-				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it does not match hardware requirements", baremetalHost.ObjectMeta.Name))
+				log.Info(fmt.Sprintf("BaremetalHost %s cannot be used because it does not match hardware requirements", baremetalHost.Name))
 				mismatch = true
 			}
 
@@ -160,7 +160,7 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 				continue
 			}
 
-			log.Info(fmt.Sprintf("Available BaremetalHost: %s", baremetalHost.ObjectMeta.Name))
+			log.Info(fmt.Sprintf("Available BaremetalHost: %s", baremetalHost.Name))
 
 			availableBaremetalHosts = append(availableBaremetalHosts, baremetalHost)
 		}
@@ -182,12 +182,12 @@ func VerifyBaremetalSetScaleUp(log logr.Logger, instance *OpenStackBaremetalSet,
 }
 
 // VerifyBaremetalSetScaleDown -
-func VerifyBaremetalSetScaleDown(log logr.Logger, instance *OpenStackBaremetalSet, existingBmhs *metal3v1.BareMetalHostList, removalAnnotatedBmhCount int) error {
+func VerifyBaremetalSetScaleDown(_ logr.Logger, instance *OpenStackBaremetalSet, existingBmhs *metal3v1.BareMetalHostList, removalAnnotatedBmhCount int) error {
 	// How many new BaremetalHost de-allocations do we need (if any)?
 	bmhsToRemoveCount := len(existingBmhs.Items) - instance.Spec.Count
 
 	if bmhsToRemoveCount > removalAnnotatedBmhCount {
-		return fmt.Errorf("Unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found, %d requested)", removalAnnotatedBmhCount, bmhsToRemoveCount)
+		return fmt.Errorf("unable to find sufficient amount of BaremetalHost replicas annotated for scale-down (%d found, %d requested)", removalAnnotatedBmhCount, bmhsToRemoveCount)
 	}
 
 	return nil

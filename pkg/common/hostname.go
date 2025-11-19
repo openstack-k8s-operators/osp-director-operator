@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package common //revive:disable:var-naming
 
 import (
 	"fmt"

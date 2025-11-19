@@ -1,6 +1,6 @@
 Q: WHAT IS TESTED HERE?
 
-A: 
+A:
 
 - Create 2 OpenStackNets and verify the associated NNCP is created
 - Delete 1 OpenStackNet and verify the associated NNCP still exists

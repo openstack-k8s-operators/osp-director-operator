@@ -28,7 +28,7 @@ type IPReservation struct {
 	VIP      bool   `json:"vip"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
-	ServiceVIP bool `json:"serviceVIP,omitempty"`
+	ServiceVIP bool `json:"serviceVIP"`
 	Deleted    bool `json:"deleted"`
 }
 
@@ -135,6 +135,7 @@ type OpenStackNetStatus struct {
 
 	// TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
 	// but we are using the same approach in other CRDs for now anyhow
+
 	// Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
 	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }

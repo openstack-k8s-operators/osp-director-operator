@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: openstackbackups.osp-director.openstack.org
 spec:
   group: osp-director.openstack.org
@@ -1492,10 +1492,8 @@ spec:
                                   description: BridgeName of the OpenStackNetAttachment
                                   type: string
                                 conditions:
-                                  description: |-
-                                    TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -2269,10 +2267,8 @@ spec:
                                 state of OpenStackNet
                               properties:
                                 conditions:
-                                  description: |-
-                                    TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -4658,10 +4654,8 @@ spec:
                                   description: BridgeName of the OpenStackNetAttachment
                                   type: string
                                 conditions:
-                                  description: |-
-                                    TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -5435,10 +5429,8 @@ spec:
                                 state of OpenStackNet
                               properties:
                                 conditions:
-                                  description: |-
-                                    TODO: It would be simpler, perhaps, to just have Conditions and get rid of CurrentState,
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource

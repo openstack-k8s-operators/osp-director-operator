@@ -104,8 +104,9 @@ gotest: get-ci-tools
 	$(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
 
 # Run golangci-lint test against code
+GOLANGCI_LINT_VERSION ?= v2.4.0
 golangci: get-ci-tools
-	$(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
+	GOLANGCI_TAG=$(GOLANGCI_LINT_VERSION) $(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
 
 # Run go lint against code
 golint: get-ci-tools
@@ -149,7 +150,7 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -v -coverprofile cover.out
 
 ##@ Build
 
@@ -229,9 +230,11 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+KUSTOMIZE_VERSION ?= v5.5.0
+CONTROLLER_TOOLS_VERSION ?= v0.18.0
 OPERATOR_SDK_VERSION ?= v1.19.0
+GOTOOLCHAIN_VERSION ?= go1.24.0
+SETUP_ENVTEST_VERSION ?= release-0.22
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -247,7 +250,8 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
+
 
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK)
@@ -319,3 +323,26 @@ osp-director-operator-agent-image-build: test ## Build osp-director-operator-age
 .PHONY: osp-director-downloader-image-build
 osp-director-downloader-image-build: test ## Build osp-director-downloader image.
 	podman build -t ${IMG} -f containers/image_downloader/Dockerfile containers/image_downloader
+
+.PHONY: gowork
+gowork: ## Generate go.work file to support our multi module repository
+	test -f go.work || GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) go work init
+	go work use .
+	go work sync
+
+.PHONY: operator-lint
+operator-lint: gowork ## Runs operator-lint
+	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.3.0
+	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...
+
+BRANCH ?= master
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.18
+
+PHONY: crd-schema-check
+crd-schema-check: manifests
+	INSTALL_DIR=$(LOCALBIN) CRD_SCHEMA_CHECKER_VERSION=$(CRD_SCHEMA_CHECKER_VERSION) hack/build-crd-schema-checker.sh
+	INSTALL_DIR=$(LOCALBIN) BASE_REF="$${PULL_BASE_SHA:-$(BRANCH)}" hack/crd-schema-checker.sh
+
+.PHONY: tidy
+tidy: ## Run go mod tidy on every mod file in the repo
+	go mod tidy

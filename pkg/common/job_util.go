@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package common //revive:disable:var-naming
 
 import (
 	"context"
@@ -80,7 +80,7 @@ func WaitOnJob(
 		log.Info("Job Status Successful")
 	} else if foundJob.Status.Failed > 0 {
 		log.Info("Job Status Failed")
-		return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs"))
+		return true, k8s_errors.NewInternalError(errors.New("job failed. Check job logs"))
 	} else {
 		log.Info("Job Status incomplete... requeuing")
 		return true, err
