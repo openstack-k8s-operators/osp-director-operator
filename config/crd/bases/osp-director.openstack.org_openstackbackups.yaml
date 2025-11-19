@@ -1492,9 +1492,8 @@ spec:
                                   description: BridgeName of the OpenStackNetAttachment
                                   type: string
                                 conditions:
-                                  description: |-
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -2268,9 +2267,8 @@ spec:
                                 state of OpenStackNet
                               properties:
                                 conditions:
-                                  description: |-
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -4656,9 +4654,8 @@ spec:
                                   description: BridgeName of the OpenStackNetAttachment
                                   type: string
                                 conditions:
-                                  description: |-
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
@@ -5432,9 +5429,8 @@ spec:
                                 state of OpenStackNet
                               properties:
                                 conditions:
-                                  description: |-
-                                    but we are using the same approach in other CRDs for now anyhow
-                                    Conditions - conditions to display in the OpenShift GUI, which reflect CurrentState
+                                  description: Conditions - conditions to display
+                                    in the OpenShift GUI, which reflect CurrentState
                                   items:
                                     description: Condition - A particular overall
                                       condition of a certain resource
