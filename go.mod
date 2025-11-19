@@ -17,7 +17,7 @@ require (
 	github.com/k8snetworkplumbingwg/sriov-network-operator v0.0.0-20250828124948-002ef793cc63
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20250728004541-45c6255cafc5
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-20251022131709-6b5f257fffcd
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.1
@@ -65,7 +65,6 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
