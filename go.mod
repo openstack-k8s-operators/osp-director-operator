@@ -22,7 +22,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.1
 	github.com/tidwall/gjson v1.18.0
-	golang.org/x/crypto v0.44.0
+	golang.org/x/crypto v0.45.0
 	k8s.io/api v0.31.13
 	k8s.io/apimachinery v0.31.13
 	k8s.io/client-go v0.31.13
@@ -139,7 +139,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0
 	go4.org v0.0.0-20200104003542-c7e774b10ea0 // indirect
-	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
