@@ -31,6 +31,7 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	config "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
 	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -123,6 +124,12 @@ func SyncGit(
 
 	configVersions := make(map[string]ospdirectorv1beta1.OpenStackConfigVersion)
 
+	// Log the current state of transport capabilities for debugging
+	// This helps verify transport capabilities across recursive calls
+	if len(transport.UnsupportedCapabilities) > 0 {
+		log.Info(fmt.Sprintf("Starting SyncGit with UnsupportedCapabilities: %v", transport.UnsupportedCapabilities))
+	}
+
 	// Check if this Secret already exists
 	foundSecret := &corev1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Name: inst.Spec.GitSecret, Namespace: inst.Namespace}, foundSecret)
@@ -151,6 +158,7 @@ func SyncGit(
 		return nil, err
 	}
 
+	// Attempt Clone with current transport capabilities
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:  gitURL,
 		Auth: publicKeys,
@@ -158,6 +166,8 @@ func SyncGit(
 	// if Azure DevOps is used it can fail with as azure is not compatible to go-git, https://github.com/go-git/go-git/pull/613
 	// "2023-08-04T13:16:19.264Z        INFO    controllers.OpenStackConfigGenerator    Failed to create Git repo: empty git-upload-pack given"
 	// retry with workaround setting capability.ThinPack
+	// Note: transport.UnsupportedCapabilities is a GLOBAL variable that persists across function calls
+	// Once set, it affects ALL subsequent git operations (Clone, List, CommitObject, etc.) in this process
 	if err != nil && errors.Is(err, transport.ErrEmptyUploadPackRequest) {
 		log.Info(fmt.Sprintf("Failed to create Git repo: %s\n", err.Error()))
 		log.Info("retrying with capability.ThinPack transport capability, required for Azure DevOps")
@@ -193,10 +203,33 @@ func SyncGit(
 	m1 := regexp.MustCompile(`/`)
 	for _, ref := range refs {
 		if ref.Name().IsBranch() {
-			if ref.Name() == "refs/heads/master" || ref.Name() == "HEAD" {
+			// Skip default branches (master/main) and HEAD
+			if ref.Name() == "refs/heads/master" || ref.Name() == "refs/heads/main" || ref.Name() == "HEAD" {
 				continue
 			}
 			commit, err := repo.CommitObject(ref.Hash())
+			// Fallback for Azure DevOps: If Clone succeeded but CommitObject fails with "object not found",
+			// it means the Clone transferred incomplete objects. This can happen when Azure DevOps accepts
+			// the default capability list but doesn't transfer complete objects.
+			//
+			// Check if we've already applied the fix (UnsupportedCapabilities contains only ThinPack).
+			// If it was already set during Clone retry (line 165), this check prevents redundant retry.
+			azureDevOpsFixApplied := len(transport.UnsupportedCapabilities) == 1 &&
+				transport.UnsupportedCapabilities[0] == capability.ThinPack
+
+			if err != nil && errors.Is(err, plumbing.ErrObjectNotFound) && !azureDevOpsFixApplied {
+				log.Info(fmt.Sprintf("Failed to get commit object: %s\n", err.Error()))
+				log.Info("Retrying entire git operation with only ThinPack in unsupported capabilities (required for Azure DevOps compatibility)")
+				// Set the global transport capabilities for Azure DevOps compatibility
+				// IMPORTANT: transport.UnsupportedCapabilities is a GLOBAL variable in go-git
+				// This setting persists for the entire process and affects the recursive call below
+				transport.UnsupportedCapabilities = []capability.Capability{
+					capability.ThinPack,
+				}
+				// Recursively retry the entire SyncGit operation
+				// The Clone operation in the recursive call will use the updated global capabilities
+				return SyncGit(ctx, inst, client, log)
+			}
 			if err != nil {
 				log.Info(fmt.Sprintf("Failed to get commit object: %s\n", err.Error()))
 				return nil, err
