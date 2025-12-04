@@ -20,7 +20,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/crypto v0.45.0
 	k8s.io/api v0.31.13
