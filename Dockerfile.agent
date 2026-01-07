@@ -18,7 +18,7 @@ ARG GO_BUILD_EXTRA_ARGS=
 COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
 WORKDIR $REMOTE_SOURCE_DIR/$REMOTE_SOURCE_SUBDIR
 
-RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=1 go build ${GO_BUILD_EXTRA_ARGS} -o ${DEST_ROOT}/${WHAT} ./containers/agent
+RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; CGO_ENABLED=0 go build ${GO_BUILD_EXTRA_ARGS} -o ${DEST_ROOT}/${WHAT} ./containers/agent
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
