@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.24.4
+go 1.25.7
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
@@ -12,7 +12,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/golang/glog v1.2.5
 	github.com/google/uuid v1.6.0
-	github.com/gophercloud/gophercloud/v2 v2.10.0
+	github.com/gophercloud/gophercloud/v2 v2.11.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/k8snetworkplumbingwg/sriov-network-operator v0.0.0-20250828124948-002ef793cc63
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20250728004541-45c6255cafc5
