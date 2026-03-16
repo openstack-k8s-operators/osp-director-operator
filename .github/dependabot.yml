@@ -19,6 +19,12 @@ updates:
       versions: ">= 0.32.0"
     - dependency-name: "k8s.io/klog/v2"
       versions: ">= 3.0.0"
+    # golang.org/x/crypto 0.49.0+ requires Go 1.25
+    - dependency-name: "golang.org/x/crypto"
+      versions: ">= 0.49.0"
+    # gophercloud/v2 2.11.0+ requires Go 1.25
+    - dependency-name: "github.com/gophercloud/gophercloud/v2"
+      versions: ">= 2.11.0"
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
@@ -39,6 +45,12 @@ updates:
       versions: ">= 0.32.0"
     - dependency-name: "k8s.io/klog/v2"
       versions: ">= 3.0.0"
+    # golang.org/x/crypto 0.49.0+ requires Go 1.25
+    - dependency-name: "golang.org/x/crypto"
+      versions: ">= 0.49.0"
+    # gophercloud/v2 2.11.0+ requires Go 1.25
+    - dependency-name: "github.com/gophercloud/gophercloud/v2"
+      versions: ">= 2.11.0"
   commit-message:
     # Prefix all commit messages with "[v1.3.x]"
     prefix: "[v1.3.x]"
