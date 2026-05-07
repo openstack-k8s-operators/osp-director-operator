@@ -28,6 +28,9 @@ updates:
     # gophercloud/v2 2.11.0+ requires Go 1.25
     - dependency-name: "github.com/gophercloud/gophercloud/v2"
       versions: ">= 2.11.0"
+    # go-git/v5 5.19.0+ requires Go 1.25
+    - dependency-name: "github.com/go-git/go-git/v5"
+      versions: ">= 5.19.0"
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
@@ -57,6 +60,9 @@ updates:
     # gophercloud/v2 2.11.0+ requires Go 1.25
     - dependency-name: "github.com/gophercloud/gophercloud/v2"
       versions: ">= 2.11.0"
+    # go-git/v5 5.19.0+ requires Go 1.25
+    - dependency-name: "github.com/go-git/go-git/v5"
+      versions: ">= 5.19.0"
   commit-message:
     # Prefix all commit messages with "[v1.3.x]"
     prefix: "[v1.3.x]"
