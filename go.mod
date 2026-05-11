@@ -21,7 +21,7 @@ require (
 	github.com/onsi/gomega v1.40.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.2
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	golang.org/x/crypto v0.48.0
 	k8s.io/api v0.31.13
 	k8s.io/apimachinery v0.31.13
