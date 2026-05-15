@@ -31,6 +31,9 @@ updates:
     # go-git/v5 5.19.0+ requires Go 1.25
     - dependency-name: "github.com/go-git/go-git/v5"
       versions: ">= 5.19.0"
+    # go-billy/v5 5.9.0+ requires Go 1.25
+    - dependency-name: "github.com/go-git/go-billy/v5"
+      versions: ">= 5.9.0"
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
@@ -63,6 +66,9 @@ updates:
     # go-git/v5 5.19.0+ requires Go 1.25
     - dependency-name: "github.com/go-git/go-git/v5"
       versions: ">= 5.19.0"
+    # go-billy/v5 5.9.0+ requires Go 1.25
+    - dependency-name: "github.com/go-git/go-billy/v5"
+      versions: ">= 5.9.0"
   commit-message:
     # Prefix all commit messages with "[v1.3.x]"
     prefix: "[v1.3.x]"
