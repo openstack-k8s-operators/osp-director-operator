@@ -18,7 +18,7 @@ require (
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20250728004541-45c6255cafc5
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-20251022131709-6b5f257fffcd
 	github.com/onsi/ginkgo/v2 v2.32.0
-	github.com/onsi/gomega v1.42.0
+	github.com/onsi/gomega v1.42.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.2
 	github.com/tidwall/gjson v1.19.0
