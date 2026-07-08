@@ -104,7 +104,7 @@ gotest: get-ci-tools
 	$(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
 
 # Run golangci-lint test against code
-GOLANGCI_LINT_VERSION ?= v2.4.0
+GOLANGCI_LINT_VERSION ?= v2.12.2
 golangci: get-ci-tools
 	GOLANGCI_TAG=$(GOLANGCI_LINT_VERSION) $(CI_TOOLS_REPO_DIR)/test-runner/golangci.sh
 
@@ -233,7 +233,7 @@ OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 KUSTOMIZE_VERSION ?= v5.5.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 OPERATOR_SDK_VERSION ?= v1.19.0
-GOTOOLCHAIN_VERSION ?= go1.24.0
+GOTOOLCHAIN_VERSION ?= go1.26.0
 SETUP_ENVTEST_VERSION ?= release-0.22
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
