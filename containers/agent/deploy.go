@@ -280,7 +280,7 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 	filterBuffer.WriteString(ctlplaneExport)
 	filterBuffer.WriteString("  AllNodesExtraMapData:\n")
 	for _, line := range strings.Split(allNodesDataFiltered, "\n") {
-		filterBuffer.WriteString(fmt.Sprintf("    %s\n", line))
+		fmt.Fprintf(&filterBuffer, "    %s\n", line)
 	}
 
 	// unfiltered
@@ -291,7 +291,7 @@ func processOvercloudJSON(kclient kubernetes.Clientset, config *rest.Config) err
 	buffer.WriteString(ctlplaneExport)
 	buffer.WriteString("  AllNodesExtraMapData:\n")
 	for _, line := range strings.Split(allNodesData, "\n") {
-		buffer.WriteString(fmt.Sprintf("    %s\n", line))
+		fmt.Fprintf(&buffer, "    %s\n", line)
 	}
 
 	// Create or Update the ConfigMap

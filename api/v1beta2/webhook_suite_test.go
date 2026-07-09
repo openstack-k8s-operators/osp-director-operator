@@ -16,9 +16,9 @@ package v1beta2
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 
 	// wait for the webhook server to get ready
 	dialer := &net.Dialer{Timeout: time.Second}
-	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
+	addrPort := net.JoinHostPort(webhookInstallOptions.LocalServingHost, strconv.Itoa(webhookInstallOptions.LocalServingPort))
 	Eventually(func() error {
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
