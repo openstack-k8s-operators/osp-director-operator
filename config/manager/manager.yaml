@@ -24,11 +24,12 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      serviceAccountName: controller-manager
       containers:
       - command:
         - /manager
         args:
-        - --enable-leader-election
+        - --leader-elect
         image: controller:latest
         name: manager
         resources:

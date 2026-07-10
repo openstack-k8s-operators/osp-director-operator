@@ -102,14 +102,14 @@ for csv_image in $(cat "${CLUSTER_BUNDLE_FILE}" | grep -E "(image:|value:)" | se
     else
         # Check for an env var containing the full image pullspec with digest.
         # Useful for hermetic builds that can't use the network when generating bundles.
-        # "quay.io/openstack-k8s-operators/kube-rbac-proxy" -> RELATED_IMAGE_KUBE_RBAC_PROXY_PULLSPEC
-        # 1. Take only the image name, e.g. kube-rbac-proxy
+        # e.g. "quay.io/foo/my-image" -> RELATED_IMAGE_MY_IMAGE_PULLSPEC
+        # 1. Take only the image name
         image_name="${base_image##*/}"
-        # 2. Convert it to uppercase, e.g. KUBE-RBAC-PROXY
+        # 2. Convert it to uppercase
         image_name="${image_name^^}"
-        # 3. Replace dashes with underscores, e.g. KUBE_RBAC_PROXY
+        # 3. Replace dashes with underscores
         image_name="${image_name//-/_}"
-        # 4. Build up the env var name to check, e.g. RELATED_IMAGE_KUBE_RBAC_PROXY_PULLSPEC
+        # 4. Build up the env var name to check
         envvar_with_digest=RELATED_IMAGE_${image_name}_PULLSPEC
         image_with_digest=${!envvar_with_digest}
         if [[ -z "${image_with_digest}" ]]; then

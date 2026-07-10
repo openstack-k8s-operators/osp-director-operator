@@ -60,6 +60,11 @@ spec:
       displayName: OpenStack Config Generator
       kind: OpenStackConfigGenerator
       name: openstackconfiggenerators.osp-director.openstack.org
+      specDescriptors:
+      - description: HeatOverride, provides the ability to customize ephemeral heat
+          service configuration.
+        displayName: Heat Override
+        path: ephemeralHeatSettings.heatOverride
       version: v1beta1
     - description: OpenStackConfigVersion represents a set of executable Ansible playbooks
       displayName: OpenStack Config Version
@@ -89,6 +94,11 @@ spec:
       displayName: OpenStack Ephemeral Heat
       kind: OpenStackEphemeralHeat
       name: openstackephemeralheats.osp-director.openstack.org
+      specDescriptors:
+      - description: HeatOverride, provides the ability to customize ephemeral heat
+          service configuration.
+        displayName: Heat Override
+        path: heatOverride
       version: v1beta1
     - description: OpenStackIPSet a resource to request a set of IPs for the given
         networks
@@ -184,6 +194,4 @@ spec:
     name: osp-director-operator
   - image: registry.redhat.io/rhel8/httpd-24:latest
     name: apache
-  - image: quay.io/openstack-k8s-operators/kube-rbac-proxy:v0.16.0
-    name: kube-rbac-proxy
   version: 0.0.0
