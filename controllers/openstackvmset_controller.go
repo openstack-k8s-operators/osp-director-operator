@@ -18,7 +18,9 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -577,9 +579,23 @@ func (r *OpenStackVMSetReconciler) generateNamespaceFencingData(
 		return err
 	}
 
+	caData := kubeconfig.CAData
+	if len(caData) == 0 && kubeconfig.CAFile != "" {
+		caData, err = os.ReadFile(kubeconfig.CAFile)
+		if err != nil {
+			cond.Message = "Error reading CA file for fencing kubeconfig"
+			cond.Reason = shared.VMSetCondReasonKubeConfigError
+			cond.Type = shared.CommonCondTypeError
+			err = common.WrapErrorForObject(cond.Message, instance, err)
+
+			return err
+		}
+	}
+
 	templateParameters := map[string]interface{}{}
 	templateParameters["Server"] = kubeconfig.Host
 	templateParameters["Namespace"] = instance.Namespace
+	templateParameters["CertificateAuthorityData"] = base64.StdEncoding.EncodeToString(caData)
 
 	// Read-back the secret for the kubevirt agent service account token
 	kubevirtAgentTokenSecret, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(ctx, vmset.KubevirtFencingServiceAccountSecret, metav1.GetOptions{})
