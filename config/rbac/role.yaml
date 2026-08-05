@@ -124,13 +124,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - machine.openshift.io
-  - metal3.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
   - metal3.io
   resources:
   - baremetalhosts
@@ -150,6 +143,12 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - metal3.io
+  resources:
+  - provisionings
+  verbs:
+  - get
 - apiGroups:
   - migration.k8s.io
   resources:
@@ -341,12 +340,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - hco.kubevirt.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
 - apiGroups:
   - kubevirt.io
   resources:

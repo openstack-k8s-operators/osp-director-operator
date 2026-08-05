@@ -85,7 +85,6 @@ func (r *OpenStackControlPlaneReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=osp-director.openstack.org,resources=openstackmacaddresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hco.kubevirt.io,namespace=openstack,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=migration.k8s.io,resources=storageversionmigrations,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;create;delete;update

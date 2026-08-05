@@ -89,8 +89,7 @@ func (r *OpenStackProvisionServerReconciler) GetScheme() *runtime.Scheme {
 // +kubebuilder:rbac:groups=core,resources=volumes,verbs=get;list;create;update;delete;watch;
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;update;watch;
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update;watch;
-// +kubebuilder:rbac:groups=machine.openshift.io,resources="*",verbs="*"
-// +kubebuilder:rbac:groups=metal3.io,resources="*",verbs="*"
+// +kubebuilder:rbac:groups=metal3.io,resources=provisionings,verbs=get
 
 // Reconcile - provision image servers
 func (r *OpenStackProvisionServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
