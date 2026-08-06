@@ -39,4 +39,18 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - "ALL"
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+      securityContext:
+        runAsNonRoot: true
       terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir: {}
+        name: tmp
