@@ -1615,3 +1615,7 @@ controller   8       22    1         1       Provisioned   All requested Virtual
 ## OSP minor version updates
 
 See the [OSP update process](docs/README-osp-update.md) document
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and DCO information.
