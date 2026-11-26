@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/osp-director-operator
 
-go 1.26.3
+go 1.26.10
 
 exclude k8s.io/cluster-bootstrap v0.0.0
 
